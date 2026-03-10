@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronRight, Download, FilePlus, FolderPlus, Pencil, Plus, Trash2, Upload } from 'lucide-react';
+import { ChevronDown, ChevronRight, Download, FilePlus, FolderPlus, Pencil, Plus, Save, Trash2, Upload } from 'lucide-react';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
 import {
@@ -15,6 +15,7 @@ import {
     renameRequest as dbRenameRequest,
     updateFolderOrder,
     updateRequestOrder,
+    updateSavedRequest,
 } from '@/lib/collections';
 import { exportCollectionToJson, importCollectionFromJson } from '@/lib/importExport';
 import { useCollectionStore } from '@/stores/collectionStore';
@@ -136,6 +137,46 @@ export function CollectionTree() {
             store.deleteRequest(id);
         } catch (error) {
             console.error('Failed to delete request', error);
+        }
+    };
+
+    const handleUpdateRequest = async (id: string) => {
+        const req = store.requests.find((r) => r.id === id);
+        if (!req) return;
+        const { method, url, headers, queryParams, body, auth } = useRequestStore.getState();
+
+        let auth_type: 'none' | 'bearer' | 'basic' | 'api-key' = 'none';
+        let auth_config: Record<string, string> = {};
+        if (auth.type === 'bearer') {
+            auth_type = 'bearer';
+            auth_config = { token: auth.token };
+        } else if (auth.type === 'basic') {
+            auth_type = 'basic';
+            auth_config = { username: auth.username, password: auth.password };
+        } else if (auth.type === 'api-key') {
+            auth_type = 'api-key';
+            auth_config = { key: auth.key, value: auth.value, in: auth.in };
+        }
+
+        const changes = {
+            method,
+            url,
+            headers,
+            query_params: queryParams,
+            body_type: body.mode as 'none' | 'raw' | 'json' | 'form-data' | 'urlencoded',
+            body_content: body.raw,
+            auth_type,
+            auth_config,
+        };
+
+        try {
+            await updateSavedRequest(id, { ...req, ...changes });
+            store.updateRequest(id, changes);
+            if (store.activeRequestId === id) {
+                useRequestStore.getState().markDirty(false);
+            }
+        } catch (error) {
+            console.error('Failed to update request', error);
         }
     };
 
@@ -514,6 +555,11 @@ export function CollectionTree() {
                                                                     reqNode.item.id,
                                                                 )
                                                             }
+                                                            onUpdate={() =>
+                                                                void handleUpdateRequest(
+                                                                    reqNode.item.id,
+                                                                )
+                                                            }
                                                             onDrop={(e) =>
                                                                 void handleDrop(
                                                                     e,
@@ -557,6 +603,9 @@ export function CollectionTree() {
                                         onDelete={() =>
                                             void handleDeleteRequest(reqNode.item.id)
                                         }
+                                        onUpdate={() =>
+                                            void handleUpdateRequest(reqNode.item.id)
+                                        }
                                         onDrop={(e) =>
                                             void handleDrop(
                                                 e,
@@ -596,6 +645,7 @@ interface RequestRowProps {
     onCancelEdit: () => void;
     onSelect: () => void;
     onDelete: () => void;
+    onUpdate: () => void;
     onDrop: (e: React.DragEvent) => void;
 }
 
@@ -615,6 +665,7 @@ function RequestRow({
     onCancelEdit,
     onSelect,
     onDelete,
+    onUpdate,
     onDrop,
 }: RequestRowProps) {
     const isEditing = editingId === id;
@@ -663,6 +714,19 @@ function RequestRow({
             )}
 
             <div className="hidden group-hover:flex items-center gap-0.5 text-gray-300">
+                <button
+                    onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onUpdate();
+                    }}
+                    aria-label="Update request from builder"
+                    title="Update with current builder config"
+                    className="p-1 rounded hover:text-white cursor-pointer"
+                    draggable={false}
+                >
+                    <Save size={14} />
+                </button>
                 <button
                     onClick={(e) => {
                         e.preventDefault();
