@@ -60,7 +60,7 @@ development_status:
   epic-3: in-progress
   3-1-environment-manager: review
   3-2-variable-interpolation: review
-  3-3-auth-types: ready-for-dev
+  3-3-auth-types: in-progress
   epic-3-retrospective: optional
 
   # ─── Epic 4: Polish & Packaging ────────────────────────────────────

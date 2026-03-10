@@ -42,6 +42,7 @@ interface RequestState {
     updateQueryParam: (index: number, field: 'key' | 'value', value: string) => void;
     toggleQueryParamEnabled: (index: number) => void;
     removeQueryParam: (index: number) => void;
+    setAuth: (auth: AuthState) => void;
     setBodyRaw: (raw: string) => void;
     loadFromSaved: (request: Request) => void;
     markDirty: (dirty?: boolean) => void;
@@ -158,6 +159,11 @@ export const useRequestStore = create<RequestState>()(
                     state.queryParams.splice(index, 1);
                     state.isDirty = true;
                 }
+            }),
+        setAuth: (auth) =>
+            set((state) => {
+                state.auth = auth;
+                state.isDirty = true;
             }),
         setBodyRaw: (raw) =>
             set((state) => {

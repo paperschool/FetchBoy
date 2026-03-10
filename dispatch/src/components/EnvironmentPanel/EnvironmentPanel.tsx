@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Trash2 } from 'lucide-react';
 import {
     createEnvironment,
     deleteEnvironment,
@@ -158,14 +159,15 @@ export function EnvironmentPanel({ open, onClose }: EnvironmentPanelProps) {
                                             </span>
                                         )}
                                         <button
+                                            type="button"
                                             aria-label={`Delete ${env.name}`}
-                                            className="text-app-muted hover:text-red-400 ml-auto flex-shrink-0 opacity-0 group-hover:opacity-100"
+                                            className="p-1 text-app-muted hover:text-red-400 rounded cursor-pointer ml-auto flex-shrink-0 opacity-0 group-hover:opacity-100"
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 handleDeleteEnvironment(env.id, env.name);
                                             }}
                                         >
-                                            ×
+                                            <Trash2 size={14} />
                                         </button>
                                     </div>
                                 ))
@@ -202,16 +204,16 @@ export function EnvironmentPanel({ open, onClose }: EnvironmentPanelProps) {
                                 </div>
                                 <div className="flex-1 overflow-y-auto">
                                     {/* Table header */}
-                                    <div className="mb-1 grid grid-cols-[1fr_1fr_2rem_2rem] gap-1 px-1">
-                                        <span className="text-app-muted text-xs">Key</span>
-                                        <span className="text-app-muted text-xs">Value</span>
-                                        <span className="text-app-muted text-xs text-center">On</span>
+                                    <div className="mb-1 grid grid-cols-[1fr_1fr_auto_auto] gap-1 px-1">
+                                        <span className="text-app-secondary text-xs">Key</span>
+                                        <span className="text-app-secondary text-xs">Value</span>
+                                        <span className="text-app-secondary text-xs text-center">On</span>
                                         <span />
                                     </div>
                                     {selectedEnv.variables.map((variable, i) => (
                                         <div
                                             key={i}
-                                            className="mb-1 grid grid-cols-[1fr_1fr_2rem_2rem] items-center gap-1"
+                                            className="mb-1 grid grid-cols-[1fr_1fr_auto_auto] items-center gap-1"
                                         >
                                             <input
                                                 aria-label={`Variable key ${i}`}
@@ -233,17 +235,18 @@ export function EnvironmentPanel({ open, onClose }: EnvironmentPanelProps) {
                                                 type="checkbox"
                                                 aria-label={`Variable enabled ${i}`}
                                                 checked={variable.enabled}
-                                                className="mx-auto"
+                                                className="mx-auto h-5 w-5 cursor-pointer"
                                                 onChange={(e) =>
                                                     handleVariableChange(i, 'enabled', e.target.checked)
                                                 }
                                             />
                                             <button
+                                                type="button"
                                                 aria-label={`Delete variable ${i}`}
-                                                className="text-app-muted hover:text-red-400 text-xs"
+                                                className="p-1 text-app-muted hover:text-red-400 rounded cursor-pointer"
                                                 onClick={() => handleDeleteVariable(i)}
                                             >
-                                                ×
+                                                <Trash2 size={14} />
                                             </button>
                                         </div>
                                     ))}

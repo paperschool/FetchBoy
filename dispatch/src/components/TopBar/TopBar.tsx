@@ -24,7 +24,7 @@ export function TopBar() {
         <select
           value={activeEnvironmentId ?? ''}
           onChange={(e) => void handleEnvChange(e)}
-          className="text-xs text-app-inverse bg-transparent border border-white/20 rounded px-2 py-1"
+          className="select-flat-inverse text-xs text-app-inverse bg-transparent border border-white/20 rounded pl-2 pr-6 py-1"
         >
           <option value="">No Environment</option>
           {environments.map((env) => (

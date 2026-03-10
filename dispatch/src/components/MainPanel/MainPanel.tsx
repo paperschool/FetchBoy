@@ -1,8 +1,10 @@
 import { invoke } from '@tauri-apps/api/core';
 import { MonacoEditorField } from '@/components/Editor/MonacoEditorField';
+import { HighlightedUrlInput } from './HighlightedUrlInput';
 import { KeyValueRows } from '@/components/RequestBuilder/KeyValueRows';
 import { ResponseViewer, type ResponseData } from '@/components/ResponseViewer/ResponseViewer';
 import { SaveRequestDialog } from '@/components/SaveRequestDialog/SaveRequestDialog';
+import { AuthPanel } from '@/components/AuthPanel/AuthPanel';
 import { createFullSavedRequest, updateSavedRequest } from '@/lib/collections';
 import { persistHistoryEntry } from '@/lib/history';
 import type { AuthState, HttpMethod, RequestTab } from '@/stores/requestStore';
@@ -59,13 +61,14 @@ export function MainPanel() {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [responseData, setResponseData] = useState<ResponseData | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
+  const [sentUrl, setSentUrl] = useState<string | null>(null);
   const [verboseLogs, setVerboseLogs] = useState<string[]>([]);
   const [requestBodyLanguage, setRequestBodyLanguage] = useState<'json' | 'html' | 'xml'>('json');
   const editorFontSize = useUiSettingsStore((state) => state.editorFontSize);
 
   const collectionStore = useCollectionStore();
   const historyStore = useHistoryStore();
-  const { interpolate: applyEnv, unresolvedIn } = useEnvironment();
+  const { interpolate: applyEnv, unresolvedIn, activeVariables } = useEnvironment();
 
   const {
     method,
@@ -86,6 +89,7 @@ export function MainPanel() {
     removeQueryParam,
     body,
     auth,
+    setAuth,
     setBodyRaw,
     markDirty,
   } = useRequestStore();
@@ -199,6 +203,7 @@ export function MainPanel() {
     setIsSending(true);
     setRequestError(null);
     setResponseData(null);
+    setSentUrl(sendUrl);
 
     const requestSnapshot = {
       id: crypto.randomUUID(),
@@ -278,12 +283,12 @@ export function MainPanel() {
   return (
     <main
       data-testid="main-panel"
-      className="bg-app-main text-app-primary overflow-auto p-4"
+      className="bg-app-main text-app-primary flex flex-col overflow-hidden p-4"
     >
-      <div className="space-y-4">
+      <div className="flex min-h-0 flex-1 flex-col gap-4">
         <p className="text-app-muted text-sm">Request Builder</p>
 
-        <div className="grid grid-cols-[8rem_1fr_auto] gap-3">
+        <div className="grid grid-cols-[8rem_1fr_auto] items-start gap-3">
           <div>
             <label htmlFor="http-method" className="text-app-secondary mb-1 block text-xs font-medium">
               HTTP Method
@@ -293,7 +298,7 @@ export function MainPanel() {
               aria-label="HTTP Method"
               value={method}
               onChange={(event) => setMethod(event.target.value as HttpMethod)}
-              className="border-app-subtle bg-app-main text-app-primary h-9 w-full rounded-md border px-2 text-sm"
+              className="select-flat border-app-subtle bg-app-main text-app-primary h-9 w-full rounded-md border pl-2 pr-7 text-sm"
             >
               {HTTP_METHODS.map((httpMethod) => (
                 <option key={httpMethod} value={httpMethod}>
@@ -307,13 +312,12 @@ export function MainPanel() {
             <label htmlFor="request-url" className="text-app-secondary mb-1 block text-xs font-medium">
               Request URL
             </label>
-            <input
+            <HighlightedUrlInput
               id="request-url"
-              aria-label="Request URL"
               value={url}
-              onChange={(event) => setUrl(event.target.value)}
+              onChange={setUrl}
               placeholder="https://api.example.com"
-              className="border-app-subtle text-app-primary h-9 w-full rounded-md border px-3 text-sm"
+              variables={activeVariables}
             />
             {unresolvedVars.length > 0 && (
               <p className="mt-1 text-xs text-orange-400">
@@ -322,7 +326,9 @@ export function MainPanel() {
             )}
           </div>
 
-          <div className="flex items-end gap-2">
+          <div>
+            <p className="text-app-secondary mb-1 block text-xs font-medium">Controls</p>
+            <div className="flex items-start gap-2">
             <button
               type="button"
               onClick={() => setSaveDialogOpen(true)}
@@ -338,6 +344,7 @@ export function MainPanel() {
             >
               {isSending ? 'Sending...' : 'Send'}
             </button>
+            </div>
           </div>
         </div>
 
@@ -405,7 +412,7 @@ export function MainPanel() {
                       aria-label="Request Body Language"
                       value={requestBodyLanguage}
                       onChange={(event) => setRequestBodyLanguage(event.target.value as 'json' | 'html' | 'xml')}
-                      className="border-app-subtle bg-app-main text-app-primary h-8 rounded-md border px-2 text-xs"
+                      className="select-flat border-app-subtle bg-app-main text-app-primary h-8 rounded-md border pl-2 pr-7 text-xs"
                     >
                       <option value="json">JSON</option>
                       <option value="html">HTML</option>
@@ -425,16 +432,21 @@ export function MainPanel() {
               </div>
             ) : null}
 
-            {activeTab === 'auth' ? <p className="text-app-muted text-sm">Auth: None</p> : null}
+            {activeTab === 'auth' ? (
+              <AuthPanel auth={auth} onAuthChange={setAuth} />
+            ) : null}
           </div>
         </details>
 
-        <ResponseViewer
-          response={responseData}
-          error={requestError}
-          logs={verboseLogs}
-          onClearLogs={() => setVerboseLogs([])}
-        />
+        <div className="flex min-h-0 flex-1 flex-col">
+          <ResponseViewer
+            response={responseData}
+            error={requestError}
+            logs={verboseLogs}
+            onClearLogs={() => setVerboseLogs([])}
+            requestedUrl={sentUrl ?? undefined}
+          />
+        </div>
       </div>
 
       <SaveRequestDialog

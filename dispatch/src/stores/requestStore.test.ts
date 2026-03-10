@@ -237,4 +237,21 @@ describe('requestStore', () => {
         expect(body.mode).toBe('json');
         expect(body.raw).toBe('{"x":1}');
     });
+
+    it('setAuth updates auth state and marks isDirty true', () => {
+        const { setAuth } = useRequestStore.getState();
+        setAuth({ type: 'bearer', token: 'abc123' });
+        const state = useRequestStore.getState();
+        expect(state.auth).toEqual({ type: 'bearer', token: 'abc123' });
+        expect(state.isDirty).toBe(true);
+    });
+
+    it('setAuth with type none sets { type: none } correctly', () => {
+        useRequestStore.setState({ auth: { type: 'bearer', token: 'old-token' }, isDirty: false });
+        const { setAuth } = useRequestStore.getState();
+        setAuth({ type: 'none' });
+        const state = useRequestStore.getState();
+        expect(state.auth).toEqual({ type: 'none' });
+        expect(state.isDirty).toBe(true);
+    });
 });
