@@ -9,6 +9,8 @@ interface UiSettingsState {
     setRequestTimeoutMs: (ms: number) => void;
     sslVerify: boolean;
     setSslVerify: (v: boolean) => void;
+    settingsPanelOpen: boolean;
+    setSettingsPanelOpen: (open: boolean) => void;
 }
 
 export const useUiSettingsStore = create<UiSettingsState>((set) => ({
@@ -20,4 +22,6 @@ export const useUiSettingsStore = create<UiSettingsState>((set) => ({
     setRequestTimeoutMs: (ms) => set({ requestTimeoutMs: ms }),
     sslVerify: true,
     setSslVerify: (v) => set({ sslVerify: v }),
+    settingsPanelOpen: false,
+    setSettingsPanelOpen: (open) => set({ settingsPanelOpen: open }),
 }));

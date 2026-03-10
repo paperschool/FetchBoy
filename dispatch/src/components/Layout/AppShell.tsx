@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { Settings } from 'lucide-react';
 import { TopBar } from '@/components/TopBar/TopBar';
 import { Sidebar } from '@/components/Sidebar/Sidebar';
 import { MainPanel } from '@/components/MainPanel/MainPanel';
@@ -10,6 +11,16 @@ import { useTheme } from '@/hooks/useTheme';
 
 export function AppShell() {
   useTheme();
+
+  const setSettingsPanelOpen = useUiSettingsStore((s) => s.setSettingsPanelOpen);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  }, []);
+
+  const dismissContextMenu = useCallback(() => setContextMenu(null), []);
 
   useEffect(() => {
     loadAllEnvironments()
@@ -26,10 +37,35 @@ export function AppShell() {
   }, []);
 
   return (
-    <div className="grid h-screen grid-cols-[16rem_1fr] grid-rows-[3rem_1fr] overflow-hidden">
+    <div
+      className="grid h-screen grid-cols-[16rem_1fr] grid-rows-[3rem_1fr] overflow-hidden"
+      onContextMenu={handleContextMenu}
+      onClick={dismissContextMenu}
+    >
       <TopBar />
       <Sidebar />
       <MainPanel />
+
+      {contextMenu && (
+        <ul
+          role="menu"
+          className="fixed z-50 min-w-[10rem] rounded-md border border-app-subtle bg-app-main py-1 shadow-lg text-sm"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <li
+            role="menuitem"
+            className="flex cursor-pointer items-center gap-2 px-3 py-2 text-app-primary hover:bg-gray-100 dark:hover:bg-gray-700"
+            onClick={() => {
+              setSettingsPanelOpen(true);
+              dismissContextMenu();
+            }}
+          >
+            <Settings size={14} className="text-app-muted" />
+            Settings
+          </li>
+        </ul>
+      )}
     </div>
   );
 }
