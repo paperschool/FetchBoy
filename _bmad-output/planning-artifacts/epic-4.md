@@ -64,3 +64,16 @@ Final Step for every story: commit all code and documentation changes for that s
 - App icon (1024×1024 PNG source) is converted to all required platform formats
 - Bundle size is verified ≤ 15MB per installer in CI build output
 - App name, version, and identifier match `tauri.conf.json`
+
+---
+
+### Story 4.5: Windows Build Compatibility
+
+**Goal:** Ensure the GitHub Actions Windows CI job produces a valid NSIS installer by fixing the emoji in `productName` and pinning NSIS as the Windows bundle target.
+
+**Acceptance Criteria:**
+- `productName` in `tauri.conf.json` is ASCII-only (emoji removed); window title in-app retains the emoji
+- Windows CI job completes and uploads a `.exe` NSIS installer artifact
+- NSIS installer is ≤ 15 MB (existing size-check step passes)
+- macOS and Linux CI jobs are unaffected
+- `bundle.windows.nsis` config is present in `tauri.conf.json`

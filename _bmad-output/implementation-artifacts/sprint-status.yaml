@@ -69,6 +69,7 @@ development_status:
   4-2-import-export-collections: review
   4-3-settings-panel: review
   4-4-app-packaging-and-installers: review
+  4-5-windows-build-compatibility: ready-for-dev
   epic-4-retrospective: optional
 
   # ─── Epic 5: Multi-Tab Workspace ───────────────────────────────────
