@@ -68,7 +68,7 @@ development_status:
   4-1-light-dark-theme: review
   4-2-import-export-collections: review
   4-3-settings-panel: review
-  4-4-app-packaging-and-installers: in-progress
+  4-4-app-packaging-and-installers: review
   epic-4-retrospective: optional
 
   # ─── Epic 5: Multi-Tab Workspace ───────────────────────────────────
