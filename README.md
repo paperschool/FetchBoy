@@ -13,11 +13,12 @@ Runs entirely offline. No account required. All data stored locally.
 - **Collections** — tree-based sidebar with nested folders, CRUD, and drag-and-drop reordering
 - **Save & Load Requests** — persist requests to collections and reload them from the sidebar
 - **Request History** — auto-populated log of the last 200 sent requests
-- **Environments** — named key-value variable stores with `{{variable}}` interpolation at send time *(planned)*
-- **Auth Schemes** — Bearer Token, Basic Auth, and API Key injection *(planned)*
-- **Light / Dark / System Theme** — persisted across restarts *(planned)*
-- **Import / Export** — collections and environments as JSON *(planned)*
-- **Cross-platform Installers** — macOS, Windows, Linux under 15MB *(planned)*
+- **Tab Bar** — multi-tab workspace with inline rename, close-on-hover, and auto-label sync
+- **Environments** — named key-value variable stores with `{{variable}}` interpolation at send time
+- **Auth Schemes** — Bearer Token, Basic Auth, and API Key injection
+- **Light / Dark / System Theme** — persisted across restarts
+- **Import / Export** — collections and environments as JSON
+- **Cross-platform Installers** — macOS, Windows, Linux under 15MB
 
 ---
 
@@ -100,7 +101,7 @@ PostmanClone/
 │   └── package.json
 ├── _bmad-output/
 │   ├── api-client-spec.md          # Full product spec
-│   ├── planning-artifacts/         # Epics (epic-1 through epic-4)
+│   ├── planning-artifacts/         # Epics (epic-1 through epic-5)
 │   └── implementation-artifacts/  # Stories + sprint-status.yaml
 └── docs/
 ```
