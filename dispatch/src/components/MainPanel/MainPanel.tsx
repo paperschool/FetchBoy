@@ -18,6 +18,37 @@ const REQUEST_TABS: Array<{ id: RequestTab; label: string }> = [
   { id: 'auth', label: 'Auth' },
 ];
 
+function extractErrorReason(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  if (typeof error === 'string' && error.trim().length > 0) {
+    return error;
+  }
+
+  if (typeof error === 'object' && error !== null) {
+    const maybeMessage =
+      'message' in error && typeof error.message === 'string'
+        ? error.message
+        : 'error' in error && typeof error.error === 'string'
+          ? error.error
+          : null;
+
+    if (maybeMessage && maybeMessage.trim().length > 0) {
+      return maybeMessage;
+    }
+
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return 'Unknown error';
+    }
+  }
+
+  return 'Unknown error';
+}
+
 export function MainPanel() {
   const [isSending, setIsSending] = useState(false);
   const [responseData, setResponseData] = useState<ResponseData | null>(null);
@@ -137,7 +168,7 @@ export function MainPanel() {
       });
       appendLog('History persisted for successful response.');
     } catch (error) {
-      const reason = error instanceof Error ? error.message : 'Unknown error';
+      const reason = extractErrorReason(error);
       const message = `Request failed: ${reason}`;
       setRequestError(message);
       appendLog(`Send failed: ${reason}`);
@@ -215,88 +246,93 @@ export function MainPanel() {
           </div>
         </div>
 
-        <div className="border-app-subtle border-b">
-          <div className="flex gap-2">
-            {REQUEST_TABS.map((tab) => {
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`rounded-t-md px-3 py-2 text-sm ${
-                    isActive
-                      ? 'border-app-subtle bg-app-main text-app-primary border border-b-0 font-medium'
-                      : 'text-app-muted hover:text-app-primary'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {activeTab === 'headers' ? (
-          <KeyValueRows
-            sectionName="headers"
-            rows={headers}
-            addLabel="Add Header"
-            onAdd={addHeader}
-            onUpdate={updateHeader}
-            onToggleEnabled={toggleHeaderEnabled}
-            onRemove={removeHeader}
-          />
-        ) : null}
-
-        {activeTab === 'query' ? (
-          <KeyValueRows
-            sectionName="query"
-            rows={queryParams}
-            addLabel="Add Query Param"
-            onAdd={addQueryParam}
-            onUpdate={updateQueryParam}
-            onToggleEnabled={toggleQueryParamEnabled}
-            onRemove={removeQueryParam}
-          />
-        ) : null}
-
-        {activeTab === 'body' ? (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-3">
-              <label className="text-app-secondary block text-sm font-medium">
-                Request Body
-              </label>
-              <div className="flex items-center gap-2">
-                <label htmlFor="request-body-language" className="text-app-secondary text-xs font-medium">
-                  Language
-                </label>
-                <select
-                  id="request-body-language"
-                  aria-label="Request Body Language"
-                  value={requestBodyLanguage}
-                  onChange={(event) => setRequestBodyLanguage(event.target.value as 'json' | 'html' | 'xml')}
-                  className="border-app-subtle bg-app-main text-app-primary h-8 rounded-md border px-2 text-xs"
-                >
-                  <option value="json">JSON</option>
-                  <option value="html">HTML</option>
-                  <option value="xml">XML</option>
-                </select>
+        <details open className="border-app-subtle rounded-md border p-2" data-testid="request-details-accordion">
+          <summary className="text-app-secondary cursor-pointer text-sm font-medium">Request Details</summary>
+          <div className="mt-3 space-y-3">
+            <div className="border-app-subtle border-b">
+              <div className="flex gap-2">
+                {REQUEST_TABS.map((tab) => {
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`rounded-t-md px-3 py-2 text-sm ${
+                        isActive
+                          ? 'border-app-subtle bg-app-main text-app-primary border border-b-0 font-medium'
+                          : 'text-app-muted hover:text-app-primary'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            <MonacoEditorField
-              testId="request-body-editor"
-              path="request-body"
-              language={requestBodyLanguage}
-              value={body.raw}
-              fontSize={editorFontSize}
-              onChange={setBodyRaw}
-            />
-          </div>
-        ) : null}
+            {activeTab === 'headers' ? (
+              <KeyValueRows
+                sectionName="headers"
+                rows={headers}
+                addLabel="Add Header"
+                onAdd={addHeader}
+                onUpdate={updateHeader}
+                onToggleEnabled={toggleHeaderEnabled}
+                onRemove={removeHeader}
+              />
+            ) : null}
 
-        {activeTab === 'auth' ? <p className="text-app-muted text-sm">Auth: None</p> : null}
+            {activeTab === 'query' ? (
+              <KeyValueRows
+                sectionName="query"
+                rows={queryParams}
+                addLabel="Add Query Param"
+                onAdd={addQueryParam}
+                onUpdate={updateQueryParam}
+                onToggleEnabled={toggleQueryParamEnabled}
+                onRemove={removeQueryParam}
+              />
+            ) : null}
+
+            {activeTab === 'body' ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <label className="text-app-secondary block text-sm font-medium">
+                    Request Body
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="request-body-language" className="text-app-secondary text-xs font-medium">
+                      Language
+                    </label>
+                    <select
+                      id="request-body-language"
+                      aria-label="Request Body Language"
+                      value={requestBodyLanguage}
+                      onChange={(event) => setRequestBodyLanguage(event.target.value as 'json' | 'html' | 'xml')}
+                      className="border-app-subtle bg-app-main text-app-primary h-8 rounded-md border px-2 text-xs"
+                    >
+                      <option value="json">JSON</option>
+                      <option value="html">HTML</option>
+                      <option value="xml">XML</option>
+                    </select>
+                  </div>
+                </div>
+
+                <MonacoEditorField
+                  testId="request-body-editor"
+                  path="request-body"
+                  language={requestBodyLanguage}
+                  value={body.raw}
+                  fontSize={editorFontSize}
+                  onChange={setBodyRaw}
+                />
+              </div>
+            ) : null}
+
+            {activeTab === 'auth' ? <p className="text-app-muted text-sm">Auth: None</p> : null}
+          </div>
+        </details>
 
         <details className="border-app-subtle rounded-md border p-2" data-testid="verbose-logs-accordion">
           <summary className="text-app-secondary flex cursor-pointer items-center justify-between text-sm font-medium">
@@ -324,7 +360,12 @@ export function MainPanel() {
           </div>
         </details>
 
-        <ResponseViewer response={responseData} error={requestError} />
+        <details open className="border-app-subtle rounded-md border p-2" data-testid="output-accordion">
+          <summary className="text-app-secondary cursor-pointer text-sm font-medium">Output</summary>
+          <div className="mt-3">
+            <ResponseViewer response={responseData} error={requestError} />
+          </div>
+        </details>
       </div>
     </main>
   );
