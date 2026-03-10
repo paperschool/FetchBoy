@@ -32,10 +32,25 @@ vi.mock('@/lib/collections', () => ({
   updateSavedRequest: vi.fn().mockResolvedValue(undefined),
 }));
 
+const { interpolateFn, unresolvedInFn } = vi.hoisted(() => ({
+  interpolateFn: vi.fn((str: string) => str),
+  unresolvedInFn: vi.fn((): string[] => []),
+}));
+
+vi.mock('@/hooks/useEnvironment', () => ({
+  useEnvironment: () => ({
+    interpolate: interpolateFn,
+    unresolvedIn: unresolvedInFn,
+    activeVariables: [],
+  }),
+}));
+
 describe('MainPanel request builder', () => {
   beforeEach(() => {
     invokeMock.mockReset();
     executeMock.mockReset();
+    interpolateFn.mockReset();
+    unresolvedInFn.mockReset();
 
     invokeMock.mockResolvedValue({
       status: 200,
@@ -46,6 +61,9 @@ describe('MainPanel request builder', () => {
       headers: [{ key: 'content-type', value: 'application/json' }],
     });
     executeMock.mockResolvedValue(undefined);
+    // Default: interpolate is a passthrough, no unresolved vars
+    interpolateFn.mockImplementation((str: string) => str);
+    unresolvedInFn.mockReturnValue([]);
 
     useRequestStore.setState({
       method: 'GET',
@@ -252,5 +270,51 @@ describe('MainPanel request builder', () => {
 
     await screen.findByText('Request Error');
     expect(screen.getByText(/Request failed: Network request failed: dns error/)).toBeInTheDocument();
+  });
+
+  it('passes interpolated URL to invoke when URL contains a resolved variable', async () => {
+    interpolateFn.mockImplementation((str: string) => {
+      if (str === 'https://{{BASE_URL}}/posts/1') return 'https://api.example.com/posts/1';
+      return str;
+    });
+
+    render(<MainPanel />);
+
+    fireEvent.change(screen.getByLabelText('Request URL'), {
+      target: { value: '{{BASE_URL}}/posts/1' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+
+    await screen.findByText('200 OK');
+
+    expect(invokeMock).toHaveBeenCalledWith('send_request', {
+      request: expect.objectContaining({
+        url: 'https://api.example.com/posts/1',
+      }),
+    });
+  });
+
+  it('shows unresolved variable warning when unresolvedIn returns tokens', () => {
+    unresolvedInFn.mockReturnValue(['BASE_URL']);
+
+    render(<MainPanel />);
+
+    fireEvent.change(screen.getByLabelText('Request URL'), {
+      target: { value: '{{BASE_URL}}/posts/1' },
+    });
+
+    expect(screen.getByText(/⚠ Unresolved:.*\{\{BASE_URL\}\}/)).toBeInTheDocument();
+  });
+
+  it('does not show warning when unresolvedIn returns empty array', () => {
+    unresolvedInFn.mockReturnValue([]);
+
+    render(<MainPanel />);
+
+    fireEvent.change(screen.getByLabelText('Request URL'), {
+      target: { value: 'https://api.example.com' },
+    });
+
+    expect(screen.queryByText(/⚠ Unresolved:/)).not.toBeInTheDocument();
   });
 });
