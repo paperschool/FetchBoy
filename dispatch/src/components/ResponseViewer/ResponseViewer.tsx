@@ -19,9 +19,11 @@ export interface ResponseData {
 interface ResponseViewerProps {
   response: ResponseData | null;
   error: string | null;
+  logs?: string[];
+  onClearLogs?: () => void;
 }
 
-type ResponseTab = 'body' | 'headers';
+type ResponseTab = 'body' | 'headers' | 'logs';
 function getStatusColorClass(status: number): string {
   if (status >= 200 && status < 300) {
     return 'text-green-600';
@@ -35,7 +37,7 @@ function getStatusColorClass(status: number): string {
   return 'text-app-primary';
 }
 
-export function ResponseViewer({ response, error }: ResponseViewerProps) {
+export function ResponseViewer({ response, error, logs = [], onClearLogs }: ResponseViewerProps) {
   const [activeTab, setActiveTab] = useState<ResponseTab>('body');
   const [responseBodyLanguage, setResponseBodyLanguage] = useState<'json' | 'html' | 'xml'>('json');
   const editorFontSize = useUiSettingsStore((state) => state.editorFontSize);
@@ -58,35 +60,28 @@ export function ResponseViewer({ response, error }: ResponseViewerProps) {
     }
   }, [formattedJsonBody]);
 
-  if (!response && !error) {
-    return null;
-  }
-
-  if (error) {
-    return (
-      <section data-testid="response-viewer" className="border-app-subtle space-y-2 rounded-md border p-3">
-        <p className="text-sm font-medium text-red-600">Request Error</p>
-        <p className="text-app-secondary text-sm">{error}</p>
-      </section>
-    );
-  }
-
-  if (!response) {
+  if (!response && !error && logs.length === 0) {
     return null;
   }
 
   return (
     <section data-testid="response-viewer" className="border-app-subtle space-y-3 rounded-md border p-3">
-      <div className="flex flex-wrap items-center gap-4 text-sm">
-        <p className="font-medium">
-          Status:{' '}
-          <span className={getStatusColorClass(response.status)}>
-            {response.status} {response.statusText}
-          </span>
-        </p>
-        <p className="text-app-secondary">Time: {response.responseTimeMs} ms</p>
-        <p className="text-app-secondary">Size: {response.responseSizeBytes} bytes</p>
-      </div>
+      {response && (
+        <div className="flex flex-wrap items-center gap-4 text-sm">
+          <p className="font-medium">
+            Status:{' '}
+            <span className={getStatusColorClass(response.status)}>
+              {response.status} {response.statusText}
+            </span>
+          </p>
+          <p className="text-app-secondary">Time: {response.responseTimeMs} ms</p>
+          <p className="text-app-secondary">Size: {response.responseSizeBytes} bytes</p>
+        </div>
+      )}
+
+      {error && (
+        <p className="text-sm font-medium text-red-600">Request Error: {error}</p>
+      )}
 
       <div className="border-app-subtle border-b">
         <div className="flex gap-2">
@@ -112,10 +107,21 @@ export function ResponseViewer({ response, error }: ResponseViewerProps) {
           >
             Headers
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('logs')}
+            className={`rounded-t-md px-3 py-2 text-sm ${
+              activeTab === 'logs'
+                ? 'border-app-subtle bg-app-main text-app-primary border border-b-0 font-medium'
+                : 'text-app-muted hover:text-app-primary'
+            }`}
+          >
+            Logs {logs.length > 0 ? `(${logs.length})` : ''}
+          </button>
         </div>
       </div>
 
-      {activeTab === 'body' ? (
+      {activeTab === 'body' && response ? (
         <div className="space-y-2">
           <div className="flex items-center justify-end gap-2">
             <label htmlFor="response-body-language" className="text-app-secondary text-xs font-medium">
@@ -143,9 +149,11 @@ export function ResponseViewer({ response, error }: ResponseViewerProps) {
             readOnly
           />
         </div>
+      ) : activeTab === 'body' ? (
+        <p className="text-app-muted text-sm">Send a request to see the response body.</p>
       ) : null}
 
-      {activeTab === 'headers' ? (
+      {activeTab === 'headers' && response ? (
         <div className="space-y-2">
           {response.headers.length === 0 ? (
             <p className="text-app-muted text-sm">No headers returned.</p>
@@ -159,6 +167,29 @@ export function ResponseViewer({ response, error }: ResponseViewerProps) {
                 <p className="text-app-primary text-sm break-all">{header.value}</p>
               </div>
             ))
+          )}
+        </div>
+      ) : activeTab === 'headers' ? (
+        <p className="text-app-muted text-sm">Send a request to see response headers.</p>
+      ) : null}
+
+      {activeTab === 'logs' ? (
+        <div className="space-y-2">
+          <div className="flex items-center justify-end">
+            <button
+              type="button"
+              onClick={onClearLogs}
+              className="border-app-subtle text-app-secondary rounded-md border px-2 py-1 text-xs font-medium hover:bg-gray-50"
+            >
+              Clear Logs
+            </button>
+          </div>
+          {logs.length === 0 ? (
+            <p className="text-app-muted text-xs">No logs yet. Click Send to capture runtime details.</p>
+          ) : (
+            <pre className="bg-app-main text-app-secondary max-h-44 overflow-auto rounded-md p-2 text-xs whitespace-pre-wrap">
+              {logs.join('\n')}
+            </pre>
           )}
         </div>
       ) : null}

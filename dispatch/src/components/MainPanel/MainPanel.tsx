@@ -335,38 +335,12 @@ export function MainPanel() {
           </div>
         </details>
 
-        <details className="border-app-subtle rounded-md border p-2" data-testid="verbose-logs-accordion">
-          <summary className="text-app-secondary flex cursor-pointer items-center justify-between text-sm font-medium">
-            <span>Verbose Logs ({verboseLogs.length})</span>
-            <button
-              type="button"
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                setVerboseLogs([]);
-              }}
-              className="border-app-subtle text-app-secondary rounded-md border px-2 py-1 text-xs font-medium hover:bg-gray-50"
-            >
-              Clear Logs
-            </button>
-          </summary>
-          <div className="mt-2 space-y-2">
-            {verboseLogs.length === 0 ? (
-              <p className="text-app-muted text-xs">No logs yet. Click Send to capture runtime details.</p>
-            ) : (
-              <pre className="bg-app-main text-app-secondary max-h-44 overflow-auto rounded-md p-2 text-xs whitespace-pre-wrap">
-                {verboseLogs.join('\n')}
-              </pre>
-            )}
-          </div>
-        </details>
-
-        <details open className="border-app-subtle rounded-md border p-2" data-testid="output-accordion">
-          <summary className="text-app-secondary cursor-pointer text-sm font-medium">Output</summary>
-          <div className="mt-3">
-            <ResponseViewer response={responseData} error={requestError} />
-          </div>
-        </details>
+        <ResponseViewer
+          response={responseData}
+          error={requestError}
+          logs={verboseLogs}
+          onClearLogs={() => setVerboseLogs([])}
+        />
       </div>
     </main>
   );
