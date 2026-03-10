@@ -255,15 +255,15 @@ export function EnvironmentPanel({ open, onClose }: EnvironmentPanelProps) {
                                         {selectedEnv.name}
                                     </span>
                                     <button
-                                        className="hover:text-app-primary text-xs border-app-subtle"
+                                        className="border border-app-subtle text-app-secondary rounded-md px-2 py-1 text-xs font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
                                         onClick={handleAddVariable}
                                     >
-                                        Add Variable
+                                        + Add Variable
                                     </button>
                                 </div>
                                 <div className="flex-1 overflow-y-auto">
                                     {/* Table header */}
-                                    <div className="mb-1 grid grid-cols-[1fr_1fr_auto_auto] gap-1 px-1">
+                                    <div className="mb-1 grid grid-cols-[1fr_1fr_28px_24px] gap-1">
                                         <span className="text-app-secondary text-xs">Key</span>
                                         <span className="text-app-secondary text-xs">Value</span>
                                         <span className="text-app-secondary text-xs text-center">On</span>
@@ -272,7 +272,7 @@ export function EnvironmentPanel({ open, onClose }: EnvironmentPanelProps) {
                                     {selectedEnv.variables.map((variable, i) => (
                                         <div
                                             key={i}
-                                            className="mb-1 grid grid-cols-[1fr_1fr_auto_auto] items-center gap-1"
+                                            className="mb-1 grid grid-cols-[1fr_1fr_28px_24px] items-center gap-1"
                                         >
                                             <input
                                                 aria-label={`Variable key ${i}`}

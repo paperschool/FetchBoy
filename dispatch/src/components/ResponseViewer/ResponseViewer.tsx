@@ -137,8 +137,8 @@ export function ResponseViewer({ response, error, logs = [], onClearLogs, reques
 
       <div className="flex min-h-0 flex-1 flex-col">
         {activeTab === 'body' && response ? (
-        <div className="flex min-h-0 flex-1 flex-col gap-2">
-          <div className="flex shrink-0 items-center justify-end gap-2">
+        <div className="relative min-h-0 flex-1">
+          <div className="absolute top-2 right-2 z-10 flex items-center gap-2">
             <label htmlFor="response-body-language" className="text-app-secondary text-xs font-medium">
               Language
             </label>
@@ -190,12 +190,12 @@ export function ResponseViewer({ response, error, logs = [], onClearLogs, reques
       ) : null}
 
       {activeTab === 'logs' ? (
-        <div className="flex min-h-0 flex-1 flex-col gap-2">
-          <div className="flex shrink-0 items-center justify-end">
+        <div className="relative min-h-0 flex-1">
+          <div className="absolute top-2 right-2 z-10">
             <button
               type="button"
               onClick={onClearLogs}
-              className="border-app-subtle text-app-secondary rounded-md border px-2 py-1 text-xs font-medium hover:bg-gray-50"
+              className="border-app-subtle text-app-secondary rounded-md border px-2 py-1 text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-800"
             >
               Clear Logs
             </button>
@@ -203,7 +203,7 @@ export function ResponseViewer({ response, error, logs = [], onClearLogs, reques
           {logs.length === 0 ? (
             <p className="text-app-muted text-xs">No logs yet. Click Send to capture runtime details.</p>
           ) : (
-            <pre className="bg-app-main text-app-secondary min-h-0 flex-1 overflow-auto rounded-md p-2 text-xs whitespace-pre-wrap">
+            <pre className="bg-app-main text-app-secondary h-full overflow-auto rounded-md p-2 text-xs whitespace-pre-wrap">
               {logs.join('\n')}
             </pre>
           )}
