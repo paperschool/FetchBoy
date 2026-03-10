@@ -133,6 +133,7 @@ export function MainPanel() {
       body_content: body.raw,
       auth_type: auth.type,
       auth_config: {},
+      sort_order: 0,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     } as const;

@@ -41,6 +41,7 @@ export interface Request {
     body_content: string;
     auth_type: 'none' | 'bearer' | 'basic' | 'api-key';
     auth_config: Record<string, string>;
+    sort_order: number;
     created_at: string;
     updated_at: string;
 }
