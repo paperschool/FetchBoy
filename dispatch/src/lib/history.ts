@@ -8,7 +8,34 @@ interface PersistHistoryInput {
     requestSnapshot: Request;
 }
 
-export async function persistHistoryEntry(input: PersistHistoryInput): Promise<void> {
+interface RawHistoryEntry {
+    id: string;
+    method: string;
+    url: string;
+    status_code: number;
+    response_time_ms: number;
+    request_snapshot: string; // raw JSON text from SQLite
+    sent_at: string;
+}
+
+export async function loadHistory(limit = 200): Promise<HistoryEntry[]> {
+    const db = await getDb();
+    const rows = await db.select<RawHistoryEntry[]>(
+        'SELECT * FROM history ORDER BY sent_at DESC LIMIT ?',
+        [limit],
+    );
+    return rows.map((row) => ({
+        ...row,
+        request_snapshot: JSON.parse(row.request_snapshot) as Request,
+    }));
+}
+
+export async function clearHistory(): Promise<void> {
+    const db = await getDb();
+    await db.execute('DELETE FROM history');
+}
+
+export async function persistHistoryEntry(input: PersistHistoryInput): Promise<HistoryEntry> {
     const db = await getDb();
 
     const nowIso = new Date().toISOString();
@@ -35,4 +62,6 @@ export async function persistHistoryEntry(input: PersistHistoryInput): Promise<v
             historyEntry.sent_at,
         ],
     );
+
+    return historyEntry;
 }
