@@ -97,9 +97,12 @@ export function CollectionTree() {
     };
 
     const handleDeleteCollection = async (id: string) => {
-        if (!window.confirm('Delete this collection and all its contents?')) return;
-        await dbDeleteCollection(id);
-        store.deleteCollection(id);
+        try {
+            await dbDeleteCollection(id);
+            store.deleteCollection(id);
+        } catch (error) {
+            console.error('Failed to delete collection', error);
+        }
     };
 
     const handleAddFolder = async (colId: string) => {
@@ -110,9 +113,12 @@ export function CollectionTree() {
     };
 
     const handleDeleteFolder = async (id: string) => {
-        if (!window.confirm('Delete this folder and all its requests?')) return;
-        await dbDeleteFolder(id);
-        store.deleteFolder(id);
+        try {
+            await dbDeleteFolder(id);
+            store.deleteFolder(id);
+        } catch (error) {
+            console.error('Failed to delete folder', error);
+        }
     };
 
     const handleAddRequest = async (colId: string, folderId: string | null = null) => {
@@ -122,9 +128,12 @@ export function CollectionTree() {
     };
 
     const handleDeleteRequest = async (id: string) => {
-        if (!window.confirm('Delete this request?')) return;
-        await dbDeleteRequest(id);
-        store.deleteRequest(id);
+        try {
+            await dbDeleteRequest(id);
+            store.deleteRequest(id);
+        } catch (error) {
+            console.error('Failed to delete request', error);
+        }
     };
 
     const handleDrop = async (
@@ -161,15 +170,15 @@ export function CollectionTree() {
         <div data-testid="collection-tree" className="text-sm">
             {/* Header */}
             <div className="flex items-center justify-between mb-2 px-1">
-                <span className="text-app-muted text-[10px] font-semibold uppercase tracking-widest">
+                <span className="text-app-muted text-xs font-semibold uppercase tracking-widest">
                     Collections
                 </span>
                 <button
                     onClick={handleAddCollection}
                     aria-label="Add Collection"
-                    className="text-app-muted hover:text-white p-0.5 rounded"
+                    className="text-app-muted hover:text-app-inverse p-1 rounded cursor-pointer"
                 >
-                    <Plus size={14} />
+                    <Plus size={16} />
                 </button>
             </div>
 
@@ -177,12 +186,12 @@ export function CollectionTree() {
             {tree.length === 0 && (
                 <div
                     data-testid="empty-state"
-                    className="text-app-muted text-xs text-center py-6 px-2"
+                    className="text-app-muted text-sm text-center py-6 px-2"
                 >
                     <p>No collections yet.</p>
                     <button
                         onClick={handleAddCollection}
-                        className="text-blue-400 hover:underline mt-1 text-xs"
+                        className="text-blue-300 hover:underline mt-1 text-sm cursor-pointer"
                     >
                         Create one
                     </button>
@@ -199,23 +208,23 @@ export function CollectionTree() {
                 return (
                     <div key={col.id} data-testid={`collection-${col.id}`}>
                         {/* Collection row */}
-                        <div className="flex items-center gap-1 py-1 px-1 rounded group hover:bg-gray-700 cursor-pointer select-none">
+                        <div className="flex items-center gap-1 py-1 px-1 rounded group hover:bg-gray-700 cursor-grab active:cursor-grabbing select-none">
                             <button
                                 onClick={() => toggle(col.id)}
-                                className="flex-shrink-0 text-app-muted"
+                                className="flex-shrink-0 text-app-muted cursor-pointer"
                                 aria-label={isColOpen ? 'Collapse collection' : 'Expand collection'}
                             >
                                 {isColOpen ? (
-                                    <ChevronDown size={12} />
+                                    <ChevronDown size={14} />
                                 ) : (
-                                    <ChevronRight size={12} />
+                                    <ChevronRight size={14} />
                                 )}
                             </button>
 
                             {editingId === col.id ? (
                                 <input
                                     ref={editRef}
-                                    className="flex-1 bg-gray-700 text-white text-xs outline-none px-1 rounded"
+                                    className="flex-1 bg-gray-700 text-app-inverse text-sm outline-none px-1 rounded"
                                     value={editingValue}
                                     onChange={(e) => setEditingValue(e.target.value)}
                                     onBlur={commitEdit}
@@ -227,7 +236,7 @@ export function CollectionTree() {
                                 />
                             ) : (
                                 <span
-                                    className="flex-1 text-app-secondary text-xs truncate"
+                                    className="flex-1 text-app-inverse text-sm truncate"
                                     onDoubleClick={() => startEdit('collection', col.id, col.name)}
                                 >
                                     {col.name}
@@ -236,32 +245,56 @@ export function CollectionTree() {
 
                             <div className="hidden group-hover:flex items-center gap-0.5 text-app-muted">
                                 <button
-                                    onClick={() => void handleAddFolder(col.id)}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        void handleAddFolder(col.id);
+                                    }}
                                     aria-label="Add folder to collection"
                                     title="New Folder"
+                                    className="p-1 rounded hover:text-app-inverse cursor-pointer"
+                                    draggable={false}
                                 >
-                                    <FolderPlus size={11} />
+                                    <FolderPlus size={14} />
                                 </button>
                                 <button
-                                    onClick={() => void handleAddRequest(col.id)}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        void handleAddRequest(col.id);
+                                    }}
                                     aria-label="Add request to collection"
                                     title="New Request"
+                                    className="p-1 rounded hover:text-app-inverse cursor-pointer"
+                                    draggable={false}
                                 >
-                                    <FilePlus size={11} />
+                                    <FilePlus size={14} />
                                 </button>
                                 <button
-                                    onClick={() => startEdit('collection', col.id, col.name)}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        startEdit('collection', col.id, col.name);
+                                    }}
                                     aria-label="Rename collection"
                                     title="Rename"
+                                    className="p-1 rounded hover:text-app-inverse cursor-pointer"
+                                    draggable={false}
                                 >
-                                    <Pencil size={11} />
+                                    <Pencil size={14} />
                                 </button>
                                 <button
-                                    onClick={() => void handleDeleteCollection(col.id)}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        void handleDeleteCollection(col.id);
+                                    }}
                                     aria-label="Delete collection"
                                     title="Delete"
+                                    className="p-1 rounded hover:text-app-inverse cursor-pointer"
+                                    draggable={false}
                                 >
-                                    <Trash2 size={11} />
+                                    <Trash2 size={14} />
                                 </button>
                             </div>
                         </div>
@@ -297,10 +330,10 @@ export function CollectionTree() {
                                                 void handleDrop(e, fld.id, col.id, null, folderIds)
                                             }
                                         >
-                                            <div className="flex items-center gap-1 py-0.5 px-1 rounded group hover:bg-gray-700 cursor-pointer select-none">
+                                            <div className="flex items-center gap-1 py-0.5 px-1 rounded group hover:bg-gray-700 cursor-grab active:cursor-grabbing select-none">
                                                 <button
                                                     onClick={() => toggle(fld.id)}
-                                                    className="flex-shrink-0 text-app-muted"
+                                                    className="flex-shrink-0 text-app-muted cursor-pointer"
                                                     aria-label={
                                                         isFldOpen
                                                             ? 'Collapse folder'
@@ -308,16 +341,16 @@ export function CollectionTree() {
                                                     }
                                                 >
                                                     {isFldOpen ? (
-                                                        <ChevronDown size={12} />
+                                                        <ChevronDown size={14} />
                                                     ) : (
-                                                        <ChevronRight size={12} />
+                                                        <ChevronRight size={14} />
                                                     )}
                                                 </button>
 
                                                 {editingId === fld.id ? (
                                                     <input
                                                         ref={editRef}
-                                                        className="flex-1 bg-gray-700 text-white text-xs outline-none px-1 rounded"
+                                                        className="flex-1 bg-gray-700 text-app-inverse text-sm outline-none px-1 rounded"
                                                         value={editingValue}
                                                         onChange={(e) =>
                                                             setEditingValue(e.target.value)
@@ -332,7 +365,7 @@ export function CollectionTree() {
                                                     />
                                                 ) : (
                                                     <span
-                                                        className="flex-1 text-app-secondary text-xs truncate"
+                                                        className="flex-1 text-app-inverse text-sm truncate"
                                                         onDoubleClick={() =>
                                                             startEdit('folder', fld.id, fld.name)
                                                         }
@@ -343,31 +376,43 @@ export function CollectionTree() {
 
                                                 <div className="hidden group-hover:flex items-center gap-0.5 text-app-muted">
                                                     <button
-                                                        onClick={() =>
-                                                            void handleAddRequest(col.id, fld.id)
-                                                        }
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            e.stopPropagation();
+                                                            void handleAddRequest(col.id, fld.id);
+                                                        }}
                                                         aria-label="Add request to folder"
                                                         title="New Request"
+                                                        className="p-1 rounded hover:text-app-inverse cursor-pointer"
+                                                        draggable={false}
                                                     >
-                                                        <FilePlus size={11} />
+                                                        <FilePlus size={14} />
                                                     </button>
                                                     <button
-                                                        onClick={() =>
-                                                            startEdit('folder', fld.id, fld.name)
-                                                        }
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            e.stopPropagation();
+                                                            startEdit('folder', fld.id, fld.name);
+                                                        }}
                                                         aria-label="Rename folder"
                                                         title="Rename"
+                                                        className="p-1 rounded hover:text-app-inverse cursor-pointer"
+                                                        draggable={false}
                                                     >
-                                                        <Pencil size={11} />
+                                                        <Pencil size={14} />
                                                     </button>
                                                     <button
-                                                        onClick={() =>
-                                                            void handleDeleteFolder(fld.id)
-                                                        }
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            e.stopPropagation();
+                                                            void handleDeleteFolder(fld.id);
+                                                        }}
                                                         aria-label="Delete folder"
                                                         title="Delete"
+                                                        className="p-1 rounded hover:text-app-inverse cursor-pointer"
+                                                        draggable={false}
                                                     >
-                                                        <Trash2 size={11} />
+                                                        <Trash2 size={14} />
                                                     </button>
                                                 </div>
                                             </div>
@@ -485,7 +530,7 @@ interface RequestRowProps {
     isActive: boolean;
     editingId: string | null;
     editingValue: string;
-    editRef: React.RefObject<HTMLInputElement | null>;
+    editRef: React.Ref<HTMLInputElement>;
     onEditChange: (v: string) => void;
     onStartEdit: () => void;
     onCommitEdit: () => void;
@@ -519,7 +564,7 @@ function RequestRow({
             data-testid={`request-${id}`}
             data-active={isActive ? 'true' : 'false'}
             draggable
-            className={`flex items-center gap-1 py-0.5 px-1 rounded group hover:bg-gray-700 cursor-pointer select-none ${
+            className={`flex items-center gap-1 py-0.5 px-1 rounded group hover:bg-gray-700 cursor-grab active:cursor-grabbing select-none ${
                 isActive ? 'bg-gray-600' : ''
             }`}
             onClick={onSelect}
@@ -534,12 +579,12 @@ function RequestRow({
             onDragOver={(e) => e.preventDefault()}
             onDrop={onDrop}
         >
-            <span className="text-[10px] font-mono text-blue-400 w-8 flex-shrink-0">{method}</span>
+            <span className="text-xs font-mono text-blue-300 w-8 flex-shrink-0">{method}</span>
 
             {isEditing ? (
                 <input
                     ref={editRef}
-                    className="flex-1 bg-gray-700 text-white text-xs outline-none px-1 rounded"
+                    className="flex-1 bg-gray-700 text-app-inverse text-sm outline-none px-1 rounded"
                     value={editingValue}
                     onChange={(e) => onEditChange(e.target.value)}
                     onBlur={onCommitEdit}
@@ -551,7 +596,7 @@ function RequestRow({
                 />
             ) : (
                 <span
-                    className="flex-1 text-app-secondary text-xs truncate"
+                    className="flex-1 text-app-inverse text-sm truncate"
                     onDoubleClick={onStartEdit}
                 >
                     {name}
@@ -561,23 +606,29 @@ function RequestRow({
             <div className="hidden group-hover:flex items-center gap-0.5 text-app-muted">
                 <button
                     onClick={(e) => {
+                        e.preventDefault();
                         e.stopPropagation();
                         onStartEdit();
                     }}
                     aria-label="Rename request"
                     title="Rename"
+                    className="p-1 rounded hover:text-app-inverse cursor-pointer"
+                    draggable={false}
                 >
-                    <Pencil size={11} />
+                    <Pencil size={14} />
                 </button>
                 <button
                     onClick={(e) => {
+                        e.preventDefault();
                         e.stopPropagation();
                         onDelete();
                     }}
                     aria-label="Delete request"
                     title="Delete"
+                    className="p-1 rounded hover:text-app-inverse cursor-pointer"
+                    draggable={false}
                 >
-                    <Trash2 size={11} />
+                    <Trash2 size={14} />
                 </button>
             </div>
         </div>
