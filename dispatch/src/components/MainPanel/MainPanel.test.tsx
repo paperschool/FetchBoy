@@ -21,6 +21,7 @@ describe('MainPanel request builder', () => {
 
     expect(screen.getByLabelText('HTTP Method')).toBeInTheDocument();
     expect(screen.getByLabelText('Request URL')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Send' })).toBeInTheDocument();
   });
 
   it('updates method and url in request store', () => {
@@ -64,5 +65,13 @@ describe('MainPanel request builder', () => {
       value: 'application/json',
       enabled: true,
     });
+  });
+
+  it('shows validation message when sending without url', () => {
+    render(<MainPanel />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+
+    expect(screen.getByText('Please enter a URL first.')).toBeInTheDocument();
   });
 });
