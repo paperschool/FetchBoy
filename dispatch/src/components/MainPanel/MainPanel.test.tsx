@@ -59,6 +59,8 @@ describe('MainPanel request builder', () => {
     expect(screen.getByLabelText('HTTP Method')).toBeInTheDocument();
     expect(screen.getByLabelText('Request URL')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Send' })).toBeInTheDocument();
+    expect(screen.getByTestId('request-details-accordion')).toBeInTheDocument();
+    expect(screen.getByTestId('output-accordion')).toBeInTheDocument();
     expect(screen.getByTestId('verbose-logs-accordion')).toBeInTheDocument();
   });
 
@@ -232,5 +234,19 @@ describe('MainPanel request builder', () => {
     await screen.findByText('Request Error');
     expect(screen.getByText('Request failed: Network down')).toBeInTheDocument();
     expect(executeMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('surfaces object-shaped invoke errors instead of Unknown error', async () => {
+    invokeMock.mockRejectedValueOnce({ message: 'Network request failed: dns error' });
+
+    render(<MainPanel />);
+
+    fireEvent.change(screen.getByLabelText('Request URL'), {
+      target: { value: 'https://api.example.com/fail' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+
+    await screen.findByText('Request Error');
+    expect(screen.getByText('Request failed: Network request failed: dns error')).toBeInTheDocument();
   });
 });
