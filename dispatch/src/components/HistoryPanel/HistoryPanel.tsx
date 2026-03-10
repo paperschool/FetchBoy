@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Trash2, X, Check } from 'lucide-react';
 import { clearHistory, loadHistory } from '@/lib/history';
 import { formatRelativeTime } from '@/lib/utils';
 import { useHistoryStore } from '@/stores/historyStore';
@@ -32,6 +32,7 @@ export function HistoryPanel() {
     const entries = useHistoryStore((state) => state.entries);
     const historyStore = useHistoryStore();
     const requestStore = useRequestStore();
+    const [isConfirmingClear, setIsConfirmingClear] = useState(false);
 
     useEffect(() => {
         loadHistory()
@@ -52,30 +53,55 @@ export function HistoryPanel() {
     };
 
     const handleClearHistory = async () => {
-        if (!window.confirm('Clear all history?')) return;
         try {
             await clearHistory();
             historyStore.clearAll();
         } catch {
             // Swallow silently, consistent with CollectionTree pattern
+        } finally {
+            setIsConfirmingClear(false);
         }
     };
 
     return (
-        <div data-testid="history-panel" className="flex flex-col h-full">
+        <div data-testid="history-panel" className="flex flex-col flex-1 min-h-0">
             <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-app-muted font-medium uppercase tracking-wide">
                     History
                 </span>
-                <button
-                    type="button"
-                    onClick={handleClearHistory}
-                    aria-label="Clear History"
-                    className="p-1 text-app-muted hover:text-red-400 rounded cursor-pointer"
-                    title="Clear History"
-                >
-                    <Trash2 size={14} />
-                </button>
+                {isConfirmingClear ? (
+                    <div className="flex items-center gap-1">
+                        <span className="text-xs text-app-muted">Clear all?</span>
+                        <button
+                            type="button"
+                            onClick={handleClearHistory}
+                            aria-label="Confirm clear history"
+                            className="p-1 text-red-400 hover:text-red-300 rounded cursor-pointer"
+                            title="Confirm"
+                        >
+                            <Check size={13} />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setIsConfirmingClear(false)}
+                            aria-label="Cancel clear history"
+                            className="p-1 text-app-muted hover:text-app-inverse rounded cursor-pointer"
+                            title="Cancel"
+                        >
+                            <X size={13} />
+                        </button>
+                    </div>
+                ) : (
+                    <button
+                        type="button"
+                        onClick={() => setIsConfirmingClear(true)}
+                        aria-label="Clear History"
+                        className="p-1 text-app-muted hover:text-red-400 rounded cursor-pointer"
+                        title="Clear History"
+                    >
+                        <Trash2 size={14} />
+                    </button>
+                )}
             </div>
 
             {entries.length === 0 ? (
@@ -86,7 +112,7 @@ export function HistoryPanel() {
                     No history yet. Send a request to get started.
                 </div>
             ) : (
-                <ul className="flex-1 overflow-y-auto space-y-0.5">
+                <ul className="flex-1 min-h-0 overflow-y-auto space-y-0.5">
                     {entries.map((entry) => (
                         <li
                             key={entry.id}

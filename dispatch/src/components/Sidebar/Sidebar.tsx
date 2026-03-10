@@ -10,9 +10,9 @@ export function Sidebar() {
     return (
         <aside
             data-testid="sidebar"
-            className="bg-app-sidebar text-app-inverse overflow-y-auto p-3 flex flex-col"
+            className="bg-app-sidebar text-app-inverse overflow-hidden p-3 flex flex-col"
         >
-            <div className="flex mb-3 rounded overflow-hidden border border-gray-700">
+            <div className="flex shrink-0 mb-3 rounded overflow-hidden border border-gray-700">
                 <button
                     type="button"
                     onClick={() => setActivePanel('collections')}
