@@ -53,14 +53,14 @@ development_status:
   2-1-monaco-editor-integration: review
   2-2-collections-sidebar: review
   2-3-save-and-load-requests: review
-  2-4-request-history: in-progress
+  2-4-request-history: review
   epic-2-retrospective: optional
 
   # ─── Epic 3: Environments & Auth ───────────────────────────────────
   epic-3: in-progress
   3-1-environment-manager: review
   3-2-variable-interpolation: review
-  3-3-auth-types: in-progress
+  3-3-auth-types: review
   epic-3-retrospective: optional
 
   # ─── Epic 4: Polish & Packaging ────────────────────────────────────
