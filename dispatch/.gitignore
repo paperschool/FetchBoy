@@ -1,0 +1,14 @@
+# Dispatch — Build Outputs
+dist/
+target/
+
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.local
+
+# Editor
+.DS_Store
+*.swp
