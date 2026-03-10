@@ -6,6 +6,16 @@ vi.mock('@/lib/collections', () => ({
     loadAllCollections: vi.fn().mockResolvedValue({ collections: [], folders: [], requests: [] }),
 }));
 
+vi.mock('@/lib/settings', () => ({
+    loadAllSettings: vi.fn().mockResolvedValue({
+        theme: 'system',
+        request_timeout_ms: 30000,
+        ssl_verify: true,
+        editor_font_size: 14,
+    }),
+    saveSetting: vi.fn().mockResolvedValue(undefined),
+}));
+
 const mockLoadAllEnvironments = vi.fn().mockResolvedValue([]);
 const mockLoadAll = vi.fn();
 

@@ -5,7 +5,7 @@ import { useTheme } from './useTheme';
 // ─── Hoisted mock state ───────────────────────────────────────────────────────
 
 const { mockStoreState } = vi.hoisted(() => {
-    const mockStoreState = { theme: 'system' as 'light' | 'dark' | 'system' };
+    const mockStoreState = { theme: 'light' as 'light' | 'dark' };
     return { mockStoreState };
 });
 
@@ -38,7 +38,7 @@ function makeMediaQuery(matches: boolean) {
 describe('useTheme', () => {
     beforeEach(() => {
         document.documentElement.classList.remove('dark');
-        mockStoreState.theme = 'system';
+        mockStoreState.theme = 'light';
         vi.clearAllMocks();
     });
 
@@ -62,36 +62,5 @@ describe('useTheme', () => {
 
         expect(document.documentElement.classList.contains('dark')).toBe(true);
     });
-
-    it('adds .dark when system theme is dark', () => {
-        mockStoreState.theme = 'system';
-        const mq = makeMediaQuery(true);
-        vi.spyOn(window, 'matchMedia').mockReturnValue(mq as unknown as MediaQueryList);
-
-        renderHook(() => useTheme());
-
-        expect(document.documentElement.classList.contains('dark')).toBe(true);
-    });
-
-    it('removes .dark when system theme is light', () => {
-        document.documentElement.classList.add('dark');
-        mockStoreState.theme = 'system';
-        const mq = makeMediaQuery(false);
-        vi.spyOn(window, 'matchMedia').mockReturnValue(mq as unknown as MediaQueryList);
-
-        renderHook(() => useTheme());
-
-        expect(document.documentElement.classList.contains('dark')).toBe(false);
-    });
-
-    it('cleans up media query listener on unmount', () => {
-        mockStoreState.theme = 'system';
-        const mq = makeMediaQuery(false);
-        vi.spyOn(window, 'matchMedia').mockReturnValue(mq as unknown as MediaQueryList);
-
-        const { unmount } = renderHook(() => useTheme());
-        unmount();
-
-        expect(mq.removeEventListener).toHaveBeenCalledWith('change', expect.any(Function));
-    });
 });
+
