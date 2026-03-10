@@ -14,6 +14,18 @@
     --accent-foreground: 240 5.9% 10%;
     --border: 240 5.9% 90%;
     --radius: 0.5rem;
+
+    /* App-level semantic colors controlled globally */
+    --app-text-primary: #111827;
+    --app-text-secondary: #374151;
+    --app-text-muted: #6b7280;
+    --app-text-inverse: #f9fafb;
+
+    --app-surface-main: #ffffff;
+    --app-surface-sidebar: #1f2937;
+    --app-surface-topbar: #111827;
+
+    --app-border-subtle: #d1d5db;
   }
 
   .dark {
@@ -28,5 +40,55 @@
     --accent: 240 3.7% 15.9%;
     --accent-foreground: 0 0% 98%;
     --border: 240 3.7% 15.9%;
+
+    --app-text-primary: #f3f4f6;
+    --app-text-secondary: #d1d5db;
+    --app-text-muted: #9ca3af;
+    --app-text-inverse: #111827;
+
+    --app-surface-main: #111827;
+    --app-surface-sidebar: #030712;
+    --app-surface-topbar: #0f172a;
+
+    --app-border-subtle: #374151;
+  }
+
+  body {
+    background-color: var(--app-surface-main);
+    color: var(--app-text-primary);
+  }
+}
+
+@layer utilities {
+  .text-app-primary {
+    color: var(--app-text-primary);
+  }
+
+  .text-app-secondary {
+    color: var(--app-text-secondary);
+  }
+
+  .text-app-muted {
+    color: var(--app-text-muted);
+  }
+
+  .text-app-inverse {
+    color: var(--app-text-inverse);
+  }
+
+  .bg-app-main {
+    background-color: var(--app-surface-main);
+  }
+
+  .bg-app-sidebar {
+    background-color: var(--app-surface-sidebar);
+  }
+
+  .bg-app-topbar {
+    background-color: var(--app-surface-topbar);
+  }
+
+  .border-app-subtle {
+    border-color: var(--app-border-subtle);
   }
 }

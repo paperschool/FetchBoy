@@ -2,9 +2,9 @@ export function Sidebar() {
   return (
     <aside
       data-testid="sidebar"
-      className="overflow-y-auto bg-gray-800 p-3 text-gray-200"
+      className="bg-app-sidebar text-app-secondary overflow-y-auto p-3"
     >
-      <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+      <p className="text-app-muted text-xs font-semibold uppercase tracking-widest">
         Collections
       </p>
     </aside>
