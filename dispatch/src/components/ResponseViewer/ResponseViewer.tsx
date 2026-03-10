@@ -170,7 +170,7 @@ export function ResponseViewer({ response, error, logs = [], onClearLogs, reques
       ) : null}
 
       {activeTab === 'headers' && response ? (
-        <div className="space-y-2">
+        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto">
           {response.headers.length === 0 ? (
             <p className="text-app-muted text-sm">No headers returned.</p>
           ) : (

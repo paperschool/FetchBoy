@@ -255,7 +255,7 @@ export function EnvironmentPanel({ open, onClose }: EnvironmentPanelProps) {
                                         {selectedEnv.name}
                                     </span>
                                     <button
-                                        className="text-app-muted hover:text-app-primary text-xs"
+                                        className="hover:text-app-primary text-xs border-app-subtle"
                                         onClick={handleAddVariable}
                                     >
                                         Add Variable
@@ -276,7 +276,7 @@ export function EnvironmentPanel({ open, onClose }: EnvironmentPanelProps) {
                                         >
                                             <input
                                                 aria-label={`Variable key ${i}`}
-                                                className="border-app-subtle text-app-primary h-7 rounded border bg-transparent px-2 text-xs"
+                                                className="-app-subtle text-app-primary h-7 rounded border bg-transparent px-2 text-xs"
                                                 value={variable.key}
                                                 onChange={(e) =>
                                                     handleVariableChange(i, 'key', e.target.value)
@@ -293,7 +293,7 @@ export function EnvironmentPanel({ open, onClose }: EnvironmentPanelProps) {
                                             <input
                                                 type="checkbox"
                                                 aria-label={`Variable enabled ${i}`}
-                                                checked={variable.enabled}
+                                                checked={variable.enabborderled}
                                                 className="mx-auto h-5 w-5 cursor-pointer"
                                                 onChange={(e) =>
                                                     handleVariableChange(i, 'enabled', e.target.checked)
