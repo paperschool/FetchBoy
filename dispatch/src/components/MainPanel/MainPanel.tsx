@@ -8,6 +8,7 @@ import { persistHistoryEntry } from '@/lib/history';
 import type { AuthState, HttpMethod, RequestTab } from '@/stores/requestStore';
 import { useRequestStore } from '@/stores/requestStore';
 import { useCollectionStore } from '@/stores/collectionStore';
+import { useHistoryStore } from '@/stores/historyStore';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import { useState } from 'react';
 
@@ -62,6 +63,7 @@ export function MainPanel() {
   const editorFontSize = useUiSettingsStore((state) => state.editorFontSize);
 
   const collectionStore = useCollectionStore();
+  const historyStore = useHistoryStore();
 
   const {
     method,
@@ -229,13 +231,14 @@ export function MainPanel() {
 
       setResponseData(response);
 
-      await persistHistoryEntry({
+      const entry = await persistHistoryEntry({
         method,
         url: normalizedUrl,
         statusCode: response.status,
         responseTimeMs: Number(response.responseTimeMs),
         requestSnapshot,
       });
+      historyStore.addEntry(entry);
       appendLog('History persisted for successful response.');
     } catch (error) {
       const reason = extractErrorReason(error);
@@ -244,13 +247,14 @@ export function MainPanel() {
       appendLog(`Send failed: ${reason}`);
 
       try {
-        await persistHistoryEntry({
+        const errorEntry = await persistHistoryEntry({
           method,
           url: normalizedUrl,
           statusCode: 0,
           responseTimeMs: 0,
           requestSnapshot,
         });
+        historyStore.addEntry(errorEntry);
         appendLog('History persisted for failed response.');
       } catch {
         // Keep UI focused on request failure; history persistence errors should not crash send flow.

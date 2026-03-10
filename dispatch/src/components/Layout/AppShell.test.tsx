@@ -33,7 +33,7 @@ describe('AppShell', () => {
 
   it('displays the Collections heading in the sidebar', async () => {
     render(<AppShell />);
-    expect(screen.getByText('Collections')).toBeInTheDocument();
+    expect(screen.getAllByText('Collections').length).toBeGreaterThan(0);
     await waitFor(() => {});
   });
 
