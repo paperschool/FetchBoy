@@ -342,7 +342,7 @@ export function MainPanel() {
               type="button"
               onClick={handleSendRequest}
               disabled={isSending}
-              className="bg-app-topbar text-app-inverse disabled:text-app-muted h-9 rounded-md px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-70"
+              className="bg-app-topbar text-app-inverse disabled:text-app-muted border-app-subtle h-9 rounded-md border px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-70"
             >
               {isSending ? 'Sending...' : 'Send'}
             </button>
