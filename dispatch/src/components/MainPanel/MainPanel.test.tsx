@@ -109,7 +109,7 @@ describe('MainPanel request builder', () => {
     expect(screen.getByLabelText('Monaco Input')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Auth' }));
-    expect(screen.getByText('Auth: None')).toBeInTheDocument();
+    expect(screen.getByText('No auth will be applied to this request.')).toBeInTheDocument();
   });
 
   it('updates body raw value through Monaco input', () => {
