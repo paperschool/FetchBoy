@@ -1,4 +1,5 @@
 import Editor from '@monaco-editor/react';
+import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 
 interface MonacoEditorFieldProps {
   value: string;
@@ -12,12 +13,22 @@ interface MonacoEditorFieldProps {
 }
 
 export function MonacoEditorField({ value, language, readOnly = false, fontSize, path, testId, height = '260px', onChange }: MonacoEditorFieldProps) {
+  const theme = useUiSettingsStore((s) => s.theme);
+  const monacoTheme =
+    theme === 'dark'
+      ? 'vs-dark'
+      : theme === 'system'
+        ? window.matchMedia('(prefers-color-scheme: dark)').matches
+          ? 'vs-dark'
+          : 'vs'
+        : 'vs';
+
   return (
     <div data-testid={testId} className="border-app-subtle overflow-hidden rounded-md border" style={{ height }}>
       <Editor
         path={path}
         language={language}
-        theme="vs"
+        theme={monacoTheme}
         value={value}
         onChange={(nextValue) => {
           if (readOnly || !onChange) {
