@@ -7,12 +7,13 @@ interface MonacoEditorFieldProps {
   fontSize: number;
   path: string;
   testId: string;
+  height?: string;
   onChange?: (value: string) => void;
 }
 
-export function MonacoEditorField({ value, language, readOnly = false, fontSize, path, testId, onChange }: MonacoEditorFieldProps) {
+export function MonacoEditorField({ value, language, readOnly = false, fontSize, path, testId, height = '260px', onChange }: MonacoEditorFieldProps) {
   return (
-    <div data-testid={testId} className="border-app-subtle overflow-hidden rounded-md border">
+    <div data-testid={testId} className="border-app-subtle overflow-hidden rounded-md border" style={{ height }}>
       <Editor
         path={path}
         language={language}
@@ -35,7 +36,7 @@ export function MonacoEditorField({ value, language, readOnly = false, fontSize,
           lineNumbersMinChars: 3,
           tabSize: 2,
         }}
-        height="260px"
+        height="100%"
       />
     </div>
   );

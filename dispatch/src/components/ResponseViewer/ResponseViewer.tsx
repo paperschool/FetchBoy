@@ -21,6 +21,7 @@ interface ResponseViewerProps {
   error: string | null;
   logs?: string[];
   onClearLogs?: () => void;
+  requestedUrl?: string;
 }
 
 type ResponseTab = 'body' | 'headers' | 'logs';
@@ -37,7 +38,7 @@ function getStatusColorClass(status: number): string {
   return 'text-app-primary';
 }
 
-export function ResponseViewer({ response, error, logs = [], onClearLogs }: ResponseViewerProps) {
+export function ResponseViewer({ response, error, logs = [], onClearLogs, requestedUrl }: ResponseViewerProps) {
   const [activeTab, setActiveTab] = useState<ResponseTab>('body');
   const [responseBodyLanguage, setResponseBodyLanguage] = useState<'json' | 'html' | 'xml'>('json');
   const editorFontSize = useUiSettingsStore((state) => state.editorFontSize);
@@ -65,17 +66,27 @@ export function ResponseViewer({ response, error, logs = [], onClearLogs }: Resp
   }
 
   return (
-    <section data-testid="response-viewer" className="border-app-subtle space-y-3 rounded-md border p-3">
+    <section data-testid="response-viewer" className="border-app-subtle flex h-full flex-col gap-3 rounded-md border p-3">
       {response && (
-        <div className="flex flex-wrap items-center gap-4 text-sm">
-          <p className="font-medium">
-            Status:{' '}
-            <span className={getStatusColorClass(response.status)}>
-              {response.status} {response.statusText}
-            </span>
-          </p>
-          <p className="text-app-secondary">Time: {response.responseTimeMs} ms</p>
-          <p className="text-app-secondary">Size: {response.responseSizeBytes} bytes</p>
+        <div className="space-y-1">
+          {requestedUrl && (
+            <p className="font-medium text-sm">
+              Requested Url:{' '}
+              <span className="text-app-muted break-all text-xs">
+                {requestedUrl}
+                </span>
+            </p>
+          )}
+          <div className="flex flex-wrap items-center gap-4 text-sm">
+            <p className="font-medium">
+              Status:{' '}
+              <span className={getStatusColorClass(response.status)}>
+                {response.status} {response.statusText}
+              </span>
+            </p>
+            <p className="text-app-secondary">Time: {response.responseTimeMs} ms</p>
+            <p className="text-app-secondary">Size: {response.responseSizeBytes} bytes</p>
+          </div>
         </div>
       )}
 
@@ -124,9 +135,10 @@ export function ResponseViewer({ response, error, logs = [], onClearLogs }: Resp
         </div>
       </div>
 
-      {activeTab === 'body' && response ? (
-        <div className="space-y-2">
-          <div className="flex items-center justify-end gap-2">
+      <div className="flex min-h-0 flex-1 flex-col">
+        {activeTab === 'body' && response ? (
+        <div className="flex min-h-0 flex-1 flex-col gap-2">
+          <div className="flex shrink-0 items-center justify-end gap-2">
             <label htmlFor="response-body-language" className="text-app-secondary text-xs font-medium">
               Language
             </label>
@@ -135,7 +147,7 @@ export function ResponseViewer({ response, error, logs = [], onClearLogs }: Resp
               aria-label="Response Body Language"
               value={responseBodyLanguage}
               onChange={(event) => setResponseBodyLanguage(event.target.value as 'json' | 'html' | 'xml')}
-              className="border-app-subtle bg-app-main text-app-primary h-8 rounded-md border px-2 text-xs"
+              className="select-flat border-app-subtle bg-app-main text-app-primary h-8 rounded-md border pl-2 pr-7 text-xs"
             >
               <option value="json">JSON</option>
               <option value="html">HTML</option>
@@ -149,6 +161,7 @@ export function ResponseViewer({ response, error, logs = [], onClearLogs }: Resp
             language={responseBodyLanguage}
             value={formattedJsonBody ?? response.body}
             fontSize={editorFontSize}
+            height="100%"
             readOnly
           />
         </div>
@@ -177,8 +190,8 @@ export function ResponseViewer({ response, error, logs = [], onClearLogs }: Resp
       ) : null}
 
       {activeTab === 'logs' ? (
-        <div className="space-y-2">
-          <div className="flex items-center justify-end">
+        <div className="flex min-h-0 flex-1 flex-col gap-2">
+          <div className="flex shrink-0 items-center justify-end">
             <button
               type="button"
               onClick={onClearLogs}
@@ -190,12 +203,13 @@ export function ResponseViewer({ response, error, logs = [], onClearLogs }: Resp
           {logs.length === 0 ? (
             <p className="text-app-muted text-xs">No logs yet. Click Send to capture runtime details.</p>
           ) : (
-            <pre className="bg-app-main text-app-secondary max-h-44 overflow-auto rounded-md p-2 text-xs whitespace-pre-wrap">
+            <pre className="bg-app-main text-app-secondary min-h-0 flex-1 overflow-auto rounded-md p-2 text-xs whitespace-pre-wrap">
               {logs.join('\n')}
             </pre>
           )}
         </div>
       ) : null}
+      </div>
     </section>
   );
 }

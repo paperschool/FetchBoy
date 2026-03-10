@@ -91,7 +91,7 @@ export function SaveRequestDialog({ open, onClose, onSave }: Props) {
                                 setCollectionId(e.target.value);
                                 setFolderId(null);
                             }}
-                            className="border-app-subtle bg-app-main text-app-primary h-9 w-full rounded-md border px-2 text-sm"
+                            className="select-flat border-app-subtle bg-app-main text-app-primary h-9 w-full rounded-md border pl-2 pr-7 text-sm"
                         >
                             <option value="">Select a collection...</option>
                             {collections.map((c) => (
@@ -114,7 +114,7 @@ export function SaveRequestDialog({ open, onClose, onSave }: Props) {
                                 id="save-folder"
                                 value={folderId ?? ''}
                                 onChange={(e) => setFolderId(e.target.value || null)}
-                                className="border-app-subtle bg-app-main text-app-primary h-9 w-full rounded-md border px-2 text-sm"
+                                className="select-flat border-app-subtle bg-app-main text-app-primary h-9 w-full rounded-md border pl-2 pr-7 text-sm"
                             >
                                 <option value="">No folder</option>
                                 {availableFolders.map((f) => (

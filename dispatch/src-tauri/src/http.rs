@@ -18,10 +18,16 @@ pub struct RequestBody {
     pub raw: String,
 }
 
-// Auth payload is present for forward compatibility; only "none" is accepted now.
+// Auth payload supporting all four auth variants (none, bearer, basic, api-key).
 #[derive(Debug, Deserialize)]
 pub struct RequestAuth {
     pub r#type: String,
+    pub token: Option<String>,
+    pub username: Option<String>,
+    pub password: Option<String>,
+    pub key: Option<String>,
+    pub value: Option<String>,
+    pub r#in: Option<String>,
 }
 
 // Input payload received from invoke("send_request", { request: ... }).
@@ -98,12 +104,18 @@ fn build_headers(headers: &[KeyValueRow]) -> Result<HeaderMap, String> {
 pub async fn send_request(request: SendRequestPayload) -> Result<SendResponsePayload, String> {
     // Validate and normalize request parts before sending network traffic.
     let method = build_method(&request.method)?;
-    let url = build_url(&request.url, &request.queryParams)?;
+    let mut url = build_url(&request.url, &request.queryParams)?;
     let headers = build_headers(&request.headers)?;
 
-    // Story scope: only auth=none is supported until auth stories are implemented.
-    if request.auth.r#type != "none" {
-        return Err("Auth type is not supported in this story yet. Use 'none'.".to_string());
+    // Inject API Key query param into URL BEFORE building the request builder.
+    if request.auth.r#type == "api-key" {
+        if request.auth.r#in.as_deref() == Some("query") {
+            let key = request.auth.key.as_deref().unwrap_or("");
+            let value = request.auth.value.as_deref().unwrap_or("");
+            if !key.is_empty() {
+                url.query_pairs_mut().append_pair(key, value);
+            }
+        }
     }
 
     // Build a reusable reqwest client with a sane default timeout.
@@ -113,6 +125,35 @@ pub async fn send_request(request: SendRequestPayload) -> Result<SendResponsePay
         .map_err(|e| format!("Failed to create HTTP client: {e}"))?;
 
     let mut request_builder = client.request(method, url).headers(headers);
+
+    // Inject bearer / basic / api-key header auth.
+    match request.auth.r#type.as_str() {
+        "bearer" => {
+            let token = request.auth.token.as_deref().unwrap_or("");
+            request_builder = request_builder.bearer_auth(token);
+        }
+        "basic" => {
+            let username = request.auth.username.as_deref().unwrap_or("");
+            let password = request.auth.password.as_deref().unwrap_or("");
+            request_builder = request_builder.basic_auth(username, Some(password));
+        }
+        "api-key" => {
+            // Only inject as header when in == "header" (query was handled above via URL).
+            if request.auth.r#in.as_deref().unwrap_or("header") == "header" {
+                let key = request.auth.key.as_deref().unwrap_or("").to_string();
+                let value = request.auth.value.as_deref().unwrap_or("").to_string();
+                if !key.is_empty() {
+                    let name = HeaderName::from_bytes(key.as_bytes())
+                        .map_err(|_| format!("Invalid API Key header name: {key}"))?;
+                    let val = HeaderValue::from_str(&value)
+                        .map_err(|_| format!("Invalid API Key header value: {value}"))?;
+                    request_builder = request_builder.header(name, val);
+                }
+            }
+        }
+        "none" | "" => {} // No auth
+        other => return Err(format!("Unsupported auth type: {other}")),
+    }
 
     // Attach raw body only when provided.
     if !request.body.raw.trim().is_empty() {
