@@ -3,11 +3,11 @@ import { useUiSettingsStore } from './uiSettingsStore';
 
 describe('uiSettingsStore', () => {
     beforeEach(() => {
-        useUiSettingsStore.setState({ theme: 'system', editorFontSize: 13 });
+        useUiSettingsStore.setState({ theme: 'light', editorFontSize: 13 });
     });
 
-    it('has initial theme value of "system"', () => {
-        expect(useUiSettingsStore.getState().theme).toBe('system');
+    it('has initial theme value of "light"', () => {
+        expect(useUiSettingsStore.getState().theme).toBe('light');
     });
 
     it('setTheme updates theme in store', () => {

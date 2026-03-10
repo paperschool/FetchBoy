@@ -46,7 +46,7 @@ describe('loadAllSettings', () => {
         const result = await loadAllSettings();
 
         expect(result).toEqual({
-            theme: 'system',
+            theme: 'light',
             request_timeout_ms: 30000,
             ssl_verify: true,
             editor_font_size: 14,
@@ -59,7 +59,7 @@ describe('loadAllSettings', () => {
         const result = await loadAllSettings();
 
         expect(result).toEqual({
-            theme: 'system',
+            theme: 'light',
             request_timeout_ms: 30000,
             ssl_verify: true,
             editor_font_size: 14,

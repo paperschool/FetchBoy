@@ -24,7 +24,7 @@ export function KeyValueRows({
       <button
         type="button"
         onClick={onAdd}
-        className="border-app-subtle text-app-primary rounded-md border px-3 py-1.5 text-sm font-medium hover:bg-gray-50"
+        className="border-app-subtle text-app-primary hover-bg-app-surface rounded-md border px-3 py-1.5 text-sm font-medium"
       >
         {addLabel}
       </button>
@@ -49,19 +49,19 @@ export function KeyValueRows({
             value={row.key}
             onChange={(event) => onUpdate(index, 'key', event.target.value)}
             placeholder="Key"
-            className="border-app-subtle text-app-primary h-9 rounded-md border px-2 text-sm"
+            className="border-app-subtle bg-app-main text-app-primary h-9 rounded-md border px-2 text-sm"
           />
           <input
             aria-label={`${sectionName}-value-${index}`}
             value={row.value}
             onChange={(event) => onUpdate(index, 'value', event.target.value)}
             placeholder="Value"
-            className="border-app-subtle text-app-primary h-9 rounded-md border px-2 text-sm"
+            className="border-app-subtle bg-app-main text-app-primary h-9 rounded-md border px-2 text-sm"
           />
           <button
             type="button"
             onClick={() => onRemove(index)}
-            className="border-app-subtle text-app-primary rounded-md border px-2 text-sm hover:bg-gray-50"
+            className="border-app-subtle text-app-primary hover-bg-app-surface rounded-md border px-2 text-sm"
             aria-label={`${sectionName}-remove-${index}`}
           >
             Remove

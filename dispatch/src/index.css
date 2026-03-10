@@ -24,8 +24,11 @@
     --app-surface-main: #ffffff;
     --app-surface-sidebar: #1f2937;
     --app-surface-topbar: #111827;
+    --app-surface-hover: #f3f4f6;
 
     --app-border-subtle: #d1d5db;
+
+    color-scheme: light;
   }
 
   .dark {
@@ -44,13 +47,16 @@
     --app-text-primary: #f3f4f6;
     --app-text-secondary: #d1d5db;
     --app-text-muted: #9ca3af;
-    --app-text-inverse: #111827;
+    --app-text-inverse: #f9fafb;
 
     --app-surface-main: #111827;
     --app-surface-sidebar: #030712;
     --app-surface-topbar: #0f172a;
+    --app-surface-hover: #1f2937;
 
     --app-border-subtle: #374151;
+
+    color-scheme: dark;
   }
 
   body {
@@ -86,6 +92,10 @@
 
   .bg-app-topbar {
     background-color: var(--app-surface-topbar);
+  }
+
+  .hover-bg-app-surface:hover {
+    background-color: var(--app-surface-hover);
   }
 
   .border-app-subtle {

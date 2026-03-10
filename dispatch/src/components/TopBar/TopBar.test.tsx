@@ -12,7 +12,7 @@ const { mockSetActiveEnvironment, mockStoreState, mockUiSettingsState } = vi.hoi
         setActive: vi.fn(),
     };
     const mockUiSettingsState = {
-        theme: 'system' as 'light' | 'dark' | 'system',
+        theme: 'light' as 'light' | 'dark',
         setTheme: vi.fn(),
     };
     return {
@@ -134,12 +134,6 @@ describe('TopBar', () => {
         expect(screen.getByRole('button', { name: /toggle theme/i })).toBeInTheDocument();
     });
 
-    it('shows system icon (🖥️) when theme is system', () => {
-        mockUiSettingsState.theme = 'system';
-        render(<TopBar />);
-        expect(screen.getByRole('button', { name: /toggle theme/i })).toHaveTextContent('🖥️');
-    });
-
     it('shows light icon (☀️) when theme is light', () => {
         mockUiSettingsState.theme = 'light';
         render(<TopBar />);
@@ -152,15 +146,6 @@ describe('TopBar', () => {
         expect(screen.getByRole('button', { name: /toggle theme/i })).toHaveTextContent('🌙');
     });
 
-    it('cycles theme: system → light on click', async () => {
-        mockUiSettingsState.theme = 'system';
-        render(<TopBar />);
-        fireEvent.click(screen.getByRole('button', { name: /toggle theme/i }));
-        await waitFor(() => {
-            expect(mockUiSettingsState.setTheme).toHaveBeenCalledWith('light');
-        });
-    });
-
     it('cycles theme: light → dark on click', async () => {
         mockUiSettingsState.theme = 'light';
         render(<TopBar />);
@@ -170,12 +155,13 @@ describe('TopBar', () => {
         });
     });
 
-    it('cycles theme: dark → system on click', async () => {
+    it('cycles theme: dark → light on click', async () => {
         mockUiSettingsState.theme = 'dark';
         render(<TopBar />);
         fireEvent.click(screen.getByRole('button', { name: /toggle theme/i }));
         await waitFor(() => {
-            expect(mockUiSettingsState.setTheme).toHaveBeenCalledWith('system');
+            expect(mockUiSettingsState.setTheme).toHaveBeenCalledWith('light');
         });
     });
 });
+

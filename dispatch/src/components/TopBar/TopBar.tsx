@@ -18,7 +18,7 @@ export function TopBar() {
   }
 
   async function handleThemeChange() {
-    const next = theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light';
+    const next = theme === 'light' ? 'dark' : 'light';
     useUiSettingsStore.getState().setTheme(next);
     await saveSetting('theme', next);
   }
@@ -35,7 +35,7 @@ export function TopBar() {
           className="text-xs text-app-inverse border border-white/20 rounded px-2 py-1 hover:bg-white/10"
           onClick={() => void handleThemeChange()}
         >
-          {theme === 'light' ? '☀️' : theme === 'dark' ? '🌙' : '🖥️'}
+          {theme === 'light' ? '☀️' : '🌙'}
         </button>
         <select
           value={activeEnvironmentId ?? ''}
