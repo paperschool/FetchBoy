@@ -1,6 +1,6 @@
 # Story 4.2: Import/Export Collections and Environments
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -21,26 +21,26 @@ so that I can move my work between machines and share collections with teammates
 
 ## Tasks / Subtasks
 
-- [ ] Task 1 — Add Tauri plugin-dialog and plugin-fs dependencies (AC: 1, 2, 3, 4)
-  - [ ] In `dispatch/package.json`, add `"@tauri-apps/plugin-dialog": "^2"` and `"@tauri-apps/plugin-fs": "^2"` to `dependencies`
-  - [ ] In `dispatch/src-tauri/Cargo.toml`, add `tauri-plugin-dialog = "2"` and `tauri-plugin-fs = "2"` under `[dependencies]`
-  - [ ] In `dispatch/src-tauri/src/lib.rs`, register both plugins:
+- [x] Task 1 — Add Tauri plugin-dialog and plugin-fs dependencies (AC: 1, 2, 3, 4)
+  - [x] In `dispatch/package.json`, add `"@tauri-apps/plugin-dialog": "^2"` and `"@tauri-apps/plugin-fs": "^2"` to `dependencies`
+  - [x] In `dispatch/src-tauri/Cargo.toml`, add `tauri-plugin-dialog = "2"` and `tauri-plugin-fs = "2"` under `[dependencies]`
+  - [x] In `dispatch/src-tauri/src/lib.rs`, register both plugins:
     ```rust
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_fs::init())
     ```
-  - [ ] In `dispatch/src-tauri/capabilities/default.json`, add permissions:
+  - [x] In `dispatch/src-tauri/capabilities/default.json`, add permissions:
     ```json
     "dialog:allow-save",
     "dialog:allow-open",
     "fs:allow-write-text-file",
     "fs:allow-read-text-file"
     ```
-  - [ ] Run `yarn tauri dev` to verify compilation succeeds (Cargo resolves new crates)
+  - [x] Run `yarn tauri dev` to verify compilation succeeds (Cargo resolves new crates)
 
-- [ ] Task 2 — Create `lib/importExport.ts` (AC: 1–6)
-  - [ ] Create `dispatch/src/lib/importExport.ts`
-  - [ ] Define the export envelope interfaces:
+- [x] Task 2 — Create `lib/importExport.ts` (AC: 1–6)
+  - [x] Create `dispatch/src/lib/importExport.ts`
+  - [x] Define the export envelope interfaces:
     ```typescript
     export interface CollectionExport {
         dispatch_version: '1.0';
@@ -58,14 +58,14 @@ so that I can move my work between machines and share collections with teammates
         environment: Environment;
     }
     ```
-  - [ ] Export `function exportCollectionToJson(collectionId: string, store: { collections: Collection[]; folders: Folder[]; requests: Request[] }): string`
+  - [x] Export `function exportCollectionToJson(collectionId: string, store: { collections: Collection[]; folders: Folder[]; requests: Request[] }): string`
     - Finds the collection, all its folders, all its requests by `collection_id`
     - Builds and returns `JSON.stringify(envelope, null, 2)` where `dispatch_version: '1.0'`, `type: 'collection'`, `exported_at: new Date().toISOString()`
     - Throws `Error('Collection not found')` if `collectionId` is not in store
-  - [ ] Export `function exportEnvironmentToJson(environmentId: string, environments: Environment[]): string`
+  - [x] Export `function exportEnvironmentToJson(environmentId: string, environments: Environment[]): string`
     - Finds the environment, builds and returns JSON envelope with `type: 'environment'`
     - Throws `Error('Environment not found')` if not found
-  - [ ] Export `async function importCollectionFromJson(json: string): Promise<{ collection: Collection; folders: Folder[]; requests: Request[] }>`
+  - [x] Export `async function importCollectionFromJson(json: string): Promise<{ collection: Collection; folders: Folder[]; requests: Request[] }>`
     - `JSON.parse(json)` — wrap in try/catch, throw `Error('Invalid JSON')` if parse fails
     - Validate: `envelope.dispatch_version === '1.0'`, `envelope.type === 'collection'`, `envelope.collection` is an object, `envelope.collection.name` is a non-empty string — throw descriptive `Error` if any check fails
     - **ID remapping**: generate `newCollectionId = crypto.randomUUID()`; build `folderIdMap: Map<string, string>` keyed by old folder ID → new UUID for each folder in `envelope.folders`
@@ -74,19 +74,19 @@ so that I can move my work between machines and share collections with teammates
     - Rebuild each request with `crypto.randomUUID()`, `collection_id: newCollectionId`, `folder_id` remapped through `folderIdMap` (null if not found)
     - Write to DB using `getDb()` directly via raw SQL (pattern mirrors `collections.ts`); write **collection first**, then **folders**, then **requests** — in a serial `await` chain (SQLite; no transaction API in plugin-sql v2)
     - Return `{ collection, folders, requests }` (all rebuilt objects with new IDs)
-  - [ ] Export `async function importEnvironmentFromJson(json: string): Promise<Environment>`
+  - [x] Export `async function importEnvironmentFromJson(json: string): Promise<Environment>`
     - Parse and validate: `dispatch_version === '1.0'`, `type === 'environment'`, `environment.name` is a non-empty string
     - Rebuild environment with `crypto.randomUUID()`, `is_active: false`, `created_at: new Date().toISOString()`
     - Insert into DB
     - Return rebuilt environment
-  - [ ] **No partial writes**: all validation must pass before any DB call
+  - [x] **No partial writes**: all validation must pass before any DB call
 
-- [ ] Task 3 — Wire export in `CollectionTree.tsx` (AC: 1)
-  - [ ] Open `dispatch/src/components/CollectionTree/CollectionTree.tsx`
-  - [ ] Add `import { save } from '@tauri-apps/plugin-dialog';` and `import { writeTextFile } from '@tauri-apps/plugin-fs';`
-  - [ ] Add `import { exportCollectionToJson } from '@/lib/importExport';`
-  - [ ] Add `import { Download } from 'lucide-react';` (download icon, already in lucide-react)
-  - [ ] Add `handleExportCollection` async function:
+- [x] Task 3 — Wire export in `CollectionTree.tsx` (AC: 1)
+  - [x] Open `dispatch/src/components/CollectionTree/CollectionTree.tsx`
+  - [x] Add `import { save } from '@tauri-apps/plugin-dialog';` and `import { writeTextFile } from '@tauri-apps/plugin-fs';`
+  - [x] Add `import { exportCollectionToJson } from '@/lib/importExport';`
+  - [x] Add `import { Download } from 'lucide-react';` (download icon, already in lucide-react)
+  - [x] Add `handleExportCollection` async function:
     ```typescript
     const handleExportCollection = async (id: string, name: string) => {
         const store = useCollectionStore.getState();
@@ -102,7 +102,7 @@ so that I can move my work between machines and share collections with teammates
         }
     };
     ```
-  - [ ] Add `Download` icon button to the per-collection action group (alongside existing `FolderPlus`, `FilePlus`, `Pencil`, `Trash2`) — place it between `Pencil` and `Trash2`:
+  - [x] Add `Download` icon button to the per-collection action group (alongside existing `FolderPlus`, `FilePlus`, `Pencil`, `Trash2`) — place it between `Pencil` and `Trash2`:
     ```tsx
     <button
         aria-label={`Export ${col.item.name}`}
@@ -112,7 +112,7 @@ so that I can move my work between machines and share collections with teammates
         <Download size={12} />
     </button>
     ```
-  - [ ] Add `handleImportCollection` async function and "Import" button in the collection tree header (the `<div>` that already hosts the `+` add-collection button):
+  - [x] Add `handleImportCollection` async function and "Import" button in the collection tree header (the `<div>` that already hosts the `+` add-collection button):
     ```typescript
     const handleImportCollection = async () => {
         try {
@@ -133,30 +133,30 @@ so that I can move my work between machines and share collections with teammates
         }
     };
     ```
-  - [ ] Add `import { open } from '@tauri-apps/plugin-dialog';` and `import { readTextFile } from '@tauri-apps/plugin-fs';`
-  - [ ] Add `import { importCollectionFromJson } from '@/lib/importExport';`
-  - [ ] Add import button next to the existing `+` add-collection button in the header (use `Upload` from lucide-react)
+  - [x] Add `import { open } from '@tauri-apps/plugin-dialog';` and `import { readTextFile } from '@tauri-apps/plugin-fs';`
+  - [x] Add `import { importCollectionFromJson } from '@/lib/importExport';`
+  - [x] Add import button next to the existing `+` add-collection button in the header (use `Upload` from lucide-react)
 
-- [ ] Task 4 — Wire export/import in `EnvironmentPanel.tsx` (AC: 2, 4)
-  - [ ] Open `dispatch/src/components/EnvironmentPanel/EnvironmentPanel.tsx`
-  - [ ] Add dialog, fs, and importExport imports (same as Task 3 but for environments)
-  - [ ] Add `handleExportEnvironment(id: string, name: string)` — same pattern as collection export but calls `exportEnvironmentToJson`
-  - [ ] Add export button (`Download` icon) next to each environment row's existing action buttons
-  - [ ] Add `handleImportEnvironment()` — reads file, calls `importEnvironmentFromJson`, calls `storeAddEnvironment(env)`, shows alert summary: `"Imported environment '${env.name}' — ${env.variables.length} variable(s)."`
-  - [ ] Add "Import Environment" button (Upload icon) in the environment panel header, alongside the existing "New Environment" button
+- [x] Task 4 — Wire export/import in `EnvironmentPanel.tsx` (AC: 2, 4)
+  - [x] Open `dispatch/src/components/EnvironmentPanel/EnvironmentPanel.tsx`
+  - [x] Add dialog, fs, and importExport imports (same as Task 3 but for environments)
+  - [x] Add `handleExportEnvironment(id: string, name: string)` — same pattern as collection export but calls `exportEnvironmentToJson`
+  - [x] Add export button (`Download` icon) next to each environment row's existing action buttons
+  - [x] Add `handleImportEnvironment()` — reads file, calls `importEnvironmentFromJson`, calls `storeAddEnvironment(env)`, shows alert summary: `"Imported environment '${env.name}' — ${env.variables.length} variable(s)."`
+  - [x] Add "Import Environment" button (Upload icon) in the environment panel header, alongside the existing "New Environment" button
 
-- [ ] Task 5 — Tests for `lib/importExport.ts` (AC: 1–6)
-  - [ ] Create `dispatch/src/lib/importExport.test.ts`
-  - [ ] Mock `@/lib/db` — return a fake DB with `select`, `execute` stubbed (same mock pattern as `collections.test.ts` and `settings.test.ts`)
-  - [ ] **exportCollectionToJson tests:**
+- [x] Task 5 — Tests for `lib/importExport.ts` (AC: 1–6)
+  - [x] Create `dispatch/src/lib/importExport.test.ts`
+  - [x] Mock `@/lib/db` — return a fake DB with `select`, `execute` stubbed (same mock pattern as `collections.test.ts` and `settings.test.ts`)
+  - [x] **exportCollectionToJson tests:**
     - Given a store with one collection, two folders, three requests: returns valid JSON with correct envelope fields
     - `type` is `'collection'`, `dispatch_version` is `'1.0'`
     - Throws if `collectionId` not found in store
-  - [ ] **exportEnvironmentToJson tests:**
+  - [x] **exportEnvironmentToJson tests:**
     - Given an environment array: returns valid JSON with correct envelope fields
     - `type` is `'environment'`, `dispatch_version` is `'1.0'`
     - Throws if environment not found
-  - [ ] **importCollectionFromJson tests:**
+  - [x] **importCollectionFromJson tests:**
     - Valid input (round-trip): parses correctly, returned objects have new UUIDs (different from originals)
     - `collection_id` on all folders and requests matches new collection ID
     - `folder_id` on requests is remapped from old to new folder IDs
@@ -166,18 +166,18 @@ so that I can move my work between machines and share collections with teammates
     - Missing `collection.name` throws with descriptive message
     - Wrong `dispatch_version` throws with descriptive message
     - No DB calls made when validation fails (no partial writes)
-  - [ ] **importEnvironmentFromJson tests:**
+  - [x] **importEnvironmentFromJson tests:**
     - Valid input: returns environment with new UUID, `is_active: false`
     - Invalid JSON throws
     - Missing `environment.name` throws
     - No DB calls when validation fails
 
-- [ ] Task 6 — Quality gates
-  - [ ] Run `yarn typecheck` from `dispatch/` — no TypeScript errors
-  - [ ] Run `yarn test` from `dispatch/` — all tests pass
+- [x] Task 6 — Quality gates
+  - [x] Run `yarn typecheck` from `dispatch/` — no TypeScript errors
+  - [x] Run `yarn test` from `dispatch/` — all tests pass
 
-- [ ] Final Task — Commit story changes
-  - [ ] Commit all code and documentation changes for this story with a message that includes Story 4.2
+- [x] Final Task — Commit story changes
+  - [x] Commit all code and documentation changes for this story with a message that includes Story 4.2
 
 ## Dev Notes
 
@@ -413,4 +413,22 @@ Claude Sonnet 4.6
 
 ### Completion Notes List
 
+- ✅ Task 1: Added `@tauri-apps/plugin-dialog@2.6.0` and `@tauri-apps/plugin-fs@2.4.5` to package.json, Cargo.toml, lib.rs (plugin registration), and capabilities/default.json (4 new permissions).
+- ✅ Task 2: Created `dispatch/src/lib/importExport.ts` with 4 exported functions — `exportCollectionToJson`, `exportEnvironmentToJson` (pure), `importCollectionFromJson`, `importEnvironmentFromJson` (async, DB-writing). Full ID remapping on import, validation before any DB call, serial await chain for SQLite.
+- ✅ Task 3: Wired `CollectionTree.tsx` — `handleExportCollection` (save dialog + writeTextFile), `handleImportCollection` (open dialog + readTextFile + store hydration). Added Download button between Pencil/Trash2, Upload button in header alongside +.
+- ✅ Task 4: Wired `EnvironmentPanel.tsx` — `handleExportEnvironment`, `handleImportEnvironment`. Download button per environment row, Upload button in footer alongside "New Environment".
+- ✅ Task 5: 21 unit tests in `importExport.test.ts` — all pass. Covers export, import round-trips, ID remapping, nested folder parent_id remapping, validation errors, and no-partial-write guarantees.
+- ✅ Task 6: `tsc --noEmit` clean; `vitest run` 245/245 tests pass, zero regressions.
+
 ### File List
+
+- `dispatch/src/lib/importExport.ts` (new)
+- `dispatch/src/lib/importExport.test.ts` (new)
+- `dispatch/package.json` (modified)
+- `dispatch/src-tauri/Cargo.toml` (modified)
+- `dispatch/src-tauri/src/lib.rs` (modified)
+- `dispatch/src-tauri/capabilities/default.json` (modified)
+- `dispatch/src/components/CollectionTree/CollectionTree.tsx` (modified)
+- `dispatch/src/components/EnvironmentPanel/EnvironmentPanel.tsx` (modified)
+- `_bmad-output/implementation-artifacts/4-2-import-export-collections.md` (modified)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified)

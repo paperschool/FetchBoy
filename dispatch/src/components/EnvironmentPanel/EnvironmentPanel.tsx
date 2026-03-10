@@ -1,11 +1,14 @@
 import { useState } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Download, Trash2, Upload } from 'lucide-react';
+import { save, open } from '@tauri-apps/plugin-dialog';
+import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
 import {
     createEnvironment,
     deleteEnvironment,
     renameEnvironment,
     updateEnvironmentVariables,
 } from '@/lib/environments';
+import { exportEnvironmentToJson, importEnvironmentFromJson } from '@/lib/importExport';
 import { useEnvironmentStore } from '@/stores/environmentStore';
 import type { KeyValuePair } from '@/lib/db';
 
@@ -43,6 +46,37 @@ export function EnvironmentPanel({ open, onClose }: EnvironmentPanelProps) {
             storeDeleteEnvironment(id);
             if (selectedEnvId === id) setSelectedEnvId(null);
         });
+    }
+
+    async function handleExportEnvironment(id: string, name: string) {
+        const envs = useEnvironmentStore.getState().environments;
+        try {
+            const json = exportEnvironmentToJson(id, envs);
+            const path = await save({
+                defaultPath: `${name.replace(/[^a-z0-9]/gi, '_')}.fetchboy`,
+                filters: [{ name: 'Fetchboy Environment', extensions: ['fetchboy'] }],
+            });
+            if (path) await writeTextFile(path, json);
+        } catch (err) {
+            window.alert(`Export failed: ${err instanceof Error ? err.message : String(err)}`);
+        }
+    }
+
+    async function handleImportEnvironment() {
+        try {
+            const selected = await open({
+                multiple: false,
+                filters: [{ name: 'Fetchboy Environment', extensions: ['fetchboy'] }],
+            });
+            if (!selected) return;
+            const path = typeof selected === 'string' ? selected : selected[0];
+            const text = await readTextFile(path);
+            const env = await importEnvironmentFromJson(text);
+            storeAddEnvironment(env);
+            window.alert(`Imported environment '${env.name}' — ${env.variables.length} variable(s).`);
+        } catch (err) {
+            window.alert(`Import failed: ${err instanceof Error ? err.message : String(err)}`);
+        }
     }
 
     function handleStartRename(id: string, currentName: string) {
@@ -160,6 +194,18 @@ export function EnvironmentPanel({ open, onClose }: EnvironmentPanelProps) {
                                         )}
                                         <button
                                             type="button"
+                                            aria-label={`Export ${env.name}`}
+                                            title="Export environment"
+                                            className="p-1 text-app-muted hover:text-app-inverse rounded cursor-pointer flex-shrink-0 opacity-0 group-hover:opacity-100"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                void handleExportEnvironment(env.id, env.name);
+                                            }}
+                                        >
+                                            <Download size={14} />
+                                        </button>
+                                        <button
+                                            type="button"
                                             aria-label={`Delete ${env.name}`}
                                             className="p-1 text-app-muted hover:text-red-400 rounded cursor-pointer ml-auto flex-shrink-0 opacity-0 group-hover:opacity-100"
                                             onClick={(e) => {
@@ -174,12 +220,22 @@ export function EnvironmentPanel({ open, onClose }: EnvironmentPanelProps) {
                             )}
                         </div>
                         <div className="border-t border-white/10 p-2">
-                            <button
-                                className="text-app-muted hover:text-app-inverse w-full rounded px-2 py-1 text-left text-xs"
-                                onClick={handleNewEnvironment}
-                            >
-                                + New Environment
-                            </button>
+                            <div className="flex gap-1">
+                                <button
+                                    className="text-app-muted hover:text-app-inverse flex-1 rounded px-2 py-1 text-left text-xs"
+                                    onClick={handleNewEnvironment}
+                                >
+                                    + New Environment
+                                </button>
+                                <button
+                                    className="text-app-muted hover:text-app-inverse rounded p-1 text-xs"
+                                    title="Import environment"
+                                    aria-label="Import environment"
+                                    onClick={() => void handleImportEnvironment()}
+                                >
+                                    <Upload size={14} />
+                                </button>
+                            </div>
                         </div>
                     </div>
 

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronRight, FilePlus, FolderPlus, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Download, FilePlus, FolderPlus, Pencil, Plus, Trash2, Upload } from 'lucide-react';
+import { save, open } from '@tauri-apps/plugin-dialog';
+import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
 import {
     createCollection,
     createFolder,
@@ -14,6 +16,7 @@ import {
     updateFolderOrder,
     updateRequestOrder,
 } from '@/lib/collections';
+import { exportCollectionToJson, importCollectionFromJson } from '@/lib/importExport';
 import { useCollectionStore } from '@/stores/collectionStore';
 import { useRequestStore } from '@/stores/requestStore';
 
@@ -136,6 +139,39 @@ export function CollectionTree() {
         }
     };
 
+    const handleExportCollection = async (id: string, name: string) => {
+        const currentStore = useCollectionStore.getState();
+        try {
+            const json = exportCollectionToJson(id, currentStore);
+            const path = await save({
+                defaultPath: `${name.replace(/[^a-z0-9]/gi, '_')}.fetchboy`,
+                filters: [{ name: 'Fetchboy Collection', extensions: ['fetchboy'] }],
+            });
+            if (path) await writeTextFile(path, json);
+        } catch (err) {
+            window.alert(`Export failed: ${err instanceof Error ? err.message : String(err)}`);
+        }
+    };
+
+    const handleImportCollection = async () => {
+        try {
+            const selected = await open({
+                multiple: false,
+                filters: [{ name: 'Fetchboy Collection', extensions: ['fetchboy'] }],
+            });
+            if (!selected) return;
+            const path = typeof selected === 'string' ? selected : selected[0];
+            const text = await readTextFile(path);
+            const { collection, folders, requests } = await importCollectionFromJson(text);
+            store.addCollection(collection);
+            for (const f of folders) store.addFolder(f);
+            for (const r of requests) store.addRequest(r);
+            window.alert(`Imported '${collection.name}' — ${folders.length} folder(s), ${requests.length} request(s).`);
+        } catch (err) {
+            window.alert(`Import failed: ${err instanceof Error ? err.message : String(err)}`);
+        }
+    };
+
     const handleDrop = async (
         e: React.DragEvent,
         targetId: string,
@@ -173,13 +209,23 @@ export function CollectionTree() {
                 <span className="text-app-muted text-xs font-semibold uppercase tracking-widest">
                     Collections
                 </span>
-                <button
-                    onClick={handleAddCollection}
-                    aria-label="Add Collection"
-                    className="text-gray-300 hover:text-white p-1 rounded cursor-pointer"
-                >
-                    <Plus size={16} />
-                </button>
+                <div className="flex items-center gap-0.5">
+                    <button
+                        onClick={() => void handleImportCollection()}
+                        aria-label="Import collection"
+                        title="Import collection"
+                        className="text-gray-300 hover:text-white p-1 rounded cursor-pointer"
+                    >
+                        <Upload size={14} />
+                    </button>
+                    <button
+                        onClick={handleAddCollection}
+                        aria-label="Add Collection"
+                        className="text-gray-300 hover:text-white p-1 rounded cursor-pointer"
+                    >
+                        <Plus size={16} />
+                    </button>
+                </div>
             </div>
 
             {/* Empty state */}
@@ -282,6 +328,19 @@ export function CollectionTree() {
                                     draggable={false}
                                 >
                                     <Pencil size={14} />
+                                </button>
+                                <button
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        void handleExportCollection(col.id, col.name);
+                                    }}
+                                    aria-label={`Export ${col.name}`}
+                                    title="Export collection"
+                                    className="p-1 rounded hover:text-white cursor-pointer"
+                                    draggable={false}
+                                >
+                                    <Download size={12} />
                                 </button>
                                 <button
                                     onClick={(e) => {
