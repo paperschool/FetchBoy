@@ -29,7 +29,7 @@ jobs:
         with:
           node-version: 20
           cache: yarn
-          cache-dependency-path: dispatch/yarn.lock
+          cache-dependency-path: fetch-boy/yarn.lock
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -37,7 +37,7 @@ jobs:
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: dispatch/src-tauri -> target
+          workspaces: fetch-boy/src-tauri -> target
 
       - name: Install Linux system dependencies
         if: matrix.platform == 'ubuntu-22.04'
@@ -55,7 +55,7 @@ jobs:
             librsvg2-dev
 
       - name: Install frontend dependencies
-        working-directory: dispatch
+        working-directory: fetch-boy
         run: yarn install --frozen-lockfile
 
       - name: Build Tauri app
@@ -63,13 +63,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          projectPath: dispatch
+          projectPath: fetch-boy
 
       - name: Check bundle sizes (Linux)
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           echo "=== Linux installer sizes ==="
-          find dispatch/src-tauri/target/release/bundle -name "*.deb" -o -name "*.AppImage" | while read f; do
+          find fetch-boy/src-tauri/target/release/bundle -name "*.deb" -o -name "*.AppImage" | while read f; do
             size_kb=$(du -k "$f" | cut -f1)
             size_mb=$(echo "scale=2; $size_kb/1024" | bc)
             echo "$f: ${size_mb} MB"
@@ -85,7 +85,7 @@ jobs:
         run: |
           Write-Host "=== Windows installer sizes ==="
           $limit = 15 * 1024 * 1024
-          Get-ChildItem -Path dispatch\src-tauri\target\release\bundle -Recurse -Include *.msi,*.exe | ForEach-Object {
+          Get-ChildItem -Path fetch-boy\src-tauri\target\release\bundle -Recurse -Include *.msi,*.exe | ForEach-Object {
             $mb = [math]::Round($_.Length / 1MB, 2)
             Write-Host "$($_.FullName): $mb MB"
             if ($_.Length -gt $limit) {
@@ -98,7 +98,7 @@ jobs:
         if: matrix.platform == 'macos-latest'
         run: |
           echo "=== macOS installer sizes ==="
-          find dispatch/src-tauri/target/release/bundle -name "*.dmg" | while read f; do
+          find fetch-boy/src-tauri/target/release/bundle -name "*.dmg" | while read f; do
             size_kb=$(du -k "$f" | cut -f1)
             size_mb=$(echo "scale=2; $size_kb/1024" | bc)
             echo "$f: ${size_mb} MB"
@@ -113,10 +113,10 @@ jobs:
         with:
           name: installers-${{ matrix.artifact-name }}
           path: |
-            dispatch/src-tauri/target/release/bundle/**/*.deb
-            dispatch/src-tauri/target/release/bundle/**/*.AppImage
-            dispatch/src-tauri/target/release/bundle/**/*.msi
-            dispatch/src-tauri/target/release/bundle/**/*.exe
-            dispatch/src-tauri/target/release/bundle/**/*.dmg
+            fetch-boy/src-tauri/target/release/bundle/**/*.deb
+            fetch-boy/src-tauri/target/release/bundle/**/*.AppImage
+            fetch-boy/src-tauri/target/release/bundle/**/*.msi
+            fetch-boy/src-tauri/target/release/bundle/**/*.exe
+            fetch-boy/src-tauri/target/release/bundle/**/*.dmg
           if-no-files-found: error
           retention-days: 30

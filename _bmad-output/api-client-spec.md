@@ -1,13 +1,13 @@
-# Project Spec: Dispatch — Lightweight API Client
+# Project Spec: Fetch Boy — Lightweight API Client
 
 ## Overview
 
-**Project Name:** Dispatch  
+**Project Name:** Fetch Boy  
 **Type:** Standalone Desktop Application  
 **Version:** 1.0 (MVP)  
 **Target Platforms:** Windows, macOS, Linux
 
-Dispatch is a lightweight, cross-platform API client designed as a focused alternative to Postman. It strips away enterprise complexity in favour of a clean, fast, and intuitive experience for individual developers and small teams. The application runs entirely offline and stores all data locally.
+Fetch Boy is a lightweight, cross-platform API client designed as a focused alternative to Postman. It strips away enterprise complexity in favour of a clean, fast, and intuitive experience for individual developers and small teams. The application runs entirely offline and stores all data locally.
 
 ---
 
@@ -161,7 +161,7 @@ enabled: boolean
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  [Dispatch]   [Environment: Development ▾]        [⚙ Settings] │
+│  [Fetch Boy]   [Environment: Development ▾]        [⚙ Settings] │
 ├──────────────┬──────────────────────────────────────────────┤
 │              │  [GET ▾] [ https://{{base_url}}/api/users  ] [Send] │
 │  Collections │                                              │
@@ -185,7 +185,7 @@ enabled: boolean
 ## Project Structure
 
 ```
-dispatch/
+fetch-boy/
 ├── src/                        # React frontend
 │   ├── components/
 │   │   ├── RequestBuilder/     # URL bar, method selector, tabs

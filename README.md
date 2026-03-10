@@ -1,4 +1,4 @@
-# Dispatch
+# Fetch Boy 🦴
 
 A lightweight, cross-platform API client — a focused alternative to Postman that strips away enterprise complexity in favour of a clean, fast, and intuitive experience.
 
@@ -36,7 +36,7 @@ Runs entirely offline. No account required. All data stored locally.
 | Code editor      | Monaco Editor                 |
 | Testing          | Vitest + Testing Library      |
 
-The frontend lives in `dispatch/` (a Vite project). Tauri wraps it, exposing Rust commands (e.g. `send_request`) via the IPC bridge. All persistence is SQLite in the platform data directory.
+The frontend lives in `fetch-boy/` (a Vite project). Tauri wraps it, exposing Rust commands (e.g. `send_request`) via the IPC bridge. All persistence is SQLite in the platform data directory.
 
 ---
 
@@ -61,7 +61,7 @@ xcode-select --install
 ```bash
 # Clone and install
 git clone <repo-url>
-cd PostmanClone/dispatch
+cd PostmanClone/fetch-boy
 yarn install
 ```
 
@@ -69,7 +69,7 @@ yarn install
 
 ## Scripts
 
-All scripts run from the `dispatch/` directory.
+All scripts run from the `fetch-boy/` directory.
 
 | Command              | Description                                        |
 | -------------------- | -------------------------------------------------- |
@@ -84,7 +84,7 @@ All scripts run from the `dispatch/` directory.
 
 ```bash
 # Start development
-cd dispatch
+cd fetch-boy
 yarn tauri dev
 ```
 
@@ -94,7 +94,7 @@ yarn tauri dev
 
 ```
 PostmanClone/
-├── dispatch/               # Vite + React frontend + Tauri config
+├── fetch-boy/              # Vite + React frontend + Tauri config
 │   ├── src/                # React components, stores, hooks
 │   ├── src-tauri/          # Rust source, tauri.conf.json, icons
 │   └── package.json

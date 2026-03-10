@@ -20,7 +20,7 @@ describe('db module', () => {
         const db = await getDb();
         expect(db).toBe(mockDb);
         expect(mockLoad).toHaveBeenCalledOnce();
-        expect(mockLoad).toHaveBeenCalledWith('sqlite:dispatch.db');
+        expect(mockLoad).toHaveBeenCalledWith('sqlite:fetch-boy.db');
     });
 
     it('getDb() returns the same instance on repeated calls (singleton)', async () => {
@@ -38,9 +38,9 @@ describe('db module', () => {
         await expect(getDb()).rejects.toThrow('DB unavailable');
     });
 
-    it('DB_PATH constant equals sqlite:dispatch.db', async () => {
+    it('DB_PATH constant equals sqlite:fetch-boy.db', async () => {
         const { DB_PATH } = await import('./db');
-        expect(DB_PATH).toBe('sqlite:dispatch.db');
+        expect(DB_PATH).toBe('sqlite:fetch-boy.db');
     });
 });
 

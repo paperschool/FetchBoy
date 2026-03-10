@@ -4,7 +4,7 @@ import type { Collection, Environment, Folder, Request } from '@/lib/db';
 // ─── Export Envelope Interfaces ───────────────────────────────────────────────
 
 export interface CollectionExport {
-    dispatch_version: '1.0';
+    fetch_boy_version: '1.0';
     type: 'collection';
     exported_at: string;
     collection: Collection;
@@ -13,7 +13,7 @@ export interface CollectionExport {
 }
 
 export interface EnvironmentExport {
-    dispatch_version: '1.0';
+    fetch_boy_version: '1.0';
     type: 'environment';
     exported_at: string;
     environment: Environment;
@@ -32,7 +32,7 @@ export function exportCollectionToJson(
     const requests = store.requests.filter((r) => r.collection_id === collectionId);
 
     const envelope: CollectionExport = {
-        dispatch_version: '1.0',
+        fetch_boy_version: '1.0',
         type: 'collection',
         exported_at: new Date().toISOString(),
         collection,
@@ -48,7 +48,7 @@ export function exportEnvironmentToJson(environmentId: string, environments: Env
     if (!environment) throw new Error('Environment not found');
 
     const envelope: EnvironmentExport = {
-        dispatch_version: '1.0',
+        fetch_boy_version: '1.0',
         type: 'environment',
         exported_at: new Date().toISOString(),
         environment,
@@ -71,7 +71,7 @@ export async function importCollectionFromJson(
     }
 
     // Validate
-    if (envelope.dispatch_version !== '1.0') {
+    if (envelope.fetch_boy_version !== '1.0') {
         throw new Error('Unsupported format version: expected 1.0');
     }
     if (envelope.type !== 'collection') {
@@ -170,7 +170,7 @@ export async function importEnvironmentFromJson(json: string): Promise<Environme
     }
 
     // Validate
-    if (envelope.dispatch_version !== '1.0') {
+    if (envelope.fetch_boy_version !== '1.0') {
         throw new Error('Unsupported format version: expected 1.0');
     }
     if (envelope.type !== 'environment') {
