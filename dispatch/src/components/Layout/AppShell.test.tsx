@@ -6,6 +6,26 @@ vi.mock('@/lib/collections', () => ({
     loadAllCollections: vi.fn().mockResolvedValue({ collections: [], folders: [], requests: [] }),
 }));
 
+const mockLoadAllEnvironments = vi.fn().mockResolvedValue([]);
+const mockLoadAll = vi.fn();
+
+vi.mock('@/lib/environments', () => ({
+    loadAllEnvironments: (...args: unknown[]) => mockLoadAllEnvironments(...args),
+    setActiveEnvironment: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('@/stores/environmentStore', () => ({
+    useEnvironmentStore: Object.assign(
+        (selector?: (s: { environments: []; activeEnvironmentId: null; setActive: ReturnType<typeof vi.fn> }) => unknown) => {
+            const state = { environments: [], activeEnvironmentId: null, setActive: vi.fn() };
+            return selector ? selector(state) : state;
+        },
+        {
+            getState: () => ({ loadAll: mockLoadAll }),
+        },
+    ),
+}));
+
 describe('AppShell', () => {
   it('renders the top bar region', async () => {
     render(<AppShell />);
@@ -41,5 +61,13 @@ describe('AppShell', () => {
     render(<AppShell />);
     expect(screen.getByText('Request Builder')).toBeInTheDocument();
     await waitFor(() => {});
+  });
+
+  it('calls loadAllEnvironments on mount and passes result to store.loadAll', async () => {
+    render(<AppShell />);
+    await waitFor(() => {
+      expect(mockLoadAllEnvironments).toHaveBeenCalled();
+      expect(mockLoadAll).toHaveBeenCalledWith([]);
+    });
   });
 });
