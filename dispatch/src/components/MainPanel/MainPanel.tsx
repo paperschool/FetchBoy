@@ -15,8 +15,6 @@ import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import { useEnvironment } from '@/hooks/useEnvironment';
 import { useState } from 'react';
 
-const SEND_TIMEOUT_MS = 15000;
-
 const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
 const REQUEST_TABS: Array<{ id: RequestTab; label: string }> = [
   { id: 'headers', label: 'Headers' },
@@ -65,6 +63,8 @@ export function MainPanel() {
   const [verboseLogs, setVerboseLogs] = useState<string[]>([]);
   const [requestBodyLanguage, setRequestBodyLanguage] = useState<'json' | 'html' | 'xml'>('json');
   const editorFontSize = useUiSettingsStore((state) => state.editorFontSize);
+  const requestTimeoutMs = useUiSettingsStore((s) => s.requestTimeoutMs);
+  const sslVerify = useUiSettingsStore((s) => s.sslVerify);
 
   const collectionStore = useCollectionStore();
   const historyStore = useHistoryStore();
@@ -234,9 +234,11 @@ export function MainPanel() {
             queryParams: sendQueryParams,
             body: sendBody,
             auth,
+            timeout_ms: requestTimeoutMs,
+            ssl_verify: sslVerify,
           },
         }),
-        SEND_TIMEOUT_MS,
+        requestTimeoutMs + 5000,
       );
 
       appendLog(

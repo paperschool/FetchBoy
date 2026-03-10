@@ -19,6 +19,8 @@ export function AppShell() {
       .then((s) => {
         useUiSettingsStore.getState().setTheme(s.theme);
         useUiSettingsStore.getState().setEditorFontSize(s.editor_font_size);
+        useUiSettingsStore.getState().setRequestTimeoutMs(s.request_timeout_ms);
+        useUiSettingsStore.getState().setSslVerify(s.ssl_verify);
       })
       .catch(() => {}); // defaults already set in store initial state
   }, []);

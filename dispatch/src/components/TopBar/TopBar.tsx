@@ -1,26 +1,19 @@
 import { useState } from 'react';
 import { useEnvironmentStore } from '@/stores/environmentStore';
-import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import { setActiveEnvironment } from '@/lib/environments';
-import { saveSetting } from '@/lib/settings';
 import { EnvironmentPanel } from '@/components/EnvironmentPanel/EnvironmentPanel';
+import { SettingsPanel } from '@/components/Settings/SettingsPanel';
 
 export function TopBar() {
   const environments = useEnvironmentStore((s) => s.environments);
   const activeEnvironmentId = useEnvironmentStore((s) => s.activeEnvironmentId);
-  const theme = useUiSettingsStore((s) => s.theme);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [settingsPanelOpen, setSettingsPanelOpen] = useState(false);
 
   async function handleEnvChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const newId = e.target.value || null;
     await setActiveEnvironment(newId);
     useEnvironmentStore.getState().setActive(newId);
-  }
-
-  async function handleThemeChange() {
-    const next = theme === 'light' ? 'dark' : 'light';
-    useUiSettingsStore.getState().setTheme(next);
-    await saveSetting('theme', next);
   }
 
   return (
@@ -30,13 +23,6 @@ export function TopBar() {
     >
       <span className="text-lg font-semibold tracking-wide">Fetch Boy 🦴</span>
       <div className="flex items-center gap-2">
-        <button
-          aria-label="Toggle theme"
-          className="text-xs text-app-inverse border border-white/20 rounded px-2 py-1 hover:bg-white/10"
-          onClick={() => void handleThemeChange()}
-        >
-          {theme === 'light' ? '☀️' : '🌙'}
-        </button>
         <select
           value={activeEnvironmentId ?? ''}
           onChange={(e) => void handleEnvChange(e)}
@@ -56,9 +42,19 @@ export function TopBar() {
         >
           ⚙
         </button>
+        <button
+          aria-label="Open settings"
+          className="text-xs text-app-inverse border border-white/20 rounded px-2 py-1 hover:bg-white/10"
+          onClick={() => setSettingsPanelOpen(true)}
+        >
+          ⚙
+        </button>
       </div>
       {panelOpen && (
         <EnvironmentPanel open={panelOpen} onClose={() => setPanelOpen(false)} />
+      )}
+      {settingsPanelOpen && (
+        <SettingsPanel open={settingsPanelOpen} onClose={() => setSettingsPanelOpen(false)} />
       )}
     </header>
   );
