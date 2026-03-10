@@ -5,7 +5,7 @@ import { useTheme } from './useTheme';
 // ─── Hoisted mock state ───────────────────────────────────────────────────────
 
 const { mockStoreState } = vi.hoisted(() => {
-    const mockStoreState = { theme: 'light' as 'light' | 'dark' };
+    const mockStoreState = { theme: 'light' as 'light' | 'dark' | 'system' };
     return { mockStoreState };
 });
 
@@ -61,6 +61,52 @@ describe('useTheme', () => {
         renderHook(() => useTheme());
 
         expect(document.documentElement.classList.contains('dark')).toBe(true);
+    });
+
+    it('system mode adds .dark when matchMedia matches dark', () => {
+        const mq = makeMediaQuery(true);
+        vi.spyOn(window, 'matchMedia').mockReturnValue(mq as unknown as MediaQueryList);
+        mockStoreState.theme = 'system';
+
+        renderHook(() => useTheme());
+
+        expect(document.documentElement.classList.contains('dark')).toBe(true);
+    });
+
+    it('system mode removes .dark when matchMedia matches light', () => {
+        document.documentElement.classList.add('dark');
+        const mq = makeMediaQuery(false);
+        vi.spyOn(window, 'matchMedia').mockReturnValue(mq as unknown as MediaQueryList);
+        mockStoreState.theme = 'system';
+
+        renderHook(() => useTheme());
+
+        expect(document.documentElement.classList.contains('dark')).toBe(false);
+    });
+
+    it('system mode attaches media query listener and reacts to changes', () => {
+        const mq = makeMediaQuery(false);
+        vi.spyOn(window, 'matchMedia').mockReturnValue(mq as unknown as MediaQueryList);
+        mockStoreState.theme = 'system';
+
+        renderHook(() => useTheme());
+
+        expect(mq.addEventListener).toHaveBeenCalledWith('change', expect.any(Function));
+        mq.dispatchChange(true);
+        expect(document.documentElement.classList.contains('dark')).toBe(true);
+        mq.dispatchChange(false);
+        expect(document.documentElement.classList.contains('dark')).toBe(false);
+    });
+
+    it('system mode cleans up media query listener on unmount', () => {
+        const mq = makeMediaQuery(false);
+        vi.spyOn(window, 'matchMedia').mockReturnValue(mq as unknown as MediaQueryList);
+        mockStoreState.theme = 'system';
+
+        const { unmount } = renderHook(() => useTheme());
+        unmount();
+
+        expect(mq.removeEventListener).toHaveBeenCalledWith('change', expect.any(Function));
     });
 });
 

@@ -3,11 +3,16 @@ import { useUiSettingsStore } from './uiSettingsStore';
 
 describe('uiSettingsStore', () => {
     beforeEach(() => {
-        useUiSettingsStore.setState({ theme: 'light', editorFontSize: 13 });
+        useUiSettingsStore.setState({
+            theme: 'system',
+            editorFontSize: 13,
+            requestTimeoutMs: 30000,
+            sslVerify: true,
+        });
     });
 
-    it('has initial theme value of "light"', () => {
-        expect(useUiSettingsStore.getState().theme).toBe('light');
+    it('has initial theme value of "system"', () => {
+        expect(useUiSettingsStore.getState().theme).toBe('system');
     });
 
     it('setTheme updates theme in store', () => {
@@ -23,5 +28,23 @@ describe('uiSettingsStore', () => {
     it('setEditorFontSize updates editorFontSize', () => {
         useUiSettingsStore.getState().setEditorFontSize(16);
         expect(useUiSettingsStore.getState().editorFontSize).toBe(16);
+    });
+
+    it('initial requestTimeoutMs is 30000', () => {
+        expect(useUiSettingsStore.getState().requestTimeoutMs).toBe(30000);
+    });
+
+    it('setRequestTimeoutMs updates requestTimeoutMs', () => {
+        useUiSettingsStore.getState().setRequestTimeoutMs(5000);
+        expect(useUiSettingsStore.getState().requestTimeoutMs).toBe(5000);
+    });
+
+    it('initial sslVerify is true', () => {
+        expect(useUiSettingsStore.getState().sslVerify).toBe(true);
+    });
+
+    it('setSslVerify(false) updates store', () => {
+        useUiSettingsStore.getState().setSslVerify(false);
+        expect(useUiSettingsStore.getState().sslVerify).toBe(false);
     });
 });

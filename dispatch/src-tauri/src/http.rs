@@ -39,6 +39,8 @@ pub struct SendRequestPayload {
     pub queryParams: Vec<KeyValueRow>,
     pub body: RequestBody,
     pub auth: RequestAuth,
+    pub timeout_ms: u64,
+    pub ssl_verify: bool,
 }
 
 // Read-only response header entry returned to the UI.
@@ -118,9 +120,10 @@ pub async fn send_request(request: SendRequestPayload) -> Result<SendResponsePay
         }
     }
 
-    // Build a reusable reqwest client with a sane default timeout.
+    // Build a reusable reqwest client with user-configured timeout and SSL settings.
     let client = Client::builder()
-        .timeout(std::time::Duration::from_secs(30))
+        .timeout(std::time::Duration::from_millis(request.timeout_ms))
+        .danger_accept_invalid_certs(!request.ssl_verify)
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {e}"))?;
 

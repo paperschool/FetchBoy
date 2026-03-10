@@ -65,7 +65,7 @@ export interface HistoryEntry {
 }
 
 export interface AppSettings {
-    theme: 'light' | 'dark';
+    theme: 'light' | 'dark' | 'system';
     request_timeout_ms: number;
     ssl_verify: boolean;
     editor_font_size: number;

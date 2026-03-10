@@ -5,20 +5,15 @@ import type { Environment } from '@/lib/db';
 
 // ─── Hoisted mock state ───────────────────────────────────────────────────────
 
-const { mockSetActiveEnvironment, mockStoreState, mockUiSettingsState } = vi.hoisted(() => {
+const { mockSetActiveEnvironment, mockStoreState } = vi.hoisted(() => {
     const mockStoreState = {
         environments: [] as Environment[],
         activeEnvironmentId: null as string | null,
         setActive: vi.fn(),
     };
-    const mockUiSettingsState = {
-        theme: 'light' as 'light' | 'dark',
-        setTheme: vi.fn(),
-    };
     return {
         mockSetActiveEnvironment: vi.fn(),
         mockStoreState,
-        mockUiSettingsState,
     };
 });
 
@@ -26,10 +21,6 @@ const { mockSetActiveEnvironment, mockStoreState, mockUiSettingsState } = vi.hoi
 
 vi.mock('@/lib/environments', () => ({
     setActiveEnvironment: (...args: unknown[]) => mockSetActiveEnvironment(...args),
-}));
-
-vi.mock('@/lib/settings', () => ({
-    saveSetting: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@/stores/environmentStore', () => ({
@@ -42,19 +33,14 @@ vi.mock('@/stores/environmentStore', () => ({
     ),
 }));
 
-vi.mock('@/stores/uiSettingsStore', () => ({
-    useUiSettingsStore: Object.assign(
-        (selector?: (s: typeof mockUiSettingsState) => unknown) =>
-            selector ? selector(mockUiSettingsState) : mockUiSettingsState,
-        {
-            getState: () => mockUiSettingsState,
-        },
-    ),
-}));
-
 vi.mock('@/components/EnvironmentPanel/EnvironmentPanel', () => ({
     EnvironmentPanel: ({ open }: { open: boolean }) =>
         open ? <div data-testid="environment-panel-mock" /> : null,
+}));
+
+vi.mock('@/components/Settings/SettingsPanel', () => ({
+    SettingsPanel: ({ open }: { open: boolean }) =>
+        open ? <div data-testid="settings-panel-mock" /> : null,
 }));
 
 const makeEnv = (overrides: Partial<Environment> = {}): Environment => ({
@@ -74,7 +60,6 @@ describe('TopBar', () => {
         mockStoreState.environments = [];
         mockStoreState.activeEnvironmentId = null;
         mockSetActiveEnvironment.mockResolvedValue(undefined);
-        mockUiSettingsState.theme = 'system';
     });
 
     it('renders the app name', () => {
@@ -129,39 +114,16 @@ describe('TopBar', () => {
         expect(screen.getByTestId('environment-panel-mock')).toBeInTheDocument();
     });
 
-    it('renders theme toggle button with accessible label', () => {
+    it('renders Open settings button with correct aria-label', () => {
         render(<TopBar />);
-        expect(screen.getByRole('button', { name: /toggle theme/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /open settings/i })).toBeInTheDocument();
     });
 
-    it('shows light icon (☀️) when theme is light', () => {
-        mockUiSettingsState.theme = 'light';
+    it('clicking Open settings button opens SettingsPanel', () => {
         render(<TopBar />);
-        expect(screen.getByRole('button', { name: /toggle theme/i })).toHaveTextContent('☀️');
-    });
-
-    it('shows dark icon (🌙) when theme is dark', () => {
-        mockUiSettingsState.theme = 'dark';
-        render(<TopBar />);
-        expect(screen.getByRole('button', { name: /toggle theme/i })).toHaveTextContent('🌙');
-    });
-
-    it('cycles theme: light → dark on click', async () => {
-        mockUiSettingsState.theme = 'light';
-        render(<TopBar />);
-        fireEvent.click(screen.getByRole('button', { name: /toggle theme/i }));
-        await waitFor(() => {
-            expect(mockUiSettingsState.setTheme).toHaveBeenCalledWith('dark');
-        });
-    });
-
-    it('cycles theme: dark → light on click', async () => {
-        mockUiSettingsState.theme = 'dark';
-        render(<TopBar />);
-        fireEvent.click(screen.getByRole('button', { name: /toggle theme/i }));
-        await waitFor(() => {
-            expect(mockUiSettingsState.setTheme).toHaveBeenCalledWith('light');
-        });
+        const settingsBtn = screen.getByRole('button', { name: /open settings/i });
+        fireEvent.click(settingsBtn);
+        expect(screen.getByTestId('settings-panel-mock')).toBeInTheDocument();
     });
 });
 
