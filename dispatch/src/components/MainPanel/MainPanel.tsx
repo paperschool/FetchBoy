@@ -1,7 +1,12 @@
+import { invoke } from '@tauri-apps/api/core';
 import { KeyValueRows } from '@/components/RequestBuilder/KeyValueRows';
+import { ResponseViewer, type ResponseData } from '@/components/ResponseViewer/ResponseViewer';
+import { persistHistoryEntry } from '@/lib/history';
 import type { HttpMethod, RequestTab } from '@/stores/requestStore';
 import { useRequestStore } from '@/stores/requestStore';
 import { useState } from 'react';
+
+const SEND_TIMEOUT_MS = 15000;
 
 const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
 const REQUEST_TABS: Array<{ id: RequestTab; label: string }> = [
@@ -13,7 +18,9 @@ const REQUEST_TABS: Array<{ id: RequestTab; label: string }> = [
 
 export function MainPanel() {
   const [isSending, setIsSending] = useState(false);
-  const [requestResult, setRequestResult] = useState<string | null>(null);
+  const [responseData, setResponseData] = useState<ResponseData | null>(null);
+  const [requestError, setRequestError] = useState<string | null>(null);
+  const [verboseLogs, setVerboseLogs] = useState<string[]>([]);
 
   const {
     method,
@@ -33,41 +40,120 @@ export function MainPanel() {
     toggleQueryParamEnabled,
     removeQueryParam,
     body,
+    auth,
     setBodyRaw,
   } = useRequestStore();
 
+  const appendLog = (message: string) => {
+    const timestamp = new Date().toISOString();
+    setVerboseLogs((current) => [...current, `[${timestamp}] ${message}`]);
+  };
+
+  const invokeWithTimeout = async <T,>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
+    return new Promise<T>((resolve, reject) => {
+      const timeoutHandle = setTimeout(() => {
+        reject(new Error(`Timed out after ${timeoutMs}ms waiting for Rust response`));
+      }, timeoutMs);
+
+      promise
+        .then((value) => {
+          clearTimeout(timeoutHandle);
+          resolve(value);
+        })
+        .catch((error) => {
+          clearTimeout(timeoutHandle);
+          reject(error);
+        });
+    });
+  };
+
   const handleSendRequest = async () => {
     const rawUrl = url.trim();
+    appendLog(`Send clicked with method=${method}, rawUrl=${rawUrl || '<empty>'}`);
 
     if (!rawUrl) {
-      setRequestResult('Please enter a URL first.');
+      setRequestError('Please enter a URL first.');
+      setResponseData(null);
+      appendLog('Validation failed: URL is empty.');
       return;
     }
 
     const normalizedUrl = /^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`;
+    appendLog(`Normalized URL: ${normalizedUrl}`);
 
     setIsSending(true);
-    setRequestResult(null);
+    setRequestError(null);
+    setResponseData(null);
+
+    const requestSnapshot = {
+      id: crypto.randomUUID(),
+      collection_id: null,
+      folder_id: null,
+      name: 'Untitled Request',
+      method,
+      url: normalizedUrl,
+      headers,
+      query_params: queryParams,
+      body_type: body.raw.trim() ? 'raw' : 'none',
+      body_content: body.raw,
+      auth_type: auth.type,
+      auth_config: {},
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    } as const;
 
     try {
-      try {
-        const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
-        const response = await tauriFetch(normalizedUrl, { method });
-        setRequestResult(`Request complete: ${response.status} ${response.statusText}`);
-        return;
-      } catch {
-        // Fallback to browser fetch (used in tests/web mode).
-      }
+      appendLog('Invoking Rust command: send_request');
+      const response = await invokeWithTimeout(
+        invoke<ResponseData>('send_request', {
+          request: {
+            method,
+            url: normalizedUrl,
+            headers,
+            queryParams,
+            body,
+            auth,
+          },
+        }),
+        SEND_TIMEOUT_MS,
+      );
 
-      const browserResponse = await fetch(normalizedUrl, { method });
-      setRequestResult(`Request complete: ${browserResponse.status} ${browserResponse.statusText}`);
+      appendLog(
+        `Rust response received: status=${response.status}, time=${response.responseTimeMs}ms, size=${response.responseSizeBytes}bytes`,
+      );
+
+      setResponseData(response);
+
+      await persistHistoryEntry({
+        method,
+        url: normalizedUrl,
+        statusCode: response.status,
+        responseTimeMs: Number(response.responseTimeMs),
+        requestSnapshot,
+      });
+      appendLog('History persisted for successful response.');
     } catch (error) {
       const reason = error instanceof Error ? error.message : 'Unknown error';
-      setRequestResult(
-        `Request failed: ${reason}. Verify URL/protocol and API reachability. If this is a public API, try full https URL (for example: https://httpbin.org/get).`,
-      );
+      const message = `Request failed: ${reason}`;
+      setRequestError(message);
+      appendLog(`Send failed: ${reason}`);
+
+      try {
+        await persistHistoryEntry({
+          method,
+          url: normalizedUrl,
+          statusCode: 0,
+          responseTimeMs: 0,
+          requestSnapshot,
+        });
+        appendLog('History persisted for failed response.');
+      } catch {
+        // Keep UI focused on request failure; history persistence errors should not crash send flow.
+        appendLog('History persistence failed after request failure.');
+      }
     } finally {
       setIsSending(false);
+      appendLog('Send flow completed.');
     }
   };
 
@@ -124,8 +210,6 @@ export function MainPanel() {
             </button>
           </div>
         </div>
-
-        {requestResult ? <p className="text-app-muted text-sm">{requestResult}</p> : null}
 
         <div className="border-app-subtle border-b">
           <div className="flex gap-2">
@@ -190,6 +274,34 @@ export function MainPanel() {
         ) : null}
 
         {activeTab === 'auth' ? <p className="text-app-muted text-sm">Auth: None</p> : null}
+
+        <details className="border-app-subtle rounded-md border p-2" data-testid="verbose-logs-accordion">
+          <summary className="text-app-secondary flex cursor-pointer items-center justify-between text-sm font-medium">
+            <span>Verbose Logs ({verboseLogs.length})</span>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                setVerboseLogs([]);
+              }}
+              className="border-app-subtle text-app-secondary rounded-md border px-2 py-1 text-xs font-medium hover:bg-gray-50"
+            >
+              Clear Logs
+            </button>
+          </summary>
+          <div className="mt-2 space-y-2">
+            {verboseLogs.length === 0 ? (
+              <p className="text-app-muted text-xs">No logs yet. Click Send to capture runtime details.</p>
+            ) : (
+              <pre className="bg-app-main text-app-secondary max-h-44 overflow-auto rounded-md p-2 text-xs whitespace-pre-wrap">
+                {verboseLogs.join('\n')}
+              </pre>
+            )}
+          </div>
+        </details>
+
+        <ResponseViewer response={responseData} error={requestError} />
       </div>
     </main>
   );

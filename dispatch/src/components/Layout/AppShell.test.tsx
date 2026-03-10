@@ -20,7 +20,7 @@ describe('AppShell', () => {
 
   it('displays the app name in the top bar', () => {
     render(<AppShell />);
-    expect(screen.getByText('Dispatch')).toBeInTheDocument();
+    expect(screen.getByText('Fetch Boy 🦴')).toBeInTheDocument();
   });
 
   it('displays the Collections heading in the sidebar', () => {
