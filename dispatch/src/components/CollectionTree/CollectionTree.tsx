@@ -176,7 +176,7 @@ export function CollectionTree() {
                 <button
                     onClick={handleAddCollection}
                     aria-label="Add Collection"
-                    className="text-app-muted hover:text-app-inverse p-1 rounded cursor-pointer"
+                    className="text-gray-300 hover:text-white p-1 rounded cursor-pointer"
                 >
                     <Plus size={16} />
                 </button>
@@ -243,7 +243,7 @@ export function CollectionTree() {
                                 </span>
                             )}
 
-                            <div className="hidden group-hover:flex items-center gap-0.5 text-app-muted">
+                            <div className="hidden group-hover:flex items-center gap-0.5 text-gray-300">
                                 <button
                                     onClick={(e) => {
                                         e.preventDefault();
@@ -252,7 +252,7 @@ export function CollectionTree() {
                                     }}
                                     aria-label="Add folder to collection"
                                     title="New Folder"
-                                    className="p-1 rounded hover:text-app-inverse cursor-pointer"
+                                    className="p-1 rounded hover:text-white cursor-pointer"
                                     draggable={false}
                                 >
                                     <FolderPlus size={14} />
@@ -265,7 +265,7 @@ export function CollectionTree() {
                                     }}
                                     aria-label="Add request to collection"
                                     title="New Request"
-                                    className="p-1 rounded hover:text-app-inverse cursor-pointer"
+                                    className="p-1 rounded hover:text-white cursor-pointer"
                                     draggable={false}
                                 >
                                     <FilePlus size={14} />
@@ -278,7 +278,7 @@ export function CollectionTree() {
                                     }}
                                     aria-label="Rename collection"
                                     title="Rename"
-                                    className="p-1 rounded hover:text-app-inverse cursor-pointer"
+                                    className="p-1 rounded hover:text-white cursor-pointer"
                                     draggable={false}
                                 >
                                     <Pencil size={14} />
@@ -291,7 +291,7 @@ export function CollectionTree() {
                                     }}
                                     aria-label="Delete collection"
                                     title="Delete"
-                                    className="p-1 rounded hover:text-app-inverse cursor-pointer"
+                                    className="p-1 rounded text-red-400 hover:text-red-300 cursor-pointer"
                                     draggable={false}
                                 >
                                     <Trash2 size={14} />
@@ -374,7 +374,7 @@ export function CollectionTree() {
                                                     </span>
                                                 )}
 
-                                                <div className="hidden group-hover:flex items-center gap-0.5 text-app-muted">
+                                                <div className="hidden group-hover:flex items-center gap-0.5 text-gray-300">
                                                     <button
                                                         onClick={(e) => {
                                                             e.preventDefault();
@@ -383,7 +383,7 @@ export function CollectionTree() {
                                                         }}
                                                         aria-label="Add request to folder"
                                                         title="New Request"
-                                                        className="p-1 rounded hover:text-app-inverse cursor-pointer"
+                                                        className="p-1 rounded hover:text-white cursor-pointer"
                                                         draggable={false}
                                                     >
                                                         <FilePlus size={14} />
@@ -396,7 +396,7 @@ export function CollectionTree() {
                                                         }}
                                                         aria-label="Rename folder"
                                                         title="Rename"
-                                                        className="p-1 rounded hover:text-app-inverse cursor-pointer"
+                                                        className="p-1 rounded hover:text-white cursor-pointer"
                                                         draggable={false}
                                                     >
                                                         <Pencil size={14} />
@@ -409,7 +409,7 @@ export function CollectionTree() {
                                                         }}
                                                         aria-label="Delete folder"
                                                         title="Delete"
-                                                        className="p-1 rounded hover:text-app-inverse cursor-pointer"
+                                                        className="p-1 rounded text-red-400 hover:text-red-300 cursor-pointer"
                                                         draggable={false}
                                                     >
                                                         <Trash2 size={14} />
@@ -603,7 +603,7 @@ function RequestRow({
                 </span>
             )}
 
-            <div className="hidden group-hover:flex items-center gap-0.5 text-app-muted">
+            <div className="hidden group-hover:flex items-center gap-0.5 text-gray-300">
                 <button
                     onClick={(e) => {
                         e.preventDefault();
@@ -612,7 +612,7 @@ function RequestRow({
                     }}
                     aria-label="Rename request"
                     title="Rename"
-                    className="p-1 rounded hover:text-app-inverse cursor-pointer"
+                    className="p-1 rounded hover:text-white cursor-pointer"
                     draggable={false}
                 >
                     <Pencil size={14} />
@@ -625,7 +625,7 @@ function RequestRow({
                     }}
                     aria-label="Delete request"
                     title="Delete"
-                    className="p-1 rounded hover:text-app-inverse cursor-pointer"
+                    className="p-1 rounded text-red-400 hover:text-red-300 cursor-pointer"
                     draggable={false}
                 >
                     <Trash2 size={14} />

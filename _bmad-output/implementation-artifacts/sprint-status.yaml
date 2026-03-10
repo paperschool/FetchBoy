@@ -53,7 +53,7 @@ development_status:
   2-1-monaco-editor-integration: review
   2-2-collections-sidebar: review
   2-3-save-and-load-requests: review
-  2-4-request-history: backlog
+  2-4-request-history: in-progress
   epic-2-retrospective: optional
 
   # ─── Epic 3: Environments & Auth ───────────────────────────────────

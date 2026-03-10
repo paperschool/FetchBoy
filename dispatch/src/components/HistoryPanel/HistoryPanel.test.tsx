@@ -136,29 +136,32 @@ describe('HistoryPanel', () => {
         const entry = makeEntry();
         useHistoryStore.setState({ entries: [entry] });
 
-        const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
-
         render(<HistoryPanel />);
+        // First click: enter confirm state
         fireEvent.click(screen.getByLabelText('Clear History'));
+        // Confirm button should now be visible
+        expect(screen.getByLabelText('Confirm clear history')).toBeInTheDocument();
+        // Second click: confirm
+        fireEvent.click(screen.getByLabelText('Confirm clear history'));
 
         await waitFor(() => {
             expect(mockClearHistory).toHaveBeenCalledOnce();
         });
         expect(useHistoryStore.getState().entries).toHaveLength(0);
-        confirmSpy.mockRestore();
     });
 
-    it('does not clear when user cancels the confirmation', async () => {
+    it('cancels the clear when cancel button is clicked', async () => {
         const entry = makeEntry();
         useHistoryStore.setState({ entries: [entry] });
 
-        const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
-
         render(<HistoryPanel />);
         fireEvent.click(screen.getByLabelText('Clear History'));
+        expect(screen.getByLabelText('Cancel clear history')).toBeInTheDocument();
+        fireEvent.click(screen.getByLabelText('Cancel clear history'));
 
         expect(mockClearHistory).not.toHaveBeenCalled();
         expect(useHistoryStore.getState().entries).toHaveLength(1);
-        confirmSpy.mockRestore();
+        // Trash button should be visible again
+        expect(screen.getByLabelText('Clear History')).toBeInTheDocument();
     });
 });
