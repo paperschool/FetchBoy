@@ -1,6 +1,6 @@
 # Story 2.1: Monaco Editor Integration
 
-Status: in-progress
+Status: review
 
 ## Story
 
@@ -55,7 +55,7 @@ Final Step: Commit all code and documentation changes for Story 2.1 before marki
   - [x] Run `yarn tauri dev` smoke check and verify editor behavior in desktop runtime.
 
 - [ ] Final Task - Commit story changes
-  - [ ] Commit all code and documentation changes for this story with a message that includes Story 2.1.
+  - [x] Commit all code and documentation changes for this story with a message that includes Story 2.1.
 
 ## Dev Notes
 
@@ -149,6 +149,7 @@ GPT-5.3-Codex
 - `yarn test`
 - `yarn typecheck`
 - `yarn tauri dev 2>&1 | head -80` (startup blocked by existing process on port 1420)
+- `git commit -m "feat: Story 2.1 Monaco editor integration"`
 
 ### Completion Notes List
 
@@ -160,6 +161,7 @@ GPT-5.3-Codex
 - Added dedicated response viewer test suite and updated main panel tests to validate Monaco behavior.
 - Full test and typecheck gates pass.
 - Tauri smoke run failed due local dev-server port conflict (1420 already in use), not due code errors.
+- Story commit created: `a4e8917`.
 
 ### File List
 
@@ -178,3 +180,4 @@ GPT-5.3-Codex
 
 - 2026-03-10: Story created and moved to ready-for-dev.
 - 2026-03-10: Implemented Monaco editor integration for request/response bodies, added language selectors, added test coverage, and validated quality gates.
+- 2026-03-10: Story commit created and status advanced to review.
