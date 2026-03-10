@@ -208,3 +208,75 @@ export async function updateRequestOrder(requestId: string, sortOrder: number): 
         requestId,
     ]);
 }
+
+export async function updateSavedRequest(
+    id: string,
+    data: Partial<Omit<Request, 'id' | 'created_at'>>,
+): Promise<void> {
+    const db = await getDb();
+    await db.execute(
+        `UPDATE requests SET
+            name = ?,
+            method = ?,
+            url = ?,
+            headers = ?,
+            query_params = ?,
+            body_type = ?,
+            body_content = ?,
+            auth_type = ?,
+            auth_config = ?,
+            sort_order = ?,
+            updated_at = ?
+         WHERE id = ?`,
+        [
+            data.name ?? '',
+            data.method ?? 'GET',
+            data.url ?? '',
+            JSON.stringify(data.headers ?? []),
+            JSON.stringify(data.query_params ?? []),
+            data.body_type ?? 'none',
+            data.body_content ?? '',
+            data.auth_type ?? 'none',
+            JSON.stringify(data.auth_config ?? {}),
+            data.sort_order ?? 0,
+            now(),
+            id,
+        ],
+    );
+}
+
+export async function createFullSavedRequest(
+    request: Omit<Request, 'id' | 'created_at' | 'updated_at'>,
+): Promise<Request> {
+    const db = await getDb();
+    const full: Request = {
+        ...request,
+        id: crypto.randomUUID(),
+        created_at: now(),
+        updated_at: now(),
+    };
+    await db.execute(
+        `INSERT INTO requests
+            (id, collection_id, folder_id, name, method, url, headers, query_params,
+             body_type, body_content, auth_type, auth_config, sort_order, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+            full.id,
+            full.collection_id,
+            full.folder_id,
+            full.name,
+            full.method,
+            full.url,
+            JSON.stringify(full.headers),
+            JSON.stringify(full.query_params),
+            full.body_type,
+            full.body_content,
+            full.auth_type,
+            JSON.stringify(full.auth_config),
+            full.sort_order,
+            full.created_at,
+            full.updated_at,
+        ],
+    );
+    return full;
+}

@@ -27,6 +27,11 @@ vi.mock('@/lib/history', () => ({
   persistHistoryEntry: (...args: unknown[]) => executeMock(...args),
 }));
 
+vi.mock('@/lib/collections', () => ({
+  createFullSavedRequest: vi.fn().mockResolvedValue({}),
+  updateSavedRequest: vi.fn().mockResolvedValue(undefined),
+}));
+
 describe('MainPanel request builder', () => {
   beforeEach(() => {
     invokeMock.mockReset();
@@ -50,6 +55,7 @@ describe('MainPanel request builder', () => {
       body: { mode: 'raw', raw: '' },
       auth: { type: 'none' },
       activeTab: 'headers',
+      isDirty: false,
     });
   });
 
@@ -60,8 +66,6 @@ describe('MainPanel request builder', () => {
     expect(screen.getByLabelText('Request URL')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Send' })).toBeInTheDocument();
     expect(screen.getByTestId('request-details-accordion')).toBeInTheDocument();
-    expect(screen.getByTestId('output-accordion')).toBeInTheDocument();
-    expect(screen.getByTestId('verbose-logs-accordion')).toBeInTheDocument();
   });
 
   it('updates method and url in request store', () => {
@@ -194,12 +198,12 @@ describe('MainPanel request builder', () => {
 
     await screen.findByText('200 OK');
 
-    const accordion = screen.getByTestId('verbose-logs-accordion');
-    fireEvent.click(screen.getByText(/Verbose Logs/));
+    const responseViewer = screen.getByTestId('response-viewer');
+    fireEvent.click(within(responseViewer).getByRole('button', { name: /^Logs/ }));
 
-    expect(accordion).toHaveTextContent('Send clicked with method=GET');
-    expect(accordion).toHaveTextContent('Invoking Rust command: send_request');
-    expect(accordion).toHaveTextContent('Send flow completed.');
+    expect(responseViewer).toHaveTextContent('Send clicked with method=GET');
+    expect(responseViewer).toHaveTextContent('Invoking Rust command: send_request');
+    expect(responseViewer).toHaveTextContent('Send flow completed.');
   });
 
   it('clears verbose logs when clicking Clear Logs', async () => {
@@ -212,13 +216,13 @@ describe('MainPanel request builder', () => {
 
     await screen.findByText('200 OK');
 
-    const accordion = screen.getByTestId('verbose-logs-accordion');
-    fireEvent.click(screen.getByText(/Verbose Logs/));
-    expect(accordion).toHaveTextContent('Send clicked with method=GET');
+    const responseViewer = screen.getByTestId('response-viewer');
+    fireEvent.click(within(responseViewer).getByRole('button', { name: /^Logs/ }));
+    expect(responseViewer).toHaveTextContent('Send clicked with method=GET');
 
     fireEvent.click(screen.getByRole('button', { name: 'Clear Logs' }));
 
-    expect(accordion).toHaveTextContent('No logs yet. Click Send to capture runtime details.');
+    expect(responseViewer).toHaveTextContent('No logs yet. Click Send to capture runtime details.');
   });
 
   it('shows readable error when invoke fails and still persists history', async () => {
@@ -232,7 +236,7 @@ describe('MainPanel request builder', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Send' }));
 
     await screen.findByText('Request Error');
-    expect(screen.getByText('Request failed: Network down')).toBeInTheDocument();
+    expect(screen.getByText(/Request failed: Network down/)).toBeInTheDocument();
     expect(executeMock).toHaveBeenCalledTimes(1);
   });
 
@@ -247,6 +251,6 @@ describe('MainPanel request builder', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Send' }));
 
     await screen.findByText('Request Error');
-    expect(screen.getByText('Request failed: Network request failed: dns error')).toBeInTheDocument();
+    expect(screen.getByText(/Request failed: Network request failed: dns error/)).toBeInTheDocument();
   });
 });
