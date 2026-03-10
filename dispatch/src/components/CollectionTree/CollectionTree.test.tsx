@@ -257,7 +257,6 @@ describe('CollectionTree', () => {
             folders: [],
             requests: [],
         });
-        vi.spyOn(window, 'confirm').mockReturnValue(true);
         render(<CollectionTree />);
         await waitFor(() => screen.getByTestId('collection-col-1'));
         fireEvent.click(screen.getByLabelText('Delete collection'));
