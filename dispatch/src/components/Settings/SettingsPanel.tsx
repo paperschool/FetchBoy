@@ -1,3 +1,4 @@
+import { Settings } from 'lucide-react';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import { saveSetting } from '@/lib/settings';
 
@@ -62,7 +63,10 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
                 data-testid="settings-panel"
             >
                 <div className="flex items-center justify-between">
-                    <h2 className="text-app-primary font-semibold text-base">Settings</h2>
+                    <div className="flex items-center gap-2">
+                        <Settings size={22} className="text-app-primary" />
+                        <h2 className="text-app-primary font-semibold text-base">Settings</h2>
+                    </div>
                     <button
                         aria-label="Close settings"
                         onClick={onClose}
