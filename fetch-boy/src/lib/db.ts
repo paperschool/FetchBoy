@@ -1,6 +1,6 @@
 import Database from '@tauri-apps/plugin-sql';
 
-export const DB_PATH = 'sqlite:dispatch.db';
+export const DB_PATH = 'sqlite:fetch-boy.db';
 
 // ─── Data Model Interfaces ────────────────────────────────────────────────────
 

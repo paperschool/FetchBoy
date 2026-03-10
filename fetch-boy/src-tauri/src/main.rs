@@ -3,5 +3,5 @@
 
 fn main() {
     // App bootstrap delegates to library setup so runtime wiring is centralized in lib.rs.
-    dispatch::run()
+    fetch_boy::run()
 }

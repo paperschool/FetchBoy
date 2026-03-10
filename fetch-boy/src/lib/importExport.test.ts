@@ -81,7 +81,7 @@ describe('exportCollectionToJson', () => {
         const json = exportCollectionToJson('col-original-id', store);
         const parsed = JSON.parse(json) as Record<string, unknown>;
 
-        expect(parsed.dispatch_version).toBe('1.0');
+        expect(parsed.fetch_boy_version).toBe('1.0');
         expect(parsed.type).toBe('collection');
         expect(typeof parsed.exported_at).toBe('string');
         expect(parsed.collection).toMatchObject({ id: 'col-original-id', name: 'My API' });
@@ -127,7 +127,7 @@ describe('exportEnvironmentToJson', () => {
         const json = exportEnvironmentToJson('env-original-id', [env]);
         const parsed = JSON.parse(json) as Record<string, unknown>;
 
-        expect(parsed.dispatch_version).toBe('1.0');
+        expect(parsed.fetch_boy_version).toBe('1.0');
         expect(parsed.type).toBe('environment');
         expect(typeof parsed.exported_at).toBe('string');
         expect((parsed.environment as Environment).name).toBe('Production');
@@ -147,7 +147,7 @@ describe('importCollectionFromJson', () => {
         const folder = makeFolder();
         const req = makeRequest();
         return JSON.stringify({
-            dispatch_version: '1.0',
+            fetch_boy_version: '1.0',
             type: 'collection',
             exported_at: '2026-01-01T00:00:00.000Z',
             collection: col,
@@ -187,7 +187,7 @@ describe('importCollectionFromJson', () => {
         const parentFolder = makeFolder({ id: 'parent-folder' });
         const childFolder = makeFolder({ id: 'child-folder', parent_id: 'parent-folder' });
         const json = JSON.stringify({
-            dispatch_version: '1.0',
+            fetch_boy_version: '1.0',
             type: 'collection',
             exported_at: '2026-01-01T00:00:00.000Z',
             collection: makeCollection(),
@@ -240,9 +240,9 @@ describe('importCollectionFromJson', () => {
         expect(mockExecute).not.toHaveBeenCalled();
     });
 
-    it('throws on wrong dispatch_version', async () => {
+    it('throws on wrong fetch_boy_version', async () => {
         const { importCollectionFromJson } = await import('./importExport');
-        const json = buildCollectionJson({ dispatch_version: '2.0' });
+        const json = buildCollectionJson({ fetch_boy_version: '2.0' });
         await expect(importCollectionFromJson(json)).rejects.toThrow('Unsupported format version: expected 1.0');
         expect(mockExecute).not.toHaveBeenCalled();
     });
@@ -259,7 +259,7 @@ describe('importCollectionFromJson', () => {
 describe('importEnvironmentFromJson', () => {
     const buildEnvJson = (overrides: Record<string, unknown> = {}) => {
         return JSON.stringify({
-            dispatch_version: '1.0',
+            fetch_boy_version: '1.0',
             type: 'environment',
             exported_at: '2026-01-01T00:00:00.000Z',
             environment: makeEnvironment(),
