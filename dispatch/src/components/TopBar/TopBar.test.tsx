@@ -5,15 +5,20 @@ import type { Environment } from '@/lib/db';
 
 // ─── Hoisted mock state ───────────────────────────────────────────────────────
 
-const { mockSetActiveEnvironment, mockStoreState } = vi.hoisted(() => {
+const { mockSetActiveEnvironment, mockStoreState, mockUiSettingsState } = vi.hoisted(() => {
     const mockStoreState = {
         environments: [] as Environment[],
         activeEnvironmentId: null as string | null,
         setActive: vi.fn(),
     };
+    const mockUiSettingsState = {
+        theme: 'system' as 'light' | 'dark' | 'system',
+        setTheme: vi.fn(),
+    };
     return {
         mockSetActiveEnvironment: vi.fn(),
         mockStoreState,
+        mockUiSettingsState,
     };
 });
 
@@ -23,12 +28,26 @@ vi.mock('@/lib/environments', () => ({
     setActiveEnvironment: (...args: unknown[]) => mockSetActiveEnvironment(...args),
 }));
 
+vi.mock('@/lib/settings', () => ({
+    saveSetting: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('@/stores/environmentStore', () => ({
     useEnvironmentStore: Object.assign(
         (selector?: (s: typeof mockStoreState) => unknown) =>
             selector ? selector(mockStoreState) : mockStoreState,
         {
             getState: () => mockStoreState,
+        },
+    ),
+}));
+
+vi.mock('@/stores/uiSettingsStore', () => ({
+    useUiSettingsStore: Object.assign(
+        (selector?: (s: typeof mockUiSettingsState) => unknown) =>
+            selector ? selector(mockUiSettingsState) : mockUiSettingsState,
+        {
+            getState: () => mockUiSettingsState,
         },
     ),
 }));
@@ -55,6 +74,7 @@ describe('TopBar', () => {
         mockStoreState.environments = [];
         mockStoreState.activeEnvironmentId = null;
         mockSetActiveEnvironment.mockResolvedValue(undefined);
+        mockUiSettingsState.theme = 'system';
     });
 
     it('renders the app name', () => {
@@ -107,5 +127,55 @@ describe('TopBar', () => {
         const manageBtn = screen.getByRole('button', { name: /manage environments/i });
         fireEvent.click(manageBtn);
         expect(screen.getByTestId('environment-panel-mock')).toBeInTheDocument();
+    });
+
+    it('renders theme toggle button with accessible label', () => {
+        render(<TopBar />);
+        expect(screen.getByRole('button', { name: /toggle theme/i })).toBeInTheDocument();
+    });
+
+    it('shows system icon (🖥️) when theme is system', () => {
+        mockUiSettingsState.theme = 'system';
+        render(<TopBar />);
+        expect(screen.getByRole('button', { name: /toggle theme/i })).toHaveTextContent('🖥️');
+    });
+
+    it('shows light icon (☀️) when theme is light', () => {
+        mockUiSettingsState.theme = 'light';
+        render(<TopBar />);
+        expect(screen.getByRole('button', { name: /toggle theme/i })).toHaveTextContent('☀️');
+    });
+
+    it('shows dark icon (🌙) when theme is dark', () => {
+        mockUiSettingsState.theme = 'dark';
+        render(<TopBar />);
+        expect(screen.getByRole('button', { name: /toggle theme/i })).toHaveTextContent('🌙');
+    });
+
+    it('cycles theme: system → light on click', async () => {
+        mockUiSettingsState.theme = 'system';
+        render(<TopBar />);
+        fireEvent.click(screen.getByRole('button', { name: /toggle theme/i }));
+        await waitFor(() => {
+            expect(mockUiSettingsState.setTheme).toHaveBeenCalledWith('light');
+        });
+    });
+
+    it('cycles theme: light → dark on click', async () => {
+        mockUiSettingsState.theme = 'light';
+        render(<TopBar />);
+        fireEvent.click(screen.getByRole('button', { name: /toggle theme/i }));
+        await waitFor(() => {
+            expect(mockUiSettingsState.setTheme).toHaveBeenCalledWith('dark');
+        });
+    });
+
+    it('cycles theme: dark → system on click', async () => {
+        mockUiSettingsState.theme = 'dark';
+        render(<TopBar />);
+        fireEvent.click(screen.getByRole('button', { name: /toggle theme/i }));
+        await waitFor(() => {
+            expect(mockUiSettingsState.setTheme).toHaveBeenCalledWith('system');
+        });
     });
 });
