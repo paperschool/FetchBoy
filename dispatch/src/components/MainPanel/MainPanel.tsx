@@ -10,6 +10,7 @@ import { useRequestStore } from '@/stores/requestStore';
 import { useCollectionStore } from '@/stores/collectionStore';
 import { useHistoryStore } from '@/stores/historyStore';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
+import { useEnvironment } from '@/hooks/useEnvironment';
 import { useState } from 'react';
 
 const SEND_TIMEOUT_MS = 15000;
@@ -64,6 +65,7 @@ export function MainPanel() {
 
   const collectionStore = useCollectionStore();
   const historyStore = useHistoryStore();
+  const { interpolate: applyEnv, unresolvedIn } = useEnvironment();
 
   const {
     method,
@@ -87,6 +89,8 @@ export function MainPanel() {
     setBodyRaw,
     markDirty,
   } = useRequestStore();
+
+  const unresolvedVars = unresolvedIn(url);
 
   const appendLog = (message: string) => {
     const timestamp = new Date().toISOString();
@@ -187,6 +191,11 @@ export function MainPanel() {
     const normalizedUrl = /^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`;
     appendLog(`Normalized URL: ${normalizedUrl}`);
 
+    const sendUrl = applyEnv(normalizedUrl);
+    const sendHeaders = headers.map((h) => ({ ...h, value: applyEnv(h.value) }));
+    const sendQueryParams = queryParams.map((q) => ({ ...q, value: applyEnv(q.value) }));
+    const sendBody = { ...body, raw: applyEnv(body.raw) };
+
     setIsSending(true);
     setRequestError(null);
     setResponseData(null);
@@ -197,11 +206,11 @@ export function MainPanel() {
       folder_id: null,
       name: 'Untitled Request',
       method,
-      url: normalizedUrl,
-      headers,
-      query_params: queryParams,
-      body_type: body.raw.trim() ? 'raw' : 'none',
-      body_content: body.raw,
+      url: sendUrl,
+      headers: sendHeaders,
+      query_params: sendQueryParams,
+      body_type: sendBody.raw.trim() ? 'raw' : 'none',
+      body_content: sendBody.raw,
       auth_type: auth.type,
       auth_config: {},
       sort_order: 0,
@@ -215,10 +224,10 @@ export function MainPanel() {
         invoke<ResponseData>('send_request', {
           request: {
             method,
-            url: normalizedUrl,
-            headers,
-            queryParams,
-            body,
+            url: sendUrl,
+            headers: sendHeaders,
+            queryParams: sendQueryParams,
+            body: sendBody,
             auth,
           },
         }),
@@ -233,7 +242,7 @@ export function MainPanel() {
 
       const entry = await persistHistoryEntry({
         method,
-        url: normalizedUrl,
+        url: sendUrl,
         statusCode: response.status,
         responseTimeMs: Number(response.responseTimeMs),
         requestSnapshot,
@@ -249,7 +258,7 @@ export function MainPanel() {
       try {
         const errorEntry = await persistHistoryEntry({
           method,
-          url: normalizedUrl,
+          url: sendUrl,
           statusCode: 0,
           responseTimeMs: 0,
           requestSnapshot,
@@ -306,6 +315,11 @@ export function MainPanel() {
               placeholder="https://api.example.com"
               className="border-app-subtle text-app-primary h-9 w-full rounded-md border px-3 text-sm"
             />
+            {unresolvedVars.length > 0 && (
+              <p className="mt-1 text-xs text-orange-400">
+                ⚠ Unresolved: {unresolvedVars.map((v) => `{{${v}}}`).join(', ')}
+              </p>
+            )}
           </div>
 
           <div className="flex items-end gap-2">
