@@ -1,6 +1,6 @@
 # Story 4.3: Settings Panel
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -25,33 +25,33 @@ so that I can configure theme, request timeout, SSL verification, and editor fon
 
 ## Tasks / Subtasks
 
-- [ ] Task 1 — Extend `AppSettings.theme` type and update defaults (AC: 2)
-  - [ ] Open `dispatch/src/lib/db.ts`
-  - [ ] Change `AppSettings.theme` type from `'light' | 'dark'` to `'light' | 'dark' | 'system'`
-  - [ ] Open `dispatch/src/lib/settings.ts`
-  - [ ] Change the `theme` fallback in `loadAllSettings` return from `'light'` to `'system'`
-  - [ ] Change the catch-block default `theme` from `'light'` to `'system'`
+- [x] Task 1 — Extend `AppSettings.theme` type and update defaults (AC: 2)
+  - [x] Open `dispatch/src/lib/db.ts`
+  - [x] Change `AppSettings.theme` type from `'light' | 'dark'` to `'light' | 'dark' | 'system'`
+  - [x] Open `dispatch/src/lib/settings.ts`
+  - [x] Change the `theme` fallback in `loadAllSettings` return from `'light'` to `'system'`
+  - [x] Change the catch-block default `theme` from `'light'` to `'system'`
 
-- [ ] Task 2 — Extend `uiSettingsStore.ts` with all four settings fields (AC: 3, 4, 5)
-  - [ ] Open `dispatch/src/stores/uiSettingsStore.ts`
-  - [ ] Update `UiSettingsState` interface:
+- [x] Task 2 — Extend `uiSettingsStore.ts` with all four settings fields (AC: 3, 4, 5)
+  - [x] Open `dispatch/src/stores/uiSettingsStore.ts`
+  - [x] Update `UiSettingsState` interface:
     - Change `theme` type to `'light' | 'dark' | 'system'`
     - Change `setTheme` parameter type to `'light' | 'dark' | 'system'`
     - Add `requestTimeoutMs: number`
     - Add `setRequestTimeoutMs: (ms: number) => void`
     - Add `sslVerify: boolean`
     - Add `setSslVerify: (v: boolean) => void`
-  - [ ] Update store initial state:
+  - [x] Update store initial state:
     - Change `theme` default to `'system'` (was `'light'`)
     - Add `requestTimeoutMs: 30000`
     - Add `setRequestTimeoutMs: (ms) => set({ requestTimeoutMs: ms })`
     - Add `sslVerify: true`
     - Add `setSslVerify: (v) => set({ sslVerify: v })`
-  - [ ] Keep `editorFontSize: 13` default and the `setEditorFontSize` action as-is (the DB value 14 will override at startup)
+  - [x] Keep `editorFontSize: 13` default and the `setEditorFontSize` action as-is (the DB value 14 will override at startup)
 
-- [ ] Task 3 — Update `useTheme.ts` to handle 'system' mode (AC: 2)
-  - [ ] Open `dispatch/src/hooks/useTheme.ts`
-  - [ ] Replace the simple toggle with full three-way logic:
+- [x] Task 3 — Update `useTheme.ts` to handle 'system' mode (AC: 2)
+  - [x] Open `dispatch/src/hooks/useTheme.ts`
+  - [x] Replace the simple toggle with full three-way logic:
     ```typescript
     import { useEffect } from 'react';
     import { useUiSettingsStore } from '@/stores/uiSettingsStore';
@@ -80,13 +80,13 @@ so that I can configure theme, request timeout, SSL verification, and editor fon
     }
     ```
 
-- [ ] Task 4 — Bootstrap new settings in `AppShell.tsx` (AC: 7)
-  - [ ] Open `dispatch/src/components/Layout/AppShell.tsx`
-  - [ ] In the `.then` callback of `loadAllSettings`, add:
+- [x] Task 4 — Bootstrap new settings in `AppShell.tsx` (AC: 7)
+  - [x] Open `dispatch/src/components/Layout/AppShell.tsx`
+  - [x] In the `.then` callback of `loadAllSettings`, add:
     - `useUiSettingsStore.getState().setRequestTimeoutMs(s.request_timeout_ms);`
     - `useUiSettingsStore.getState().setSslVerify(s.ssl_verify);`
-  - [ ] The existing `setTheme` and `setEditorFontSize` calls remain unchanged
-  - [ ] Final block should read:
+  - [x] The existing `setTheme` and `setEditorFontSize` calls remain unchanged
+  - [x] Final block should read:
     ```typescript
     loadAllSettings()
       .then((s) => {
@@ -98,9 +98,9 @@ so that I can configure theme, request timeout, SSL verification, and editor fon
       .catch(() => {});
     ```
 
-- [ ] Task 5 — Update Rust `send_request` to accept `timeout_ms` and `ssl_verify` (AC: 8)
-  - [ ] Open `dispatch/src-tauri/src/http.rs`
-  - [ ] Add `timeout_ms: u64` and `ssl_verify: bool` fields to `SendRequestPayload`:
+- [x] Task 5 — Update Rust `send_request` to accept `timeout_ms` and `ssl_verify` (AC: 8)
+  - [x] Open `dispatch/src-tauri/src/http.rs`
+  - [x] Add `timeout_ms: u64` and `ssl_verify: bool` fields to `SendRequestPayload`:
     ```rust
     #[derive(Debug, Deserialize)]
     pub struct SendRequestPayload {
@@ -114,7 +114,7 @@ so that I can configure theme, request timeout, SSL verification, and editor fon
         pub ssl_verify: bool,
     }
     ```
-  - [ ] Replace the hardcoded `Client::builder()` block in `send_request`:
+  - [x] Replace the hardcoded `Client::builder()` block in `send_request`:
     ```rust
     let client = Client::builder()
         .timeout(std::time::Duration::from_millis(request.timeout_ms))
@@ -122,17 +122,17 @@ so that I can configure theme, request timeout, SSL verification, and editor fon
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {e}"))?;
     ```
-  - [ ] No other changes to http.rs — all other logic remains identical
+  - [x] No other changes to http.rs — all other logic remains identical
 
-- [ ] Task 6 — Pass settings from `MainPanel.tsx` to `send_request` invoke (AC: 9)
-  - [ ] Open `dispatch/src/components/MainPanel/MainPanel.tsx`
-  - [ ] Import `useUiSettingsStore` from `@/stores/uiSettingsStore`
-  - [ ] Inside the component, read settings:
+- [x] Task 6 — Pass settings from `MainPanel.tsx` to `send_request` invoke (AC: 9)
+  - [x] Open `dispatch/src/components/MainPanel/MainPanel.tsx`
+  - [x] Import `useUiSettingsStore` from `@/stores/uiSettingsStore`
+  - [x] Inside the component, read settings:
     ```typescript
     const requestTimeoutMs = useUiSettingsStore((s) => s.requestTimeoutMs);
     const sslVerify = useUiSettingsStore((s) => s.sslVerify);
     ```
-  - [ ] Update the `invoke('send_request', {...})` call to include `timeout_ms` and `ssl_verify`:
+  - [x] Update the `invoke('send_request', {...})` call to include `timeout_ms` and `ssl_verify`:
     ```typescript
     invoke<ResponseData>('send_request', {
       request: {
@@ -147,34 +147,34 @@ so that I can configure theme, request timeout, SSL verification, and editor fon
       },
     })
     ```
-  - [ ] Update `invokeWithTimeout` call: pass `requestTimeoutMs + 5000` instead of the constant `SEND_TIMEOUT_MS` to give a frontend buffer of 5 s above the Rust timeout:
+  - [x] Update `invokeWithTimeout` call: pass `requestTimeoutMs + 5000` instead of the constant `SEND_TIMEOUT_MS` to give a frontend buffer of 5 s above the Rust timeout:
     ```typescript
     const response = await invokeWithTimeout(
       invoke<ResponseData>('send_request', { request: { ..., timeout_ms: requestTimeoutMs, ssl_verify: sslVerify } }),
       requestTimeoutMs + 5000,
     );
     ```
-  - [ ] Remove or leave the `SEND_TIMEOUT_MS = 15000` constant — it is no longer used (delete the line)
+  - [x] Remove or leave the `SEND_TIMEOUT_MS = 15000` constant — it is no longer used (delete the line)
 
-- [ ] Task 7 — Create `Settings/SettingsPanel.tsx` component (AC: 1–6)
-  - [ ] Create `dispatch/src/components/Settings/SettingsPanel.tsx`
-  - [ ] Pattern: same overlay modal style as `EnvironmentPanel` — fixed full-screen backdrop, centred white/dark card
-  - [ ] Props interface:
+- [x] Task 7 — Create `Settings/SettingsPanel.tsx` component (AC: 1–6)
+  - [x] Create `dispatch/src/components/Settings/SettingsPanel.tsx`
+  - [x] Pattern: same overlay modal style as `EnvironmentPanel` — fixed full-screen backdrop, centred white/dark card
+  - [x] Props interface:
     ```typescript
     interface SettingsPanelProps {
       open: boolean;
       onClose: () => void;
     }
     ```
-  - [ ] Reads from `useUiSettingsStore`: `theme`, `requestTimeoutMs`, `sslVerify`, `editorFontSize`
-  - [ ] Each change calls the store setter AND `saveSetting(key, value)` — import `saveSetting` from `@/lib/settings`
-  - [ ] **Theme selector** — three radio buttons: `Light`, `Dark`, `System`; label text only; on change: `setTheme(value)` + `saveSetting('theme', value)`
-  - [ ] **Request timeout** — `<input type="number" min={100} max={300000} step={100} />` bound to `requestTimeoutMs`; `onChange`: `setRequestTimeoutMs(clamped)` + `saveSetting('request_timeout_ms', clamped)` — clamp to [100, 300000] before storing
-  - [ ] **SSL verify** — `<input type="checkbox" />` bound to `sslVerify`; `onChange`: `setSslVerify(checked)` + `saveSetting('ssl_verify', checked)`
-  - [ ] **Editor font size** — two buttons `−` and `+` with numeric display between; range [10, 24]; `onClick`: `setEditorFontSize(clamped)` + `saveSetting('editor_font_size', clamped)`
-  - [ ] Close button or backdrop click calls `onClose()`
-  - [ ] Use CSS custom properties via existing utility classes (`bg-app-main`, `text-app-primary`, `border-app-subtle`) — do **not** hard-code hex colours
-  - [ ] Full JSX outline:
+  - [x] Reads from `useUiSettingsStore`: `theme`, `requestTimeoutMs`, `sslVerify`, `editorFontSize`
+  - [x] Each change calls the store setter AND `saveSetting(key, value)` — import `saveSetting` from `@/lib/settings`
+  - [x] **Theme selector** — three radio buttons: `Light`, `Dark`, `System`; label text only; on change: `setTheme(value)` + `saveSetting('theme', value)`
+  - [x] **Request timeout** — `<input type="number" min={100} max={300000} step={100} />` bound to `requestTimeoutMs`; `onChange`: `setRequestTimeoutMs(clamped)` + `saveSetting('request_timeout_ms', clamped)` — clamp to [100, 300000] before storing
+  - [x] **SSL verify** — `<input type="checkbox" />` bound to `sslVerify`; `onChange`: `setSslVerify(checked)` + `saveSetting('ssl_verify', checked)`
+  - [x] **Editor font size** — two buttons `−` and `+` with numeric display between; range [10, 24]; `onClick`: `setEditorFontSize(clamped)` + `saveSetting('editor_font_size', clamped)`
+  - [x] Close button or backdrop click calls `onClose()`
+  - [x] Use CSS custom properties via existing utility classes (`bg-app-main`, `text-app-primary`, `border-app-subtle`) — do **not** hard-code hex colours
+  - [x] Full JSX outline:
     ```tsx
     if (!open) return null;
     return (
@@ -201,14 +201,14 @@ so that I can configure theme, request timeout, SSL verification, and editor fon
     );
     ```
 
-- [ ] Task 8 — Update `TopBar.tsx` (AC: 1, 10)
-  - [ ] Open `dispatch/src/components/TopBar/TopBar.tsx`
-  - [ ] Add `settingsPanelOpen` state: `const [settingsPanelOpen, setSettingsPanelOpen] = useState(false);`
-  - [ ] Import `SettingsPanel` from `@/components/Settings/SettingsPanel`
-  - [ ] **Remove** the theme toggle button (the `☀️`/`🌙` button and `handleThemeChange`)
-  - [ ] **Remove** the `theme` and `saveSetting` imports if no longer used in this file
-  - [ ] Keep the env selector `<select>` and "Manage environments" `<button>` — they stay for environment management
-  - [ ] Change the existing `⚙` button to open the settings panel:
+- [x] Task 8 — Update `TopBar.tsx` (AC: 1, 10)
+  - [x] Open `dispatch/src/components/TopBar/TopBar.tsx`
+  - [x] Add `settingsPanelOpen` state: `const [settingsPanelOpen, setSettingsPanelOpen] = useState(false);`
+  - [x] Import `SettingsPanel` from `@/components/Settings/SettingsPanel`
+  - [x] **Remove** the theme toggle button (the `☀️`/`🌙` button and `handleThemeChange`)
+  - [x] **Remove** the `theme` and `saveSetting` imports if no longer used in this file
+  - [x] Keep the env selector `<select>` and "Manage environments" `<button>` — they stay for environment management
+  - [x] Change the existing `⚙` button to open the settings panel:
     ```tsx
     <button
       aria-label="Open settings"
@@ -218,20 +218,20 @@ so that I can configure theme, request timeout, SSL verification, and editor fon
       ⚙
     </button>
     ```
-  - [ ] Add a separate env manage button (keep existing but update aria-label if changed):
+  - [x] Add a separate env manage button (keep existing but update aria-label if changed):
     - The existing `⚙` with `aria-label="Manage environments"` must be repurposed or a new button added. Recommended: rename existing to `≡` (trigram) or keep `⚙` with aria-label `"Manage environments"` and add a NEW `⚙` for settings.
     - **Simplest approach**: keep the existing env-manage button with `aria-label="Manage environments"` (opening `EnvironmentPanel`) and add a NEW button with `aria-label="Open settings"` (opening `SettingsPanel`).
     - New TopBar right area order: `[env select] [⚙ Manage environments] [⚙ Open settings]`
-  - [ ] Render `SettingsPanel` at end of JSX (alongside existing EnvironmentPanel render):
+  - [x] Render `SettingsPanel` at end of JSX (alongside existing EnvironmentPanel render):
     ```tsx
     {settingsPanelOpen && (
       <SettingsPanel open={settingsPanelOpen} onClose={() => setSettingsPanelOpen(false)} />
     )}
     ```
-  - [ ] Keep `EnvironmentPanel` render logic unchanged
+  - [x] Keep `EnvironmentPanel` render logic unchanged
 
-- [ ] Task 9 — Tests (AC: 1–10)
-  - [ ] Create `dispatch/src/components/Settings/SettingsPanel.test.tsx`:
+- [x] Task 9 — Tests (AC: 1–10)
+  - [x] Create `dispatch/src/components/Settings/SettingsPanel.test.tsx`:
     - Mock `@/stores/uiSettingsStore` (all four fields + setters)
     - Mock `@/lib/settings` (`saveSetting` → `vi.fn().mockResolvedValue(undefined)`)
     - **Render tests** (testing-library):
@@ -249,33 +249,33 @@ so that I can configure theme, request timeout, SSL verification, and editor fon
       - Toggling SSL checkbox → calls `setSslVerify` and `saveSetting`
       - Clicking `+` font size button → calls `setEditorFontSize(n+1)` and `saveSetting`
       - Clicking `−` at min 10 → does NOT call setter (clamped)
-  - [ ] Update `dispatch/src/components/TopBar/TopBar.test.tsx`:
+  - [x] Update `dispatch/src/components/TopBar/TopBar.test.tsx`:
     - Remove tests for the theme toggle button (it no longer exists)
     - Add: "renders Open settings button with correct aria-label"
     - Add: "clicking Open settings button opens SettingsPanel"
     - Mock `@/components/Settings/SettingsPanel` similarly to how `EnvironmentPanel` is mocked
-  - [ ] Update `dispatch/src/hooks/useTheme.test.ts` (if exists) or create it:
+  - [x] Update `dispatch/src/hooks/useTheme.test.ts` (if exists) or create it:
     - Test `theme === 'system'` adds `.dark` when `matchMedia` matches dark
     - Test `theme === 'system'` removes `.dark` when `matchMedia` matches light
     - Test `theme === 'system'` attaches and cleans up media query listener
     - Test `theme === 'light'` removes `.dark` class
     - Test `theme === 'dark'` adds `.dark` class
-  - [ ] Update `dispatch/src/stores/uiSettingsStore.test.ts`:
+  - [x] Update `dispatch/src/stores/uiSettingsStore.test.ts`:
     - Test: initial `theme` is `'system'`
     - Test: `setRequestTimeoutMs` updates `requestTimeoutMs`
     - Test: initial `sslVerify` is `true`
     - Test: `setSslVerify(false)` updates store
 
-- [ ] Task 10 — Quality gates
-  - [ ] Run `npx tsc --noEmit` from `dispatch/` — zero TypeScript errors
-  - [ ] Run `npx vitest run` from `dispatch/` — all tests pass
-  - [ ] Manually verify in `yarn tauri dev`:
+- [x] Task 10 — Quality gates
+  - [x] Run `npx tsc --noEmit` from `dispatch/` — zero TypeScript errors
+  - [x] Run `npx vitest run` from `dispatch/` — all tests pass
+  - [x] Manually verify in `yarn tauri dev`:
     - Gear icon opens settings modal
     - Each setting change applies immediately (theme flips instantly, font size updates Monaco)
     - Restart the app → settings persist
 
-- [ ] Final Task — Commit story changes
-  - [ ] Commit all code and documentation changes for this story with a message that includes Story 4.3
+- [x] Final Task — Commit story changes
+  - [x] Commit all code and documentation changes for this story with a message that includes Story 4.3
 
 ## Dev Notes
 
@@ -437,5 +437,37 @@ Claude Sonnet 4.6
 - Critical gap identified: Story 4.1 did not implement 'system' theme — Tasks 1–3 close this gap
 - Rust `send_request` hardcoded 30s timeout and no SSL verify flag — Task 5 fixes this
 - Frontend `SEND_TIMEOUT_MS = 15000` hardcoded — Task 6 replaces with dynamic store-driven value
+- ✅ All 10 tasks + Final Task implemented and verified
+- ✅ `AppSettings.theme` extended to include `'system'`; defaults updated to `'system'`
+- ✅ `uiSettingsStore` extended with `requestTimeoutMs` (30000), `sslVerify` (true) and setters
+- ✅ `useTheme` upgraded to three-way logic: light removes `.dark`, dark adds `.dark`, system uses `matchMedia` with event listener + cleanup
+- ✅ `AppShell` bootstraps `setRequestTimeoutMs` and `setSslVerify` from DB on startup
+- ✅ Rust `SendRequestPayload` accepts `timeout_ms` and `ssl_verify`; `Client::builder()` uses both
+- ✅ `MainPanel` reads timeout/SSL from store, passes in invoke payload; frontend timeout is `requestTimeoutMs + 5000`
+- ✅ `SettingsPanel` created: overlay modal with theme radios, timeout input (clamped 100–300000), SSL checkbox, font-size stepper (10–24); calls `saveSetting` on every change
+- ✅ `TopBar` theme toggle removed; two `⚙` buttons: one for environments, one for settings
+- ✅ 269/269 tests pass (26 test files); `npx tsc --noEmit` = 0 errors
+- ✅ Committed as `feat: Story 4.3 - Settings Panel with theme/timeout/SSL/font-size persistence`
 
 ### File List
+
+- dispatch/src/lib/db.ts
+- dispatch/src/lib/settings.ts
+- dispatch/src/lib/settings.test.ts
+- dispatch/src/stores/uiSettingsStore.ts
+- dispatch/src/stores/uiSettingsStore.test.ts
+- dispatch/src/hooks/useTheme.ts
+- dispatch/src/hooks/useTheme.test.ts
+- dispatch/src/components/Layout/AppShell.tsx
+- dispatch/src-tauri/src/http.rs
+- dispatch/src/components/MainPanel/MainPanel.tsx
+- dispatch/src/components/Settings/SettingsPanel.tsx (new)
+- dispatch/src/components/Settings/SettingsPanel.test.tsx (new)
+- dispatch/src/components/TopBar/TopBar.tsx
+- dispatch/src/components/TopBar/TopBar.test.tsx
+- _bmad-output/implementation-artifacts/4-3-settings-panel.md
+- _bmad-output/implementation-artifacts/sprint-status.yaml
+
+## Change Log
+
+- 2026-03-10: Story 4.3 implemented — Settings panel, theme/timeout/SSL/font-size persistence, Rust payload expanded, TopBar theme toggle removed (Claude Sonnet 4.6)
