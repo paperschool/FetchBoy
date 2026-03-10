@@ -293,7 +293,7 @@ export function EnvironmentPanel({ open, onClose }: EnvironmentPanelProps) {
                                             <input
                                                 type="checkbox"
                                                 aria-label={`Variable enabled ${i}`}
-                                                checked={variable.enabborderled}
+                                                checked={variable.enabled}
                                                 className="mx-auto h-5 w-5 cursor-pointer"
                                                 onChange={(e) =>
                                                     handleVariableChange(i, 'enabled', e.target.checked)

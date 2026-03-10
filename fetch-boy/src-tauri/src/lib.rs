@@ -14,7 +14,7 @@ pub fn run() {
         .plugin(
             // SQL plugin initializes SQLite and applies migrations at startup.
             tauri_plugin_sql::Builder::default()
-                .add_migrations("sqlite:dispatch.db", db::migrations())
+                .add_migrations("sqlite:fetch-boy.db", db::migrations())
                 .build(),
         )
         // Expose Rust commands callable from the frontend via invoke().
