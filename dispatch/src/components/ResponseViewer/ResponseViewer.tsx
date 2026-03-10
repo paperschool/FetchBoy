@@ -1,4 +1,6 @@
-import { useMemo, useState } from 'react';
+import { MonacoEditorField } from '@/components/Editor/MonacoEditorField';
+import { useUiSettingsStore } from '@/stores/uiSettingsStore';
+import { useEffect, useMemo, useState } from 'react';
 
 export interface ResponseHeaderRow {
   key: string;
@@ -20,50 +22,6 @@ interface ResponseViewerProps {
 }
 
 type ResponseTab = 'body' | 'headers';
-type BodyViewMode = 'raw' | 'json';
-
-function formatPrimitive(value: unknown): string {
-  if (value === null) {
-    return 'null';
-  }
-  if (typeof value === 'string') {
-    return `"${value}"`;
-  }
-  return String(value);
-}
-
-function JsonNode({ label, value }: { label?: string; value: unknown }) {
-  const isArray = Array.isArray(value);
-  const isObject = typeof value === 'object' && value !== null && !isArray;
-
-  if (!isArray && !isObject) {
-    return (
-      <p className="text-app-primary text-xs">
-        {label ? <span className="text-app-secondary">{label}: </span> : null}
-        {formatPrimitive(value)}
-      </p>
-    );
-  }
-
-  const entries = isArray
-    ? (value as unknown[]).map((entry, index) => [String(index), entry] as const)
-    : Object.entries(value as Record<string, unknown>);
-
-  return (
-    <details open className="ml-2">
-      <summary className="text-app-secondary cursor-pointer text-xs font-medium">
-        {label ? `${label}: ` : ''}
-        {isArray ? `Array(${entries.length})` : `Object(${entries.length})`}
-      </summary>
-      <div className="border-app-subtle mt-1 space-y-1 border-l pl-2">
-        {entries.map(([entryKey, entryValue]) => (
-          <JsonNode key={entryKey} label={entryKey} value={entryValue} />
-        ))}
-      </div>
-    </details>
-  );
-}
-
 function getStatusColorClass(status: number): string {
   if (status >= 200 && status < 300) {
     return 'text-green-600';
@@ -79,19 +37,26 @@ function getStatusColorClass(status: number): string {
 
 export function ResponseViewer({ response, error }: ResponseViewerProps) {
   const [activeTab, setActiveTab] = useState<ResponseTab>('body');
-  const [bodyViewMode, setBodyViewMode] = useState<BodyViewMode>('raw');
+  const [responseBodyLanguage, setResponseBodyLanguage] = useState<'json' | 'html' | 'xml'>('json');
+  const editorFontSize = useUiSettingsStore((state) => state.editorFontSize);
 
-  const parsedJsonBody = useMemo(() => {
+  const formattedJsonBody = useMemo(() => {
     if (!response) {
-      return { isValid: false, value: null as unknown };
+      return null;
     }
 
     try {
-      return { isValid: true, value: JSON.parse(response.body) as unknown };
+      return JSON.stringify(JSON.parse(response.body) as unknown, null, 2);
     } catch {
-      return { isValid: false, value: null as unknown };
+      return null;
     }
   }, [response]);
+
+  useEffect(() => {
+    if (formattedJsonBody) {
+      setResponseBodyLanguage('json');
+    }
+  }, [formattedJsonBody]);
 
   if (!response && !error) {
     return null;
@@ -152,46 +117,31 @@ export function ResponseViewer({ response, error }: ResponseViewerProps) {
 
       {activeTab === 'body' ? (
         <div className="space-y-2">
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setBodyViewMode('raw')}
-              className={`rounded-md px-2 py-1 text-xs ${
-                bodyViewMode === 'raw'
-                  ? 'border-app-subtle bg-app-main text-app-primary border font-medium'
-                  : 'text-app-muted hover:text-app-primary'
-              }`}
+          <div className="flex items-center justify-end gap-2">
+            <label htmlFor="response-body-language" className="text-app-secondary text-xs font-medium">
+              Language
+            </label>
+            <select
+              id="response-body-language"
+              aria-label="Response Body Language"
+              value={responseBodyLanguage}
+              onChange={(event) => setResponseBodyLanguage(event.target.value as 'json' | 'html' | 'xml')}
+              className="border-app-subtle bg-app-main text-app-primary h-8 rounded-md border px-2 text-xs"
             >
-              Raw
-            </button>
-            <button
-              type="button"
-              onClick={() => setBodyViewMode('json')}
-              className={`rounded-md px-2 py-1 text-xs ${
-                bodyViewMode === 'json'
-                  ? 'border-app-subtle bg-app-main text-app-primary border font-medium'
-                  : 'text-app-muted hover:text-app-primary'
-              }`}
-            >
-              JSON
-            </button>
+              <option value="json">JSON</option>
+              <option value="html">HTML</option>
+              <option value="xml">XML</option>
+            </select>
           </div>
 
-          {bodyViewMode === 'raw' ? (
-            <pre className="border-app-subtle text-app-primary max-h-64 overflow-auto rounded-md border p-3 text-xs whitespace-pre-wrap">
-              {response.body}
-            </pre>
-          ) : null}
-
-          {bodyViewMode === 'json' ? (
-            parsedJsonBody.isValid ? (
-              <div className="border-app-subtle max-h-64 overflow-auto rounded-md border p-2" data-testid="response-json-view">
-                <JsonNode value={parsedJsonBody.value} />
-              </div>
-            ) : (
-              <p className="text-app-muted text-xs">Response body is not valid JSON.</p>
-            )
-          ) : null}
+          <MonacoEditorField
+            testId="response-body-editor"
+            path="response-body"
+            language={responseBodyLanguage}
+            value={formattedJsonBody ?? response.body}
+            fontSize={editorFontSize}
+            readOnly
+          />
         </div>
       ) : null}
 

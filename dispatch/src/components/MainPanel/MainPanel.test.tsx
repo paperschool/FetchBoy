@@ -3,6 +3,19 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MainPanel } from './MainPanel';
 import { useRequestStore } from '@/stores/requestStore';
 
+vi.mock('@monaco-editor/react', () => ({
+  default: ({ value, onChange, options, path }: { value?: string; onChange?: (value?: string) => void; options?: { readOnly?: boolean; fontSize?: number }; path?: string }) => (
+    <div data-testid="monaco-editor" data-readonly={options?.readOnly ? 'true' : 'false'} data-font-size={String(options?.fontSize ?? '')} data-path={path ?? ''}>
+      <textarea
+        aria-label={options?.readOnly ? 'Monaco Readonly' : 'Monaco Input'}
+        value={value ?? ''}
+        onChange={(event) => onChange?.(event.target.value)}
+        readOnly={Boolean(options?.readOnly)}
+      />
+    </div>
+  ),
+}));
+
 const invokeMock = vi.fn();
 const executeMock = vi.fn();
 
@@ -67,10 +80,23 @@ describe('MainPanel request builder', () => {
     render(<MainPanel />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Body' }));
-    expect(screen.getByLabelText('Raw Body')).toBeInTheDocument();
+    expect(screen.getByTestId('request-body-editor')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Request Body Language' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Monaco Input')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Auth' }));
     expect(screen.getByText('Auth: None')).toBeInTheDocument();
+  });
+
+  it('updates body raw value through Monaco input', () => {
+    render(<MainPanel />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Body' }));
+    fireEvent.change(screen.getByLabelText('Monaco Input'), {
+      target: { value: '{"name":"dispatch"}' },
+    });
+
+    expect(useRequestStore.getState().body.raw).toBe('{"name":"dispatch"}');
   });
 
   it('adds and edits a header row', () => {
@@ -122,11 +148,11 @@ describe('MainPanel request builder', () => {
     expect(screen.getByText('200 OK')).toBeInTheDocument();
     expect(screen.getByText('Time: 42 ms')).toBeInTheDocument();
     expect(screen.getByText('Size: 120 bytes')).toBeInTheDocument();
-    expect(screen.getByText('{"ok":true}')).toBeInTheDocument();
+    expect((screen.getByLabelText('Monaco Readonly') as HTMLTextAreaElement).value).toContain('"ok": true');
     expect(executeMock).toHaveBeenCalledTimes(1);
   });
 
-  it('supports split body views between raw and interactive json', async () => {
+  it('renders response body in read-only Monaco with pretty JSON by default', async () => {
     render(<MainPanel />);
 
     fireEvent.change(screen.getByLabelText('Request URL'), {
@@ -135,13 +161,8 @@ describe('MainPanel request builder', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Send' }));
 
     await screen.findByText('200 OK');
-
-    const responseViewer = screen.getByTestId('response-viewer');
-    fireEvent.click(within(responseViewer).getByRole('button', { name: 'JSON' }));
-
-    expect(within(responseViewer).getByTestId('response-json-view')).toBeInTheDocument();
-    expect(within(responseViewer).getByText('ok:')).toBeInTheDocument();
-    expect(within(responseViewer).getByText('true')).toBeInTheDocument();
+    expect(screen.getByLabelText('Monaco Readonly')).toBeInTheDocument();
+    expect((screen.getByLabelText('Monaco Readonly') as HTMLTextAreaElement).value).toContain('"ok": true');
   });
 
   it('shows response headers in read-only headers tab', async () => {

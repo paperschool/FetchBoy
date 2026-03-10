@@ -1,9 +1,11 @@
 import { invoke } from '@tauri-apps/api/core';
+import { MonacoEditorField } from '@/components/Editor/MonacoEditorField';
 import { KeyValueRows } from '@/components/RequestBuilder/KeyValueRows';
 import { ResponseViewer, type ResponseData } from '@/components/ResponseViewer/ResponseViewer';
 import { persistHistoryEntry } from '@/lib/history';
 import type { HttpMethod, RequestTab } from '@/stores/requestStore';
 import { useRequestStore } from '@/stores/requestStore';
+import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import { useState } from 'react';
 
 const SEND_TIMEOUT_MS = 15000;
@@ -21,6 +23,8 @@ export function MainPanel() {
   const [responseData, setResponseData] = useState<ResponseData | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [verboseLogs, setVerboseLogs] = useState<string[]>([]);
+  const [requestBodyLanguage, setRequestBodyLanguage] = useState<'json' | 'html' | 'xml'>('json');
+  const editorFontSize = useUiSettingsStore((state) => state.editorFontSize);
 
   const {
     method,
@@ -259,16 +263,35 @@ export function MainPanel() {
 
         {activeTab === 'body' ? (
           <div className="space-y-2">
-            <label htmlFor="raw-body" className="text-app-secondary block text-sm font-medium">
-              Raw Body
-            </label>
-            <textarea
-              id="raw-body"
-              aria-label="Raw Body"
+            <div className="flex items-center justify-between gap-3">
+              <label className="text-app-secondary block text-sm font-medium">
+                Request Body
+              </label>
+              <div className="flex items-center gap-2">
+                <label htmlFor="request-body-language" className="text-app-secondary text-xs font-medium">
+                  Language
+                </label>
+                <select
+                  id="request-body-language"
+                  aria-label="Request Body Language"
+                  value={requestBodyLanguage}
+                  onChange={(event) => setRequestBodyLanguage(event.target.value as 'json' | 'html' | 'xml')}
+                  className="border-app-subtle bg-app-main text-app-primary h-8 rounded-md border px-2 text-xs"
+                >
+                  <option value="json">JSON</option>
+                  <option value="html">HTML</option>
+                  <option value="xml">XML</option>
+                </select>
+              </div>
+            </div>
+
+            <MonacoEditorField
+              testId="request-body-editor"
+              path="request-body"
+              language={requestBodyLanguage}
               value={body.raw}
-              onChange={(event) => setBodyRaw(event.target.value)}
-              rows={8}
-              className="border-app-subtle text-app-primary w-full rounded-md border p-3 font-mono text-sm"
+              fontSize={editorFontSize}
+              onChange={setBodyRaw}
             />
           </div>
         ) : null}
