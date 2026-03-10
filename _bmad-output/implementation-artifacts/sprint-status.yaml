@@ -49,8 +49,8 @@ development_status:
   epic-1-retrospective: optional
 
   # ─── Epic 2: Core UX ───────────────────────────────────────────────
-  epic-2: backlog
-  2-1-monaco-editor-integration: backlog
+  epic-2: in-progress
+  2-1-monaco-editor-integration: in-progress
   2-2-collections-sidebar: backlog
   2-3-save-and-load-requests: backlog
   2-4-request-history: backlog
