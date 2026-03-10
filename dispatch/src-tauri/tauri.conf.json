@@ -1,6 +1,6 @@
 {
     "$schema": "https://schema.tauri.app/config/2",
-    "productName": "Fetch Boy 🦴",
+    "productName": "Fetch Boy",
     "version": "0.1.0",
     "identifier": "com.dispatch.app",
     "build": {
@@ -34,6 +34,9 @@
             "icons/128x128@2x.png",
             "icons/icon.icns",
             "icons/icon.ico"
-        ]
+        ],
+        "windows": {
+            "nsis": {}
+        }
     }
 }
