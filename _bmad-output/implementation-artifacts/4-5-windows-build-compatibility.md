@@ -1,6 +1,6 @@
 # Story 4.5: Windows Build Compatibility
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -21,11 +21,11 @@ so that Windows users can download and install the app from every release.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1 — Fix `productName` emoji breakage on Windows (AC: 1, 4)
-  - [ ] Open `dispatch/src-tauri/tauri.conf.json`.
-  - [ ] Change `"productName"` from `"Fetch Boy 🦴"` → `"Fetch Boy"` (ASCII-only).
-  - [ ] **Do NOT change** `app.windows[0].title` — keep it as `"Fetch Boy 🦴"` so the in-app window title still shows the emoji.
-  - [ ] Final `tauri.conf.json` top-level fields should look like:
+- [x] Task 1 — Fix `productName` emoji breakage on Windows (AC: 1, 4)
+  - [x] Open `dispatch/src-tauri/tauri.conf.json`.
+  - [x] Change `"productName"` from `"Fetch Boy 🦴"` → `"Fetch Boy"` (ASCII-only).
+  - [x] **Do NOT change** `app.windows[0].title` — keep it as `"Fetch Boy 🦴"` so the in-app window title still shows the emoji.
+  - [x] Final `tauri.conf.json` top-level fields should look like:
     ```json
     {
       "$schema": "https://schema.tauri.app/config/2",
@@ -44,11 +44,11 @@ so that Windows users can download and install the app from every release.
       }
     }
     ```
-  - [ ] Verify the dev server still starts: `cd dispatch && yarn tauri dev` — window title should still say `"Fetch Boy 🦴"`.
+  - [x] Verify the dev server still starts: `cd dispatch && yarn tauri dev` — window title should still say `"Fetch Boy 🦴"`.
 
-- [ ] Task 2 — Add NSIS-specific bundle config (AC: 2)
-  - [ ] Open `dispatch/src-tauri/tauri.conf.json`.
-  - [ ] Add a `bundle.windows` section inside the existing `bundle` object to pin the installer format to NSIS (prevents WiX MSI failures on runners without the WiX Toolset):
+- [x] Task 2 — Add NSIS-specific bundle config (AC: 2)
+  - [x] Open `dispatch/src-tauri/tauri.conf.json`.
+  - [x] Add a `bundle.windows` section inside the existing `bundle` object to pin the installer format to NSIS (prevents WiX MSI failures on runners without the WiX Toolset):
     ```json
     "bundle": {
       "active": true,
@@ -65,31 +65,26 @@ so that Windows users can download and install the app from every release.
       }
     }
     ```
-  - [ ] The empty `nsis: {}` object tells Tauri to include NSIS as a target using all defaults. No further NSIS config is needed.
+  - [x] The empty `nsis: {}` object tells Tauri to include NSIS as a target using all defaults. No further NSIS config is needed.
 
-- [ ] Task 3 — Verify size-check step covers NSIS `.exe` (AC: 3)
-  - [ ] Open `.github/workflows/build.yml`.
-  - [ ] Locate the `Check bundle sizes (Windows)` step. Confirm it uses:
+- [x] Task 3 — Verify size-check step covers NSIS `.exe` (AC: 3)
+  - [x] Open `.github/workflows/build.yml`.
+  - [x] Locate the `Check bundle sizes (Windows)` step. Confirmed it uses:
     ```powershell
     Get-ChildItem -Path dispatch\src-tauri\target\release\bundle -Recurse -Include *.msi,*.exe
     ```
-  - [ ] This pattern already covers NSIS `.exe` — **no changes required** unless the pattern is missing `.exe`.
-  - [ ] If `.exe` is absent from the `-Include` list, add it. Otherwise mark this task done as-is.
+  - [x] This pattern already covers NSIS `.exe` — **no changes required**.
 
-- [ ] Task 4 — Verify `upload-artifact` step covers NSIS `.exe` (AC: 2)
-  - [ ] Open `.github/workflows/build.yml`.
-  - [ ] Confirm the `Upload installers` step path glob includes `**/*.exe`.
-    - It already does: `dispatch/src-tauri/target/release/bundle/**/*.exe` — **no changes needed**.
-  - [ ] If missing, add `dispatch/src-tauri/target/release/bundle/**/*.exe` to the `path:` block.
+- [x] Task 4 — Verify `upload-artifact` step covers NSIS `.exe` (AC: 2)
+  - [x] Open `.github/workflows/build.yml`.
+  - [x] Confirmed the `Upload installers` step path glob includes `**/*.exe`.
+    - Already present: `dispatch/src-tauri/target/release/bundle/**/*.exe` — **no changes needed**.
 
-- [ ] Task 5 — Document Windows local build steps (AC: 5)
-  - [ ] Add the "Local Windows Build" section to Dev Notes in this story (already present below — no file edits needed; this satisfies the AC).
+- [x] Task 5 — Document Windows local build steps (AC: 5)
+  - [x] "Local Windows Build" section is present in Dev Notes (see `### Local Windows Build Prerequisites`). No file edits needed; AC satisfied.
 
-- [ ] Final Task — Commit story changes
-  - [ ] Commit `dispatch/src-tauri/tauri.conf.json` with:
-    ```
-    feat: Story 4.5 - Windows Build Compatibility (fix productName emoji, add NSIS config)
-    ```
+- [x] Final Task — Commit story changes
+  - [x] Committed `dispatch/src-tauri/tauri.conf.json` with the required message.
 
 ## Dev Notes
 
@@ -200,10 +195,25 @@ This story executes that fallback proactively rather than reactively, ensuring t
 
 ### Agent Model Used
 
-claude-sonnet-4-5
+claude-sonnet-4-6
 
 ### Debug Log References
 
+None — config-only change, no runtime errors.
+
 ### Completion Notes List
 
+- ✅ Task 1: Removed emoji from `productName` in `tauri.conf.json` (`"Fetch Boy 🦴"` → `"Fetch Boy"`). Window `title` field intentionally kept as `"Fetch Boy 🦴"` to preserve in-app display on all platforms.
+- ✅ Task 2: Added `bundle.windows.nsis: {}` inside the existing `bundle` object. This pins the Windows installer to NSIS (which ships with Tauri), eliminating WiX MSI failure risk on `windows-latest` CI runners that lack WiX Toolset.
+- ✅ Task 3: Verified `build.yml` Windows size-check step already uses `-Include *.msi,*.exe` — no change required.
+- ✅ Task 4: Verified `build.yml` upload-artifact step already includes `**/*.exe` glob — no change required.
+- ✅ Task 5: Windows local build prerequisites already documented in Dev Notes — no file edits needed.
+- TypeScript compilation clean. 286/287 tests pass; single pre-existing failure in `EnvironmentPanel.test.tsx` is unrelated to this story (config-only change touches no JS/TS source).
+
 ### File List
+
+- `dispatch/src-tauri/tauri.conf.json` — removed emoji from `productName`; added `bundle.windows.nsis: {}`
+
+## Change Log
+
+- 2026-03-10: Story 4.5 implemented — fixed Windows-unsafe emoji in `productName`, added explicit NSIS bundle config. No CI workflow changes required (`build.yml` already covered `.exe` for both size-check and upload). (Date: 2026-03-10)
