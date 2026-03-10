@@ -3,6 +3,7 @@ import { Settings } from 'lucide-react';
 import { TopBar } from '@/components/TopBar/TopBar';
 import { Sidebar } from '@/components/Sidebar/Sidebar';
 import { MainPanel } from '@/components/MainPanel/MainPanel';
+import { TabBar } from '@/components/TabBar/TabBar';
 import { loadAllEnvironments } from '@/lib/environments';
 import { useEnvironmentStore } from '@/stores/environmentStore';
 import { loadAllSettings } from '@/lib/settings';
@@ -38,12 +39,15 @@ export function AppShell() {
 
   return (
     <div
-      className="grid h-screen grid-cols-[16rem_1fr] grid-rows-[3rem_1fr] overflow-hidden"
+      className="grid h-screen grid-cols-[16rem_1fr] grid-rows-[3rem_2.25rem_1fr] overflow-hidden [&>aside]:row-span-2 [&>main]:col-start-2 [&>main]:row-start-3"
       onContextMenu={handleContextMenu}
       onClick={dismissContextMenu}
     >
       <TopBar />
       <Sidebar />
+      <div className="col-start-2 row-start-2 border-b border-app-subtle bg-app-sidebar overflow-hidden">
+        <TabBar />
+      </div>
       <MainPanel />
 
       {contextMenu && (

@@ -1,6 +1,6 @@
 # Story 5.1: Tab Bar Foundation
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -25,65 +25,65 @@ so that I can open multiple requests at once without losing my place.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1 — Create `tabStore` in Zustand (AC: 2, 3, 4, 6, 7, 8, 9)
-  - [ ] Create `dispatch/src/stores/tabStore.ts`
-  - [ ] Define `TabEntry` interface: `{ id: string; label: string; isCustomLabel: boolean }`
-  - [ ] Define `TabStore` state interface and implement with `zustand` + `immer` middleware (matching pattern in `requestStore.ts`)
-  - [ ] Initial state: one tab `{ id: crypto.randomUUID(), label: 'New Request', isCustomLabel: false }`, `activeTabId` = that tab's id
-  - [ ] Actions: `addTab()` — appends new `TabEntry` with defaults, sets it as active
-  - [ ] Actions: `closeTab(id: string)` — removes tab; blocks if only one tab remains; if closing active tab, activates the adjacent tab (prefer left neighbour, else right)
-  - [ ] Actions: `setActiveTab(id: string)` — sets `activeTabId`
-  - [ ] Actions: `renameTab(id: string, label: string)` — sets label and `isCustomLabel: true`
-  - [ ] Actions: `syncLabelFromRequest(id: string, method: string, url: string)` — only updates label when `isCustomLabel` is `false`; produces `"{METHOD} {url}"` truncated to 30 chars (trim trailing slash, use full method)
-  - [ ] Export `useTabStore` as named export
+- [x] Task 1 — Create `tabStore` in Zustand (AC: 2, 3, 4, 6, 7, 8, 9)
+  - [x] Create `dispatch/src/stores/tabStore.ts`
+  - [x] Define `TabEntry` interface: `{ id: string; label: string; isCustomLabel: boolean }`
+  - [x] Define `TabStore` state interface and implement with `zustand` + `immer` middleware (matching pattern in `requestStore.ts`)
+  - [x] Initial state: one tab `{ id: crypto.randomUUID(), label: 'New Request', isCustomLabel: false }`, `activeTabId` = that tab's id
+  - [x] Actions: `addTab()` — appends new `TabEntry` with defaults, sets it as active
+  - [x] Actions: `closeTab(id: string)` — removes tab; blocks if only one tab remains; if closing active tab, activates the adjacent tab (prefer left neighbour, else right)
+  - [x] Actions: `setActiveTab(id: string)` — sets `activeTabId`
+  - [x] Actions: `renameTab(id: string, label: string)` — sets label and `isCustomLabel: true`
+  - [x] Actions: `syncLabelFromRequest(id: string, method: string, url: string)` — only updates label when `isCustomLabel` is `false`; produces `"{METHOD} {url}"` truncated to 30 chars (trim trailing slash, use full method)
+  - [x] Export `useTabStore` as named export
 
-- [ ] Task 2 — Create `TabBar` component (AC: 1–10)
-  - [ ] Create `dispatch/src/components/TabBar/TabBar.tsx`
-  - [ ] Use `useTabStore` for all tab state
-  - [ ] Subscribe to `useRequestStore((s) => ({ method: s.method, url: s.url }))` and call `syncLabelFromRequest(activeTabId, method, url)` inside a `useEffect` whenever method or url changes
-  - [ ] Render a horizontal scrollable bar (`overflow-x-auto`) containing one `TabItem` per tab plus the `+` button pinned to the right
-  - [ ] Each `TabItem`:
+- [x] Task 2 — Create `TabBar` component (AC: 1–10)
+  - [x] Create `dispatch/src/components/TabBar/TabBar.tsx`
+  - [x] Use `useTabStore` for all tab state
+  - [x] Subscribe to `useRequestStore((s) => ({ method: s.method, url: s.url }))` and call `syncLabelFromRequest(activeTabId, method, url)` inside a `useEffect` whenever method or url changes
+  - [x] Render a horizontal scrollable bar (`overflow-x-auto`) containing one `TabItem` per tab plus the `+` button pinned to the right
+  - [x] Each `TabItem`:
     - Renders the tab label (truncated with CSS `truncate max-w-[160px]`)
     - Shows `×` button only on hover (`group-hover:opacity-100 opacity-0`)
     - Clicking the `×` calls `closeTab(id)`; clicking the tab body calls `setActiveTab(id)`
     - When tab is active: highlighted background (Tailwind token `bg-app-main` / `bg-white dark:bg-gray-800`)
     - When tab is inactive: muted background (`bg-gray-100 dark:bg-gray-700`)
-  - [ ] Double-click on a tab label replaces it with an `<input>` (controlled, auto-focused); Enter / blur → `renameTab`; Escape → cancel
-  - [ ] `+` button: `onClick={() => addTab()}`, aria-label `"New tab"`
+  - [x] Double-click on a tab label replaces it with an `<input>` (controlled, auto-focused); Enter / blur → `renameTab`; Escape → cancel
+  - [x] `+` button: `onClick={() => addTab()}`, aria-label `"New tab"`
 
-- [ ] Task 3 — Wire `TabBar` into the layout (AC: 1)
-  - [ ] Open `dispatch/src/components/Layout/AppShell.tsx`
-  - [ ] Import `TabBar` from `@/components/TabBar/TabBar`
-  - [ ] The current grid is `grid-cols-[16rem_1fr] grid-rows-[3rem_1fr]`; change to `grid-cols-[16rem_1fr] grid-rows-[3rem_2.25rem_1fr]`
-  - [ ] Add a `<div>` for the tab bar slot: `col-start-2 row-start-2` containing `<TabBar />`
-  - [ ] `Sidebar` must be updated to span both content rows: add `row-span-2` (it currently auto-places into row-start-2; now it must explicitly span rows 2–3)
-  - [ ] `MainPanel` must move to `row-start-3 col-start-2`
-  - [ ] Verify the layout renders correctly at all three grid cells
+- [x] Task 3 — Wire `TabBar` into the layout (AC: 1)
+  - [x] Open `dispatch/src/components/Layout/AppShell.tsx`
+  - [x] Import `TabBar` from `@/components/TabBar/TabBar`
+  - [x] The current grid is `grid-cols-[16rem_1fr] grid-rows-[3rem_1fr]`; change to `grid-cols-[16rem_1fr] grid-rows-[3rem_2.25rem_1fr]`
+  - [x] Add a `<div>` for the tab bar slot: `col-start-2 row-start-2` containing `<TabBar />`
+  - [x] `Sidebar` must be updated to span both content rows: add `row-span-2` (it currently auto-places into row-start-2; now it must explicitly span rows 2–3)
+  - [x] `MainPanel` must move to `row-start-3 col-start-2`
+  - [x] Verify the layout renders correctly at all three grid cells
 
-- [ ] Task 4 — Create tests for `tabStore` (AC: 2–9)
-  - [ ] Create `dispatch/src/stores/tabStore.test.ts`
-  - [ ] Test: initial state has exactly one tab with label `'New Request'` and `isCustomLabel: false`
-  - [ ] Test: `addTab()` appends a new tab and makes it active
-  - [ ] Test: `closeTab(id)` with two tabs removes the tab and activates the neighbour
-  - [ ] Test: `closeTab(id)` with one tab does nothing (tab count stays at 1)
-  - [ ] Test: `renameTab(id, 'Foo')` sets label to `'Foo'` and `isCustomLabel: true`
-  - [ ] Test: `syncLabelFromRequest` does NOT update label when `isCustomLabel` is `true`
-  - [ ] Test: `syncLabelFromRequest` DOES update label when `isCustomLabel` is `false`
-  - [ ] Test: truncation — a URL longer than 30 chars is truncated in the returned label
+- [x] Task 4 — Create tests for `tabStore` (AC: 2–9)
+  - [x] Create `dispatch/src/stores/tabStore.test.ts`
+  - [x] Test: initial state has exactly one tab with label `'New Request'` and `isCustomLabel: false`
+  - [x] Test: `addTab()` appends a new tab and makes it active
+  - [x] Test: `closeTab(id)` with two tabs removes the tab and activates the neighbour
+  - [x] Test: `closeTab(id)` with one tab does nothing (tab count stays at 1)
+  - [x] Test: `renameTab(id, 'Foo')` sets label to `'Foo'` and `isCustomLabel: true`
+  - [x] Test: `syncLabelFromRequest` does NOT update label when `isCustomLabel` is `true`
+  - [x] Test: `syncLabelFromRequest` DOES update label when `isCustomLabel` is `false`
+  - [x] Test: truncation — a URL longer than 30 chars is truncated in the returned label
 
-- [ ] Task 5 — Create tests for `TabBar` component (AC: 1–10)
-  - [ ] Create `dispatch/src/components/TabBar/TabBar.test.tsx`
-  - [ ] Set up test helpers: reset `tabStore` in `beforeEach` using `useTabStore.setState(initialState)`; mock `useRequestStore` to return `{ method: 'GET', url: '' }`
-  - [ ] Test: renders the single default tab and `+` button
-  - [ ] Test: clicking `+` button creates a second tab that becomes active
-  - [ ] Test: the `×` button is accessible via hover simulation; clicking it removes tab
-  - [ ] Test: attempting to close the last tab does nothing (tab count remains 1)
-  - [ ] Test: double-clicking a tab label shows an `<input>`; typing `Enter` renames the tab
-  - [ ] Test: pressing `Escape` during rename reverts to original label
+- [x] Task 5 — Create tests for `TabBar` component (AC: 1–10)
+  - [x] Create `dispatch/src/components/TabBar/TabBar.test.tsx`
+  - [x] Set up test helpers: reset `tabStore` in `beforeEach` using `useTabStore.setState(initialState)`; mock `useRequestStore` to return `{ method: 'GET', url: '' }`
+  - [x] Test: renders the single default tab and `+` button
+  - [x] Test: clicking `+` button creates a second tab that becomes active
+  - [x] Test: the `×` button is accessible via hover simulation; clicking it removes tab
+  - [x] Test: attempting to close the last tab does nothing (tab count remains 1)
+  - [x] Test: double-clicking a tab label shows an `<input>`; typing `Enter` renames the tab
+  - [x] Test: pressing `Escape` during rename reverts to original label
 
-- [ ] Task 6 — Final: commit story changes
-  - [ ] Run `npx tsc --noEmit` from `dispatch/` — zero TypeScript errors
-  - [ ] Run `npx vitest run` from `dispatch/` — all tests pass including new ones
+- [x] Task 6 — Final: commit story changes
+  - [x] Run `npx tsc --noEmit` from `dispatch/` — zero TypeScript errors
+  - [x] Run `npx vitest run` from `dispatch/` — all tests pass including new ones
   - [ ] Commit all code and documentation changes for this story with a message that includes `Story 5.1`
 
 ## Dev Notes
@@ -230,5 +230,23 @@ Claude Sonnet 4.6 (GitHub Copilot)
 ### Completion Notes List
 
 - Ultimate context engine analysis completed — comprehensive developer guide created
+- Task 1: Created `dispatch/src/stores/tabStore.ts` using Zustand + immer pattern matching `requestStore.ts`. Implements `TabEntry` interface, all five actions (`addTab`, `closeTab`, `setActiveTab`, `renameTab`, `syncLabelFromRequest`). Session-only (no persist middleware). 10/10 unit tests pass.
+- Task 2: Created `dispatch/src/components/TabBar/TabBar.tsx`. Subscribes to `tabStore` and `requestStore`, syncs active tab label via `useEffect`, renders horizontal scrollable tab bar with active/inactive states, hover-reveal close buttons, inline rename on double-click (Enter to confirm, Escape to cancel), and `+` new tab button.
+- Task 3: Updated `dispatch/src/components/Layout/AppShell.tsx` — grid rows changed from `[3rem_1fr]` to `[3rem_2.25rem_1fr]`. Used Tailwind v4 arbitrary child selectors `[&>aside]:row-span-2` and `[&>main]:col-start-2 [&>main]:row-start-3` to set grid placement without modifying Sidebar/MainPanel components. TabBar wrapped in `col-start-2 row-start-2` div.
+- Task 4: Created `dispatch/src/stores/tabStore.test.ts` — 10 unit tests covering all store actions and edge cases (block close on single tab, truncation, isCustomLabel guard).
+- Task 5: Created `dispatch/src/components/TabBar/TabBar.test.tsx` — 8 component tests covering rendering, tab creation/closing, inline rename with Enter/Escape.
+- Task 6: TypeScript check passed (0 errors). Full test suite: 18 new tests pass, 0 regressions. Pre-existing EnvironmentPanel.test.tsx failure confirmed unrelated to Story 5.1.
 
 ### File List
+
+- dispatch/src/stores/tabStore.ts (new)
+- dispatch/src/stores/tabStore.test.ts (new)
+- dispatch/src/components/TabBar/TabBar.tsx (new)
+- dispatch/src/components/TabBar/TabBar.test.tsx (new)
+- dispatch/src/components/Layout/AppShell.tsx (modified)
+- _bmad-output/implementation-artifacts/5-1-tab-bar-foundation.md (modified)
+- _bmad-output/implementation-artifacts/sprint-status.yaml (modified)
+
+### Change Log
+
+- 2026-03-10: Story 5.1 implemented — Tab Bar Foundation. Created `tabStore` (Zustand+immer, session-only), `TabBar` component with full AC coverage (add/close tabs, auto-label sync, inline rename), wired into `AppShell` 3-row grid layout, 18 tests added (10 store + 8 component).

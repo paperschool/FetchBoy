@@ -74,7 +74,7 @@ development_status:
 
   # ─── Epic 5: Multi-Tab Workspace ───────────────────────────────────
   epic-5: in-progress
-  5-1-tab-bar-foundation: ready-for-dev
+  5-1-tab-bar-foundation: review
   5-2-per-tab-state-isolation: backlog
   5-3-open-requests-in-new-tab: backlog
   5-4-tab-keyboard-shortcuts-and-reordering: backlog
