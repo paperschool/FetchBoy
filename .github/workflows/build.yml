@@ -1,0 +1,122 @@
+name: Build Installers
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ubuntu-22.04
+            artifact-name: linux
+          - platform: windows-latest
+            artifact-name: windows
+          - platform: macos-latest
+            artifact-name: macos
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+          cache-dependency-path: dispatch/yarn.lock
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: dispatch/src-tauri -> target
+
+      - name: Install Linux system dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+
+      - name: Install frontend dependencies
+        working-directory: dispatch
+        run: yarn install --frozen-lockfile
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: dispatch
+
+      - name: Check bundle sizes (Linux)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          echo "=== Linux installer sizes ==="
+          find dispatch/src-tauri/target/release/bundle -name "*.deb" -o -name "*.AppImage" | while read f; do
+            size_kb=$(du -k "$f" | cut -f1)
+            size_mb=$(echo "scale=2; $size_kb/1024" | bc)
+            echo "$f: ${size_mb} MB"
+            if [ "$size_kb" -gt 15360 ]; then
+              echo "ERROR: $f exceeds 15 MB limit (${size_mb} MB)"
+              exit 1
+            fi
+          done
+
+      - name: Check bundle sizes (Windows)
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          Write-Host "=== Windows installer sizes ==="
+          $limit = 15 * 1024 * 1024
+          Get-ChildItem -Path dispatch\src-tauri\target\release\bundle -Recurse -Include *.msi,*.exe | ForEach-Object {
+            $mb = [math]::Round($_.Length / 1MB, 2)
+            Write-Host "$($_.FullName): $mb MB"
+            if ($_.Length -gt $limit) {
+              Write-Error "ERROR: $($_.Name) exceeds 15 MB limit ($mb MB)"
+              exit 1
+            }
+          }
+
+      - name: Check bundle sizes (macOS)
+        if: matrix.platform == 'macos-latest'
+        run: |
+          echo "=== macOS installer sizes ==="
+          find dispatch/src-tauri/target/release/bundle -name "*.dmg" | while read f; do
+            size_kb=$(du -k "$f" | cut -f1)
+            size_mb=$(echo "scale=2; $size_kb/1024" | bc)
+            echo "$f: ${size_mb} MB"
+            if [ "$size_kb" -gt 15360 ]; then
+              echo "ERROR: $f exceeds 15 MB limit (${size_mb} MB)"
+              exit 1
+            fi
+          done
+
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: installers-${{ matrix.artifact-name }}
+          path: |
+            dispatch/src-tauri/target/release/bundle/**/*.deb
+            dispatch/src-tauri/target/release/bundle/**/*.AppImage
+            dispatch/src-tauri/target/release/bundle/**/*.msi
+            dispatch/src-tauri/target/release/bundle/**/*.exe
+            dispatch/src-tauri/target/release/bundle/**/*.dmg
+          if-no-files-found: error
+          retention-days: 30

@@ -1,6 +1,6 @@
 # Story 4.4: App Packaging and Installers
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -23,16 +23,16 @@ so that I can install the app natively on any platform without requiring a devel
 
 ## Tasks / Subtasks
 
-- [ ] Task 1 — Audit and align `tauri.conf.json` and `Cargo.toml` metadata (AC: 7)
-  - [ ] Open `dispatch/src-tauri/tauri.conf.json` — current state:
+- [x] Task 1 — Audit and align `tauri.conf.json` and `Cargo.toml` metadata (AC: 7)
+  - [x] Open `dispatch/src-tauri/tauri.conf.json` — current state:
     - `productName`: `"Fetch Boy 🦴"`
     - `version`: `"0.1.0"`
     - `identifier`: `"com.dispatch.app"`
-  - [ ] Open `dispatch/src-tauri/Cargo.toml` — current state:
+  - [x] Open `dispatch/src-tauri/Cargo.toml` — current state:
     - `name`: `"dispatch"`, `version`: `"0.1.0"`, `description`: `"Dispatch — lightweight API client"`
-  - [ ] **Emoji warning**: The emoji `🦴` in `productName` is safe on macOS and Linux, but Windows MSI/ NSIS may warn or produce unexpected file names. If the Windows CI job fails on the product name, rename to `"Fetch Boy"` (without emoji) as the fallback.
-  - [ ] Confirm `bundle.targets` is `"all"` (already set — no change needed unless scoping to specific formats).
-  - [ ] Confirm `bundle.icon` array already lists all required entries (already correct — no changes needed):
+  - [x] **Emoji warning**: The emoji `🦴` in `productName` is safe on macOS and Linux, but Windows MSI/ NSIS may warn or produce unexpected file names. If the Windows CI job fails on the product name, rename to `"Fetch Boy"` (without emoji) as the fallback.
+  - [x] Confirm `bundle.targets` is `"all"` (already set — no change needed unless scoping to specific formats).
+  - [x] Confirm `bundle.icon` array already lists all required entries (already correct — no changes needed):
     ```json
     "icon": [
       "icons/32x32.png",
@@ -42,13 +42,13 @@ so that I can install the app natively on any platform without requiring a devel
       "icons/icon.ico"
     ]
     ```
-  - [ ] Verify all icon files exist under `dispatch/src-tauri/icons/` — they do: `32x32.png`, `128x128.png`, `128x128@2x.png`, `icon.icns`, `icon.ico`, `icon.png`. **No regeneration needed.** If ever you need to regenerate from the source PNG, run: `npx tauri icon dispatch/src-tauri/icons/icon.png` from the `dispatch/` directory.
+  - [x] Verify all icon files exist under `dispatch/src-tauri/icons/` — they do: `32x32.png`, `128x128.png`, `128x128@2x.png`, `icon.icns`, `icon.ico`, `icon.png`. **No regeneration needed.** If ever you need to regenerate from the source PNG, run: `npx tauri icon dispatch/src-tauri/icons/icon.png` from the `dispatch/` directory.
 
-- [ ] Task 2 — Create GitHub Actions build workflow (AC: 1–6, 8)
-  - [ ] Create `.github/workflows/build.yml` at the **repository root** (not inside `dispatch/`).
-  - [ ] The workflow must use a **matrix** of three platform runners: `ubuntu-22.04`, `windows-latest`, `macos-latest`.
-  - [ ] Use `tauri-apps/tauri-action@v0` (supports Tauri v2).
-  - [ ] **Full workflow content** (create exactly as below):
+- [x] Task 2 — Create GitHub Actions build workflow (AC: 1–6, 8)
+  - [x] Create `.github/workflows/build.yml` at the **repository root** (not inside `dispatch/`).
+  - [x] The workflow must use a **matrix** of three platform runners: `ubuntu-22.04`, `windows-latest`, `macos-latest`.
+  - [x] Use `tauri-apps/tauri-action@v0` (supports Tauri v2).
+  - [x] **Full workflow content** (create exactly as below):
 
     ```yaml
     name: Build Installers
@@ -175,8 +175,8 @@ so that I can install the app natively on any platform without requiring a devel
               retention-days: 30
     ```
 
-- [ ] Task 3 — Verify release profile is size-optimised (AC: 6)
-  - [ ] Open `dispatch/src-tauri/Cargo.toml` — release profile **already** has all optimisations:
+- [x] Task 3 — Verify release profile is size-optimised (AC: 6)
+  - [x] Open `dispatch/src-tauri/Cargo.toml` — release profile **already** has all optimisations:
     ```toml
     [profile.release]
     panic = "abort"
@@ -185,23 +185,23 @@ so that I can install the app natively on any platform without requiring a devel
     opt-level = "s"
     strip = true
     ```
-  - [ ] **No changes needed** — this is already correct and optimal for binary size.
+  - [x] **No changes needed** — this is already correct and optimal for binary size.
 
-- [ ] Task 4 — Local macOS build smoke-test (AC: 2, 5, 6, 7)
-  - [ ] From the `dispatch/` directory, run:
+- [x] Task 4 — Local macOS build smoke-test (AC: 2, 5, 6, 7)
+  - [x] From the `dispatch/` directory, run:
     ```bash
     yarn tauri build
     ```
-  - [ ] Verify: `dispatch/src-tauri/target/release/bundle/dmg/*.dmg` is created.
-  - [ ] Check size locally:
+  - [x] Verify: `dispatch/src-tauri/target/release/bundle/dmg/*.dmg` is created.
+  - [x] Check size locally:
     ```bash
     find dispatch/src-tauri/target/release/bundle -name "*.dmg" -exec du -sh {} \;
     ```
-  - [ ] Confirm size is ≤ 15 MB.
-  - [ ] If exceeding 15 MB, investigate: run `cargo bloat --release --crates` from `dispatch/src-tauri/` to identify large crates.
+  - [x] Confirm size is ≤ 15 MB.
+  - [x] If exceeding 15 MB, investigate: run `cargo bloat --release --crates` from `dispatch/src-tauri/` to identify large crates.
 
-- [ ] Final Task — Commit story changes
-  - [ ] Commit the new workflow file and any `tauri.conf.json` changes with a message that includes Story 4.4:
+- [x] Final Task — Commit story changes
+  - [x] Commit the new workflow file and any `tauri.conf.json` changes with a message that includes Story 4.4:
     ```
     feat: Story 4.4 - App Packaging and Installers (GitHub Actions CI + bundle size check)
     ```
@@ -316,6 +316,27 @@ Claude Sonnet 4.6
 
 ### Debug Log References
 
+- **Pre-existing `tsc -b` failures surfaced by first-ever production build**: `vitest.config.ts` had a vitest/vite bundled-version type mismatch; `tsconfig.app.json` included test files causing unused-param errors; `EnvironmentPanel.tsx` had an import name shadowed by the `open: boolean` prop. Fixed by: excluding tests from `tsconfig.app.json`, removing `vitest.config.ts` from `tsconfig.node.json`, and renaming the `open` dialog import to `openDialog`.
+- **macOS DMG size**: 3.6 MB (well under 15 MB AC threshold).
+
 ### Completion Notes List
 
+- Created `.github/workflows/build.yml` at repo root with 3-platform matrix (ubuntu-22.04, windows-latest, macos-latest), `tauri-apps/tauri-action@v0`, per-platform bundle size checks (≤ 15 MB), and `actions/upload-artifact@v4` uploads.
+- Audited `tauri.conf.json` and `Cargo.toml` — all metadata consistent and `[profile.release]` already fully size-optimised. No changes required to either file.
+- Fixed pre-existing `tsc -b` blockers (not part of story scope but required for smoke-test AC): excluded test files from `tsconfig.app.json`, removed `vitest.config.ts` from `tsconfig.node.json`, fixed `EnvironmentPanel.tsx` import shadow bug (`open` → `openDialog`).
+- Added `@types/node` devDependency so `vite.config.ts` and `vitest.config.ts` resolve Node `path`/`__dirname` types.
+- macOS smoke-test build: `Fetch Boy 🦴_0.1.0_aarch64.dmg` created at 3.6 MB.
+- All 269 existing tests pass — no regressions.
+
 ### File List
+
+- `.github/workflows/build.yml` (created)
+- `dispatch/package.json` (modified — added `@types/node` devDependency)
+- `dispatch/yarn.lock` (modified — lockfile update for `@types/node`)
+- `dispatch/tsconfig.app.json` (modified — added test file exclusions)
+- `dispatch/tsconfig.node.json` (modified — removed `vitest.config.ts` from includes)
+- `dispatch/src/components/EnvironmentPanel/EnvironmentPanel.tsx` (modified — fixed `open` import name shadow)
+
+## Change Log
+
+- **2026-03-10**: Story 4.4 implemented — created `.github/workflows/build.yml` with cross-platform CI matrix; audited `tauri.conf.json` and `Cargo.toml` (no changes needed); fixed pre-existing `tsc -b` build blockers (tsconfig exclusions + `@types/node` + `EnvironmentPanel` import shadow fix); macOS smoke-test confirmed 3.6 MB `.dmg`. All 269 tests pass.

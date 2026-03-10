@@ -2,6 +2,9 @@
 dist/
 target/
 
+# TypeScript incremental build cache
+*.tsbuildinfo
+
 # Dependencies
 node_modules/
 
