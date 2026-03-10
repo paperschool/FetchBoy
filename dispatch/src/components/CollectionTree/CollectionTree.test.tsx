@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { Collection, Folder, Request } from '@/lib/db';
 import { useCollectionStore } from '@/stores/collectionStore';
+import { useRequestStore } from '@/stores/requestStore';
 import { CollectionTree } from './CollectionTree';
 
 // ─── Mock collections lib ─────────────────────────────────────────────────────
@@ -82,9 +83,22 @@ const resetStore = () =>
         activeRequestId: null,
     });
 
+const resetRequestStore = () =>
+    useRequestStore.setState({
+        method: 'GET',
+        url: '',
+        headers: [],
+        queryParams: [],
+        body: { mode: 'raw', raw: '' },
+        auth: { type: 'none' },
+        activeTab: 'headers',
+        isDirty: false,
+    });
+
 describe('CollectionTree', () => {
     beforeEach(() => {
         resetStore();
+        resetRequestStore();
         vi.clearAllMocks();
         mockLoadAllCollections.mockResolvedValue({ collections: [], folders: [], requests: [] });
         mockCreateCollection.mockResolvedValue(makeCol());
@@ -251,5 +265,62 @@ describe('CollectionTree', () => {
             expect(mockDeleteCollection).toHaveBeenCalledWith('col-1');
             expect(useCollectionStore.getState().collections).toHaveLength(0);
         });
+    });
+
+    it('clicking a request calls loadFromSaved and sets it as active', async () => {
+        const col = makeCol();
+        const req = makeReq({ folder_id: null });
+        mockLoadAllCollections.mockResolvedValue({
+            collections: [col],
+            folders: [],
+            requests: [req],
+        });
+        useRequestStore.setState({ isDirty: false });
+        render(<CollectionTree />);
+        await waitFor(() => screen.getByTestId('collection-col-1'));
+        fireEvent.click(screen.getByLabelText('Expand collection'));
+        await waitFor(() => screen.getByTestId('request-req-1'));
+        fireEvent.click(screen.getByTestId('request-req-1'));
+        expect(useCollectionStore.getState().activeRequestId).toBe('req-1');
+        expect(useRequestStore.getState().url).toBe(req.url);
+    });
+
+    it('dirty guard shows confirm when isDirty is true before loading a request', async () => {
+        const col = makeCol();
+        const req = makeReq({ folder_id: null });
+        mockLoadAllCollections.mockResolvedValue({
+            collections: [col],
+            folders: [],
+            requests: [req],
+        });
+        useRequestStore.setState({ isDirty: true, url: 'https://unsaved.example.com' });
+        const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+        render(<CollectionTree />);
+        await waitFor(() => screen.getByTestId('collection-col-1'));
+        fireEvent.click(screen.getByLabelText('Expand collection'));
+        await waitFor(() => screen.getByTestId('request-req-1'));
+        fireEvent.click(screen.getByTestId('request-req-1'));
+        expect(confirmSpy).toHaveBeenCalledWith('You have unsaved changes. Discard and load this request?');
+        expect(useCollectionStore.getState().activeRequestId).toBe('req-1');
+    });
+
+    it('dirty guard cancel prevents loading the request', async () => {
+        const col = makeCol();
+        const req = makeReq({ folder_id: null, url: 'https://saved.example.com' });
+        mockLoadAllCollections.mockResolvedValue({
+            collections: [col],
+            folders: [],
+            requests: [req],
+        });
+        useRequestStore.setState({ isDirty: true, url: 'https://unsaved.example.com' });
+        vi.spyOn(window, 'confirm').mockReturnValue(false);
+        render(<CollectionTree />);
+        await waitFor(() => screen.getByTestId('collection-col-1'));
+        fireEvent.click(screen.getByLabelText('Expand collection'));
+        await waitFor(() => screen.getByTestId('request-req-1'));
+        fireEvent.click(screen.getByTestId('request-req-1'));
+        // url should not change — load was cancelled
+        expect(useRequestStore.getState().url).toBe('https://unsaved.example.com');
+        expect(useCollectionStore.getState().activeRequestId).toBeNull();
     });
 });

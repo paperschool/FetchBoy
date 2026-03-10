@@ -50,6 +50,7 @@ interface CollectionState {
     addRequest: (request: Request) => void;
     renameRequest: (id: string, name: string) => void;
     deleteRequest: (id: string) => void;
+    updateRequest: (id: string, changes: Partial<Omit<Request, 'id' | 'created_at'>>) => void;
 
     // Reorder
     reorderFolders: (collectionId: string, orderedIds: string[]) => void;
@@ -146,6 +147,12 @@ export const useCollectionStore = create<CollectionState>()(
             set((state) => {
                 const req = state.requests.find((r) => r.id === id);
                 if (req) req.name = name;
+            }),
+
+        updateRequest: (id, changes) =>
+            set((state) => {
+                const req = state.requests.find((r) => r.id === id);
+                if (req) Object.assign(req, changes);
             }),
 
         deleteRequest: (id) =>

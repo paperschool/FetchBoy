@@ -80,7 +80,10 @@ export function ResponseViewer({ response, error, logs = [], onClearLogs }: Resp
       )}
 
       {error && (
-        <p className="text-sm font-medium text-red-600">Request Error: {error}</p>
+        <>
+          <p className="text-sm font-medium text-red-600">Request Error</p>
+          <p className="text-sm text-red-600">{error}</p>
+        </>
       )}
 
       <div className="border-app-subtle border-b">

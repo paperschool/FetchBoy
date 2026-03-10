@@ -15,12 +15,14 @@ import {
     updateRequestOrder,
 } from '@/lib/collections';
 import { useCollectionStore } from '@/stores/collectionStore';
+import { useRequestStore } from '@/stores/requestStore';
 
 type EditingType = 'collection' | 'folder' | 'request';
 
 export function CollectionTree() {
     const store = useCollectionStore();
     const tree = store.getCollectionTree();
+    const requestStore = useRequestStore();
 
     const [expanded, setExpanded] = useState<Record<string, boolean>>({});
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -46,6 +48,16 @@ export function CollectionTree() {
 
     const toggle = (id: string) =>
         setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
+
+    const handleLoadRequest = (id: string) => {
+        const request = store.requests.find((r) => r.id === id);
+        if (!request) return;
+        if (requestStore.isDirty) {
+            if (!window.confirm('You have unsaved changes. Discard and load this request?')) return;
+        }
+        requestStore.loadFromSaved(request);
+        store.setActiveRequest(id);
+    };
 
     const startEdit = (type: EditingType, id: string, name: string) => {
         setEditingType(type);
@@ -389,7 +401,7 @@ export function CollectionTree() {
                                                             onCommitEdit={() => void commitEdit()}
                                                             onCancelEdit={cancelEdit}
                                                             onSelect={() =>
-                                                                store.setActiveRequest(
+                                                                handleLoadRequest(
                                                                     reqNode.item.id,
                                                                 )
                                                             }
@@ -436,7 +448,7 @@ export function CollectionTree() {
                                         onCommitEdit={() => void commitEdit()}
                                         onCancelEdit={cancelEdit}
                                         onSelect={() =>
-                                            store.setActiveRequest(reqNode.item.id)
+                                            handleLoadRequest(reqNode.item.id)
                                         }
                                         onDelete={() =>
                                             void handleDeleteRequest(reqNode.item.id)

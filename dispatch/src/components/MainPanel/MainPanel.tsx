@@ -2,9 +2,12 @@ import { invoke } from '@tauri-apps/api/core';
 import { MonacoEditorField } from '@/components/Editor/MonacoEditorField';
 import { KeyValueRows } from '@/components/RequestBuilder/KeyValueRows';
 import { ResponseViewer, type ResponseData } from '@/components/ResponseViewer/ResponseViewer';
+import { SaveRequestDialog } from '@/components/SaveRequestDialog/SaveRequestDialog';
+import { createFullSavedRequest, updateSavedRequest } from '@/lib/collections';
 import { persistHistoryEntry } from '@/lib/history';
-import type { HttpMethod, RequestTab } from '@/stores/requestStore';
+import type { AuthState, HttpMethod, RequestTab } from '@/stores/requestStore';
 import { useRequestStore } from '@/stores/requestStore';
+import { useCollectionStore } from '@/stores/collectionStore';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import { useState } from 'react';
 
@@ -51,11 +54,14 @@ function extractErrorReason(error: unknown): string {
 
 export function MainPanel() {
   const [isSending, setIsSending] = useState(false);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [responseData, setResponseData] = useState<ResponseData | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [verboseLogs, setVerboseLogs] = useState<string[]>([]);
   const [requestBodyLanguage, setRequestBodyLanguage] = useState<'json' | 'html' | 'xml'>('json');
   const editorFontSize = useUiSettingsStore((state) => state.editorFontSize);
+
+  const collectionStore = useCollectionStore();
 
   const {
     method,
@@ -77,11 +83,74 @@ export function MainPanel() {
     body,
     auth,
     setBodyRaw,
+    markDirty,
   } = useRequestStore();
 
   const appendLog = (message: string) => {
     const timestamp = new Date().toISOString();
     setVerboseLogs((current) => [...current, `[${timestamp}] ${message}`]);
+  };
+
+  function authStateToConfig(authState: AuthState): Record<string, string> {
+    switch (authState.type) {
+      case 'bearer': return { token: authState.token };
+      case 'basic': return { username: authState.username, password: authState.password };
+      case 'api-key': return { key: authState.key, value: authState.value, in: authState.in };
+      default: return {};
+    }
+  }
+
+  const handleDialogSave = async (saveName: string, collectionId: string, folderId: string | null) => {
+    const existing = collectionStore.requests.find(
+      (r) => r.name === saveName && r.collection_id === collectionId && (r.folder_id ?? null) === folderId,
+    );
+
+    if (existing) {
+      if (!window.confirm('A request with this name already exists. Overwrite?')) return;
+      await updateSavedRequest(existing.id, {
+        name: saveName,
+        method,
+        url,
+        headers,
+        query_params: queryParams,
+        body_type: body.mode,
+        body_content: body.raw,
+        auth_type: auth.type,
+        auth_config: authStateToConfig(auth),
+      });
+      collectionStore.updateRequest(existing.id, {
+        name: saveName,
+        method,
+        url,
+        headers,
+        query_params: queryParams,
+        body_type: body.mode,
+        body_content: body.raw,
+        auth_type: auth.type,
+        auth_config: authStateToConfig(auth),
+      });
+      collectionStore.setActiveRequest(existing.id);
+    } else {
+      const saved = await createFullSavedRequest({
+        collection_id: collectionId,
+        folder_id: folderId,
+        name: saveName,
+        method,
+        url,
+        headers,
+        query_params: queryParams,
+        body_type: body.mode,
+        body_content: body.raw,
+        auth_type: auth.type,
+        auth_config: authStateToConfig(auth),
+        sort_order: 0,
+      });
+      collectionStore.addRequest(saved);
+      collectionStore.setActiveRequest(saved.id);
+    }
+
+    markDirty(false);
+    setSaveDialogOpen(false);
   };
 
   const invokeWithTimeout = async <T,>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
@@ -235,7 +304,14 @@ export function MainPanel() {
             />
           </div>
 
-          <div className="flex items-end">
+          <div className="flex items-end gap-2">
+            <button
+              type="button"
+              onClick={() => setSaveDialogOpen(true)}
+              className="border-app-subtle text-app-secondary h-9 rounded-md border px-4 text-sm font-medium"
+            >
+              Save
+            </button>
             <button
               type="button"
               onClick={handleSendRequest}
@@ -342,6 +418,12 @@ export function MainPanel() {
           onClearLogs={() => setVerboseLogs([])}
         />
       </div>
+
+      <SaveRequestDialog
+        open={saveDialogOpen}
+        onClose={() => setSaveDialogOpen(false)}
+        onSave={handleDialogSave}
+      />
     </main>
   );
 }
