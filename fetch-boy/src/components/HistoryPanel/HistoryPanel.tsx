@@ -33,6 +33,7 @@ export function HistoryPanel() {
     const entries = useHistoryStore((state) => state.entries);
     const historyStore = useHistoryStore();
     const [isConfirmingClear, setIsConfirmingClear] = useState(false);
+    const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; entryId: string } | null>(null);
 
     useEffect(() => {
         loadHistory()
@@ -52,6 +53,13 @@ export function HistoryPanel() {
             }
         }
         updateTabRequestState(activeTabId, buildSnapshotFromSaved(entry.request_snapshot));
+    };
+
+    const handleOpenInNewTab = (entry: (typeof entries)[number]) => {
+        const snapshot = buildSnapshotFromSaved(entry.request_snapshot);
+        const raw = `${entry.request_snapshot.method} ${entry.request_snapshot.url}`;
+        const label = raw.length > 30 ? raw.slice(0, 27) + '\u2026' : raw;
+        useTabStore.getState().openRequestInNewTab(snapshot, label);
     };
 
     const handleClearHistory = async () => {
@@ -120,6 +128,8 @@ export function HistoryPanel() {
                             key={entry.id}
                             data-testid={`history-row-${entry.id}`}
                             onClick={() => handleRowClick(entry)}
+                            onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setCtxMenu({ x: e.clientX, y: e.clientY, entryId: entry.id }); }}
+                            onMouseDown={(e) => { if (e.button === 1) { e.preventDefault(); handleOpenInNewTab(entry); } }}
                             className="flex items-center gap-2 px-1.5 py-1 rounded cursor-pointer hover:bg-gray-700"
                         >
                             <span
@@ -145,6 +155,32 @@ export function HistoryPanel() {
                     ))}
                 </ul>
             )}
+            {ctxMenu && (() => {
+                const entry = entries.find((e) => e.id === ctxMenu.entryId);
+                if (!entry) return null;
+                return (
+                    <>
+                        <div
+                            className="fixed inset-0 z-40"
+                            onClick={(e) => { e.stopPropagation(); setCtxMenu(null); }}
+                        />
+                        <ul
+                            role="menu"
+                            className="fixed z-50 min-w-[10rem] rounded-md border border-app-subtle bg-app-main py-1 shadow-lg text-sm"
+                            style={{ top: ctxMenu.y, left: ctxMenu.x }}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <li
+                                role="menuitem"
+                                className="px-3 py-1.5 hover:bg-app-subtle cursor-pointer"
+                                onClick={() => { handleOpenInNewTab(entry); setCtxMenu(null); }}
+                            >
+                                Open in New Tab
+                            </li>
+                        </ul>
+                    </>
+                );
+            })()}
         </div>
     );
 }

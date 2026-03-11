@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
+import { current } from 'immer';
 import type { HttpMethod, RequestTab, AuthState, BodyMode, KeyValueRow } from './requestStore';
 import type { ResponseData } from '@/components/ResponseViewer/ResponseViewer';
 
@@ -66,12 +67,18 @@ interface TabStore {
     activeTabId: string;
     addTab: () => void;
     closeTab: (id: string) => void;
+    navigateTab: (direction: 'next' | 'prev') => void;
+    reorderTabs: (orderedIds: string[]) => void;
+    duplicateTab: (id: string) => void;
+    closeOtherTabs: (id: string) => void;
+    closeAllTabs: () => void;
     setActiveTab: (id: string) => void;
     renameTab: (id: string, label: string) => void;
     syncLabelFromRequest: (id: string, method: string, url: string) => void;
     updateTabRequestState: (id: string, patch: Partial<RequestSnapshot>) => void;
     updateTabResponseState: (id: string, patch: Partial<ResponseSnapshot>) => void;
     appendResponseLog: (id: string, log: string) => void;
+    openRequestInNewTab: (snapshot: RequestSnapshot, label: string) => void;
 }
 
 const createInitialTab = (): TabEntry => ({
@@ -112,6 +119,59 @@ export const useTabStore = create<TabStore>()(
                     const newIdx = Math.max(0, idx - 1);
                     state.activeTabId = state.tabs[newIdx].id;
                 }
+            }),
+
+        navigateTab: (direction) =>
+            set((state) => {
+                if (state.tabs.length <= 1) return;
+                const currentIdx = state.tabs.findIndex((t) => t.id === state.activeTabId);
+                if (currentIdx === -1) return;
+                const delta = direction === 'next' ? 1 : -1;
+                const nextIdx = (currentIdx + delta + state.tabs.length) % state.tabs.length;
+                state.activeTabId = state.tabs[nextIdx].id;
+            }),
+
+        reorderTabs: (orderedIds) =>
+            set((state) => {
+                if (orderedIds.length !== state.tabs.length) return;
+                const tabById = new Map(state.tabs.map((tab) => [tab.id, tab]));
+                const hasUnknownId = orderedIds.some((id) => !tabById.has(id));
+                if (hasUnknownId) return;
+
+                state.tabs = orderedIds.map((id) => tabById.get(id)!);
+            }),
+
+        duplicateTab: (id) =>
+            set((state) => {
+                const sourceIdx = state.tabs.findIndex((tab) => tab.id === id);
+                if (sourceIdx === -1) return;
+
+                const source = state.tabs[sourceIdx];
+                const duplicated: TabEntry = {
+                    id: crypto.randomUUID(),
+                    label: `${source.label} (copy)`,
+                    isCustomLabel: true,
+                    requestState: structuredClone(current(source.requestState)),
+                    responseState: createDefaultResponseSnapshot(),
+                };
+
+                state.tabs.splice(sourceIdx + 1, 0, duplicated);
+                state.activeTabId = duplicated.id;
+            }),
+
+        closeOtherTabs: (id) =>
+            set((state) => {
+                const keep = state.tabs.find((tab) => tab.id === id);
+                if (!keep) return;
+                state.tabs = [keep];
+                state.activeTabId = keep.id;
+            }),
+
+        closeAllTabs: () =>
+            set((state) => {
+                const freshTab = createInitialTab();
+                state.tabs = [freshTab];
+                state.activeTabId = freshTab.id;
             }),
 
         setActiveTab: (id) =>
@@ -156,6 +216,19 @@ export const useTabStore = create<TabStore>()(
             set((state) => {
                 const tab = state.tabs.find((t) => t.id === id);
                 if (tab) tab.responseState.verboseLogs.push(log);
+            }),
+
+        openRequestInNewTab: (snapshot, label) =>
+            set((state) => {
+                const newTab: TabEntry = {
+                    id: crypto.randomUUID(),
+                    label,
+                    isCustomLabel: true,
+                    requestState: { ...snapshot },
+                    responseState: createDefaultResponseSnapshot(),
+                };
+                state.tabs.push(newTab);
+                state.activeTabId = newTab.id;
             }),
     })),
 );

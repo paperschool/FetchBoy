@@ -129,7 +129,7 @@ describe('EnvironmentPanel', () => {
         // Select the environment
         fireEvent.click(screen.getByTestId('env-row-env-1'));
         // Add a variable
-        fireEvent.click(screen.getByText('Add Variable'));
+        fireEvent.click(screen.getByRole('button', { name: /add variable/i }));
         await waitFor(() => {
             expect(mockUpdateEnvironmentVariables).toHaveBeenCalled();
             expect(mockStoreState.updateVariables).toHaveBeenCalled();
