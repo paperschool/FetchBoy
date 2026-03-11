@@ -6,16 +6,20 @@ import { MainPanel } from '@/components/MainPanel/MainPanel';
 import { TabBar } from '@/components/TabBar/TabBar';
 import { loadAllEnvironments } from '@/lib/environments';
 import { useEnvironmentStore } from '@/stores/environmentStore';
-import { loadAllSettings } from '@/lib/settings';
+import { loadAllSettings, saveSetting } from '@/lib/settings';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import { useTheme } from '@/hooks/useTheme';
 import useTabKeyboardShortcuts from '@/hooks/useTabKeyboardShortcuts';
+import useSidebarKeyboardShortcut from '@/hooks/useSidebarKeyboardShortcut';
 
 export function AppShell() {
   useTheme();
   useTabKeyboardShortcuts();
+  useSidebarKeyboardShortcut();
 
   const setSettingsPanelOpen = useUiSettingsStore((s) => s.setSettingsPanelOpen);
+  const sidebarCollapsed = useUiSettingsStore((s) => s.sidebarCollapsed);
+  const setSidebarCollapsed = useUiSettingsStore((s) => s.setSidebarCollapsed);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
@@ -24,6 +28,12 @@ export function AppShell() {
   }, []);
 
   const dismissContextMenu = useCallback(() => setContextMenu(null), []);
+
+  const handleToggleSidebar = useCallback(() => {
+    const newState = !sidebarCollapsed;
+    setSidebarCollapsed(newState);
+    saveSetting('sidebar_collapsed', newState).catch(() => {});
+  }, [sidebarCollapsed, setSidebarCollapsed]);
 
   useEffect(() => {
     loadAllEnvironments()
@@ -35,18 +45,21 @@ export function AppShell() {
         useUiSettingsStore.getState().setEditorFontSize(s.editor_font_size);
         useUiSettingsStore.getState().setRequestTimeoutMs(s.request_timeout_ms);
         useUiSettingsStore.getState().setSslVerify(s.ssl_verify);
+        useUiSettingsStore.getState().setSidebarCollapsed(s.sidebar_collapsed ?? false);
       })
       .catch(() => {}); // defaults already set in store initial state
   }, []);
 
   return (
     <div
-      className="grid h-screen grid-cols-[16rem_1fr] grid-rows-[3rem_2.25rem_1fr] overflow-hidden [&>aside]:row-span-2 [&>main]:col-start-2 [&>main]:row-start-3"
+      className={`grid h-screen ${
+        sidebarCollapsed ? 'grid-cols-[3.5rem_1fr]' : 'grid-cols-[16rem_1fr]'
+      } grid-rows-[3rem_2.25rem_1fr] overflow-hidden transition-[grid-template-columns] duration-200 ease-in-out [&>aside]:row-span-2 [&>main]:col-start-2 [&>main]:row-start-3`}
       onContextMenu={handleContextMenu}
       onClick={dismissContextMenu}
     >
       <TopBar />
-      <Sidebar />
+      <Sidebar collapsed={sidebarCollapsed} onToggle={handleToggleSidebar} />
       <div className="col-start-2 row-start-2 border-b border-app-subtle bg-app-sidebar overflow-hidden">
         <TabBar />
       </div>

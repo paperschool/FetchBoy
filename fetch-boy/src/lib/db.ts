@@ -69,6 +69,7 @@ export interface AppSettings {
     request_timeout_ms: number;
     ssl_verify: boolean;
     editor_font_size: number;
+    sidebar_collapsed?: boolean;
 }
 
 // ─── Singleton Database Handle ────────────────────────────────────────────────
