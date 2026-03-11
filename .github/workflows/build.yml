@@ -153,13 +153,16 @@ jobs:
       - name: Collect installer files
         id: files
         run: |
-          FILES=$(find artifacts -type f \( -name "*.dmg" -o -name "*.msi" -o -name "*.exe" -o -name "*.deb" -o -name "*.AppImage" \) | tr '\n' ' ')
+          # Output as JSON array to properly handle files with spaces
+          FILES=$(find artifacts -type f \( -name "*.dmg" -o -name "*.msi" -o -name "*.exe" -o -name "*.deb" -o -name "*.AppImage" \) | jq -s '.')
           echo "files=$FILES" >> $GITHUB_OUTPUT
 
       - name: Create GitHub release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Read files from JSON array into a bash array to properly handle spaces
+          mapfile -t FILE_ARRAY < <(echo "${{ steps.files.outputs.files }}" | jq -r '.[]')
           gh release create "v${{ steps.version.outputs.version }}" \
             --title "Fetch Boy v${{ steps.version.outputs.version }}" \
             --draft \
@@ -196,4 +199,4 @@ jobs:
           ```
           EOF
           )" \
-            ${{ steps.files.outputs.files }}
+            "${FILE_ARRAY[@]}"
