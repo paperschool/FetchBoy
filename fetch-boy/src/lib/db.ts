@@ -71,6 +71,7 @@ export interface AppSettings {
     editor_font_size: number;
     sidebar_collapsed?: boolean;
     sidebar_settings_expanded?: boolean;
+    has_seeded_sample_data?: boolean;
 }
 
 // ─── Singleton Database Handle ────────────────────────────────────────────────

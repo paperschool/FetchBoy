@@ -13,6 +13,8 @@ interface UiSettingsState {
     setSidebarCollapsed: (collapsed: boolean) => void;
     sidebarSettingsExpanded: boolean;
     setSidebarSettingsExpanded: (expanded: boolean) => void;
+    hasSeededSampleData: boolean;
+    setHasSeededSampleData: (seeded: boolean) => void;
 }
 
 export const useUiSettingsStore = create<UiSettingsState>((set) => ({
@@ -28,4 +30,6 @@ export const useUiSettingsStore = create<UiSettingsState>((set) => ({
     setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
     sidebarSettingsExpanded: false,
     setSidebarSettingsExpanded: (expanded) => set({ sidebarSettingsExpanded: expanded }),
+    hasSeededSampleData: false,
+    setHasSeededSampleData: (seeded) => set({ hasSeededSampleData: seeded }),
 }));
