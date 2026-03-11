@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./fetch-boy/src-tauri/icons/fetch-boi-logo.svg" alt="Fetch Boy Logo" width="265" height="265" />
+  <img src="./fetch-boy/src-tauri/icons/fetch-boi-logo.svg" alt="Fetch Boy Logo" width="512" height="512" />
 </p>
 
 <h1 align="left">Fetch Boy</h1>
@@ -90,6 +90,22 @@ yarn install
 
 yarn tauri dev
 ```
+
+---
+
+## Installation
+
+### macOS
+
+After downloading or building the `.app` bundle, you may need to remove the extended attribute quarantine flag to run the app:
+
+```bash
+xattr -cr /Applications/Fetch\ Boy.app
+```
+
+Then open the app from Applications as usual.
+
+> ⚠️ **Disclaimer:** Fetch Boy is currently in **early development**. The app has not been signed or notarized by Apple yet, which means Gatekeeper may show warnings when trying to run it. Use the `xattr` command above to bypass these restrictions. Once the app reaches a more stable release, proper signing and notarization will be set up.
 
 ---
 
