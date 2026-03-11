@@ -1,6 +1,6 @@
 import { MonacoEditorField } from '@/components/Editor/MonacoEditorField';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
-import { Download, Send, X } from 'lucide-react';
+import { Download, Send, X, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { EmptyState } from '@/components/ui/EmptyState';
 
@@ -57,6 +57,115 @@ function getStatusColorClass(status: number): string {
     return 'text-red-600';
   }
   return 'text-app-primary';
+}
+
+// Image viewer component with zoom and scroll
+function ImageViewer({ contentType, body }: { contentType?: string; body: string }) {
+  const [zoom, setZoom] = useState(100);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  const imageSrc = `data:${contentType};base64,${body}`;
+
+  const handleZoomIn = () => setZoom((z) => Math.min(z + 25, 400));
+  const handleZoomOut = () => setZoom((z) => Math.max(z - 25, 25));
+  const handleReset = () => {
+    setZoom(100);
+    setPosition({ x: 0, y: 0 });
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    setPosition({
+      x: e.clientX - dragStart.x,
+      y: e.clientY - dragStart.y,
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      if (e.deltaY < 0) {
+        handleZoomIn();
+      } else {
+        handleZoomOut();
+      }
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-2 h-full">
+      {/* Toolbar */}
+      <div className="flex items-center gap-2 pb-2 border-b border-app-subtle">
+        <button
+          type="button"
+          onClick={handleZoomOut}
+          className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-app-subtle hover:bg-gray-100 dark:hover:bg-gray-700 text-app-primary"
+          title="Zoom out"
+        >
+          <ZoomOut size={14} />
+        </button>
+        <span className="text-xs text-app-secondary min-w-[3rem] text-center">{zoom}%</span>
+        <button
+          type="button"
+          onClick={handleZoomIn}
+          className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-app-subtle hover:bg-gray-100 dark:hover:bg-gray-700 text-app-primary"
+          title="Zoom in"
+        >
+          <ZoomIn size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={handleReset}
+          className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-app-subtle hover:bg-gray-100 dark:hover:bg-gray-700 text-app-primary ml-2"
+          title="Reset view"
+        >
+          <RotateCcw size={14} />
+          Reset
+        </button>
+        <span className="text-xs text-app-muted ml-auto">Scroll to pan • Ctrl+scroll to zoom</span>
+      </div>
+
+      {/* Image container with scroll and zoom */}
+      <div 
+        className="flex-1 overflow-auto bg-app-main border border-app-subtle rounded-md cursor-grab active:cursor-grabbing"
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onWheel={handleWheel}
+      >
+        <div 
+          className="flex items-center justify-center min-h-full p-4"
+          style={{ 
+            transform: `scale(${zoom / 100})`,
+            transformOrigin: 'center center',
+          }}
+        >
+          <img
+            src={imageSrc}
+            alt="Response image"
+            className="max-w-none rounded-md shadow-lg"
+            style={{ 
+              transform: `translate(${position.x}px, ${position.y}px)`,
+              transition: isDragging ? 'none' : 'transform 0.1s ease-out',
+            }}
+            draggable={false}
+          />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function ResponseViewer({ response, error, logs = [], onClearLogs, requestedUrl, wasCancelled = false, wasTimedOut = false, timedOutAfterSec = null }: ResponseViewerProps) {
@@ -184,15 +293,12 @@ export function ResponseViewer({ response, error, logs = [], onClearLogs, reques
       <div className="flex min-h-0 flex-1 flex-col">
         {activeTab === 'body' && response ? (
         <div className="relative min-h-[220px] flex-1">
-          {/* Image preview */}
+          {/* Image preview with zoom and scroll */}
           {isImageContentType(response.contentType) && (
-            <div className="flex items-center justify-center p-4">
-              <img
-                src={`data:${response.contentType};base64,${response.body}`}
-                alt="Response image"
-                className="max-w-full max-h-[400px] rounded-md"
-              />
-            </div>
+            <ImageViewer 
+              contentType={response.contentType}
+              body={response.body}
+            />
           )}
 
           {/* PDF download link */}
