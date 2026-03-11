@@ -79,5 +79,5 @@ development_status:
   5-3-open-requests-in-new-tab: review
   5-4-tab-keyboard-shortcuts-and-reordering: review
   5-5-export-request-as-curl-code-snippet: review
-  5-6-match-query-params-from-url: ready-for-dev
+  5-6-match-query-params-from-url: review
   epic-5-retrospective: optional

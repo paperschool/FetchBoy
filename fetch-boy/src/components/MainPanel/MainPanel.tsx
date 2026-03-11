@@ -9,6 +9,7 @@ import { ResponseViewer, type ResponseData } from '@/components/ResponseViewer/R
 import { SaveRequestDialog } from '@/components/SaveRequestDialog/SaveRequestDialog';
 import { AuthPanel } from '@/components/AuthPanel/AuthPanel';
 import { createFullSavedRequest, updateSavedRequest } from '@/lib/collections';
+import { extractQueryParamsFromUrl } from '@/lib/extractQueryParamsFromUrl';
 import { persistHistoryEntry } from '@/lib/history';
 import type { AuthState, HttpMethod, RequestTab } from '@/stores/requestStore';
 import { useTabStore } from '@/stores/tabStore';
@@ -17,7 +18,7 @@ import { useCollectionStore } from '@/stores/collectionStore';
 import { useHistoryStore } from '@/stores/historyStore';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import { useEnvironment } from '@/hooks/useEnvironment';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
 const REQUEST_TABS: Array<{ id: RequestTab; label: string }> = [
@@ -82,8 +83,81 @@ function buildRequestedUrlForDisplay(
   }
 }
 
+function parseUrlWithFallback(rawUrl: string): URL | null {
+  const trimmed = rawUrl.trim();
+  if (trimmed.length === 0) {
+    return null;
+  }
+
+  try {
+    return new URL(trimmed);
+  } catch {
+    if (/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)) {
+      return null;
+    }
+
+    try {
+      return new URL(`https://${trimmed}`);
+    } catch {
+      return null;
+    }
+  }
+}
+
+function stripQueryFromUrl(rawUrl: string): string {
+  const parsedUrl = parseUrlWithFallback(rawUrl);
+  if (!parsedUrl) {
+    const hashIndex = rawUrl.indexOf('#');
+    const beforeHash = hashIndex >= 0 ? rawUrl.slice(0, hashIndex) : rawUrl;
+    const hash = hashIndex >= 0 ? rawUrl.slice(hashIndex) : '';
+    const queryIndex = beforeHash.indexOf('?');
+    const withoutQuery = queryIndex >= 0 ? beforeHash.slice(0, queryIndex) : beforeHash;
+    return `${withoutQuery}${hash}`;
+  }
+
+  parsedUrl.search = '';
+  return parsedUrl.toString();
+}
+
+function buildUrlFromQueryParams(
+  rawUrl: string,
+  params: Array<{ key: string; value: string; enabled: boolean }>,
+): string | null {
+  const parsedUrl = parseUrlWithFallback(rawUrl);
+  if (!parsedUrl) {
+    return null;
+  }
+
+  parsedUrl.search = '';
+  for (const param of params) {
+    if (param.enabled && param.key.trim().length > 0) {
+      parsedUrl.searchParams.append(param.key, param.value);
+    }
+  }
+
+  return parsedUrl.toString();
+}
+
+function areQueryParamsEqual(
+  left: Array<{ key: string; value: string; enabled: boolean }>,
+  right: Array<{ key: string; value: string; enabled: boolean }>,
+): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return left.every((row, index) => {
+    const other = right[index];
+    return row.key === other.key && row.value === other.value && row.enabled === other.enabled;
+  });
+}
+
 export function MainPanel() {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [queryMatchError, setQueryMatchError] = useState<string | null>(null);
+  const [syncQueryParams, setSyncQueryParams] = useState(false);
+  const [requestDetailsOpen, setRequestDetailsOpen] = useState(true);
+  const [responseOpen, setResponseOpen] = useState(true);
   const editorFontSize = useUiSettingsStore((state) => state.editorFontSize);
   const requestTimeoutMs = useUiSettingsStore((s) => s.requestTimeoutMs);
   const sslVerify = useUiSettingsStore((s) => s.sslVerify);
@@ -107,7 +181,10 @@ export function MainPanel() {
 
   // Request state setters (adapted from requestStore actions)
   const setMethod = (m: HttpMethod) => updateReq({ method: m, isDirty: true });
-  const setUrl = (u: string) => updateReq({ url: u, isDirty: true });
+  const setUrl = (u: string) => {
+    setQueryMatchError(null);
+    updateReq({ url: u, isDirty: true });
+  };
   const setActiveTab = (t: RequestTab) => updateReq({ activeTab: t });
   const addHeader = () => updateReq({ headers: [...req.headers, { key: '', value: '', enabled: true }], isDirty: true });
   const updateHeader = (index: number, field: 'key' | 'value', value: string) => {
@@ -119,16 +196,36 @@ export function MainPanel() {
     updateReq({ headers: newH, isDirty: true });
   };
   const removeHeader = (index: number) => updateReq({ headers: req.headers.filter((_, i) => i !== index), isDirty: true });
-  const addQueryParam = () => updateReq({ queryParams: [...req.queryParams, { key: '', value: '', enabled: true }], isDirty: true });
+
+  const updateSyncUrlFromQueryParams = (nextQueryParams: Array<{ key: string; value: string; enabled: boolean }>) => {
+    if (!syncQueryParams) {
+      updateReq({ queryParams: nextQueryParams, isDirty: true });
+      return;
+    }
+
+    const nextUrl = buildUrlFromQueryParams(req.url, nextQueryParams);
+    if (!nextUrl) {
+      setQueryMatchError('Unable to parse URL. Enter a valid URL and try again.');
+      updateReq({ queryParams: nextQueryParams, isDirty: true });
+      return;
+    }
+
+    setQueryMatchError(null);
+    updateReq({ queryParams: nextQueryParams, url: nextUrl, isDirty: true });
+  };
+
+  const addQueryParam = () => {
+    updateSyncUrlFromQueryParams([...req.queryParams, { key: '', value: '', enabled: true }]);
+  };
   const updateQueryParam = (index: number, field: 'key' | 'value', value: string) => {
     const newParams = req.queryParams.map((p, i) => i === index ? { ...p, [field]: value } : p);
-    updateReq({ queryParams: newParams, isDirty: true });
+    updateSyncUrlFromQueryParams(newParams);
   };
   const toggleQueryParamEnabled = (index: number) => {
     const newP = req.queryParams.map((p, i) => i === index ? { ...p, enabled: !p.enabled } : p);
-    updateReq({ queryParams: newP, isDirty: true });
+    updateSyncUrlFromQueryParams(newP);
   };
-  const removeQueryParam = (index: number) => updateReq({ queryParams: req.queryParams.filter((_, i) => i !== index), isDirty: true });
+  const removeQueryParam = (index: number) => updateSyncUrlFromQueryParams(req.queryParams.filter((_, i) => i !== index));
   const setAuth = (a: AuthState) => updateReq({ auth: a, isDirty: true });
   const setBodyRaw = (raw: string) => updateReq({ body: { ...req.body, raw }, isDirty: true });
   const markDirty = (dirty = true) => updateReq({ isDirty: dirty });
@@ -143,6 +240,23 @@ export function MainPanel() {
   const setRequestBodyLanguage = (lang: 'json' | 'html' | 'xml') => updateRes({ requestBodyLanguage: lang });
 
   const unresolvedVars = unresolvedIn(url);
+
+  useEffect(() => {
+    if (!syncQueryParams) {
+      return;
+    }
+
+    const result = extractQueryParamsFromUrl(url);
+    if (!result.ok) {
+      setQueryMatchError('Unable to parse URL. Enter a valid URL and try again.');
+      return;
+    }
+
+    setQueryMatchError(null);
+    if (!areQueryParamsEqual(queryParams, result.params)) {
+      updateReq({ queryParams: result.params, isDirty: true });
+    }
+  }, [syncQueryParams, url, queryParams, updateReq]);
 
   const appendLog = (message: string) => {
     const timestamp = new Date().toISOString();
@@ -244,10 +358,15 @@ export function MainPanel() {
     appendLog(`Normalized URL: ${normalizedUrl}`);
 
     const sendUrl = applyEnv(normalizedUrl);
+    const sendUrlBase = stripQueryFromUrl(sendUrl);
+    const sendUrlForRequest = syncQueryParams ? sendUrlBase : sendUrl;
+    if (syncQueryParams && !parseUrlWithFallback(sendUrl) && sendUrl.includes('?')) {
+      appendLog('Sync Query Parameters: using string-based query stripping fallback for an unparseable URL.');
+    }
     const sendHeaders = headers.map((h) => ({ ...h, value: applyEnv(h.value) }));
     const sendQueryParams = queryParams.map((q) => ({ ...q, value: applyEnv(q.value) }));
     const sendBody = { ...body, raw: applyEnv(body.raw) };
-    const requestedUrlForDisplay = buildRequestedUrlForDisplay(sendUrl, sendQueryParams, auth);
+    const requestedUrlForDisplay = buildRequestedUrlForDisplay(sendUrlForRequest, sendQueryParams, auth);
 
     updateRes({ isSending: true, requestError: null, responseData: null, sentUrl: requestedUrlForDisplay });
 
@@ -257,7 +376,7 @@ export function MainPanel() {
       folder_id: null,
       name: 'Untitled Request',
       method,
-      url: sendUrl,
+      url: sendUrlForRequest,
       headers: sendHeaders,
       query_params: sendQueryParams,
       body_type: sendBody.raw.trim() ? 'raw' : 'none',
@@ -275,7 +394,7 @@ export function MainPanel() {
         invoke<ResponseData>('send_request', {
           request: {
             method,
-            url: sendUrl,
+            url: sendUrlForRequest,
             headers: sendHeaders,
             queryParams: sendQueryParams,
             body: sendBody,
@@ -295,7 +414,7 @@ export function MainPanel() {
 
       const entry = await persistHistoryEntry({
         method,
-        url: sendUrl,
+        url: sendUrlForRequest,
         statusCode: response.status,
         responseTimeMs: Number(response.responseTimeMs),
         requestSnapshot,
@@ -311,7 +430,7 @@ export function MainPanel() {
       try {
         const errorEntry = await persistHistoryEntry({
           method,
-          url: sendUrl,
+          url: sendUrlForRequest,
           statusCode: 0,
           responseTimeMs: 0,
           requestSnapshot,
@@ -409,9 +528,15 @@ export function MainPanel() {
           </div>
         </div>
 
-        <details open className="border-app-subtle rounded-md border p-2" data-testid="request-details-accordion">
+        <details
+          open
+          onToggle={(event) => setRequestDetailsOpen((event.currentTarget as HTMLDetailsElement).open)}
+          className="border-app-subtle min-h-0 rounded-md border p-2 open:flex open:min-h-[18rem] open:flex-col"
+          data-testid="request-details-accordion"
+        >
           <summary className="text-app-secondary cursor-pointer text-sm font-medium">Request Details</summary>
-          <div className="mt-3 space-y-3">
+          {requestDetailsOpen ? (
+            <div className="mt-3 flex min-h-0 flex-1 flex-col space-y-3">
             <div className="border-app-subtle border-b">
               <div className="flex gap-2">
                 {REQUEST_TABS.map((tab) => {
@@ -455,11 +580,42 @@ export function MainPanel() {
                 onUpdate={updateQueryParam}
                 onToggleEnabled={toggleQueryParamEnabled}
                 onRemove={removeQueryParam}
+                toolbarRightAction={(
+                  <label className="text-app-secondary inline-flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={syncQueryParams}
+                      onChange={(event) => {
+                        const nextChecked = event.target.checked;
+                        setSyncQueryParams(nextChecked);
+
+                        if (!nextChecked) {
+                          setQueryMatchError(null);
+                          return;
+                        }
+
+                        const result = extractQueryParamsFromUrl(req.url);
+                        if (!result.ok) {
+                          setQueryMatchError('Unable to parse URL. Enter a valid URL and try again.');
+                          return;
+                        }
+
+                        setQueryMatchError(null);
+                        if (!areQueryParamsEqual(queryParams, result.params)) {
+                          updateReq({ queryParams: result.params, isDirty: true });
+                        }
+                      }}
+                      aria-label="Sync Query Parameters"
+                    />
+                    Sync Query Parameters
+                  </label>
+                )}
+                toolbarInlineMessage={queryMatchError}
               />
             ) : null}
 
             {activeTab === 'body' ? (
-              <div className="space-y-2">
+              <div className="flex min-h-0 flex-1 flex-col space-y-2">
                 <div className="flex items-center justify-between gap-3">
                   <label className="text-app-secondary block text-sm font-medium">
                     Request Body
@@ -488,6 +644,7 @@ export function MainPanel() {
                   language={requestBodyLanguage}
                   value={body.raw}
                   fontSize={editorFontSize}
+                  height="100%"
                   onChange={setBodyRaw}
                 />
               </div>
@@ -496,18 +653,33 @@ export function MainPanel() {
             {activeTab === 'auth' ? (
               <AuthPanel auth={auth} onAuthChange={setAuth} />
             ) : null}
-          </div>
+            </div>
+          ) : null}
         </details>
 
-        <div className="flex min-h-0 flex-1 flex-col">
-          <ResponseViewer
-            response={responseData}
-            error={requestError}
-            logs={verboseLogs}
-            onClearLogs={() => updateRes({ verboseLogs: [] })}
-            requestedUrl={sentUrl ?? undefined}
-          />
-        </div>
+        <details
+          open
+          onToggle={(event) => setResponseOpen((event.currentTarget as HTMLDetailsElement).open)}
+          className="border-app-subtle min-h-0 rounded-md border p-2 open:flex open:min-h-[16rem] open:flex-1 open:flex-col"
+          data-testid="response-accordion"
+        >
+          <summary className="text-app-secondary cursor-pointer text-sm font-medium">Response</summary>
+          {responseOpen ? (
+            <div className="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden">
+              {responseData || requestError || verboseLogs.length > 0 ? (
+                <ResponseViewer
+                  response={responseData}
+                  error={requestError}
+                  logs={verboseLogs}
+                  onClearLogs={() => updateRes({ verboseLogs: [] })}
+                  requestedUrl={sentUrl ?? undefined}
+                />
+              ) : (
+                <p className="text-app-muted text-sm">Send a request to see response details.</p>
+              )}
+            </div>
+          ) : null}
+        </details>
       </div>
 
       <SaveRequestDialog

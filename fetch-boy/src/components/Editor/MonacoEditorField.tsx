@@ -24,7 +24,7 @@ export function MonacoEditorField({ value, language, readOnly = false, fontSize,
         : 'vs';
 
   return (
-    <div data-testid={testId} className="border-app-subtle overflow-hidden rounded-md border" style={{ height }}>
+    <div data-testid={testId} className="border-app-subtle min-h-0 overflow-hidden rounded-md border" style={{ height }}>
       <Editor
         path={path}
         language={language}

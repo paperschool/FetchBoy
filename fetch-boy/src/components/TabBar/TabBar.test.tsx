@@ -63,8 +63,8 @@ describe('TabBar', () => {
 
     it('attempting to close the last tab does nothing (tab count remains 1)', () => {
         render(<TabBar />);
-        const closeButtons = screen.getAllByRole('button', { name: /Close tab/i });
-        fireEvent.click(closeButtons[0]);
+        fireEvent.contextMenu(screen.getByRole('tab'), { clientX: 10, clientY: 20 });
+        fireEvent.click(screen.getByRole('menuitem', { name: /^Close Tab/i }));
         expect(useTabStore.getState().tabs).toHaveLength(1);
     });
 
