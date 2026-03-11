@@ -181,6 +181,29 @@ describe('MainPanel request builder', () => {
     expect(executeMock).toHaveBeenCalledTimes(1);
   });
 
+  it('shows requested URL with enabled query params after send', async () => {
+    render(<MainPanel />);
+
+    fireEvent.change(screen.getByLabelText('Request URL'), {
+      target: { value: 'https://httpbin.org/get' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Query Params' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Query Param' }));
+
+    fireEvent.change(screen.getByLabelText('query-key-0'), {
+      target: { value: 'test' },
+    });
+    fireEvent.change(screen.getByLabelText('query-value-0'), {
+      target: { value: '123' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+
+    await screen.findByText('200 OK');
+    expect(screen.getByText('https://httpbin.org/get?test=123')).toBeInTheDocument();
+  });
+
   it('renders response body in read-only Monaco with pretty JSON by default', async () => {
     render(<MainPanel />);
 

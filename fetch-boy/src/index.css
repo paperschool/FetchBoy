@@ -102,6 +102,10 @@
     border-color: var(--app-border-subtle);
   }
 
+  .bg-app-subtle {
+    background-color: var(--app-surface-hover);
+  }
+
   /* Flat select: removes native OS chrome and injects a custom SVG chevron */
   .select-flat {
     appearance: none;

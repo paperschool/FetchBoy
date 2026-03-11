@@ -104,3 +104,23 @@ So that I can quickly reproduce or share the call without manually constructing 
 - The clipboard content is plain text; no trailing whitespace or invisible characters
 - Generation is purely client-side (no Tauri command needed); the logic lives in a `generateSnippet(format, resolvedRequest)` utility function covered by unit tests
 - Snippet format examples are correct and runnable (validated against known-good fixtures in unit tests)
+
+---
+
+### Story 5.6: Match Query Params from URL
+
+As a developer,
+I want a "Match Query Params" action in the Query Params toolbar,
+So that I can quickly populate query rows from the URL without entering each key/value manually.
+
+**Acceptance Criteria:**
+- In the Request Details -> Query Params tab, a button labeled **Match Query Params** appears on the right side of the same toolbar row as **Add Query Param**
+- Clicking **Match Query Params** parses the current request URL and extracts query-string pairs into query param rows
+- Existing query rows are replaced with the extracted URL query params in their URL order
+- Each extracted query row is created with `enabled: true`
+- Query keys with no explicit value (for example `?flag`) are supported and map to `key = "flag"`, `value = ""`
+- Repeated keys (for example `?tag=a&tag=b`) are preserved as separate rows
+- If the URL has no query string, all query rows are cleared
+- If the URL is invalid or cannot be parsed, no rows are changed and a non-blocking inline message is shown near the button
+- Query param matching updates request dirty state consistently with manual query param edits
+- Feature is covered by unit/component tests for success, empty-query, repeated-key, and invalid-URL cases
