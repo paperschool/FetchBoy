@@ -90,3 +90,9 @@ development_status:
   6-4-request-timeout-configuration: review
   6-5-settings-in-sidebar-accordion: review
   epic-6-retrospective: optional
+
+  # ─── Epic 7: First-Run Experience & Polish ────────────────────────
+  epic-7: backlog
+  7-1-startup-animation: backlog
+  7-2-onboarding-tooltip-tutorial: backlog
+  epic-7-retrospective: optional
