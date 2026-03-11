@@ -1,0 +1,15 @@
+{
+  "changelog": [
+    {
+      "version": "0.1.0",
+      "date": "2026-03-11",
+      "changes": [
+        "Initial release of FetchBoy - API testing made easy",
+        "Request builder with Monaco editor",
+        "Collections and history management",
+        "Environment variables support",
+        "Light and dark theme support"
+      ]
+    }
+  ]
+}
