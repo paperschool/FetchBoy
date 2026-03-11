@@ -157,7 +157,6 @@ export function MainPanel() {
   const [queryMatchError, setQueryMatchError] = useState<string | null>(null);
   const [syncQueryParams, setSyncQueryParams] = useState(false);
   const [requestDetailsOpen, setRequestDetailsOpen] = useState(true);
-  const [responseOpen, setResponseOpen] = useState(true);
   const editorFontSize = useUiSettingsStore((state) => state.editorFontSize);
   const requestTimeoutMs = useUiSettingsStore((s) => s.requestTimeoutMs);
   const sslVerify = useUiSettingsStore((s) => s.sslVerify);
@@ -657,29 +656,25 @@ export function MainPanel() {
           ) : null}
         </details>
 
-        <details
-          open
-          onToggle={(event) => setResponseOpen((event.currentTarget as HTMLDetailsElement).open)}
-          className="border-app-subtle min-h-0 rounded-md border p-2 open:flex open:min-h-[16rem] open:flex-1 open:flex-col"
-          data-testid="response-accordion"
+        <section
+          className="border-app-subtle flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border p-2"
+          data-testid="response-panel"
         >
-          <summary className="text-app-secondary cursor-pointer text-sm font-medium">Response</summary>
-          {responseOpen ? (
-            <div className="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden">
-              {responseData || requestError || verboseLogs.length > 0 ? (
-                <ResponseViewer
-                  response={responseData}
-                  error={requestError}
-                  logs={verboseLogs}
-                  onClearLogs={() => updateRes({ verboseLogs: [] })}
-                  requestedUrl={sentUrl ?? undefined}
-                />
-              ) : (
-                <p className="text-app-muted text-sm">Send a request to see response details.</p>
-              )}
-            </div>
-          ) : null}
-        </details>
+          <p className="text-app-secondary text-sm font-medium">Response</p>
+          <div className="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden">
+            {responseData || requestError || verboseLogs.length > 0 ? (
+              <ResponseViewer
+                response={responseData}
+                error={requestError}
+                logs={verboseLogs}
+                onClearLogs={() => updateRes({ verboseLogs: [] })}
+                requestedUrl={sentUrl ?? undefined}
+              />
+            ) : (
+              <p className="text-app-muted text-sm">Send a request to see response details.</p>
+            )}
+          </div>
+        </section>
       </div>
 
       <SaveRequestDialog
