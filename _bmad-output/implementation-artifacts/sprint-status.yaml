@@ -99,6 +99,6 @@ development_status:
   7-4-empty-state-polish: review
   7-5-keyboard-shortcut-overlay: review
   7-6-whats-new-modal: review
-  7-7-image-binary-response-handling: backlog
-  7-8-request-progress-bar: backlog
+  7-7-image-binary-response-handling: review
+  7-8-request-progress-bar: ready-for-dev
   epic-7-retrospective: optional

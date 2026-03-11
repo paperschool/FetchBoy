@@ -1,6 +1,6 @@
 import { MonacoEditorField } from '@/components/Editor/MonacoEditorField';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
-import { Send, X } from 'lucide-react';
+import { Download, Send, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { EmptyState } from '@/components/ui/EmptyState';
 
@@ -14,8 +14,24 @@ export interface ResponseData {
   statusText: string;
   responseTimeMs: number;
   responseSizeBytes: number;
-  body: string;
+  body: string;  // base64 encoded for binary responses, text for text responses
   headers: ResponseHeaderRow[];
+  contentType?: string;  // Content-Type header value from backend
+}
+
+export function isImageContentType(contentType?: string): boolean {
+  if (!contentType) return false;
+  return contentType.toLowerCase().startsWith('image/');
+}
+
+export function isPdfContentType(contentType?: string): boolean {
+  return contentType?.toLowerCase() === 'application/pdf';
+}
+
+export function isBinaryContentType(contentType?: string): boolean {
+  if (!contentType) return false;
+  const ct = contentType.toLowerCase();
+  return ct.startsWith('image/') || ct === 'application/octet-stream' || ct === 'application/pdf';
 }
 
 interface ResponseViewerProps {
@@ -168,30 +184,78 @@ export function ResponseViewer({ response, error, logs = [], onClearLogs, reques
       <div className="flex min-h-0 flex-1 flex-col">
         {activeTab === 'body' && response ? (
         <div className="relative min-h-[220px] flex-1">
-          <div className="absolute top-2 right-2 z-10 flex items-center gap-2">
-            <select
-              id="response-body-language"
-              aria-label="Response Body Language"
-              value={responseBodyLanguage}
-              onChange={(event) => setResponseBodyLanguage(event.target.value as 'json' | 'html' | 'xml' | 'plaintext')}
-              className="select-flat border-app-subtle bg-app-main text-app-primary h-8 rounded-md border pl-2 pr-7 text-xs"
-            >
-              <option value="json">JSON</option>
-              <option value="html">HTML</option>
-              <option value="xml">XML</option>
-              <option value="plaintext">Raw</option>
-            </select>
-          </div>
+          {/* Image preview */}
+          {isImageContentType(response.contentType) && (
+            <div className="flex items-center justify-center p-4">
+              <img
+                src={`data:${response.contentType};base64,${response.body}`}
+                alt="Response image"
+                className="max-w-full max-h-[400px] rounded-md"
+              />
+            </div>
+          )}
 
-          <MonacoEditorField
-            testId="response-body-editor"
-            path="response-body"
-            language={responseBodyLanguage}
-            value={responseBodyLanguage === 'plaintext' ? response.body : (formattedJsonBody ?? response.body)}
-            fontSize={editorFontSize}
-            height="100%"
-            readOnly
-          />
+          {/* PDF download link */}
+          {isPdfContentType(response.contentType) && (
+            <div className="p-4 space-y-3">
+              <p className="text-app-muted text-sm">PDF response received</p>
+              <a
+                href={`data:application/pdf;base64,${response.body}`}
+                download="response.pdf"
+                className="inline-flex items-center gap-2 rounded-md bg-blue-500 px-4 py-2 text-sm text-white hover:bg-blue-600"
+              >
+                <Download size={14} />
+                Download PDF
+              </a>
+            </div>
+          )}
+
+          {/* Other binary - download button */}
+          {isBinaryContentType(response.contentType) &&
+           !isImageContentType(response.contentType) &&
+           !isPdfContentType(response.contentType) && (
+            <div className="p-4 space-y-3">
+              <p className="text-app-muted text-sm">Binary file detected ({response.contentType})</p>
+              <a
+                href={`data:${response.contentType};base64,${response.body}`}
+                download="response.bin"
+                className="inline-flex items-center gap-2 rounded-md bg-blue-500 px-4 py-2 text-sm text-white hover:bg-blue-600"
+              >
+                <Download size={14} />
+                Download File
+              </a>
+            </div>
+          )}
+
+          {/* Text content - Monaco editor with language dropdown */}
+          {!isBinaryContentType(response.contentType) && (
+            <>
+              <div className="absolute top-2 right-2 z-10 flex items-center gap-2">
+                <select
+                  id="response-body-language"
+                  aria-label="Response Body Language"
+                  value={responseBodyLanguage}
+                  onChange={(event) => setResponseBodyLanguage(event.target.value as 'json' | 'html' | 'xml' | 'plaintext')}
+                  className="select-flat border-app-subtle bg-app-main text-app-primary h-8 rounded-md border pl-2 pr-7 text-xs"
+                >
+                  <option value="json">JSON</option>
+                  <option value="html">HTML</option>
+                  <option value="xml">XML</option>
+                  <option value="plaintext">Raw</option>
+                </select>
+              </div>
+
+              <MonacoEditorField
+                testId="response-body-editor"
+                path="response-body"
+                language={responseBodyLanguage}
+                value={responseBodyLanguage === 'plaintext' ? response.body : (formattedJsonBody ?? response.body)}
+                fontSize={editorFontSize}
+                height="100%"
+                readOnly
+              />
+            </>
+          )}
         </div>
       ) : activeTab === 'body' ? (
         <p className="text-app-muted text-sm">Send a request to see the response body.</p>

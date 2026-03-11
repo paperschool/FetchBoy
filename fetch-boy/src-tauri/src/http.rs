@@ -1,3 +1,4 @@
+use base64::Engine as _;
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use reqwest::{Client, Method, Url};
 use serde::{Deserialize, Serialize};
@@ -63,8 +64,15 @@ pub struct SendResponsePayload {
     pub statusText: String,
     pub responseTimeMs: u128,
     pub responseSizeBytes: usize,
-    pub body: String,
+    pub body: String,           // base64 encoded for binary, text for text
     pub headers: Vec<ResponseHeader>,
+    pub contentType: Option<String>,  // Content-Type header value
+}
+
+// Check if the content type should be treated as binary (read as bytes and base64-encoded).
+fn is_binary_content_type(content_type: &str) -> bool {
+    let ct = content_type.to_lowercase();
+    ct.starts_with("image/") || ct == "application/octet-stream" || ct == "application/pdf"
 }
 
 // Parse HTTP verb safely from user-provided string.
@@ -232,20 +240,78 @@ pub async fn send_request(
         })
         .collect();
 
-    // Read response payload as text for initial raw-body support.
-    let body = response
-        .text()
-        .await
-        .map_err(|e| format!("Failed to read response body: {e}"))?;
+    // Extract content-type before consuming the response body.
+    let content_type = response
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string());
+
+    // Read binary responses as base64-encoded bytes; text responses as UTF-8 strings.
+    let (body, response_size) = if content_type
+        .as_ref()
+        .map(|ct| is_binary_content_type(ct))
+        .unwrap_or(false)
+    {
+        let bytes = response
+            .bytes()
+            .await
+            .map_err(|e| format!("Failed to read response body: {e}"))?;
+        let encoded = base64::engine::general_purpose::STANDARD.encode(&bytes);
+        let size = bytes.len();
+        (encoded, size)
+    } else {
+        let text = response
+            .text()
+            .await
+            .map_err(|e| format!("Failed to read response body: {e}"))?;
+        let size = text.len();
+        (text, size)
+    };
 
     Ok(SendResponsePayload {
         status: status_code,
         statusText: status_text,
         responseTimeMs: started.elapsed().as_millis(),
-        responseSizeBytes: body.len(),
+        responseSizeBytes: response_size,
         body,
         headers,
+        contentType: content_type,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn is_binary_content_type_returns_true_for_images() {
+        assert!(is_binary_content_type("image/png"));
+        assert!(is_binary_content_type("image/jpeg"));
+        assert!(is_binary_content_type("image/gif"));
+        assert!(is_binary_content_type("image/webp"));
+        assert!(is_binary_content_type("image/svg+xml"));
+    }
+
+    #[test]
+    fn is_binary_content_type_returns_true_for_pdf_and_octet_stream() {
+        assert!(is_binary_content_type("application/pdf"));
+        assert!(is_binary_content_type("application/octet-stream"));
+    }
+
+    #[test]
+    fn is_binary_content_type_returns_false_for_text_types() {
+        assert!(!is_binary_content_type("application/json"));
+        assert!(!is_binary_content_type("text/plain"));
+        assert!(!is_binary_content_type("text/html"));
+        assert!(!is_binary_content_type("application/xml"));
+    }
+
+    #[test]
+    fn is_binary_content_type_is_case_insensitive() {
+        assert!(is_binary_content_type("Image/PNG"));
+        assert!(is_binary_content_type("APPLICATION/PDF"));
+    }
 }
 
 #[tauri::command]

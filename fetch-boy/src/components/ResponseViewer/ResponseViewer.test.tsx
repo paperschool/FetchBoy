@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { ResponseViewer, type ResponseData } from './ResponseViewer';
+import { ResponseViewer, type ResponseData, isImageContentType, isPdfContentType, isBinaryContentType } from './ResponseViewer';
 
 vi.mock('@monaco-editor/react', () => ({
   default: ({ value, options, language, path }: { value?: string; options?: { readOnly?: boolean; fontSize?: number }; language?: string; path?: string }) => (
@@ -23,6 +23,46 @@ const sampleResponse: ResponseData = {
   responseSizeBytes: 120,
   body: '{"ok":true,"name":"dispatch"}',
   headers: [{ key: 'content-type', value: 'application/json' }],
+};
+
+const imageResponse: ResponseData = {
+  status: 200,
+  statusText: 'OK',
+  responseTimeMs: 100,
+  responseSizeBytes: 1024,
+  body: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+  headers: [],
+  contentType: 'image/png',
+};
+
+const pdfResponse: ResponseData = {
+  status: 200,
+  statusText: 'OK',
+  responseTimeMs: 150,
+  responseSizeBytes: 2048,
+  body: 'JVBERi0xLjQK',
+  headers: [],
+  contentType: 'application/pdf',
+};
+
+const binaryResponse: ResponseData = {
+  status: 200,
+  statusText: 'OK',
+  responseTimeMs: 80,
+  responseSizeBytes: 512,
+  body: 'SGVsbG8gV29ybGQ=',
+  headers: [],
+  contentType: 'application/octet-stream',
+};
+
+const textResponse: ResponseData = {
+  status: 200,
+  statusText: 'OK',
+  responseTimeMs: 50,
+  responseSizeBytes: 100,
+  body: '{"message":"hello"}',
+  headers: [],
+  contentType: 'application/json',
 };
 
 describe('Story 6.2 cancellation state', () => {
@@ -103,3 +143,102 @@ describe('ResponseViewer Monaco integration', () => {
     expect(editor).toHaveAttribute('data-language', 'xml');
   });
 });
+
+describe('Story 7.7 Image & Binary Response Handling', () => {
+  describe('Helper functions', () => {
+    it('isImageContentType returns true for image/* types', () => {
+      expect(isImageContentType('image/png')).toBe(true);
+      expect(isImageContentType('image/jpeg')).toBe(true);
+      expect(isImageContentType('image/gif')).toBe(true);
+      expect(isImageContentType('image/webp')).toBe(true);
+      expect(isImageContentType('image/svg+xml')).toBe(true);
+    });
+
+    it('isImageContentType returns false for non-image types', () => {
+      expect(isImageContentType('application/json')).toBe(false);
+      expect(isImageContentType('text/plain')).toBe(false);
+      expect(isImageContentType('application/pdf')).toBe(false);
+    });
+
+    it('isPdfContentType returns true for application/pdf', () => {
+      expect(isPdfContentType('application/pdf')).toBe(true);
+    });
+
+    it('isPdfContentType returns false for non-pdf types', () => {
+      expect(isPdfContentType('image/png')).toBe(false);
+      expect(isPdfContentType('application/json')).toBe(false);
+    });
+
+    it('isBinaryContentType returns true for images, pdf, and octet-stream', () => {
+      expect(isBinaryContentType('image/png')).toBe(true);
+      expect(isBinaryContentType('image/jpeg')).toBe(true);
+      expect(isBinaryContentType('application/pdf')).toBe(true);
+      expect(isBinaryContentType('application/octet-stream')).toBe(true);
+    });
+
+    it('isBinaryContentType returns false for text types', () => {
+      expect(isBinaryContentType('application/json')).toBe(false);
+      expect(isBinaryContentType('text/plain')).toBe(false);
+      expect(isBinaryContentType('text/html')).toBe(false);
+      expect(isBinaryContentType('application/xml')).toBe(false);
+    });
+  });
+
+  describe('Binary response rendering', () => {
+    it('renders image preview for image/png content type', () => {
+      render(<ResponseViewer response={imageResponse} error={null} />);
+      
+      const img = screen.getByAltText('Response image');
+      expect(img).toBeInTheDocument();
+      expect(img).toHaveAttribute('src', expect.stringContaining('data:image/png;base64,'));
+    });
+
+    it('renders download link for application/pdf', () => {
+      render(<ResponseViewer response={pdfResponse} error={null} />);
+      
+      expect(screen.getByText('Download PDF')).toBeInTheDocument();
+      const link = screen.getByText('Download PDF').closest('a');
+      expect(link).toHaveAttribute('download', 'response.pdf');
+    });
+
+    it('renders download button for application/octet-stream', () => {
+      render(<ResponseViewer response={binaryResponse} error={null} />);
+      
+      expect(screen.getByText('Download File')).toBeInTheDocument();
+      expect(screen.getByText('Binary file detected (application/octet-stream)')).toBeInTheDocument();
+    });
+
+    it('renders Monaco editor for text content', () => {
+      render(<ResponseViewer response={textResponse} error={null} />);
+      
+      expect(screen.getByTestId('response-body-editor')).toBeInTheDocument();
+    });
+
+    it('does not show image when contentType is undefined', () => {
+      const responseNoContentType: ResponseData = {
+        status: 200,
+        statusText: 'OK',
+        responseTimeMs: 50,
+        responseSizeBytes: 100,
+        body: '{"message":"hello"}',
+        headers: [],
+      };
+      
+      render(<ResponseViewer response={responseNoContentType} error={null} />);
+      
+      expect(screen.queryByAltText('Response image')).not.toBeInTheDocument();
+      expect(screen.getByTestId('response-body-editor')).toBeInTheDocument();
+    });
+
+    it('shows Raw option in language dropdown', () => {
+      render(<ResponseViewer response={textResponse} error={null} />);
+      
+      const select = screen.getByRole('combobox', { name: 'Response Body Language' });
+      expect(select).toHaveValue('json');
+      
+      fireEvent.change(select, { target: { value: 'plaintext' } });
+      expect(select).toHaveValue('plaintext');
+    });
+  });
+});
+
