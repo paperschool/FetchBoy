@@ -149,6 +149,33 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
                         </button>
                     </div>
                 </div>
+
+                {/* Keyboard shortcuts section */}
+                <div className="space-y-2" data-testid="keyboard-shortcuts-section">
+                    <p className="text-app-primary text-sm font-medium">Keyboard Shortcuts</p>
+                    <dl className="space-y-1 text-sm" data-testid="keyboard-shortcuts-list">
+                        <div className="flex justify-between">
+                            <dt className="text-app-secondary">Send Request</dt>
+                            <dd className="text-app-primary font-mono text-xs">⌘+Enter / Ctrl+Enter</dd>
+                        </div>
+                        <div className="flex justify-between">
+                            <dt className="text-app-secondary">Toggle Sidebar</dt>
+                            <dd className="text-app-primary font-mono text-xs">⌘+B / Ctrl+B</dd>
+                        </div>
+                        <div className="flex justify-between">
+                            <dt className="text-app-secondary">New Tab</dt>
+                            <dd className="text-app-primary font-mono text-xs">⌘+T / Ctrl+T</dd>
+                        </div>
+                        <div className="flex justify-between">
+                            <dt className="text-app-secondary">Close Tab</dt>
+                            <dd className="text-app-primary font-mono text-xs">⌘+W / Ctrl+W</dd>
+                        </div>
+                        <div className="flex justify-between">
+                            <dt className="text-app-secondary">Next Tab</dt>
+                            <dd className="text-app-primary font-mono text-xs">⌘+Tab / Ctrl+Tab</dd>
+                        </div>
+                    </dl>
+                </div>
             </div>
         </div>
     );

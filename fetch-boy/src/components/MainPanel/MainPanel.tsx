@@ -18,7 +18,8 @@ import { useCollectionStore } from '@/stores/collectionStore';
 import { useHistoryStore } from '@/stores/historyStore';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import { useEnvironment } from '@/hooks/useEnvironment';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import useSendRequestKeyboardShortcut from '@/hooks/useSendRequestKeyboardShortcut';
 
 const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
 const REQUEST_TABS: Array<{ id: RequestTab; label: string }> = [
@@ -347,7 +348,7 @@ export function MainPanel() {
     });
   };
 
-  const handleSendRequest = async () => {
+  const handleSendRequest = useCallback(async () => {
     const rawUrl = url.trim();
     appendLog(`Send clicked with method=${method}, rawUrl=${rawUrl || '<empty>'}`);
 
@@ -475,7 +476,10 @@ export function MainPanel() {
       updateRes({ isSending: false });
       appendLog('Send flow completed.');
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [url, method, headers, queryParams, body, auth, syncQueryParams, applyEnv, requestTimeoutMs, sslVerify, activeTabId]);
+
+  useSendRequestKeyboardShortcut(handleSendRequest);
 
   const handleCancelRequest = () => {
     abortControllerRef.current?.abort();
