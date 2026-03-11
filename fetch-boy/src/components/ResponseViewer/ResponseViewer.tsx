@@ -66,7 +66,7 @@ export function ResponseViewer({ response, error, logs = [], onClearLogs, reques
   }
 
   return (
-    <section data-testid="response-viewer" className="border-app-subtle flex h-full flex-col gap-3 rounded-md border p-3">
+    <section data-testid="response-viewer" className="border-app-subtle flex min-h-0 flex-1 flex-col gap-3 overflow-hidden rounded-md border p-3">
       {response && (
         <div className="space-y-1">
           {requestedUrl && (
@@ -137,7 +137,7 @@ export function ResponseViewer({ response, error, logs = [], onClearLogs, reques
 
       <div className="flex min-h-0 flex-1 flex-col">
         {activeTab === 'body' && response ? (
-        <div className="relative min-h-0 flex-1">
+        <div className="relative min-h-[220px] flex-1">
           <div className="absolute top-2 right-2 z-10 flex items-center gap-2">
             <label htmlFor="response-body-language" className="text-app-secondary text-xs font-medium">
               Language

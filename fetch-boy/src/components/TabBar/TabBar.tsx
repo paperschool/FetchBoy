@@ -56,10 +56,10 @@ function SortableTabItem({
             {...listeners}
             role="tab"
             aria-selected={isActive}
-            className={`group relative flex h-full min-w-0 max-w-[10rem] shrink-0 cursor-pointer select-none items-center gap-1 border-r border-app-subtle px-3 text-sm ${
+                className={`group relative mx-1 mt-1 flex h-[calc(100%-0.25rem)] min-w-0 max-w-[10rem] shrink-0 cursor-pointer select-none items-center gap-1 rounded-t-md border-x border-t border-b-0 px-3 text-sm transition-colors ${
                 isActive
-                    ? 'border-b-2 border-b-blue-500 bg-app-main text-app-primary'
-                    : 'bg-app-sidebar text-gray-400 hover:bg-app-main'
+                    ? 'border-app-subtle bg-app-main text-app-primary shadow-sm'
+                    : 'border-transparent bg-app-sidebar text-gray-400 hover:border-app-subtle hover:bg-app-main'
             } ${isBlocked ? 'animate-pulse ring-1 ring-amber-400/70' : ''}`}
             onClick={onTabClick}
             onContextMenu={onContextMenu}
@@ -228,7 +228,7 @@ export function TabBar() {
                     </SortableContext>
 
                     <button
-                        className="flex h-full shrink-0 cursor-pointer items-center px-2 text-gray-400 transition-colors hover:bg-gray-700/50 hover:text-white"
+                        className="mx-1 mt-1 flex h-[calc(100%-0.25rem)] shrink-0 cursor-pointer items-center rounded-t-md border-x border-t border-b-0 border-transparent px-2 text-gray-400 transition-colors hover:border-app-subtle hover:bg-app-main hover:text-white"
                         aria-label="New tab"
                         title={`New Tab (${isMac ? '⌘T' : 'Ctrl+T'})`}
                         onClick={() => addTab()}

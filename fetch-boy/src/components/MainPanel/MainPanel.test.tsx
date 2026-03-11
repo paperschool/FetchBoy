@@ -83,6 +83,8 @@ describe('MainPanel request builder', () => {
     expect(screen.getByLabelText('Request URL')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Send' })).toBeInTheDocument();
     expect(screen.getByTestId('request-details-accordion')).toBeInTheDocument();
+    expect(screen.getByTestId('response-accordion')).toBeInTheDocument();
+    expect(screen.getByText('Send a request to see response details.')).toBeInTheDocument();
   });
 
   it('updates method and url in request store', () => {
@@ -202,6 +204,73 @@ describe('MainPanel request builder', () => {
 
     await screen.findByText('200 OK');
     expect(screen.getByText('https://httpbin.org/get?test=123')).toBeInTheDocument();
+  });
+
+  it('does not duplicate query params when request URL already contains same query string', async () => {
+    render(<MainPanel />);
+
+    fireEvent.change(screen.getByLabelText('Request URL'), {
+      target: { value: 'https://httpbin.org/get?test=123' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Query Params' }));
+    fireEvent.click(screen.getByLabelText('Sync Query Parameters'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+
+    await screen.findByText('200 OK');
+    expect(screen.queryByText('https://httpbin.org/get?test=123&test=123')).not.toBeInTheDocument();
+    expect(invokeMock).toHaveBeenCalledWith('send_request', {
+      request: expect.objectContaining({
+        url: 'https://httpbin.org/get',
+        queryParams: [{ key: 'test', value: '123', enabled: true }],
+      }),
+    });
+  });
+
+  it('strips url query in sync mode even for unparseable templated urls', async () => {
+    render(<MainPanel />);
+
+    fireEvent.change(screen.getByLabelText('Request URL'), {
+      target: { value: 'https://{{host}}/get?test=123' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Query Params' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Query Param' }));
+    fireEvent.change(screen.getByLabelText('query-key-0'), {
+      target: { value: 'test' },
+    });
+    fireEvent.change(screen.getByLabelText('query-value-0'), {
+      target: { value: '123' },
+    });
+    fireEvent.click(screen.getByLabelText('Sync Query Parameters'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+
+    await screen.findByText('200 OK');
+    expect(invokeMock).toHaveBeenCalledWith('send_request', {
+      request: expect.objectContaining({
+        url: 'https://{{host}}/get',
+        queryParams: [{ key: 'test', value: '123', enabled: true }],
+      }),
+    });
+  });
+
+  it('preserves query string from URL when sync query parameters is disabled', async () => {
+    render(<MainPanel />);
+
+    fireEvent.change(screen.getByLabelText('Request URL'), {
+      target: { value: 'https://httpbin.org/get?test=123' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+
+    await screen.findByText('200 OK');
+    expect(invokeMock).toHaveBeenCalledWith('send_request', {
+      request: expect.objectContaining({
+        url: 'https://httpbin.org/get?test=123',
+      }),
+    });
   });
 
   it('renders response body in read-only Monaco with pretty JSON by default', async () => {
@@ -344,5 +413,126 @@ describe('MainPanel request builder', () => {
     });
 
     expect(screen.queryByText(/⚠ Unresolved:/)).not.toBeInTheDocument();
+  });
+
+  it('shows Add Query Param and Sync Query Parameters controls on the same toolbar row', () => {
+    render(<MainPanel />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Query Params' }));
+
+    const addButton = screen.getByRole('button', { name: 'Add Query Param' });
+    const syncToggle = screen.getByLabelText('Sync Query Parameters');
+
+    expect(addButton).toBeInTheDocument();
+    expect(syncToggle).toBeInTheDocument();
+    expect(addButton.parentElement).not.toBeNull();
+    expect(addButton.parentElement).toContainElement(syncToggle);
+  });
+
+  it('syncs query params from URL when sync toggle is enabled', () => {
+    render(<MainPanel />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Query Params' }));
+    fireEvent.click(screen.getByLabelText('Sync Query Parameters'));
+    fireEvent.change(screen.getByLabelText('Request URL'), {
+      target: { value: 'https://api.example.com/items?tag=a&tag=b&flag' },
+    });
+
+    const { activeTabId, tabs } = useTabStore.getState();
+    const activeTab = tabs.find((t) => t.id === activeTabId);
+
+    expect(activeTab?.requestState.queryParams).toEqual([
+      { key: 'tag', value: 'a', enabled: true },
+      { key: 'tag', value: 'b', enabled: true },
+      { key: 'flag', value: '', enabled: true },
+    ]);
+    expect(activeTab?.requestState.isDirty).toBe(true);
+  });
+
+  it('clears query rows when sync is enabled and URL has no query string', () => {
+    render(<MainPanel />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Query Params' }));
+    fireEvent.click(screen.getByLabelText('Sync Query Parameters'));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Query Param' }));
+
+    fireEvent.change(screen.getByLabelText('query-key-0'), {
+      target: { value: 'stale' },
+    });
+
+    fireEvent.change(screen.getByLabelText('Request URL'), {
+      target: { value: 'https://api.example.com/items' },
+    });
+
+    const { activeTabId, tabs } = useTabStore.getState();
+    const activeTab = tabs.find((t) => t.id === activeTabId);
+
+    expect(activeTab?.requestState.queryParams).toEqual([]);
+    expect(screen.getByText('No query configured yet.')).toBeInTheDocument();
+  });
+
+  it('keeps prior query rows and shows inline error for invalid URL when sync is enabled', () => {
+    render(<MainPanel />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Query Params' }));
+    fireEvent.click(screen.getByLabelText('Sync Query Parameters'));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Query Param' }));
+
+    fireEvent.change(screen.getByLabelText('query-key-0'), {
+      target: { value: 'keep' },
+    });
+    fireEvent.change(screen.getByLabelText('query-value-0'), {
+      target: { value: 'me' },
+    });
+
+    fireEvent.change(screen.getByLabelText('Request URL'), {
+      target: { value: 'http://:bad-url' },
+    });
+
+    const { activeTabId, tabs } = useTabStore.getState();
+    const activeTab = tabs.find((t) => t.id === activeTabId);
+
+    expect(activeTab?.requestState.queryParams).toEqual([
+      { key: 'keep', value: 'me', enabled: true },
+    ]);
+    expect(screen.getByText('Unable to parse URL. Enter a valid URL and try again.')).toBeInTheDocument();
+  });
+
+  it('updates request url when query rows are edited while sync is enabled', () => {
+    render(<MainPanel />);
+
+    fireEvent.change(screen.getByLabelText('Request URL'), {
+      target: { value: 'https://api.example.com/items?tag=a&flag' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Query Params' }));
+    fireEvent.click(screen.getByLabelText('Sync Query Parameters'));
+
+    fireEvent.change(screen.getByLabelText('query-value-0'), {
+      target: { value: 'updated' },
+    });
+
+    const { activeTabId, tabs } = useTabStore.getState();
+    const activeTab = tabs.find((t) => t.id === activeTabId);
+
+    expect(activeTab?.requestState.url).toBe('https://api.example.com/items?tag=updated&flag=');
+  });
+
+  it('updates request url when query row is removed while sync is enabled', () => {
+    render(<MainPanel />);
+
+    fireEvent.change(screen.getByLabelText('Request URL'), {
+      target: { value: 'https://api.example.com/items?tag=a&tag=b' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Query Params' }));
+    fireEvent.click(screen.getByLabelText('Sync Query Parameters'));
+    fireEvent.click(screen.getByLabelText('query-remove-0'));
+
+    const { activeTabId, tabs } = useTabStore.getState();
+    const activeTab = tabs.find((t) => t.id === activeTabId);
+
+    expect(activeTab?.requestState.queryParams).toEqual([{ key: 'tag', value: 'b', enabled: true }]);
+    expect(activeTab?.requestState.url).toBe('https://api.example.com/items?tag=b');
   });
 });

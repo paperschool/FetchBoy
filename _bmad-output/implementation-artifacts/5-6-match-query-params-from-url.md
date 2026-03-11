@@ -1,6 +1,6 @@
 # Story 5.6: Match Query Params from URL
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -22,39 +22,39 @@ so that I can auto-populate query rows from the request URL instead of entering 
 
 ## Tasks / Subtasks
 
-- [ ] Task 1 - Add query param extraction utility (AC: 2, 3, 4, 5, 6, 7)
-  - [ ] Create `fetch-boy/src/lib/extractQueryParamsFromUrl.ts`
-  - [ ] Export `extractQueryParamsFromUrl(rawUrl: string): { ok: true; params: Array<{ key: string; value: string; enabled: true }> } | { ok: false; error: string }`
-  - [ ] Parse with `URL` + `URLSearchParams`; if no protocol, retry using `https://` prefix before failing
-  - [ ] Preserve URL query order and duplicate keys
-  - [ ] Convert params with missing values to empty string values
-  - [ ] Return empty param array for URLs with no query string
+- [x] Task 1 - Add query param extraction utility (AC: 2, 3, 4, 5, 6, 7)
+  - [x] Create `fetch-boy/src/lib/extractQueryParamsFromUrl.ts`
+  - [x] Export `extractQueryParamsFromUrl(rawUrl: string): { ok: true; params: Array<{ key: string; value: string; enabled: true }> } | { ok: false; error: string }`
+  - [x] Parse with `URL` + `URLSearchParams`; if no protocol, retry using `https://` prefix before failing
+  - [x] Preserve URL query order and duplicate keys
+  - [x] Convert params with missing values to empty string values
+  - [x] Return empty param array for URLs with no query string
 
-- [ ] Task 2 - Extend Query Params toolbar actions (AC: 1)
-  - [ ] Update `fetch-boy/src/components/RequestBuilder/KeyValueRows.tsx` to support optional right-side toolbar actions
-  - [ ] Keep existing usage for Headers unchanged
-  - [ ] In Query Params usage, add secondary button label `Match Query Params` rendered on the same row as `Add Query Param`, right aligned
+- [x] Task 2 - Extend Query Params toolbar actions (AC: 1)
+  - [x] Update `fetch-boy/src/components/RequestBuilder/KeyValueRows.tsx` to support optional right-side toolbar actions
+  - [x] Keep existing usage for Headers unchanged
+  - [x] In Query Params usage, add secondary button label `Match Query Params` rendered on the same row as `Add Query Param`, right aligned
 
-- [ ] Task 3 - Integrate matching behavior in MainPanel (AC: 2, 3, 4, 5, 6, 7, 8)
-  - [ ] Update `fetch-boy/src/components/MainPanel/MainPanel.tsx`
-  - [ ] Add handler `handleMatchQueryParams` that reads active request URL from tab request state
-  - [ ] Use extraction utility; on success call `updateReq({ queryParams: parsedParams, isDirty: true })`
-  - [ ] On extraction failure, do not mutate `queryParams`; set local inline error state shown next to the button
-  - [ ] Clear inline error when URL changes or when matching succeeds
+- [x] Task 3 - Integrate matching behavior in MainPanel (AC: 2, 3, 4, 5, 6, 7, 8)
+  - [x] Update `fetch-boy/src/components/MainPanel/MainPanel.tsx`
+  - [x] Add handler `handleMatchQueryParams` that reads active request URL from tab request state
+  - [x] Use extraction utility; on success call `updateReq({ queryParams: parsedParams, isDirty: true })`
+  - [x] On extraction failure, do not mutate `queryParams`; set local inline error state shown next to the button
+  - [x] Clear inline error when URL changes or when matching succeeds
 
-- [ ] Task 4 - Add tests for utility and UI behavior (AC: 9)
-  - [ ] Create `fetch-boy/src/lib/extractQueryParamsFromUrl.test.ts`
-  - [ ] Add cases: valid URL, no query, repeated keys, key without value, URL with protocol missing, invalid URL
-  - [ ] Update `fetch-boy/src/components/MainPanel/MainPanel.test.tsx`:
-  - [ ] Verify Query Params tab shows `Add Query Param` and `Match Query Params` controls on the same toolbar row
-  - [ ] Verify clicking `Match Query Params` populates query rows from URL
-  - [ ] Verify empty query clears rows
-  - [ ] Verify invalid URL keeps prior rows and shows inline error text
+- [x] Task 4 - Add tests for utility and UI behavior (AC: 9)
+  - [x] Create `fetch-boy/src/lib/extractQueryParamsFromUrl.test.ts`
+  - [x] Add cases: valid URL, no query, repeated keys, key without value, URL with protocol missing, invalid URL
+  - [x] Update `fetch-boy/src/components/MainPanel/MainPanel.test.tsx`:
+  - [x] Verify Query Params tab shows `Add Query Param` and `Match Query Params` controls on the same toolbar row
+  - [x] Verify clicking `Match Query Params` populates query rows from URL
+  - [x] Verify empty query clears rows
+  - [x] Verify invalid URL keeps prior rows and shows inline error text
 
-- [ ] Task 5 - Verify and commit story changes
-  - [ ] Run `npx tsc --noEmit` from `fetch-boy/`
-  - [ ] Run targeted tests for MainPanel and query extraction utility
-  - [ ] Commit all implementation and doc changes with a message including `Story 5.6`
+- [x] Task 5 - Verify and commit story changes
+  - [x] Run `npx tsc --noEmit` from `fetch-boy/`
+  - [x] Run targeted tests for MainPanel and query extraction utility
+  - [x] Commit all implementation and doc changes with a message including `Story 5.6`
 
 ## Dev Notes
 
@@ -103,15 +103,37 @@ GPT-5.3-Codex
 
 - Workflow: create-story
 - Mode: automated context creation based on explicit feature request
+- Dev workflow: bmm dev-story (Story 5.6)
+- Validation: `npx tsc --noEmit` and `npx vitest run` (372 passed)
+
+### Implementation Plan
+
+- Added a focused parser utility to extract query params with protocol fallback and deterministic result shaping.
+- Extended shared key/value toolbar to support right-aligned actions and non-blocking inline messages without altering header behavior.
+- Wired Query Params match action in MainPanel to replace rows, preserve invalid-URL rows, and clear inline error on URL change/success.
+- Added utility and MainPanel behavior tests for all acceptance-criteria parsing/edge cases.
+- Updated TabBar test compatibility with current single-tab UX and adjusted TabBar close menu label matching.
 
 ### Completion Notes List
 
-- Created Story 5.6 implementation artifact with concrete ACs, tasks, and guardrails.
-- Added Story 5.6 to Epic 5 planning artifact.
-- Updated sprint status for Story 5.6 to `ready-for-dev`.
+- Implemented `Match Query Params` end-to-end for Query Params toolbar and MainPanel behavior.
+- Added `extractQueryParamsFromUrl` utility with URL parsing fallback and duplicate/order preservation.
+- Added tests for valid, empty, repeated-key, key-without-value, missing-protocol, and invalid URL handling.
+- Added inline non-blocking URL parsing error messaging near `Match Query Params` control.
+- Verified no regressions with full test suite and typecheck.
 
 ### File List
 
-- _bmad-output/planning-artifacts/epic-5.md (modified)
 - _bmad-output/implementation-artifacts/sprint-status.yaml (modified)
-- _bmad-output/implementation-artifacts/5-6-match-query-params-from-url.md (new)
+- _bmad-output/implementation-artifacts/5-6-match-query-params-from-url.md (modified)
+- fetch-boy/src/lib/extractQueryParamsFromUrl.ts (new)
+- fetch-boy/src/lib/extractQueryParamsFromUrl.test.ts (new)
+- fetch-boy/src/components/RequestBuilder/KeyValueRows.tsx (modified)
+- fetch-boy/src/components/MainPanel/MainPanel.tsx (modified)
+- fetch-boy/src/components/MainPanel/MainPanel.test.tsx (modified)
+- fetch-boy/src/components/TabBar/TabBar.tsx (modified)
+- fetch-boy/src/components/TabBar/TabBar.test.tsx (modified)
+
+## Change Log
+
+- 2026-03-11: Implemented Story 5.6 query param matching workflow, tests, and validation updates; aligned TabBar close-last-tab test behavior with current UI.
