@@ -65,6 +65,13 @@ export function CollectionTree() {
         store.setActiveRequest(id);
     };
 
+    const handleOpenInNewTab = (id: string) => {
+        const request = store.requests.find((r) => r.id === id);
+        if (!request) return;
+        const snapshot = buildSnapshotFromSaved(request);
+        useTabStore.getState().openRequestInNewTab(snapshot, request.name);
+    };
+
     const startEdit = (type: EditingType, id: string, name: string) => {
         setEditingType(type);
         setEditingId(id);
@@ -573,6 +580,7 @@ export function CollectionTree() {
                                                                     fldReqIds,
                                                                 )
                                                             }
+                                                            onOpenInNewTab={() => handleOpenInNewTab(reqNode.item.id)}
                                                         />
                                                     ))}
                                                 </div>
@@ -619,6 +627,7 @@ export function CollectionTree() {
                                                 directReqIds,
                                             )
                                         }
+                                        onOpenInNewTab={() => handleOpenInNewTab(reqNode.item.id)}
                                     />
                                 ))}
                             </div>
@@ -651,6 +660,7 @@ interface RequestRowProps {
     onDelete: () => void;
     onUpdate: () => void;
     onDrop: (e: React.DragEvent) => void;
+    onOpenInNewTab: () => void;
 }
 
 function RequestRow({
@@ -671,9 +681,12 @@ function RequestRow({
     onDelete,
     onUpdate,
     onDrop,
+    onOpenInNewTab,
 }: RequestRowProps) {
     const isEditing = editingId === id;
+    const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
     return (
+        <>
         <div
             data-testid={`request-${id}`}
             data-active={isActive ? 'true' : 'false'}
@@ -682,6 +695,8 @@ function RequestRow({
                 isActive ? 'bg-gray-600' : ''
             }`}
             onClick={onSelect}
+            onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setCtxMenu({ x: e.clientX, y: e.clientY }); }}
+            onMouseDown={(e) => { if (e.button === 1) { e.preventDefault(); onOpenInNewTab(); } }}
             onDragStart={(e) => {
                 e.stopPropagation();
                 e.dataTransfer.effectAllowed = 'move';
@@ -759,5 +774,28 @@ function RequestRow({
                 </button>
             </div>
         </div>
+        {ctxMenu && (
+            <>
+                <div
+                    className="fixed inset-0 z-40"
+                    onClick={(e) => { e.stopPropagation(); setCtxMenu(null); }}
+                />
+                <ul
+                    role="menu"
+                    className="fixed z-50 min-w-[10rem] rounded-md border border-app-subtle bg-app-main py-1 shadow-lg text-sm"
+                    style={{ top: ctxMenu.y, left: ctxMenu.x }}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <li
+                        role="menuitem"
+                        className="px-3 py-1.5 hover:bg-app-subtle cursor-pointer"
+                        onClick={() => { onOpenInNewTab(); setCtxMenu(null); }}
+                    >
+                        Open in New Tab
+                    </li>
+                </ul>
+            </>
+        )}
+        </>
     );
 }

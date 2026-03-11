@@ -245,4 +245,102 @@ describe('tabStore', () => {
             expect(tabs[0].requestState.isDirty).toBe(true);
         });
     });
+
+    describe('Story 5.4 tab actions', () => {
+        it("navigateTab('next') with two tabs advances activeTabId to the second tab", () => {
+            useTabStore.getState().addTab();
+            const { tabs, setActiveTab, navigateTab } = useTabStore.getState();
+            setActiveTab(tabs[0].id);
+
+            navigateTab('next');
+
+            expect(useTabStore.getState().activeTabId).toBe(tabs[1].id);
+        });
+
+        it("navigateTab('next') on the last tab wraps to the first tab", () => {
+            useTabStore.getState().addTab();
+            const { tabs, setActiveTab, navigateTab } = useTabStore.getState();
+            setActiveTab(tabs[1].id);
+
+            navigateTab('next');
+
+            expect(useTabStore.getState().activeTabId).toBe(tabs[0].id);
+        });
+
+        it("navigateTab('prev') on the first tab wraps to the last tab", () => {
+            useTabStore.getState().addTab();
+            const { tabs, setActiveTab, navigateTab } = useTabStore.getState();
+            setActiveTab(tabs[0].id);
+
+            navigateTab('prev');
+
+            expect(useTabStore.getState().activeTabId).toBe(tabs[1].id);
+        });
+
+        it('reorderTabs([id2, id1]) swaps tab order and keeps activeTabId unchanged', () => {
+            useTabStore.getState().addTab();
+            const { tabs, setActiveTab, reorderTabs } = useTabStore.getState();
+            const [id1, id2] = [tabs[0].id, tabs[1].id];
+            setActiveTab(id1);
+
+            reorderTabs([id2, id1]);
+
+            const state = useTabStore.getState();
+            expect(state.tabs.map((tab) => tab.id)).toEqual([id2, id1]);
+            expect(state.activeTabId).toBe(id1);
+        });
+
+        it('duplicateTab(id) inserts a copy after source and uses a fresh response state', () => {
+            const sourceId = useTabStore.getState().tabs[0].id;
+            useTabStore.getState().updateTabRequestState(sourceId, {
+                method: 'POST',
+                url: 'https://api.example.com/items',
+                headers: [{ id: crypto.randomUUID(), key: 'x-api-key', value: 'abc', enabled: true }],
+            });
+
+            useTabStore.getState().duplicateTab(sourceId);
+
+            const { tabs } = useTabStore.getState();
+            expect(tabs).toHaveLength(2);
+            expect(tabs[1].requestState).toEqual(tabs[0].requestState);
+            expect(tabs[1].requestState).not.toBe(tabs[0].requestState);
+            expect(tabs[1].responseState).toEqual(createDefaultResponseSnapshot());
+            expect(tabs[1].isCustomLabel).toBe(true);
+            expect(tabs[1].label).toBe('New Request (copy)');
+        });
+
+        it('duplicateTab(id) makes the new tab active', () => {
+            const sourceId = useTabStore.getState().tabs[0].id;
+            useTabStore.getState().duplicateTab(sourceId);
+
+            const { tabs, activeTabId } = useTabStore.getState();
+            expect(activeTabId).toBe(tabs[1].id);
+        });
+
+        it('closeOtherTabs(id) with three tabs leaves only that tab', () => {
+            useTabStore.getState().addTab();
+            useTabStore.getState().addTab();
+            const keepId = useTabStore.getState().tabs[1].id;
+
+            useTabStore.getState().closeOtherTabs(keepId);
+
+            const { tabs, activeTabId } = useTabStore.getState();
+            expect(tabs).toHaveLength(1);
+            expect(tabs[0].id).toBe(keepId);
+            expect(activeTabId).toBe(keepId);
+        });
+
+        it("closeAllTabs() leaves exactly one fresh tab with label 'New Request'", () => {
+            useTabStore.getState().addTab();
+            useTabStore.getState().addTab();
+
+            useTabStore.getState().closeAllTabs();
+
+            const { tabs, activeTabId } = useTabStore.getState();
+            expect(tabs).toHaveLength(1);
+            expect(tabs[0].label).toBe('New Request');
+            expect(tabs[0].isCustomLabel).toBe(false);
+            expect(activeTabId).toBe(tabs[0].id);
+        });
+    });
 });

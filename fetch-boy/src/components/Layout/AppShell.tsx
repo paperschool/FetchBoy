@@ -9,9 +9,11 @@ import { useEnvironmentStore } from '@/stores/environmentStore';
 import { loadAllSettings } from '@/lib/settings';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import { useTheme } from '@/hooks/useTheme';
+import useTabKeyboardShortcuts from '@/hooks/useTabKeyboardShortcuts';
 
 export function AppShell() {
   useTheme();
+  useTabKeyboardShortcuts();
 
   const setSettingsPanelOpen = useUiSettingsStore((s) => s.setSettingsPanelOpen);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);

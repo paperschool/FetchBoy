@@ -99,4 +99,46 @@ describe('TabBar', () => {
         expect(screen.getByText('New Request')).toBeInTheDocument();
         expect(useTabStore.getState().tabs[0].label).toBe('New Request');
     });
+
+    it('shows shortcut hint in the New tab button title', () => {
+        render(<TabBar />);
+        const addButton = screen.getByRole('button', { name: 'New tab' });
+        expect(addButton.getAttribute('title')).toMatch(/New Tab \((⌘T|Ctrl\+T)\)/);
+    });
+
+    it('opens tab context menu on right click and duplicates tab', () => {
+        render(<TabBar />);
+        const tab = screen.getByRole('tab');
+
+        fireEvent.contextMenu(tab, { clientX: 10, clientY: 20 });
+        expect(screen.getByRole('menu')).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole('menuitem', { name: /Duplicate Tab/i }));
+        expect(useTabStore.getState().tabs).toHaveLength(2);
+        expect(useTabStore.getState().tabs[1].label).toBe('New Request (copy)');
+    });
+
+    it('Close Other Tabs is disabled when only one tab exists', () => {
+        render(<TabBar />);
+        fireEvent.contextMenu(screen.getByRole('tab'), { clientX: 10, clientY: 20 });
+
+        const item = screen.getByRole('menuitem', { name: /Close Other Tabs/i });
+        fireEvent.click(item);
+
+        expect(useTabStore.getState().tabs).toHaveLength(1);
+    });
+
+    it('Close All Tabs keeps exactly one fresh tab', () => {
+        useTabStore.getState().addTab();
+        useTabStore.getState().addTab();
+        render(<TabBar />);
+
+        fireEvent.contextMenu(screen.getAllByRole('tab')[1], { clientX: 10, clientY: 20 });
+        fireEvent.click(screen.getByRole('menuitem', { name: /Close All Tabs/i }));
+
+        const { tabs, activeTabId } = useTabStore.getState();
+        expect(tabs).toHaveLength(1);
+        expect(tabs[0].label).toBe('New Request');
+        expect(activeTabId).toBe(tabs[0].id);
+    });
 });
