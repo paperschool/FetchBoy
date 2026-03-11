@@ -72,6 +72,7 @@ export interface AppSettings {
     sidebar_collapsed?: boolean;
     sidebar_settings_expanded?: boolean;
     has_seeded_sample_data?: boolean;
+    last_seen_version?: string | null;
 }
 
 // ─── Singleton Database Handle ────────────────────────────────────────────────

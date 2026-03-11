@@ -15,6 +15,7 @@ export async function loadAllSettings(): Promise<AppSettings> {
             sidebar_collapsed: (map['sidebar_collapsed'] as boolean) ?? false,
             sidebar_settings_expanded: (map['sidebar_settings_expanded'] as boolean) ?? false,
             has_seeded_sample_data: (map['has_seeded_sample_data'] as boolean) ?? false,
+            last_seen_version: (map['last_seen_version'] as string | null) ?? null,
         };
     } catch {
         return {
@@ -25,6 +26,7 @@ export async function loadAllSettings(): Promise<AppSettings> {
             sidebar_collapsed: false,
             sidebar_settings_expanded: false,
             has_seeded_sample_data: false,
+            last_seen_version: null,
         };
     }
 }

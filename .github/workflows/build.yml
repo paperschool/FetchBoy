@@ -154,7 +154,8 @@ jobs:
         id: files
         run: |
           # Output as JSON array to properly handle files with spaces
-          FILES=$(find artifacts -type f \( -name "*.dmg" -o -name "*.msi" -o -name "*.exe" -o -name "*.deb" -o -name "*.AppImage" \) | jq -s '.')
+          # Handle empty find results gracefully by using fallback
+          FILES=$(find artifacts -type f \( -name "*.dmg" -o -name "*.msi" -o -name "*.exe" -o -name "*.deb" -o -name "*.AppImage" \) | jq -s '. ' 2>/dev/null || echo "[]")
           echo "files=$FILES" >> $GITHUB_OUTPUT
 
       - name: Create GitHub release

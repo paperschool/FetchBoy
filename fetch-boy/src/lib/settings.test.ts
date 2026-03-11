@@ -40,6 +40,7 @@ describe('loadAllSettings', () => {
             sidebar_collapsed: false,
             sidebar_settings_expanded: false,
             has_seeded_sample_data: false,
+            last_seen_version: null,
         });
     });
 
@@ -56,6 +57,7 @@ describe('loadAllSettings', () => {
             sidebar_collapsed: false,
             sidebar_settings_expanded: false,
             has_seeded_sample_data: false,
+            last_seen_version: null,
         });
     });
 
@@ -72,6 +74,7 @@ describe('loadAllSettings', () => {
             sidebar_collapsed: false,
             sidebar_settings_expanded: false,
             has_seeded_sample_data: false,
+            last_seen_version: null,
         });
     });
 });

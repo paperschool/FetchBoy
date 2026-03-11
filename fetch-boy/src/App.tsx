@@ -3,9 +3,26 @@ import { AppShell } from '@/components/Layout/AppShell';
 import { SplashScreen } from '@/components/Layout/SplashScreen';
 import { TourController } from '@/components/Layout/TourController';
 import { KeyboardShortcutsModal } from '@/components/ui/KeyboardShortcutsModal';
+import { WhatsNewModal } from '@/components/ui/WhatsNewModal';
 import { useRequestStore } from '@/stores/requestStore';
 import { useTourStore } from '@/stores/tourStore';
+import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import { seedSampleDataIfNeeded } from '@/lib/seedSampleData';
+import { getCurrentVersion, isNewVersion } from '@/lib/appVersion';
+import changelogData from '@/data/changelog.json';
+
+async function persistLastSeenVersion(version: string): Promise<void> {
+  try {
+    const { getDb } = await import('@/lib/db');
+    const db = await getDb();
+    await db.execute('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', [
+      'last_seen_version',
+      JSON.stringify(version),
+    ]);
+  } catch {
+    // Not in a Tauri environment — skip
+  }
+}
 
 function App() {
   const method = useRequestStore((s) => s.method);
@@ -13,6 +30,7 @@ function App() {
   const [showSplash, setShowSplash] = useState(true);
   const [showTour, setShowTour] = useState(false);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+  const [showWhatsNew, setShowWhatsNew] = useState(false);
 
   function handleSplashComplete() {
     setShowSplash(false);
@@ -22,6 +40,13 @@ function App() {
   useEffect(() => {
     if (!showSplash && hasCompletedTour) {
       seedSampleDataIfNeeded().catch(() => {});
+      const lastSeen = useUiSettingsStore.getState().lastSeenVersion;
+      const currentVersion = getCurrentVersion();
+      if (isNewVersion(lastSeen)) {
+        setShowWhatsNew(true);
+        useUiSettingsStore.getState().setLastSeenVersion(currentVersion);
+        persistLastSeenVersion(currentVersion);
+      }
     }
   }, [showSplash, hasCompletedTour]);
 
@@ -56,6 +81,13 @@ function App() {
         open={showKeyboardShortcuts}
         onClose={() => setShowKeyboardShortcuts(false)}
       />
+      {showWhatsNew && (
+        <WhatsNewModal
+          version={getCurrentVersion()}
+          changelog={changelogData.changelog}
+          onDismiss={() => setShowWhatsNew(false)}
+        />
+      )}
     </div>
   );
 }

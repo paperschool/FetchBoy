@@ -15,6 +15,8 @@ interface UiSettingsState {
     setSidebarSettingsExpanded: (expanded: boolean) => void;
     hasSeededSampleData: boolean;
     setHasSeededSampleData: (seeded: boolean) => void;
+    lastSeenVersion: string | null;
+    setLastSeenVersion: (version: string | null) => void;
 }
 
 export const useUiSettingsStore = create<UiSettingsState>((set) => ({
@@ -32,4 +34,6 @@ export const useUiSettingsStore = create<UiSettingsState>((set) => ({
     setSidebarSettingsExpanded: (expanded) => set({ sidebarSettingsExpanded: expanded }),
     hasSeededSampleData: false,
     setHasSeededSampleData: (seeded) => set({ hasSeededSampleData: seeded }),
+    lastSeenVersion: null,
+    setLastSeenVersion: (version) => set({ lastSeenVersion: version }),
 }));
