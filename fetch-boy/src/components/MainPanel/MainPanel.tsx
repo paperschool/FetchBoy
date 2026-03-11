@@ -176,7 +176,7 @@ export function MainPanel() {
   const body = req.body;
   const auth = req.auth;
   const activeTab = req.activeTab;
-  const isDirty = req.isDirty;
+
 
   // Request state setters (adapted from requestStore actions)
   const setMethod = (m: HttpMethod) => updateReq({ method: m, isDirty: true });
