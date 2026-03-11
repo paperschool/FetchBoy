@@ -324,4 +324,73 @@ describe('CollectionTree', () => {
         expect(tabs.find((t) => t.id === activeTabId)?.requestState.url).toBe('https://unsaved.example.com');
         expect(useCollectionStore.getState().activeRequestId).toBeNull();
     });
+
+    describe('open in new tab', () => {
+        it('right-clicking a request row renders a context menu with "Open in New Tab"', async () => {
+            const col = makeCol();
+            const req = makeReq({ folder_id: null });
+            mockLoadAllCollections.mockResolvedValue({ collections: [col], folders: [], requests: [req] });
+            render(<CollectionTree />);
+            await waitFor(() => screen.getByTestId('collection-col-1'));
+            fireEvent.click(screen.getByLabelText('Expand collection'));
+            await waitFor(() => screen.getByTestId('request-req-1'));
+
+            fireEvent.contextMenu(screen.getByTestId('request-req-1'));
+
+            expect(screen.getByRole('menu')).toBeInTheDocument();
+            expect(screen.getByRole('menuitem', { name: 'Open in New Tab' })).toBeInTheDocument();
+        });
+
+        it('clicking "Open in New Tab" opens the request in a new tab', async () => {
+            const col = makeCol();
+            const req = makeReq({ folder_id: null, url: 'https://saved.example.com', method: 'POST' });
+            mockLoadAllCollections.mockResolvedValue({ collections: [col], folders: [], requests: [req] });
+            render(<CollectionTree />);
+            await waitFor(() => screen.getByTestId('collection-col-1'));
+            fireEvent.click(screen.getByLabelText('Expand collection'));
+            await waitFor(() => screen.getByTestId('request-req-1'));
+
+            fireEvent.contextMenu(screen.getByTestId('request-req-1'));
+            fireEvent.click(screen.getByRole('menuitem', { name: 'Open in New Tab' }));
+
+            const { tabs, activeTabId } = useTabStore.getState();
+            expect(tabs).toHaveLength(2);
+            expect(activeTabId).toBe(tabs[1].id);
+            expect(tabs[1].label).toBe(req.name);
+            expect(tabs[1].isCustomLabel).toBe(true);
+            expect(tabs[1].requestState.url).toBe(req.url);
+        });
+
+        it('left-clicking a request row does NOT open a new tab (no regression)', async () => {
+            const col = makeCol();
+            const req = makeReq({ folder_id: null });
+            mockLoadAllCollections.mockResolvedValue({ collections: [col], folders: [], requests: [req] });
+            render(<CollectionTree />);
+            await waitFor(() => screen.getByTestId('collection-col-1'));
+            fireEvent.click(screen.getByLabelText('Expand collection'));
+            await waitFor(() => screen.getByTestId('request-req-1'));
+
+            fireEvent.click(screen.getByTestId('request-req-1'));
+
+            const { tabs } = useTabStore.getState();
+            expect(tabs).toHaveLength(1);
+        });
+
+        it('middle-click (button=1) opens the request in a new tab', async () => {
+            const col = makeCol();
+            const req = makeReq({ folder_id: null, url: 'https://middle-click.com' });
+            mockLoadAllCollections.mockResolvedValue({ collections: [col], folders: [], requests: [req] });
+            render(<CollectionTree />);
+            await waitFor(() => screen.getByTestId('collection-col-1'));
+            fireEvent.click(screen.getByLabelText('Expand collection'));
+            await waitFor(() => screen.getByTestId('request-req-1'));
+
+            fireEvent.mouseDown(screen.getByTestId('request-req-1'), { button: 1 });
+
+            const { tabs, activeTabId } = useTabStore.getState();
+            expect(tabs).toHaveLength(2);
+            expect(activeTabId).toBe(tabs[1].id);
+            expect(tabs[1].requestState.url).toBe(req.url);
+        });
+    });
 });

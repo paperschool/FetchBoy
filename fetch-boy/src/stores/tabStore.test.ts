@@ -194,4 +194,55 @@ describe('tabStore', () => {
             expect(updated[1].responseState.verboseLogs).toEqual([]);
         });
     });
+
+    describe('openRequestInNewTab', () => {
+        it('creates a new tab with the given snapshot and label, isCustomLabel true', () => {
+            const snapshot = { ...createDefaultRequestSnapshot(), url: 'https://api.example.com', method: 'POST' as const };
+            const { tabs: before } = useTabStore.getState();
+            expect(before).toHaveLength(1);
+
+            useTabStore.getState().openRequestInNewTab(snapshot, 'My Request');
+
+            const { tabs } = useTabStore.getState();
+            expect(tabs).toHaveLength(2);
+            const newTab = tabs[1];
+            expect(newTab.label).toBe('My Request');
+            expect(newTab.isCustomLabel).toBe(true);
+            expect(newTab.requestState.url).toBe('https://api.example.com');
+            expect(newTab.requestState.method).toBe('POST');
+        });
+
+        it('new tab gets a fresh responseState', () => {
+            const snapshot = createDefaultRequestSnapshot();
+            useTabStore.getState().openRequestInNewTab(snapshot, 'Fresh Tab');
+
+            const { tabs } = useTabStore.getState();
+            const newTab = tabs[1];
+            expect(newTab.responseState.responseData).toBeNull();
+            expect(newTab.responseState.requestError).toBeNull();
+            expect(newTab.responseState.isSending).toBe(false);
+            expect(newTab.responseState.verboseLogs).toEqual([]);
+        });
+
+        it('activeTabId points to the new tab after openRequestInNewTab', () => {
+            const snapshot = createDefaultRequestSnapshot();
+            useTabStore.getState().openRequestInNewTab(snapshot, 'Target Tab');
+
+            const { tabs, activeTabId } = useTabStore.getState();
+            expect(activeTabId).toBe(tabs[1].id);
+        });
+
+        it('original tab requestState is unchanged after openRequestInNewTab', () => {
+            const { tabs: initial } = useTabStore.getState();
+            const originalId = initial[0].id;
+            useTabStore.getState().updateTabRequestState(originalId, { url: 'https://original.com', isDirty: true });
+
+            const snapshot = { ...createDefaultRequestSnapshot(), url: 'https://new.com' };
+            useTabStore.getState().openRequestInNewTab(snapshot, 'New Tab');
+
+            const { tabs } = useTabStore.getState();
+            expect(tabs[0].requestState.url).toBe('https://original.com');
+            expect(tabs[0].requestState.isDirty).toBe(true);
+        });
+    });
 });

@@ -167,4 +167,55 @@ describe('HistoryPanel', () => {
         // Trash button should be visible again
         expect(screen.getByLabelText('Clear History')).toBeInTheDocument();
     });
+
+    describe('open in new tab', () => {
+        it('right-clicking a history row shows "Open in New Tab" menu item', async () => {
+            const entry = makeEntry({ id: 'ctx-entry' });
+            useHistoryStore.setState({ entries: [entry] });
+            mockLoadHistory.mockResolvedValue([entry]);
+
+            render(<HistoryPanel />);
+            await waitFor(() => screen.getByTestId('history-row-ctx-entry'));
+
+            fireEvent.contextMenu(screen.getByTestId('history-row-ctx-entry'));
+
+            expect(screen.getByRole('menu')).toBeInTheDocument();
+            expect(screen.getByRole('menuitem', { name: 'Open in New Tab' })).toBeInTheDocument();
+        });
+
+        it('clicking "Open in New Tab" opens entry in a new tab with correct label and state', async () => {
+            const snapshot = makeSnapshot();
+            const entry = makeEntry({ id: 'new-tab-entry', method: 'POST', url: 'https://api.example.com', request_snapshot: { ...snapshot, method: 'POST', url: 'https://api.example.com' } });
+            useHistoryStore.setState({ entries: [entry] });
+            mockLoadHistory.mockResolvedValue([entry]);
+
+            render(<HistoryPanel />);
+            await waitFor(() => screen.getByTestId('history-row-new-tab-entry'));
+
+            fireEvent.contextMenu(screen.getByTestId('history-row-new-tab-entry'));
+            fireEvent.click(screen.getByRole('menuitem', { name: 'Open in New Tab' }));
+
+            const { tabs, activeTabId } = useTabStore.getState();
+            expect(tabs).toHaveLength(2);
+            expect(activeTabId).toBe(tabs[1].id);
+            expect(tabs[1].isCustomLabel).toBe(true);
+            expect(tabs[1].requestState.url).toBe('https://api.example.com');
+        });
+
+        it('left-clicking still calls the original handler and does NOT open a new tab', async () => {
+            const entry = makeEntry({ id: 'left-click-entry' });
+            useHistoryStore.setState({ entries: [entry] });
+            mockLoadHistory.mockResolvedValue([entry]);
+
+            render(<HistoryPanel />);
+            await waitFor(() => screen.getByTestId('history-row-left-click-entry'));
+
+            fireEvent.click(screen.getByTestId('history-row-left-click-entry'));
+
+            const { tabs } = useTabStore.getState();
+            expect(tabs).toHaveLength(1);
+            // Existing tab updated with entry's snapshot url
+            expect(tabs[0].requestState.url).toBe(entry.request_snapshot.url);
+        });
+    });
 });
