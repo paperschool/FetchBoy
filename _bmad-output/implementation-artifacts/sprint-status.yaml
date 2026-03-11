@@ -93,7 +93,7 @@ development_status:
 
   # ─── Epic 7: First-Run Experience & Polish ────────────────────────
   epic-7: in-progress
-  7-1-startup-animation: in-progress
+  7-1-startup-animation: review
   7-2-onboarding-tooltip-tutorial: backlog
   epic-7-retrospective: optional
 

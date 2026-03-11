@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react';
-import { useTheme } from '@/hooks/useTheme';
-import { useUiSettingsStore } from '@/stores/uiSettingsStore';
-import logoUrl from '../../../src-tauri/icons/fetch-boi-logo.svg';
+import { useEffect, useRef } from "react";
+import { useTheme } from "@/hooks/useTheme";
+import { useUiSettingsStore } from "@/stores/uiSettingsStore";
+import logoUrl from "../../../src-tauri/icons/fetch-boi-logo.svg";
 
 interface SplashScreenProps {
   onComplete: () => void;
@@ -58,8 +58,12 @@ export function SplashScreen({
       onClick={handleClick}
       data-testid="splash-screen"
     >
-      <div style={{ animation: 'splash-fade-in 0.5s ease-out forwards' }}>
-        <img src={logoUrl} alt="FetchBoy" className="w-48 h-48 object-contain" />
+      <div style={{ animation: "splash-fade-in 0.5s ease-out forwards" }}>
+        <img
+          src={logoUrl}
+          alt="FetchBoy"
+          className="w-128 h-128 object-contain"
+        />
       </div>
     </div>
   );
