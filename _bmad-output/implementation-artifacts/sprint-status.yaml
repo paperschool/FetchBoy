@@ -88,5 +88,5 @@ development_status:
   6-2-request-cancellation: review
   6-3-keyboard-shortcut-to-send-request: review
   6-4-request-timeout-configuration: review
-  6-5-settings-in-sidebar-accordion: ready-for-dev
+  6-5-settings-in-sidebar-accordion: review
   epic-6-retrospective: optional
