@@ -13,6 +13,7 @@ export async function loadAllSettings(): Promise<AppSettings> {
             ssl_verify: (map['ssl_verify'] as boolean) ?? true,
             editor_font_size: (map['editor_font_size'] as number) ?? 14,
             sidebar_collapsed: (map['sidebar_collapsed'] as boolean) ?? false,
+            sidebar_settings_expanded: (map['sidebar_settings_expanded'] as boolean) ?? false,
         };
     } catch {
         return {
@@ -21,6 +22,7 @@ export async function loadAllSettings(): Promise<AppSettings> {
             ssl_verify: true,
             editor_font_size: 14,
             sidebar_collapsed: false,
+            sidebar_settings_expanded: false,
         };
     }
 }
