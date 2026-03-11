@@ -39,6 +39,7 @@ describe('loadAllSettings', () => {
             editor_font_size: 16,
             sidebar_collapsed: false,
             sidebar_settings_expanded: false,
+            has_seeded_sample_data: false,
         });
     });
 
@@ -54,6 +55,7 @@ describe('loadAllSettings', () => {
             editor_font_size: 14,
             sidebar_collapsed: false,
             sidebar_settings_expanded: false,
+            has_seeded_sample_data: false,
         });
     });
 
@@ -69,6 +71,7 @@ describe('loadAllSettings', () => {
             editor_font_size: 14,
             sidebar_collapsed: false,
             sidebar_settings_expanded: false,
+            has_seeded_sample_data: false,
         });
     });
 });

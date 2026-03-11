@@ -47,6 +47,7 @@ export function AppShell() {
         useUiSettingsStore.getState().setSslVerify(s.ssl_verify);
         useUiSettingsStore.getState().setSidebarCollapsed(s.sidebar_collapsed ?? false);
         useUiSettingsStore.getState().setSidebarSettingsExpanded(s.sidebar_settings_expanded ?? false);
+        useUiSettingsStore.getState().setHasSeededSampleData(s.has_seeded_sample_data ?? false);
       })
       .catch(() => {}); // defaults already set in store initial state
   }, []);
