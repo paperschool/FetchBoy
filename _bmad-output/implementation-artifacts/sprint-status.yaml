@@ -87,6 +87,6 @@ development_status:
   6-1-foldable-side-panel: review
   6-2-request-cancellation: review
   6-3-keyboard-shortcut-to-send-request: review
-  6-4-request-timeout-configuration: ready-for-dev
+  6-4-request-timeout-configuration: review
   6-5-settings-in-sidebar-accordion: ready-for-dev
   epic-6-retrospective: optional
