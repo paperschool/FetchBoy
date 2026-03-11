@@ -1,6 +1,6 @@
 # Story 7.8: Request In-Flight Progress Bar
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -18,26 +18,26 @@ So that I know the app is working even when looking away from the loading spinne
 
 ## Tasks / Subtasks
 
-- [ ] Task 1 - Create ProgressBar component (AC: 1, 3)
-  - [ ] Create `fetch-boy/src/components/ProgressBar/ProgressBar.tsx`
-  - [ ] Implement CSS animation from 0% → 80% while request in flight
-  - [ ] Add 80% → 100% completion animation on response
-  - [ ] Style with theme-aware colors
+- [x] Task 1 - Create ProgressBar component (AC: 1, 3)
+  - [x] Create `fetch-boy/src/components/ProgressBar/ProgressBar.tsx`
+  - [x] Implement CSS animation from 0% → 80% while request in flight
+  - [x] Add 80% → 100% completion animation on response
+  - [x] Style with theme-aware colors
 
-- [ ] Task 2 - Integrate ProgressBar with request flow (AC: 1, 2)
-  - [ ] Add ProgressBar to main app layout (App.tsx or MainPanel)
-  - [ ] Connect to request state (in-flight status)
-  - [ ] Handle cancel action - complete/hide on cancellation
-  - [ ] Reset progress bar on new request
+- [x] Task 2 - Integrate ProgressBar with request flow (AC: 1, 2)
+  - [x] Add ProgressBar to main app layout (MainPanel.tsx)
+  - [x] Connect to request state (in-flight status)
+  - [x] Handle cancel action - complete/hide on cancellation
+  - [x] Reset progress bar on new request
 
-- [ ] Task 3 - Add theme support (AC: 3)
-  - [ ] Use theme-aware colors from useUiSettingsStore
-  - [ ] Ensure progress bar visible in both light and dark modes
+- [x] Task 3 - Add theme support (AC: 3)
+  - [x] Use theme-aware colors from useUiSettingsStore
+  - [x] Ensure progress bar visible in both light and dark modes
 
-- [ ] Task 4 - Final Task - Commit story changes
-  - [ ] Run `npx tsc --noEmit` from `fetch-boy/` to verify TypeScript compilation
-  - [ ] Run `cargo check` from `fetch-boy/src-tauri/` to verify Rust compilation
-  - [ ] Run `npx vitest run` from `fetch-boy/` to verify all tests pass
+- [x] Task 4 - Final Task - Commit story changes
+  - [x] Run `npx tsc --noEmit` from `fetch-boy/` to verify TypeScript compilation
+  - [x] Run `cargo check` from `fetch-boy/src-tauri/` to verify Rust compilation
+  - [x] Run `npx vitest run` from `fetch-boy/` to verify all tests pass
   - [ ] Commit all code and documentation changes for this story with a message that includes Story 7.8
 
 ## Dev Notes
@@ -384,6 +384,29 @@ claude-sonnet-4-20250514
 - Context analysis completed
 
 ### Completion Notes List
+
+- **Implementation Summary:** Created a Request In-Flight Progress Bar feature that shows at the top of the window during HTTP requests
+- **Components Created:**
+  - `fetch-boy/src/components/ProgressBar/ProgressBar.tsx` - Theme-aware progress bar component with CSS animations
+  - `fetch-boy/src/components/ProgressBar/index.ts` - Barrel export
+  - `fetch-boy/src/components/ProgressBar/ProgressBar.test.tsx` - Unit tests (7 tests)
+  - `fetch-boy/src/hooks/useRequestProgress.ts` - Zustand store for progress state management
+
+- **Files Modified:**
+  - `fetch-boy/src/components/MainPanel/MainPanel.tsx` - Integrated ProgressBar with request flow
+
+- **Features Implemented:**
+  - Fixed-position progress bar at top of window (z-index: 50)
+  - CSS animation from 0% → 80% during request, then 80% → 100% on completion
+  - Theme-aware colors (blue-500 in light mode, blue-600 in dark mode)
+  - Cancel handling - resets progress on cancellation
+  - Fade-out animation after completion (300ms)
+  - No new dependencies - pure CSS/React implementation
+
+- **Validation:**
+  - TypeScript compilation: ✅
+  - Rust compilation: ✅
+  - Unit tests: ✅ (7/7 passing)
 
 ### File List
 

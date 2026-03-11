@@ -12,6 +12,7 @@ import {
 import { SaveRequestDialog } from "@/components/SaveRequestDialog/SaveRequestDialog";
 import { AuthPanel } from "@/components/AuthPanel/AuthPanel";
 import { TimeoutInput } from "@/components/RequestBuilder/TimeoutInput";
+import { ProgressBar } from "@/components/ProgressBar/ProgressBar";
 import { createFullSavedRequest, updateSavedRequest } from "@/lib/collections";
 import { extractQueryParamsFromUrl } from "@/lib/extractQueryParamsFromUrl";
 import { persistHistoryEntry } from "@/lib/history";
@@ -25,6 +26,7 @@ import { useCollectionStore } from "@/stores/collectionStore";
 import { useHistoryStore } from "@/stores/historyStore";
 import { useUiSettingsStore } from "@/stores/uiSettingsStore";
 import { useEnvironment } from "@/hooks/useEnvironment";
+import { useRequestProgressStore } from "@/hooks/useRequestProgress";
 import { useCallback, useEffect, useRef, useState } from "react";
 import useSendRequestKeyboardShortcut from "@/hooks/useSendRequestKeyboardShortcut";
 
@@ -634,12 +636,6 @@ export function MainPanel() {
 
   useSendRequestKeyboardShortcut(handleSendRequest);
 
-  const handleCancelRequest = () => {
-    abortControllerRef.current?.abort();
-    invoke("cancel_request", { requestId: activeTabId }).catch(() => {});
-    appendLog("Cancel requested by user.");
-  };
-
   const resolvedRequest: ResolvedRequest = {
     method,
     url: applyEnv(
@@ -655,12 +651,73 @@ export function MainPanel() {
     auth,
   };
 
+  // Progress bar state management
+  const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const startProgress = () => {
+    // Reset and start progress simulation
+    useRequestProgressStore.getState().startRequest();
+    
+    // Simulate progress during request
+    progressRef.current = setInterval(() => {
+      const current = useRequestProgressStore.getState().requestProgress;
+      if (current < 80) {
+        useRequestProgressStore.getState().updateProgress(current + 10);
+      }
+    }, 200);
+  };
+
+  const stopProgress = () => {
+    if (progressRef.current) {
+      clearInterval(progressRef.current);
+      progressRef.current = null;
+    }
+  };
+
+  // Get progress state for rendering
+  const progressState = useRequestProgressStore();
+
+  // Update progress when request state changes
+  useEffect(() => {
+    if (isSending) {
+      startProgress();
+    } else {
+      stopProgress();
+      // Complete progress when request ends
+      if (responseData || requestError || wasCancelled || wasTimedOut) {
+        useRequestProgressStore.getState().completeRequest();
+      }
+    }
+
+    return () => {
+      stopProgress();
+    };
+  }, [isSending, responseData, requestError, wasCancelled, wasTimedOut]);
+
+  // Handle cancel - reset progress
+  const handleCancelRequest = () => {
+    abortControllerRef.current?.abort();
+    invoke("cancel_request", { requestId: activeTabId }).catch(() => {});
+    useRequestProgressStore.getState().cancelRequest();
+    appendLog("Cancel requested by user.");
+  };
+
+  const handleProgressComplete = () => {
+    useRequestProgressStore.getState().reset();
+  };
+
   return (
-    <main
-      data-testid="main-panel"
-      className="bg-app-main text-app-primary flex flex-col overflow-hidden p-4"
-    >
-      <div className="flex min-h-0 flex-1 flex-col gap-4">
+    <>
+      <ProgressBar 
+        isActive={progressState.isRequestInFlight} 
+        progress={progressState.requestProgress}
+        onComplete={handleProgressComplete}
+      />
+      <main
+        data-testid="main-panel"
+        className="bg-app-main text-app-primary flex flex-col overflow-hidden p-4"
+      >
+        <div className="flex min-h-0 flex-1 flex-col gap-4">
         <p className="text-app-muted text-sm">Request Builder</p>
 
         <div
@@ -953,5 +1010,6 @@ export function MainPanel() {
         onSave={handleDialogSave}
       />
     </main>
+    </>
   );
 }
