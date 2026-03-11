@@ -12,6 +12,7 @@ type SortableTabItemProps = {
     label: string;
     isActive: boolean;
     isBlocked: boolean;
+    isOnly: boolean;
     isEditing: boolean;
     editValue: string;
     inputRef: RefObject<HTMLInputElement | null>;
@@ -29,6 +30,7 @@ function SortableTabItem({
     label,
     isActive,
     isBlocked,
+    isOnly,
     isEditing,
     editValue,
     inputRef,
@@ -57,7 +59,7 @@ function SortableTabItem({
             className={`group relative flex h-full min-w-0 max-w-[10rem] shrink-0 cursor-pointer select-none items-center gap-1 border-r border-app-subtle px-3 text-sm ${
                 isActive
                     ? 'border-b-2 border-b-blue-500 bg-app-main text-app-primary'
-                    : 'bg-app-sidebar text-app-secondary hover:bg-app-main'
+                    : 'bg-app-sidebar text-gray-400 hover:bg-app-main'
             } ${isBlocked ? 'animate-pulse ring-1 ring-amber-400/70' : ''}`}
             onClick={onTabClick}
             onContextMenu={onContextMenu}
@@ -76,13 +78,15 @@ function SortableTabItem({
                     {label}
                 </span>
             )}
-            <button
-                className="ml-1 shrink-0 rounded p-0.5 text-app-secondary opacity-0 transition-opacity hover:text-red-500 group-hover:opacity-100"
-                aria-label={`Close tab ${label}`}
-                onClick={onCloseClick}
-            >
-                <X size={12} />
-            </button>
+            {!isOnly && (
+                <button
+                    className="ml-1 shrink-0 cursor-pointer rounded p-0.5 text-app-secondary opacity-0 transition-opacity hover:text-red-500 group-hover:opacity-100"
+                    aria-label={`Close tab ${label}`}
+                    onClick={onCloseClick}
+                >
+                    <X size={12} />
+                </button>
+            )}
         </div>
     );
 }
@@ -189,6 +193,7 @@ export function TabBar() {
                                     label={tab.label}
                                     isActive={isActive}
                                     isBlocked={blockedTabId === tab.id}
+                                    isOnly={tabs.length === 1}
                                     isEditing={isEditing}
                                     editValue={editValue}
                                     inputRef={inputRef}
@@ -223,7 +228,7 @@ export function TabBar() {
                     </SortableContext>
 
                     <button
-                        className="flex h-full shrink-0 items-center px-2 text-app-secondary hover:bg-app-main hover:text-app-primary"
+                        className="flex h-full shrink-0 cursor-pointer items-center px-2 text-gray-400 transition-colors hover:bg-gray-700/50 hover:text-white"
                         aria-label="New tab"
                         title={`New Tab (${isMac ? '⌘T' : 'Ctrl+T'})`}
                         onClick={() => addTab()}
@@ -238,7 +243,7 @@ export function TabBar() {
                     <div className="fixed inset-0 z-40" onClick={closeMenu} />
                     <ul
                         role="menu"
-                        className="fixed z-50 min-w-[10rem] rounded-md border border-app-subtle bg-app-main py-1 shadow-lg text-sm"
+                        className="fixed z-50 min-w-[10rem] rounded-md border border-app-subtle bg-app-main py-1 shadow-lg text-sm text-app-primary"
                         style={{ top: tabCtxMenu.y, left: tabCtxMenu.x }}
                         onClick={(e) => e.stopPropagation()}
                     >

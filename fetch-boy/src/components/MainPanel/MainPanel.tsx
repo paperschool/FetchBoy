@@ -1,6 +1,9 @@
 import { invoke } from '@tauri-apps/api/core';
+import { Save, Send } from 'lucide-react';
 import { MonacoEditorField } from '@/components/Editor/MonacoEditorField';
+import { CopyAsButton } from './CopyAsButton';
 import { HighlightedUrlInput } from './HighlightedUrlInput';
+import type { ResolvedRequest } from '@/lib/generateSnippet';
 import { KeyValueRows } from '@/components/RequestBuilder/KeyValueRows';
 import { ResponseViewer, type ResponseData } from '@/components/ResponseViewer/ResponseViewer';
 import { SaveRequestDialog } from '@/components/SaveRequestDialog/SaveRequestDialog';
@@ -53,6 +56,30 @@ function extractErrorReason(error: unknown): string {
   }
 
   return 'Unknown error';
+}
+
+function buildRequestedUrlForDisplay(
+  baseUrl: string,
+  queryParams: Array<{ key: string; value: string; enabled: boolean }>,
+  auth: AuthState,
+): string {
+  try {
+    const parsedUrl = new URL(baseUrl);
+
+    for (const param of queryParams) {
+      if (param.enabled && param.key.trim().length > 0) {
+        parsedUrl.searchParams.append(param.key, param.value);
+      }
+    }
+
+    if (auth.type === 'api-key' && auth.in === 'query' && auth.key.trim().length > 0) {
+      parsedUrl.searchParams.append(auth.key, auth.value);
+    }
+
+    return parsedUrl.toString();
+  } catch {
+    return baseUrl;
+  }
 }
 
 export function MainPanel() {
@@ -220,8 +247,9 @@ export function MainPanel() {
     const sendHeaders = headers.map((h) => ({ ...h, value: applyEnv(h.value) }));
     const sendQueryParams = queryParams.map((q) => ({ ...q, value: applyEnv(q.value) }));
     const sendBody = { ...body, raw: applyEnv(body.raw) };
+    const requestedUrlForDisplay = buildRequestedUrlForDisplay(sendUrl, sendQueryParams, auth);
 
-    updateRes({ isSending: true, requestError: null, responseData: null, sentUrl: sendUrl });
+    updateRes({ isSending: true, requestError: null, responseData: null, sentUrl: requestedUrlForDisplay });
 
     const requestSnapshot = {
       id: crypto.randomUUID(),
@@ -300,6 +328,15 @@ export function MainPanel() {
     }
   };
 
+  const resolvedRequest: ResolvedRequest = {
+    method,
+    url: applyEnv(url.trim() ? (/^https?:\/\//i.test(url.trim()) ? url.trim() : `https://${url.trim()}`) : url.trim()),
+    headers: headers.map((h) => ({ ...h, value: applyEnv(h.value) })),
+    queryParams: queryParams.map((q) => ({ ...q, value: applyEnv(q.value) })),
+    body: { ...body, raw: applyEnv(body.raw) },
+    auth,
+  };
+
   return (
     <main
       data-testid="main-panel"
@@ -348,22 +385,26 @@ export function MainPanel() {
 
           <div>
             <p className="text-app-secondary mb-1 block text-xs font-medium">Controls</p>
-            <div className="flex items-start gap-2">
-            <button
-              type="button"
-              onClick={() => setSaveDialogOpen(true)}
-              className="border-app-subtle text-app-secondary h-9 rounded-md border px-4 text-sm font-medium"
-            >
-              Save
-            </button>
-            <button
-              type="button"
-              onClick={handleSendRequest}
-              disabled={isSending}
-              className="bg-app-topbar text-app-inverse disabled:text-app-muted border-app-subtle h-9 rounded-md border px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {isSending ? 'Sending...' : 'Send'}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleSendRequest}
+                disabled={isSending}
+                className="flex items-center gap-1.5 h-9 rounded-md border border-green-600 bg-green-600 px-4 text-sm font-medium text-white hover:bg-green-700 hover:border-green-700 cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 transition-colors"
+              >
+                <Send size={14} />
+                {isSending ? 'Sending...' : 'Send'}
+              </button>
+              <span className="w-px self-stretch bg-app-subtle opacity-50" aria-hidden="true" />
+              <button
+                type="button"
+                onClick={() => setSaveDialogOpen(true)}
+                className="border-app-subtle text-app-secondary h-9 rounded-md border px-3 flex items-center cursor-pointer"
+                title="Save"
+              >
+                <Save size={15} />
+              </button>
+              <CopyAsButton resolvedRequest={resolvedRequest} />
             </div>
           </div>
         </div>

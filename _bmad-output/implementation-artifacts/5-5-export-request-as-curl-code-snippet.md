@@ -1,6 +1,6 @@
 # Story 5.5: Export Request as cURL / Code Snippet
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -22,46 +22,46 @@ so that I can quickly reproduce or share the call without manually constructing 
 
 ## Tasks / Subtasks
 
-- [ ] Task 1 — Create `generateSnippet` utility (AC: 3, 4, 5, 7, 8, 9)
-  - [ ] Create `fetch-boy/src/lib/generateSnippet.ts`
-  - [ ] Define exported types: `SnippetFormat = 'curl' | 'python' | 'javascript' | 'nodejs'` and `ResolvedRequest` interface (method, url, headers, queryParams, body, auth — see Dev Notes for full shape)
-  - [ ] Implement `buildResolvedHeaders(req: ResolvedRequest): Array<{key: string; value: string}>` — filters to enabled headers, then injects auth:
+- [x] Task 1 — Create `generateSnippet` utility (AC: 3, 4, 5, 7, 8, 9)
+  - [x] Create `fetch-boy/src/lib/generateSnippet.ts`
+  - [x] Define exported types: `SnippetFormat = 'curl' | 'python' | 'javascript' | 'nodejs'` and `ResolvedRequest` interface (method, url, headers, queryParams, body, auth — see Dev Notes for full shape)
+  - [x] Implement `buildResolvedHeaders(req: ResolvedRequest): Array<{key: string; value: string}>` — filters to enabled headers, then injects auth:
     - `bearer`: prepend `{ key: 'Authorization', value: 'Bearer {token}' }`
     - `basic`: prepend `{ key: 'Authorization', value: 'Basic {btoa(username:password)}' }`
     - `api-key` with `in: 'header'`: prepend `{ key: auth.key, value: auth.value }`
     - `none` or `api-key` with `in: 'query'`: no header injection
-  - [ ] Implement `buildResolvedUrl(req: ResolvedRequest): string` — takes `req.url`, appends all enabled query params plus any api-key query param (when `auth.in === 'query'`). Use `URL` constructor for robust param merging; fall back to manual string join if `URL` throws (invalid base URL)
-  - [ ] Implement `generateSnippet(format: SnippetFormat, req: ResolvedRequest): string` — dispatches to four private format functions
-  - [ ] **cURL format**: `curl -X {METHOD} '{url}' (\ -H '{key}: {value}')* (\ -d '{body}')`. Omit `-d` flag entirely when `body.mode === 'none'` or `body.raw` is empty after trim. Each `-H` flag on its own `\\\n  ` continuation line for readability. Quote order: method first, then URL, then headers, then body
-  - [ ] **Python (requests) format**: assign `url = "{url}"`, `headers = {...}` dict (omit if empty), `params = {...}` dict (omit if empty — NOTE: params are already baked into the URL for cURL, but Python uses separate `params=` kwarg), `data = "{body}"` (omit if no body). Call: `response = requests.{method_lower}(url, headers=headers, params=params, data=data)` — omit unused kwargs. Final line: `print(response.json())`
-  - [ ] **JavaScript (fetch) format**: `await fetch('{url}', { method: '{METHOD}', headers: {...}, body: '{body}' })` with `const data = await response.json()` and `console.log(data)`. Omit `body` key when no body. Omit `headers` key when no headers
-  - [ ] **Node.js (axios) format**: `const axios = require('axios');` then `const response = await axios({ method: '{method_lower}', url: '{url}', headers: {...}, params: {...}, data: '{body}' })` — omit unused keys. Final line: `console.log(response.data)`
-  - [ ] Ensure **no trailing whitespace** on any output line (trim each line or post-process with `.split('\n').map(l => l.trimEnd()).join('\n')`)
-  - [ ] Export `generateSnippet`, `SnippetFormat`, `ResolvedRequest` as named exports
+  - [x] Implement `buildResolvedUrl(req: ResolvedRequest): string` — takes `req.url`, appends all enabled query params plus any api-key query param (when `auth.in === 'query'`). Use `URL` constructor for robust param merging; fall back to manual string join if `URL` throws (invalid base URL)
+  - [x] Implement `generateSnippet(format: SnippetFormat, req: ResolvedRequest): string` — dispatches to four private format functions
+  - [x] **cURL format**: `curl -X {METHOD} '{url}' (\ -H '{key}: {value}')* (\ -d '{body}')`. Omit `-d` flag entirely when `body.mode === 'none'` or `body.raw` is empty after trim. Each `-H` flag on its own `\\\n  ` continuation line for readability. Quote order: method first, then URL, then headers, then body
+  - [x] **Python (requests) format**: assign `url = "{url}"`, `headers = {...}` dict (omit if empty), `params = {...}` dict (omit if empty — NOTE: params are already baked into the URL for cURL, but Python uses separate `params=` kwarg), `data = "{body}"` (omit if no body). Call: `response = requests.{method_lower}(url, headers=headers, params=params, data=data)` — omit unused kwargs. Final line: `print(response.json())`
+  - [x] **JavaScript (fetch) format**: `await fetch('{url}', { method: '{METHOD}', headers: {...}, body: '{body}' })` with `const data = await response.json()` and `console.log(data)`. Omit `body` key when no body. Omit `headers` key when no headers
+  - [x] **Node.js (axios) format**: `const axios = require('axios');` then `const response = await axios({ method: '{method_lower}', url: '{url}', headers: {...}, params: {...}, data: '{body}' })` — omit unused keys. Final line: `console.log(response.data)`
+  - [x] Ensure **no trailing whitespace** on any output line (trim each line or post-process with `.split('\n').map(l => l.trimEnd()).join('\n')`)
+  - [x] Export `generateSnippet`, `SnippetFormat`, `ResolvedRequest` as named exports
 
-- [ ] Task 2 — Write `generateSnippet` unit tests (AC: 8, 9)
-  - [ ] Create `fetch-boy/src/lib/generateSnippet.test.ts`
-  - [ ] Define a base fixture: `POST https://api.example.com/users` with one enabled header `Content-Type: application/json`, one enabled query param `page=1`, JSON body `{"name":"Alice"}`, auth `none`
-  - [ ] Test cURL fixture: verify output starts with `curl -X POST`, contains the URL with `?page=1`, contains `-H 'Content-Type: application/json'`, contains `-d '{"name":"Alice"}'`
-  - [ ] Test Python fixture: verify output contains `import requests`, `requests.post(`, `'Content-Type': 'application/json'`, `'page': '1'`
-  - [ ] Test JavaScript fixture: verify output contains `await fetch(`, `method: 'POST'`, `'Content-Type': 'application/json'`
-  - [ ] Test Node.js fixture: verify output contains `require('axios')`, `method: 'post'`, `'Content-Type': 'application/json'`, `params:` block
-  - [ ] Test **Bearer auth injection**: `auth = { type: 'bearer', token: 'tok123' }` — cURL output contains `-H 'Authorization: Bearer tok123'`; Python/JS/axios outputs contain `Authorization: Bearer tok123` in headers
-  - [ ] Test **Basic auth injection**: `auth = { type: 'basic', username: 'user', password: 'pass' }` — output contains `Authorization: Basic dXNlcjpwYXNz` (base64 of `user:pass`)
-  - [ ] Test **API Key auth in header**: `auth = { type: 'api-key', key: 'X-Api-Key', value: 'secret', in: 'header' }` — output contains `X-Api-Key: secret` header
-  - [ ] Test **API Key auth in query**: `auth = { type: 'api-key', key: 'apikey', value: 'secret', in: 'query' }` — URL contains `apikey=secret` param; no extra header added
-  - [ ] Test **disabled headers filtered out**: a disabled header is absent from the snippet
-  - [ ] Test **no body when mode is 'none'**: cURL output does NOT contain `-d`, Python output does NOT contain `data=`
-  - [ ] Test **no trailing whitespace**: every line of every format output must satisfy `line === line.trimEnd()`
+- [x] Task 2 — Write `generateSnippet` unit tests (AC: 8, 9)
+  - [x] Create `fetch-boy/src/lib/generateSnippet.test.ts`
+  - [x] Define a base fixture: `POST https://api.example.com/users` with one enabled header `Content-Type: application/json`, one enabled query param `page=1`, JSON body `{"name":"Alice"}`, auth `none`
+  - [x] Test cURL fixture: verify output starts with `curl -X POST`, contains the URL with `?page=1`, contains `-H 'Content-Type: application/json'`, contains `-d '{"name":"Alice"}'`
+  - [x] Test Python fixture: verify output contains `import requests`, `requests.post(`, `'Content-Type': 'application/json'`, `'page': '1'`
+  - [x] Test JavaScript fixture: verify output contains `await fetch(`, `method: 'POST'`, `'Content-Type': 'application/json'`
+  - [x] Test Node.js fixture: verify output contains `require('axios')`, `method: 'post'`, `'Content-Type': 'application/json'`, `params:` block
+  - [x] Test **Bearer auth injection**: `auth = { type: 'bearer', token: 'tok123' }` — cURL output contains `-H 'Authorization: Bearer tok123'`; Python/JS/axios outputs contain `Authorization: Bearer tok123` in headers
+  - [x] Test **Basic auth injection**: `auth = { type: 'basic', username: 'user', password: 'pass' }` — output contains `Authorization: Basic dXNlcjpwYXNz` (base64 of `user:pass`)
+  - [x] Test **API Key auth in header**: `auth = { type: 'api-key', key: 'X-Api-Key', value: 'secret', in: 'header' }` — output contains `X-Api-Key: secret` header
+  - [x] Test **API Key auth in query**: `auth = { type: 'api-key', key: 'apikey', value: 'secret', in: 'query' }` — URL contains `apikey=secret` param; no extra header added
+  - [x] Test **disabled headers filtered out**: a disabled header is absent from the snippet
+  - [x] Test **no body when mode is 'none'**: cURL output does NOT contain `-d`, Python output does NOT contain `data=`
+  - [x] Test **no trailing whitespace**: every line of every format output must satisfy `line === line.trimEnd()`
 
-- [ ] Task 3 — Create `CopyAsButton` component (AC: 1, 2, 6)
-  - [ ] Create `fetch-boy/src/components/MainPanel/CopyAsButton.tsx`
-  - [ ] Props: `interface CopyAsButtonProps { resolvedRequest: ResolvedRequest }`
-  - [ ] Local state: `const [open, setOpen] = useState(false)` (dropdown visibility) and `const [copied, setCopied] = useState(false)` (toast trigger)
-  - [ ] Render a button with label `</>` (or `Copy as…`) and `data-testid="copy-as-button"`. Clicking toggles `open`
-  - [ ] When `open`, render a dropdown `<ul role="menu">` positioned absolutely below the button, using same Tailwind classes as existing context menus: `absolute z-50 min-w-[10rem] rounded-md border border-app-subtle bg-app-main py-1 shadow-lg text-sm right-0 top-full mt-1`
-  - [ ] Four `<li>` items (use `<button role="menuitem">` pattern): `cURL`, `Python (requests)`, `JavaScript (fetch)`, `Node.js (axios)`
-  - [ ] `handleCopy(format: SnippetFormat)` async handler:
+- [x] Task 3 — Create `CopyAsButton` component (AC: 1, 2, 6)
+  - [x] Create `fetch-boy/src/components/MainPanel/CopyAsButton.tsx`
+  - [x] Props: `interface CopyAsButtonProps { resolvedRequest: ResolvedRequest }`
+  - [x] Local state: `const [open, setOpen] = useState(false)` (dropdown visibility) and `const [copied, setCopied] = useState(false)` (toast trigger)
+  - [x] Render a button with label `</>` (or `Copy as…`) and `data-testid="copy-as-button"`. Clicking toggles `open`
+  - [x] When `open`, render a dropdown `<ul role="menu">` positioned absolutely below the button, using same Tailwind classes as existing context menus: `absolute z-50 min-w-[10rem] rounded-md border border-app-subtle bg-app-main py-1 shadow-lg text-sm right-0 top-full mt-1`
+  - [x] Four `<li>` items (use `<button role="menuitem">` pattern): `cURL`, `Python (requests)`, `JavaScript (fetch)`, `Node.js (axios)`
+  - [x] `handleCopy(format: SnippetFormat)` async handler:
     ```typescript
     const snippet = generateSnippet(format, resolvedRequest);
     await navigator.clipboard.writeText(snippet);
@@ -69,15 +69,15 @@ so that I can quickly reproduce or share the call without manually constructing 
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
     ```
-  - [ ] Toast display: render `{copied && <span className="text-xs text-green-500 ml-2">Copied!</span>}` adjacent to the button (inline, not absolutely positioned)
-  - [ ] Wrap button + dropdown in a `<div className="relative">` to scope dropdown positioning
-  - [ ] Click-outside dismissal: add `useEffect` that attaches a `mousedown` handler on `document`; if click is outside the container ref, set `open(false)`. Clean up on unmount
-  - [ ] `data-testid="copy-as-dropdown"` on the `<ul>` for easy test targeting
+  - [x] Toast display: render `{copied && <span className="text-xs text-green-500 ml-2">Copied!</span>}` adjacent to the button (inline, not absolutely positioned)
+  - [x] Wrap button + dropdown in a `<div className="relative">` to scope dropdown positioning
+  - [x] Click-outside dismissal: add `useEffect` that attaches a `mousedown` handler on `document`; if click is outside the container ref, set `open(false)`. Clean up on unmount
+  - [x] `data-testid="copy-as-dropdown"` on the `<ul>` for easy test targeting
 
-- [ ] Task 4 — Integrate `CopyAsButton` into `MainPanel` (AC: 1, 2, 3, 5)
-  - [ ] Open `fetch-boy/src/components/MainPanel/MainPanel.tsx`
-  - [ ] Import `CopyAsButton` and `type ResolvedRequest` from their respective modules
-  - [ ] Build `resolvedRequest` object just before the `return (...)`:
+- [x] Task 4 — Integrate `CopyAsButton` into `MainPanel` (AC: 1, 2, 3, 5)
+  - [x] Open `fetch-boy/src/components/MainPanel/MainPanel.tsx`
+  - [x] Import `CopyAsButton` and `type ResolvedRequest` from their respective modules
+  - [x] Build `resolvedRequest` object just before the `return (...)`:
     ```typescript
     const resolvedRequest: ResolvedRequest = {
       method,
@@ -89,22 +89,22 @@ so that I can quickly reproduce or share the call without manually constructing 
     };
     ```
     Note: auth values are NOT interpolated (consistent with `handleSendRequest` behavior)
-  - [ ] In the `Controls` column flex container (the `<div className="flex items-start gap-2">` wrapping Save and Send), insert `<CopyAsButton resolvedRequest={resolvedRequest} />` **between Save and Send**
+  - [x] In the `Controls` column flex container (the `<div className="flex items-start gap-2">` wrapping Save and Send), insert `<CopyAsButton resolvedRequest={resolvedRequest} />` **between Save and Send**
 
-- [ ] Task 5 — Write `CopyAsButton` unit tests (AC: 1, 2, 6)
-  - [ ] Create `fetch-boy/src/components/MainPanel/CopyAsButton.test.tsx`
-  - [ ] Mock `navigator.clipboard.writeText` in `beforeEach`: `Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } })`
-  - [ ] Test: `CopyAsButton` renders a button element
-  - [ ] Test: clicking the button opens the dropdown (dropdown `ul` becomes visible)
-  - [ ] Test: dropdown contains all four format labels (`cURL`, `Python (requests)`, `JavaScript (fetch)`, `Node.js (axios)`)
-  - [ ] Test: clicking `cURL` calls `navigator.clipboard.writeText` with a non-empty string
-  - [ ] Test: after clicking a format option, the "Copied!" span appears in the DOM
-  - [ ] Test: pressing `Escape` or clicking outside closes the dropdown (test the `setOpen(false)` path via mousedown outside)
+- [x] Task 5 — Write `CopyAsButton` unit tests (AC: 1, 2, 6)
+  - [x] Create `fetch-boy/src/components/MainPanel/CopyAsButton.test.tsx`
+  - [x] Mock `navigator.clipboard.writeText` in `beforeEach`: `Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } })`
+  - [x] Test: `CopyAsButton` renders a button element
+  - [x] Test: clicking the button opens the dropdown (dropdown `ul` becomes visible)
+  - [x] Test: dropdown contains all four format labels (`cURL`, `Python (requests)`, `JavaScript (fetch)`, `Node.js (axios)`)
+  - [x] Test: clicking `cURL` calls `navigator.clipboard.writeText` with a non-empty string
+  - [x] Test: after clicking a format option, the "Copied!" span appears in the DOM
+  - [x] Test: pressing `Escape` or clicking outside closes the dropdown (test the `setOpen(false)` path via mousedown outside)
 
-- [ ] Task 6 — Final: verify and commit
-  - [ ] Run `npx tsc --noEmit` from `fetch-boy/` — zero TypeScript errors
-  - [ ] Run `npx vitest run` from `fetch-boy/` — all tests pass including the new `generateSnippet.test.ts` and `CopyAsButton.test.tsx`
-  - [ ] Commit all code and documentation changes for this story with a message that includes `Story 5.5`
+- [x] Task 6 — Final: verify and commit
+  - [x] Run `npx tsc --noEmit` from `fetch-boy/` — zero TypeScript errors
+  - [x] Run `npx vitest run` from `fetch-boy/` — all tests pass including the new `generateSnippet.test.ts` and `CopyAsButton.test.tsx`
+  - [x] Commit all code and documentation changes for this story with a message that includes `Story 5.5`
 
 ## Dev Notes
 
@@ -128,13 +128,13 @@ export interface ResolvedRequest {
 
 Match `handleSendRequest` in `MainPanel.tsx` which delegates auth to the Rust layer. For snippets, replicate the equivalent:
 
-| Auth Type | Snippet Injection |
-|---|---|
-| `none` | No injection |
-| `bearer` | `Authorization: Bearer {auth.token}` header |
-| `basic` | `Authorization: Basic {btoa(auth.username + ':' + auth.password)}` header |
-| `api-key`, `in: 'header'` | `{auth.key}: {auth.value}` header |
-| `api-key`, `in: 'query'` | Append `{auth.key}={encodeURIComponent(auth.value)}` to URL query string |
+| Auth Type                 | Snippet Injection                                                         |
+| ------------------------- | ------------------------------------------------------------------------- |
+| `none`                    | No injection                                                              |
+| `bearer`                  | `Authorization: Bearer {auth.token}` header                               |
+| `basic`                   | `Authorization: Basic {btoa(auth.username + ':' + auth.password)}` header |
+| `api-key`, `in: 'header'` | `{auth.key}: {auth.value}` header                                         |
+| `api-key`, `in: 'query'`  | Append `{auth.key}={encodeURIComponent(auth.value)}` to URL query string  |
 
 ### URL Construction with Query Params
 
@@ -331,4 +331,22 @@ Claude Sonnet 4.6
 
 ### Completion Notes List
 
+- Implemented `generateSnippet.ts` — pure client-side utility with `generateSnippet(format, resolvedRequest)` dispatching to four private format generators (cURL, Python requests, JavaScript fetch, Node.js axios).
+- Auth injection (Bearer, Basic, API Key in header/query) fully mirrors `handleSendRequest` logic.
+- URL query params baked into URL for cURL/fetch; kept as separate `params=` kwarg for Python and `params:` key for axios.
+- No trailing whitespace enforced via `trimEnd()` post-processing on every output line.
+- 35 unit tests for `generateSnippet` — all pass.
+- `CopyAsButton` component: toggle dropdown with click-outside `useEffect`, 4 format `menuitem` buttons, inline "Copied!" toast via local state, no external toast library needed.
+- 7 unit tests for `CopyAsButton` — all pass.
+- `MainPanel.tsx` updated: `resolvedRequest` object built from env-interpolated state, `CopyAsButton` inserted between Save and Send in the controls toolbar.
+- Full regression suite: **361 tests, 0 failures**. TypeScript: 0 errors.
+
 ### File List
+
+- fetch-boy/src/lib/generateSnippet.ts (NEW)
+- fetch-boy/src/lib/generateSnippet.test.ts (NEW)
+- fetch-boy/src/components/MainPanel/CopyAsButton.tsx (NEW)
+- fetch-boy/src/components/MainPanel/CopyAsButton.test.tsx (NEW)
+- fetch-boy/src/components/MainPanel/MainPanel.tsx (MODIFIED)
+- _bmad-output/implementation-artifacts/5-5-export-request-as-curl-code-snippet.md (MODIFIED)
+- _bmad-output/implementation-artifacts/sprint-status.yaml (MODIFIED)

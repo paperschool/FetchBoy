@@ -166,7 +166,7 @@ export function HistoryPanel() {
                         />
                         <ul
                             role="menu"
-                            className="fixed z-50 min-w-[10rem] rounded-md border border-app-subtle bg-app-main py-1 shadow-lg text-sm"
+                            className="fixed z-50 min-w-[10rem] rounded-md border border-app-subtle bg-app-main py-1 shadow-lg text-sm text-app-primary"
                             style={{ top: ctxMenu.y, left: ctxMenu.x }}
                             onClick={(e) => e.stopPropagation()}
                         >
