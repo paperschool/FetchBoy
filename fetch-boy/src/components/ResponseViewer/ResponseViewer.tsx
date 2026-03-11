@@ -44,7 +44,7 @@ function getStatusColorClass(status: number): string {
 
 export function ResponseViewer({ response, error, logs = [], onClearLogs, requestedUrl, wasCancelled = false, wasTimedOut = false, timedOutAfterSec = null }: ResponseViewerProps) {
   const [activeTab, setActiveTab] = useState<ResponseTab>('body');
-  const [responseBodyLanguage, setResponseBodyLanguage] = useState<'json' | 'html' | 'xml'>('json');
+  const [responseBodyLanguage, setResponseBodyLanguage] = useState<'json' | 'html' | 'xml' | 'plaintext'>('json');
   const editorFontSize = useUiSettingsStore((state) => state.editorFontSize);
 
   const formattedJsonBody = useMemo(() => {
@@ -165,12 +165,13 @@ export function ResponseViewer({ response, error, logs = [], onClearLogs, reques
               id="response-body-language"
               aria-label="Response Body Language"
               value={responseBodyLanguage}
-              onChange={(event) => setResponseBodyLanguage(event.target.value as 'json' | 'html' | 'xml')}
+              onChange={(event) => setResponseBodyLanguage(event.target.value as 'json' | 'html' | 'xml' | 'plaintext')}
               className="select-flat border-app-subtle bg-app-main text-app-primary h-8 rounded-md border pl-2 pr-7 text-xs"
             >
               <option value="json">JSON</option>
               <option value="html">HTML</option>
               <option value="xml">XML</option>
+              <option value="plaintext">Raw</option>
             </select>
           </div>
 
@@ -178,7 +179,7 @@ export function ResponseViewer({ response, error, logs = [], onClearLogs, reques
             testId="response-body-editor"
             path="response-body"
             language={responseBodyLanguage}
-            value={formattedJsonBody ?? response.body}
+            value={responseBodyLanguage === 'plaintext' ? response.body : (formattedJsonBody ?? response.body)}
             fontSize={editorFontSize}
             height="100%"
             readOnly
