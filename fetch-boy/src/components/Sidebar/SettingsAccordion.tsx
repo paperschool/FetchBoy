@@ -2,6 +2,7 @@ import { ChevronDown, ChevronRight, Settings as SettingsIcon } from 'lucide-reac
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import { saveSetting } from '@/lib/settings';
 import { useTourStore } from '@/stores/tourStore';
+import { KEYBOARD_SHORTCUTS, getShortcutDisplay } from '@/lib/keyboardShortcuts';
 
 interface SettingsAccordionProps {
     isExpanded: boolean;
@@ -18,6 +19,7 @@ export function SettingsAccordion({ isExpanded, onToggle }: SettingsAccordionPro
     const editorFontSize = useUiSettingsStore((s) => s.editorFontSize);
     const setEditorFontSize = useUiSettingsStore((s) => s.setEditorFontSize);
     const resetTour = useTourStore((s) => s.resetTour);
+    const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().includes('MAC');
 
     function handleThemeChange(value: 'light' | 'dark' | 'system') {
         setTheme(value);
@@ -171,22 +173,14 @@ export function SettingsAccordion({ isExpanded, onToggle }: SettingsAccordionPro
                     <div className="space-y-1" data-testid="sidebar-keyboard-shortcuts-section">
                         <p className="text-app-muted text-xs font-medium">Keyboard Shortcuts</p>
                         <dl className="space-y-0.5 text-xs" data-testid="sidebar-keyboard-shortcuts-list">
-                            <div className="flex justify-between">
-                                <dt className="text-app-muted opacity-70">Send Request</dt>
-                                <dd className="text-app-muted font-mono text-xs">⌘+Enter / Ctrl+Enter</dd>
-                            </div>
-                            <div className="flex justify-between">
-                                <dt className="text-app-muted opacity-70">Toggle Sidebar</dt>
-                                <dd className="text-app-muted font-mono text-xs">⌘+B / Ctrl+B</dd>
-                            </div>
-                            <div className="flex justify-between">
-                                <dt className="text-app-muted opacity-70">New Tab</dt>
-                                <dd className="text-app-muted font-mono text-xs">⌘+T / Ctrl+T</dd>
-                            </div>
-                            <div className="flex justify-between">
-                                <dt className="text-app-muted opacity-70">Close Tab</dt>
-                                <dd className="text-app-muted font-mono text-xs">⌘+W / Ctrl+W</dd>
-                            </div>
+                            {KEYBOARD_SHORTCUTS.map((shortcut) => (
+                                <div key={shortcut.id} className="flex justify-between">
+                                    <dt className="text-app-muted opacity-70">{shortcut.displayName}</dt>
+                                    <dd className="text-app-muted font-mono text-xs">
+                                        {getShortcutDisplay(isMac, shortcut)}
+                                    </dd>
+                                </div>
+                            ))}
                         </dl>
                     </div>
                 </div>

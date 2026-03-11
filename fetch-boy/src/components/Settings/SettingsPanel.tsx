@@ -2,6 +2,7 @@ import { Settings } from 'lucide-react';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import { saveSetting } from '@/lib/settings';
 import { useTourStore } from '@/stores/tourStore';
+import { KEYBOARD_SHORTCUTS, getShortcutDisplay } from '@/lib/keyboardShortcuts';
 
 interface SettingsPanelProps {
     open: boolean;
@@ -18,6 +19,7 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
     const editorFontSize = useUiSettingsStore((s) => s.editorFontSize);
     const setEditorFontSize = useUiSettingsStore((s) => s.setEditorFontSize);
     const resetTour = useTourStore((s) => s.resetTour);
+    const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().includes('MAC');
 
     if (!open) return null;
 
@@ -169,26 +171,14 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
                 <div className="space-y-2" data-testid="keyboard-shortcuts-section">
                     <p className="text-app-primary text-sm font-medium">Keyboard Shortcuts</p>
                     <dl className="space-y-1 text-sm" data-testid="keyboard-shortcuts-list">
-                        <div className="flex justify-between">
-                            <dt className="text-app-secondary">Send Request</dt>
-                            <dd className="text-app-primary font-mono text-xs">⌘+Enter / Ctrl+Enter</dd>
-                        </div>
-                        <div className="flex justify-between">
-                            <dt className="text-app-secondary">Toggle Sidebar</dt>
-                            <dd className="text-app-primary font-mono text-xs">⌘+B / Ctrl+B</dd>
-                        </div>
-                        <div className="flex justify-between">
-                            <dt className="text-app-secondary">New Tab</dt>
-                            <dd className="text-app-primary font-mono text-xs">⌘+T / Ctrl+T</dd>
-                        </div>
-                        <div className="flex justify-between">
-                            <dt className="text-app-secondary">Close Tab</dt>
-                            <dd className="text-app-primary font-mono text-xs">⌘+W / Ctrl+W</dd>
-                        </div>
-                        <div className="flex justify-between">
-                            <dt className="text-app-secondary">Next Tab</dt>
-                            <dd className="text-app-primary font-mono text-xs">⌘+Tab / Ctrl+Tab</dd>
-                        </div>
+                        {KEYBOARD_SHORTCUTS.map((shortcut) => (
+                            <div key={shortcut.id} className="flex justify-between">
+                                <dt className="text-app-secondary">{shortcut.displayName}</dt>
+                                <dd className="text-app-primary font-mono text-xs">
+                                    {getShortcutDisplay(isMac, shortcut)}
+                                </dd>
+                            </div>
+                        ))}
                     </dl>
                 </div>
             </div>
