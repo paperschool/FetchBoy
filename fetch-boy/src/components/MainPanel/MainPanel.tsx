@@ -640,7 +640,6 @@ export function MainPanel() {
                   language={requestBodyLanguage}
                   value={body.raw}
                   fontSize={editorFontSize}
-                  height="100%"
                   onChange={setBodyRaw}
                 />
               </div>
