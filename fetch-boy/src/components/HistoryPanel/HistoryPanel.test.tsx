@@ -81,7 +81,7 @@ describe('HistoryPanel', () => {
             expect(screen.getByTestId('history-empty-state')).toBeInTheDocument();
         });
         expect(
-            screen.getByText('No history yet. Send a request to get started.'),
+            screen.getByText('Your sent requests will appear here'),
         ).toBeInTheDocument();
     });
 

@@ -39,9 +39,9 @@ describe('Story 6.2 cancellation state', () => {
     expect(screen.queryByText(/request cancelled/i)).not.toBeInTheDocument();
   });
 
-  it('returns null when wasCancelled=false, no response, no error, no logs', () => {
-    const { container } = render(<ResponseViewer response={null} error={null} wasCancelled={false} />);
-    expect(container.firstChild).toBeNull();
+  it('renders empty state when wasCancelled=false, no response, no error, no logs', () => {
+    render(<ResponseViewer response={null} error={null} wasCancelled={false} />);
+    expect(screen.getByText('Hit Send to see your response')).toBeInTheDocument();
   });
 
   it('normal error display is unaffected when wasCancelled=false', () => {
@@ -69,9 +69,9 @@ describe('Story 6.4 timeout state', () => {
     expect(screen.queryByText(/timed out/i)).not.toBeInTheDocument();
   });
 
-  it('returns null when wasTimedOut=false, no response, no error, no logs, no cancellation', () => {
-    const { container } = render(<ResponseViewer response={null} error={null} wasTimedOut={false} />);
-    expect(container.firstChild).toBeNull();
+  it('renders empty state when wasTimedOut=false, no response, no error, no logs, no cancellation', () => {
+    render(<ResponseViewer response={null} error={null} wasTimedOut={false} />);
+    expect(screen.getByText('Hit Send to see your response')).toBeInTheDocument();
   });
 });
 
