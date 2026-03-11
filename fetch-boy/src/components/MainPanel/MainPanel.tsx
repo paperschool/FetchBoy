@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import { Loader2, Save, Send, X } from 'lucide-react';
+import { Loader2, Save, Send } from 'lucide-react';
 import { MonacoEditorField } from '@/components/Editor/MonacoEditorField';
 import { CopyAsButton } from './CopyAsButton';
 import { HighlightedUrlInput } from './HighlightedUrlInput';
@@ -185,7 +185,7 @@ export function MainPanel() {
 
 
   // Request state setters (adapted from requestStore actions)
-  const setTimeout = (ms: number) => updateReq({ timeout: ms });
+  const setRequestTimeout = (ms: number) => updateReq({ timeout: ms });
   const setMethod = (m: HttpMethod) => updateReq({ method: m, isDirty: true });
   const setUrl = (u: string) => {
     setQueryMatchError(null);
@@ -721,7 +721,7 @@ export function MainPanel() {
                   </label>
                   <TimeoutInput
                     value={timeout}
-                    onChange={setTimeout}
+                    onChange={setRequestTimeout}
                     disabled={isSending}
                   />
                   <p className="text-app-muted text-xs">0 = no timeout. Overrides the global default for this tab.</p>
