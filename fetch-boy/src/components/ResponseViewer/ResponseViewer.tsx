@@ -1,5 +1,6 @@
 import { MonacoEditorField } from '@/components/Editor/MonacoEditorField';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
+import { X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 export interface ResponseHeaderRow {
@@ -22,6 +23,7 @@ interface ResponseViewerProps {
   logs?: string[];
   onClearLogs?: () => void;
   requestedUrl?: string;
+  wasCancelled?: boolean;
 }
 
 type ResponseTab = 'body' | 'headers' | 'logs';
@@ -38,7 +40,7 @@ function getStatusColorClass(status: number): string {
   return 'text-app-primary';
 }
 
-export function ResponseViewer({ response, error, logs = [], onClearLogs, requestedUrl }: ResponseViewerProps) {
+export function ResponseViewer({ response, error, logs = [], onClearLogs, requestedUrl, wasCancelled = false }: ResponseViewerProps) {
   const [activeTab, setActiveTab] = useState<ResponseTab>('body');
   const [responseBodyLanguage, setResponseBodyLanguage] = useState<'json' | 'html' | 'xml'>('json');
   const editorFontSize = useUiSettingsStore((state) => state.editorFontSize);
@@ -61,7 +63,7 @@ export function ResponseViewer({ response, error, logs = [], onClearLogs, reques
     }
   }, [formattedJsonBody]);
 
-  if (!response && !error && logs.length === 0) {
+  if (!response && !error && logs.length === 0 && !wasCancelled) {
     return null;
   }
 
@@ -95,6 +97,13 @@ export function ResponseViewer({ response, error, logs = [], onClearLogs, reques
           <p className="text-sm font-medium text-red-600">Request Error</p>
           <p className="text-sm text-red-600">{error}</p>
         </>
+      )}
+
+      {wasCancelled && !response && !error && (
+        <div className="flex items-center gap-2 text-app-secondary text-sm py-2">
+          <X size={14} className="text-app-muted" />
+          <span>Request cancelled</span>
+        </div>
       )}
 
       <div className="border-app-subtle border-b">

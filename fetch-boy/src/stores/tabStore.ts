@@ -24,6 +24,7 @@ export interface ResponseSnapshot {
     verboseLogs: string[];
     requestBodyLanguage: 'json' | 'html' | 'xml';
     isSending: boolean;
+    wasCancelled: boolean;
 }
 
 export function createDefaultRequestSnapshot(): RequestSnapshot {
@@ -47,6 +48,7 @@ export function createDefaultResponseSnapshot(): ResponseSnapshot {
         verboseLogs: [],
         requestBodyLanguage: 'json',
         isSending: false,
+        wasCancelled: false,
     };
 }
 

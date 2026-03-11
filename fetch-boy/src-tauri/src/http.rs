@@ -1,7 +1,12 @@
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use reqwest::{Client, Method, Url};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::Mutex;
 use std::time::Instant;
+use tokio::sync::oneshot;
+
+pub struct CancellationRegistry(pub Mutex<HashMap<String, oneshot::Sender<()>>>);
 
 // Shared key/value representation for headers and query params from the frontend.
 #[derive(Debug, Deserialize)]
@@ -41,6 +46,7 @@ pub struct SendRequestPayload {
     pub auth: RequestAuth,
     pub timeout_ms: u64,
     pub ssl_verify: bool,
+    pub requestId: Option<String>,
 }
 
 // Read-only response header entry returned to the UI.
@@ -103,7 +109,10 @@ fn build_headers(headers: &[KeyValueRow]) -> Result<HeaderMap, String> {
 }
 
 #[tauri::command]
-pub async fn send_request(request: SendRequestPayload) -> Result<SendResponsePayload, String> {
+pub async fn send_request(
+    request: SendRequestPayload,
+    state: tauri::State<'_, CancellationRegistry>,
+) -> Result<SendResponsePayload, String> {
     // Validate and normalize request parts before sending network traffic.
     let method = build_method(&request.method)?;
     let mut url = build_url(&request.url, &request.queryParams)?;
@@ -165,10 +174,36 @@ pub async fn send_request(request: SendRequestPayload) -> Result<SendResponsePay
 
     // Track elapsed time for response diagnostics in the UI.
     let started = Instant::now();
-    let response = request_builder
-        .send()
-        .await
-        .map_err(|e| format!("Network request failed: {e}"))?;
+
+    // If a requestId was provided, register a cancellation channel and race the request against it.
+    let response = if let Some(ref request_id) = request.requestId {
+        let (tx, rx) = oneshot::channel::<()>();
+        {
+            let mut map = state.0.lock().map_err(|e| e.to_string())?;
+            map.insert(request_id.clone(), tx);
+        }
+
+        let result = tokio::select! {
+            res = request_builder.send() => {
+                // Cleanup registry entry on normal completion.
+                let mut map = state.0.lock().map_err(|e| e.to_string())?;
+                map.remove(request_id);
+                res.map_err(|e| format!("Network request failed: {e}"))
+            }
+            _ = rx => {
+                // Cleanup registry entry on cancellation.
+                let mut map = state.0.lock().map_err(|e| e.to_string())?;
+                map.remove(request_id);
+                return Err("__CANCELLED__".to_string());
+            }
+        };
+        result?
+    } else {
+        request_builder
+            .send()
+            .await
+            .map_err(|e| format!("Network request failed: {e}"))?
+    };
 
     let status = response.status();
     let status_code = status.as_u16();
@@ -201,4 +236,16 @@ pub async fn send_request(request: SendRequestPayload) -> Result<SendResponsePay
         body,
         headers,
     })
+}
+
+#[tauri::command]
+pub async fn cancel_request(
+    request_id: String,
+    state: tauri::State<'_, CancellationRegistry>,
+) -> Result<(), String> {
+    let mut map = state.0.lock().map_err(|e| e.to_string())?;
+    if let Some(sender) = map.remove(&request_id) {
+        let _ = sender.send(());
+    }
+    Ok(())
 }

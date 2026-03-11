@@ -25,6 +25,32 @@ const sampleResponse: ResponseData = {
   headers: [{ key: 'content-type', value: 'application/json' }],
 };
 
+describe('Story 6.2 cancellation state', () => {
+  it('renders "Request cancelled" in neutral styling when wasCancelled=true', () => {
+    render(<ResponseViewer response={null} error={null} wasCancelled={true} />);
+    const el = screen.getByText(/request cancelled/i);
+    expect(el).toBeInTheDocument();
+    // Verify NOT using red/error styling
+    expect(el.closest('[class*="red"]')).toBeNull();
+  });
+
+  it('does not render cancellation message when wasCancelled=false with a response', () => {
+    render(<ResponseViewer response={sampleResponse} error={null} wasCancelled={false} />);
+    expect(screen.queryByText(/request cancelled/i)).not.toBeInTheDocument();
+  });
+
+  it('returns null when wasCancelled=false, no response, no error, no logs', () => {
+    const { container } = render(<ResponseViewer response={null} error={null} wasCancelled={false} />);
+    expect(container.firstChild).toBeNull();
+  });
+
+  it('normal error display is unaffected when wasCancelled=false', () => {
+    render(<ResponseViewer response={null} error="Connection refused" wasCancelled={false} />);
+    expect(screen.getByText('Request Error')).toBeInTheDocument();
+    expect(screen.getByText('Connection refused')).toBeInTheDocument();
+  });
+});
+
 describe('ResponseViewer Monaco integration', () => {
   it('renders body with read-only Monaco editor', () => {
     render(<ResponseViewer response={sampleResponse} error={null} />);
