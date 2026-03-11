@@ -37,6 +37,7 @@ describe('loadAllSettings', () => {
             request_timeout_ms: 5000,
             ssl_verify: false,
             editor_font_size: 16,
+            sidebar_collapsed: false,
         });
     });
 
@@ -50,6 +51,7 @@ describe('loadAllSettings', () => {
             request_timeout_ms: 30000,
             ssl_verify: true,
             editor_font_size: 14,
+            sidebar_collapsed: false,
         });
     });
 
@@ -63,6 +65,7 @@ describe('loadAllSettings', () => {
             request_timeout_ms: 30000,
             ssl_verify: true,
             editor_font_size: 14,
+            sidebar_collapsed: false,
         });
     });
 });

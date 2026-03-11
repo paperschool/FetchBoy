@@ -6,13 +6,16 @@ vi.mock('@/lib/collections', () => ({
     loadAllCollections: vi.fn().mockResolvedValue({ collections: [], folders: [], requests: [] }),
 }));
 
+const mockLoadAllSettings = vi.fn().mockResolvedValue({
+    theme: 'system',
+    request_timeout_ms: 30000,
+    ssl_verify: true,
+    editor_font_size: 14,
+    sidebar_collapsed: false,
+});
+
 vi.mock('@/lib/settings', () => ({
-    loadAllSettings: vi.fn().mockResolvedValue({
-        theme: 'system',
-        request_timeout_ms: 30000,
-        ssl_verify: true,
-        editor_font_size: 14,
-    }),
+    loadAllSettings: (...args: unknown[]) => mockLoadAllSettings(...args),
     saveSetting: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -78,6 +81,50 @@ describe('AppShell', () => {
     await waitFor(() => {
       expect(mockLoadAllEnvironments).toHaveBeenCalled();
       expect(mockLoadAll).toHaveBeenCalledWith([]);
+    });
+  });
+
+  it('applies expanded grid layout when sidebar is not collapsed', async () => {
+    mockLoadAllSettings.mockResolvedValueOnce({
+      theme: 'system',
+      request_timeout_ms: 30000,
+      ssl_verify: true,
+      editor_font_size: 14,
+      sidebar_collapsed: false,
+    });
+    const { container } = render(<AppShell />);
+    await waitFor(() => {
+      const gridContainer = container.querySelector('.grid');
+      expect(gridContainer?.className).toContain('grid-cols-[16rem_1fr]');
+    });
+  });
+
+  it('applies collapsed grid layout when sidebar is collapsed', async () => {
+    mockLoadAllSettings.mockResolvedValueOnce({
+      theme: 'system',
+      request_timeout_ms: 30000,
+      ssl_verify: true,
+      editor_font_size: 14,
+      sidebar_collapsed: true,
+    });
+    const { container } = render(<AppShell />);
+    await waitFor(() => {
+      const gridContainer = container.querySelector('.grid');
+      expect(gridContainer?.className).toContain('grid-cols-[3.5rem_1fr]');
+    });
+  });
+
+  it('loads sidebar collapsed state from settings on mount', async () => {
+    mockLoadAllSettings.mockResolvedValueOnce({
+      theme: 'system',
+      request_timeout_ms: 30000,
+      ssl_verify: true,
+      editor_font_size: 14,
+      sidebar_collapsed: true,
+    });
+    render(<AppShell />);
+    await waitFor(() => {
+      expect(mockLoadAllSettings).toHaveBeenCalled();
     });
   });
 });

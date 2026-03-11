@@ -1,17 +1,77 @@
 import { useState } from 'react';
+import { ChevronLeft, ChevronRight, Folder, Clock } from 'lucide-react';
 import { CollectionTree } from '@/components/CollectionTree/CollectionTree';
 import { HistoryPanel } from '@/components/HistoryPanel/HistoryPanel';
 
 type SidebarPanel = 'collections' | 'history';
 
-export function Sidebar() {
+interface SidebarProps {
+    collapsed: boolean;
+    onToggle: () => void;
+}
+
+export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     const [activePanel, setActivePanel] = useState<SidebarPanel>('collections');
+
+    if (collapsed) {
+        return (
+            <aside
+                data-testid="sidebar"
+                className="bg-app-sidebar text-app-inverse overflow-hidden p-2 flex flex-col items-center gap-2"
+            >
+                <button
+                    type="button"
+                    onClick={onToggle}
+                    className="p-2 hover:bg-gray-700 rounded transition-colors"
+                    aria-label="Expand sidebar"
+                    title="Expand sidebar (Cmd/Ctrl+B)"
+                >
+                    <ChevronRight size={20} className="text-app-muted" />
+                </button>
+                <button
+                    type="button"
+                    onClick={() => {
+                        setActivePanel('collections');
+                        onToggle();
+                    }}
+                    className="p-2 hover:bg-gray-700 rounded transition-colors"
+                    aria-label="Collections"
+                    title="Collections"
+                >
+                    <Folder size={20} className="text-app-muted" />
+                </button>
+                <button
+                    type="button"
+                    onClick={() => {
+                        setActivePanel('history');
+                        onToggle();
+                    }}
+                    className="p-2 hover:bg-gray-700 rounded transition-colors"
+                    aria-label="History"
+                    title="History"
+                >
+                    <Clock size={20} className="text-app-muted" />
+                </button>
+            </aside>
+        );
+    }
 
     return (
         <aside
             data-testid="sidebar"
             className="bg-app-sidebar text-app-inverse overflow-hidden p-3 flex flex-col"
         >
+            <div className="flex items-center justify-between mb-3">
+                <button
+                    type="button"
+                    onClick={onToggle}
+                    className="p-1.5 hover:bg-gray-700 rounded transition-colors"
+                    aria-label="Collapse sidebar"
+                    title="Collapse sidebar (Cmd/Ctrl+B)"
+                >
+                    <ChevronLeft size={18} className="text-app-muted" />
+                </button>
+            </div>
             <div className="flex shrink-0 mb-3 rounded overflow-hidden border border-gray-700">
                 <button
                     type="button"

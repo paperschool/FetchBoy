@@ -11,6 +11,8 @@ interface UiSettingsState {
     setSslVerify: (v: boolean) => void;
     settingsPanelOpen: boolean;
     setSettingsPanelOpen: (open: boolean) => void;
+    sidebarCollapsed: boolean;
+    setSidebarCollapsed: (collapsed: boolean) => void;
 }
 
 export const useUiSettingsStore = create<UiSettingsState>((set) => ({
@@ -24,4 +26,6 @@ export const useUiSettingsStore = create<UiSettingsState>((set) => ({
     setSslVerify: (v) => set({ sslVerify: v }),
     settingsPanelOpen: false,
     setSettingsPanelOpen: (open) => set({ settingsPanelOpen: open }),
+    sidebarCollapsed: false,
+    setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
 }));

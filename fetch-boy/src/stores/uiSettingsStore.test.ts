@@ -8,6 +8,7 @@ describe('uiSettingsStore', () => {
             editorFontSize: 13,
             requestTimeoutMs: 30000,
             sslVerify: true,
+            sidebarCollapsed: false,
         });
     });
 
@@ -46,5 +47,20 @@ describe('uiSettingsStore', () => {
     it('setSslVerify(false) updates store', () => {
         useUiSettingsStore.getState().setSslVerify(false);
         expect(useUiSettingsStore.getState().sslVerify).toBe(false);
+    });
+
+    it('initial sidebarCollapsed is false', () => {
+        expect(useUiSettingsStore.getState().sidebarCollapsed).toBe(false);
+    });
+
+    it('setSidebarCollapsed updates sidebarCollapsed state', () => {
+        useUiSettingsStore.getState().setSidebarCollapsed(true);
+        expect(useUiSettingsStore.getState().sidebarCollapsed).toBe(true);
+    });
+
+    it('setSidebarCollapsed can toggle back to false', () => {
+        useUiSettingsStore.getState().setSidebarCollapsed(true);
+        useUiSettingsStore.getState().setSidebarCollapsed(false);
+        expect(useUiSettingsStore.getState().sidebarCollapsed).toBe(false);
     });
 });

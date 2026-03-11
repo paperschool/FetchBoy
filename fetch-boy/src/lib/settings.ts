@@ -12,9 +12,16 @@ export async function loadAllSettings(): Promise<AppSettings> {
             request_timeout_ms: (map['request_timeout_ms'] as number) ?? 30000,
             ssl_verify: (map['ssl_verify'] as boolean) ?? true,
             editor_font_size: (map['editor_font_size'] as number) ?? 14,
+            sidebar_collapsed: (map['sidebar_collapsed'] as boolean) ?? false,
         };
     } catch {
-        return { theme: 'system', request_timeout_ms: 30000, ssl_verify: true, editor_font_size: 14 };
+        return {
+            theme: 'system',
+            request_timeout_ms: 30000,
+            ssl_verify: true,
+            editor_font_size: 14,
+            sidebar_collapsed: false,
+        };
     }
 }
 

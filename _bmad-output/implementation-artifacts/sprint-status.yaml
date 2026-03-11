@@ -1,4 +1,4 @@
-# generated: 2026-03-10
+# generated: 2026-03-11
 # project: FetchBoyApp
 # project_key: NOKEY
 # tracking_system: file-system
@@ -33,7 +33,7 @@
 # - SM typically creates next story after previous one is 'done' to incorporate learnings
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
-generated: 2026-03-10
+generated: 2026-03-11
 project: FetchBoyApp
 project_key: NOKEY
 tracking_system: file-system
@@ -81,3 +81,11 @@ development_status:
   5-5-export-request-as-curl-code-snippet: review
   5-6-match-query-params-from-url: review
   epic-5-retrospective: optional
+
+  # ─── Epic 6: Workspace Ergonomics & Developer Flow ─────────────────
+  epic-6: in-progress
+  6-1-foldable-side-panel: in-progress
+  6-2-request-cancellation: backlog
+  6-3-keyboard-shortcut-to-send-request: backlog
+  6-4-request-timeout-configuration: backlog
+  epic-6-retrospective: optional
