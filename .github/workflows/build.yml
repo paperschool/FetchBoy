@@ -128,3 +128,70 @@ jobs:
             fetch-boy/src-tauri/target/release/bundle/**/*.dmg
           if-no-files-found: error
           retention-days: 30
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION=$(node -p "require('./fetch-boy/package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: installers-*
+          merge-multiple: false
+
+      - name: Create GitHub release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v${{ steps.version.outputs.version }}" \
+            --title "Fetch Boy v${{ steps.version.outputs.version }}" \
+            --draft \
+            --notes "$(cat <<'EOF'
+          ## Downloads
+
+          | Platform | File |
+          |----------|------|
+          | macOS | `.dmg` |
+          | Windows | `.msi` or `.exe` |
+          | Linux | `.deb` or `.AppImage` |
+
+          ---
+
+          ## macOS Installation Note
+
+          Fetch Boy is not yet signed with an Apple Developer certificate. macOS will show a **"damaged and can't be opened"** error. The app is not damaged — this is Gatekeeper blocking unsigned apps.
+
+          **To open the app, run this command in Terminal after dragging it to Applications:**
+
+          ```bash
+          xattr -cr /Applications/Fetch\ Boy.app
+          ```
+
+          You only need to do this once.
+
+          ---
+
+          ## Linux Installation Note
+
+          **AppImage:** Make the file executable before running:
+          ```bash
+          chmod +x "Fetch Boy_${{ steps.version.outputs.version }}_amd64.AppImage"
+          ```
+          EOF
+          )" \
+            artifacts/installers-macos/*.dmg \
+            artifacts/installers-windows/*.msi \
+            artifacts/installers-windows/*.exe \
+            artifacts/installers-linux/*.deb \
+            artifacts/installers-linux/*.AppImage
