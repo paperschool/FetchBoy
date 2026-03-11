@@ -620,9 +620,6 @@ export function MainPanel() {
                     Request Body
                   </label>
                   <div className="flex items-center gap-2">
-                    <label htmlFor="request-body-language" className="text-app-secondary text-xs font-medium">
-                      Language
-                    </label>
                     <select
                       id="request-body-language"
                       aria-label="Request Body Language"
