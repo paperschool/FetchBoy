@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { HistoryEntry } from '@/lib/db';
 import { useHistoryStore } from '@/stores/historyStore';
-import { useRequestStore } from '@/stores/requestStore';
+import { useTabStore, createDefaultRequestSnapshot, createDefaultResponseSnapshot } from '@/stores/tabStore';
 import { HistoryPanel } from './HistoryPanel';
 
 // ─── Mock history lib ─────────────────────────────────────────────────────────
@@ -55,22 +55,21 @@ const makeEntry = (overrides: Partial<HistoryEntry> = {}): HistoryEntry => ({
 });
 
 const resetHistoryStore = () => useHistoryStore.setState({ entries: [] });
-const resetRequestStore = () =>
-    useRequestStore.setState({
-        method: 'GET',
-        url: '',
-        headers: [],
-        queryParams: [],
-        body: { mode: 'raw', raw: '' },
-        auth: { type: 'none' },
-        activeTab: 'headers',
-        isDirty: false,
-    });
+const resetTabStore = () => {
+    const freshTab = {
+        id: 'test-tab-1',
+        label: 'New Request',
+        isCustomLabel: false,
+        requestState: createDefaultRequestSnapshot(),
+        responseState: createDefaultResponseSnapshot(),
+    };
+    useTabStore.setState({ tabs: [freshTab], activeTabId: freshTab.id });
+};
 
 describe('HistoryPanel', () => {
     beforeEach(() => {
         resetHistoryStore();
-        resetRequestStore();
+        resetTabStore();
         vi.clearAllMocks();
         mockLoadHistory.mockResolvedValue([]);
         mockClearHistory.mockResolvedValue(undefined);
@@ -103,7 +102,7 @@ describe('HistoryPanel', () => {
         expect(screen.getByTestId('history-row-e3')).toBeInTheDocument();
     });
 
-    it('calls requestStore.loadFromSaved with entry snapshot on row click', async () => {
+    it('calls updateTabRequestState with entry snapshot on row click', async () => {
         const snapshot = makeSnapshot();
         const entry = makeEntry({ id: 'click-me', request_snapshot: snapshot });
         useHistoryStore.setState({ entries: [entry] });
@@ -111,16 +110,18 @@ describe('HistoryPanel', () => {
         render(<HistoryPanel />);
 
         fireEvent.click(screen.getByTestId('history-row-click-me'));
-        expect(useRequestStore.getState().url).toBe(snapshot.url);
+        const { activeTabId, tabs } = useTabStore.getState();
+        expect(tabs.find((t) => t.id === activeTabId)?.requestState.url).toBe(snapshot.url);
     });
 
     it('prompts dirty guard when isDirty is true and cancelling prevents load', async () => {
-        const entry = makeEntry({ id: 'dirty-test' });
+        const entrySnapshot = makeSnapshot({ url: 'https://new-entry.com' });
+        const entry = makeEntry({ id: 'dirty-test', request_snapshot: entrySnapshot });
         useHistoryStore.setState({ entries: [entry] });
-        useRequestStore.setState({ isDirty: true } as ReturnType<typeof useRequestStore.getState>);
+        const { activeTabId } = useTabStore.getState();
+        useTabStore.getState().updateTabRequestState(activeTabId, { isDirty: true, url: 'https://original.com' });
 
         const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
-        const loadFromSaved = vi.spyOn(useRequestStore.getState(), 'loadFromSaved');
 
         render(<HistoryPanel />);
         fireEvent.click(screen.getByTestId('history-row-dirty-test'));
@@ -128,7 +129,9 @@ describe('HistoryPanel', () => {
         expect(confirmSpy).toHaveBeenCalledWith(
             'You have unsaved changes. Discard and load this request?',
         );
-        expect(loadFromSaved).not.toHaveBeenCalled();
+        // url should remain unchanged — load was blocked
+        const { tabs } = useTabStore.getState();
+        expect(tabs.find((t) => t.id === activeTabId)?.requestState.url).toBe('https://original.com');
         confirmSpy.mockRestore();
     });
 

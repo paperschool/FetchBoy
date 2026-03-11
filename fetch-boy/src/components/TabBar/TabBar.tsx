@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTabStore } from '@/stores/tabStore';
-import { useRequestStore } from '@/stores/requestStore';
 import { X, Plus } from 'lucide-react';
 
 export function TabBar() {
@@ -12,8 +11,8 @@ export function TabBar() {
     const renameTab = useTabStore((s) => s.renameTab);
     const syncLabelFromRequest = useTabStore((s) => s.syncLabelFromRequest);
 
-    const method = useRequestStore((s) => s.method);
-    const url = useRequestStore((s) => s.url);
+    const method = useTabStore((s) => s.tabs.find((t) => t.id === s.activeTabId)?.requestState.method ?? 'GET');
+    const url = useTabStore((s) => s.tabs.find((t) => t.id === s.activeTabId)?.requestState.url ?? '');
 
     const [editingTabId, setEditingTabId] = useState<string | null>(null);
     const [editValue, setEditValue] = useState('');

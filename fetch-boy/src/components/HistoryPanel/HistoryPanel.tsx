@@ -3,7 +3,8 @@ import { Trash2, X, Check } from 'lucide-react';
 import { clearHistory, loadHistory } from '@/lib/history';
 import { formatRelativeTime } from '@/lib/utils';
 import { useHistoryStore } from '@/stores/historyStore';
-import { useRequestStore } from '@/stores/requestStore';
+import { useTabStore } from '@/stores/tabStore';
+import { buildSnapshotFromSaved } from '@/lib/requestSnapshotUtils';
 
 function methodColour(method: string): string {
     const map: Record<string, string> = {
@@ -31,7 +32,6 @@ function statusLabel(status: number): string {
 export function HistoryPanel() {
     const entries = useHistoryStore((state) => state.entries);
     const historyStore = useHistoryStore();
-    const requestStore = useRequestStore();
     const [isConfirmingClear, setIsConfirmingClear] = useState(false);
 
     useEffect(() => {
@@ -44,12 +44,14 @@ export function HistoryPanel() {
     }, []);
 
     const handleRowClick = (entry: (typeof entries)[number]) => {
-        if (requestStore.isDirty) {
+        const { activeTabId, tabs, updateTabRequestState } = useTabStore.getState();
+        const activeTabEntry = tabs.find((t) => t.id === activeTabId);
+        if (activeTabEntry?.requestState.isDirty) {
             if (!window.confirm('You have unsaved changes. Discard and load this request?')) {
                 return;
             }
         }
-        requestStore.loadFromSaved(entry.request_snapshot);
+        updateTabRequestState(activeTabId, buildSnapshotFromSaved(entry.request_snapshot));
     };
 
     const handleClearHistory = async () => {

@@ -19,14 +19,14 @@ import {
 } from '@/lib/collections';
 import { exportCollectionToJson, importCollectionFromJson } from '@/lib/importExport';
 import { useCollectionStore } from '@/stores/collectionStore';
-import { useRequestStore } from '@/stores/requestStore';
+import { useTabStore } from '@/stores/tabStore';
+import { buildSnapshotFromSaved } from '@/lib/requestSnapshotUtils';
 
 type EditingType = 'collection' | 'folder' | 'request';
 
 export function CollectionTree() {
     const store = useCollectionStore();
     const tree = store.getCollectionTree();
-    const requestStore = useRequestStore();
 
     const [expanded, setExpanded] = useState<Record<string, boolean>>({});
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -56,10 +56,12 @@ export function CollectionTree() {
     const handleLoadRequest = (id: string) => {
         const request = store.requests.find((r) => r.id === id);
         if (!request) return;
-        if (requestStore.isDirty) {
+        const { activeTabId, tabs, updateTabRequestState } = useTabStore.getState();
+        const activeTab = tabs.find((t) => t.id === activeTabId);
+        if (activeTab?.requestState.isDirty) {
             if (!window.confirm('You have unsaved changes. Discard and load this request?')) return;
         }
-        requestStore.loadFromSaved(request);
+        updateTabRequestState(activeTabId, buildSnapshotFromSaved(request));
         store.setActiveRequest(id);
     };
 
@@ -143,7 +145,9 @@ export function CollectionTree() {
     const handleUpdateRequest = async (id: string) => {
         const req = store.requests.find((r) => r.id === id);
         if (!req) return;
-        const { method, url, headers, queryParams, body, auth } = useRequestStore.getState();
+        const { activeTabId, tabs, updateTabRequestState } = useTabStore.getState();
+        const activeTabEntry = tabs.find((t) => t.id === activeTabId);
+        const { method, url, headers, queryParams, body, auth } = activeTabEntry?.requestState ?? useTabStore.getState().tabs[0].requestState;
 
         let auth_type: 'none' | 'bearer' | 'basic' | 'api-key' = 'none';
         let auth_config: Record<string, string> = {};
@@ -173,7 +177,7 @@ export function CollectionTree() {
             await updateSavedRequest(id, { ...req, ...changes });
             store.updateRequest(id, changes);
             if (store.activeRequestId === id) {
-                useRequestStore.getState().markDirty(false);
+                updateTabRequestState(activeTabId, { isDirty: false });
             }
         } catch (error) {
             console.error('Failed to update request', error);

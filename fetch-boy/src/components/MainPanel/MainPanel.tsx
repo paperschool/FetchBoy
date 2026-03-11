@@ -8,7 +8,8 @@ import { AuthPanel } from '@/components/AuthPanel/AuthPanel';
 import { createFullSavedRequest, updateSavedRequest } from '@/lib/collections';
 import { persistHistoryEntry } from '@/lib/history';
 import type { AuthState, HttpMethod, RequestTab } from '@/stores/requestStore';
-import { useRequestStore } from '@/stores/requestStore';
+import { useTabStore } from '@/stores/tabStore';
+import { useActiveRequestState, useActiveResponseState } from '@/hooks/useActiveTabState';
 import { useCollectionStore } from '@/stores/collectionStore';
 import { useHistoryStore } from '@/stores/historyStore';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
@@ -55,13 +56,7 @@ function extractErrorReason(error: unknown): string {
 }
 
 export function MainPanel() {
-  const [isSending, setIsSending] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
-  const [responseData, setResponseData] = useState<ResponseData | null>(null);
-  const [requestError, setRequestError] = useState<string | null>(null);
-  const [sentUrl, setSentUrl] = useState<string | null>(null);
-  const [verboseLogs, setVerboseLogs] = useState<string[]>([]);
-  const [requestBodyLanguage, setRequestBodyLanguage] = useState<'json' | 'html' | 'xml'>('json');
   const editorFontSize = useUiSettingsStore((state) => state.editorFontSize);
   const requestTimeoutMs = useUiSettingsStore((s) => s.requestTimeoutMs);
   const sslVerify = useUiSettingsStore((s) => s.sslVerify);
@@ -70,35 +65,62 @@ export function MainPanel() {
   const historyStore = useHistoryStore();
   const { interpolate: applyEnv, unresolvedIn, activeVariables } = useEnvironment();
 
-  const {
-    method,
-    setMethod,
-    url,
-    setUrl,
-    activeTab,
-    setActiveTab,
-    headers,
-    addHeader,
-    updateHeader,
-    toggleHeaderEnabled,
-    removeHeader,
-    queryParams,
-    addQueryParam,
-    updateQueryParam,
-    toggleQueryParamEnabled,
-    removeQueryParam,
-    body,
-    auth,
-    setAuth,
-    setBodyRaw,
-    markDirty,
-  } = useRequestStore();
+  const { state: req, update: updateReq } = useActiveRequestState();
+  const { state: res, update: updateRes } = useActiveResponseState();
+
+  // Request state destructuring
+  const method = req.method;
+  const url = req.url;
+  const headers = req.headers;
+  const queryParams = req.queryParams;
+  const body = req.body;
+  const auth = req.auth;
+  const activeTab = req.activeTab;
+  const isDirty = req.isDirty;
+
+  // Request state setters (adapted from requestStore actions)
+  const setMethod = (m: HttpMethod) => updateReq({ method: m, isDirty: true });
+  const setUrl = (u: string) => updateReq({ url: u, isDirty: true });
+  const setActiveTab = (t: RequestTab) => updateReq({ activeTab: t });
+  const addHeader = () => updateReq({ headers: [...req.headers, { key: '', value: '', enabled: true }], isDirty: true });
+  const updateHeader = (index: number, field: 'key' | 'value', value: string) => {
+    const newHeaders = req.headers.map((h, i) => i === index ? { ...h, [field]: value } : h);
+    updateReq({ headers: newHeaders, isDirty: true });
+  };
+  const toggleHeaderEnabled = (index: number) => {
+    const newH = req.headers.map((h, i) => i === index ? { ...h, enabled: !h.enabled } : h);
+    updateReq({ headers: newH, isDirty: true });
+  };
+  const removeHeader = (index: number) => updateReq({ headers: req.headers.filter((_, i) => i !== index), isDirty: true });
+  const addQueryParam = () => updateReq({ queryParams: [...req.queryParams, { key: '', value: '', enabled: true }], isDirty: true });
+  const updateQueryParam = (index: number, field: 'key' | 'value', value: string) => {
+    const newParams = req.queryParams.map((p, i) => i === index ? { ...p, [field]: value } : p);
+    updateReq({ queryParams: newParams, isDirty: true });
+  };
+  const toggleQueryParamEnabled = (index: number) => {
+    const newP = req.queryParams.map((p, i) => i === index ? { ...p, enabled: !p.enabled } : p);
+    updateReq({ queryParams: newP, isDirty: true });
+  };
+  const removeQueryParam = (index: number) => updateReq({ queryParams: req.queryParams.filter((_, i) => i !== index), isDirty: true });
+  const setAuth = (a: AuthState) => updateReq({ auth: a, isDirty: true });
+  const setBodyRaw = (raw: string) => updateReq({ body: { ...req.body, raw }, isDirty: true });
+  const markDirty = (dirty = true) => updateReq({ isDirty: dirty });
+
+  // Response state destructuring
+  const isSending = res.isSending;
+  const responseData = res.responseData;
+  const requestError = res.requestError;
+  const sentUrl = res.sentUrl;
+  const verboseLogs = res.verboseLogs;
+  const requestBodyLanguage = res.requestBodyLanguage;
+  const setRequestBodyLanguage = (lang: 'json' | 'html' | 'xml') => updateRes({ requestBodyLanguage: lang });
 
   const unresolvedVars = unresolvedIn(url);
 
   const appendLog = (message: string) => {
     const timestamp = new Date().toISOString();
-    setVerboseLogs((current) => [...current, `[${timestamp}] ${message}`]);
+    const { activeTabId, appendResponseLog } = useTabStore.getState();
+    appendResponseLog(activeTabId, `[${timestamp}] ${message}`);
   };
 
   function authStateToConfig(authState: AuthState): Record<string, string> {
@@ -186,8 +208,7 @@ export function MainPanel() {
     appendLog(`Send clicked with method=${method}, rawUrl=${rawUrl || '<empty>'}`);
 
     if (!rawUrl) {
-      setRequestError('Please enter a URL first.');
-      setResponseData(null);
+      updateRes({ requestError: 'Please enter a URL first.', responseData: null });
       appendLog('Validation failed: URL is empty.');
       return;
     }
@@ -200,10 +221,7 @@ export function MainPanel() {
     const sendQueryParams = queryParams.map((q) => ({ ...q, value: applyEnv(q.value) }));
     const sendBody = { ...body, raw: applyEnv(body.raw) };
 
-    setIsSending(true);
-    setRequestError(null);
-    setResponseData(null);
-    setSentUrl(sendUrl);
+    updateRes({ isSending: true, requestError: null, responseData: null, sentUrl: sendUrl });
 
     const requestSnapshot = {
       id: crypto.randomUUID(),
@@ -245,7 +263,7 @@ export function MainPanel() {
         `Rust response received: status=${response.status}, time=${response.responseTimeMs}ms, size=${response.responseSizeBytes}bytes`,
       );
 
-      setResponseData(response);
+      updateRes({ responseData: response });
 
       const entry = await persistHistoryEntry({
         method,
@@ -259,7 +277,7 @@ export function MainPanel() {
     } catch (error) {
       const reason = extractErrorReason(error);
       const message = `Request failed: ${reason}`;
-      setRequestError(message);
+      updateRes({ requestError: message });
       appendLog(`Send failed: ${reason}`);
 
       try {
@@ -277,7 +295,7 @@ export function MainPanel() {
         appendLog('History persistence failed after request failure.');
       }
     } finally {
-      setIsSending(false);
+      updateRes({ isSending: false });
       appendLog('Send flow completed.');
     }
   };
@@ -445,7 +463,7 @@ export function MainPanel() {
             response={responseData}
             error={requestError}
             logs={verboseLogs}
-            onClearLogs={() => setVerboseLogs([])}
+            onClearLogs={() => updateRes({ verboseLogs: [] })}
             requestedUrl={sentUrl ?? undefined}
           />
         </div>
