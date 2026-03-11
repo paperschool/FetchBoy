@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import { Save, Send } from 'lucide-react';
+import { Loader2, Save, Send, X } from 'lucide-react';
 import { MonacoEditorField } from '@/components/Editor/MonacoEditorField';
 import { CopyAsButton } from './CopyAsButton';
 import { HighlightedUrlInput } from './HighlightedUrlInput';
@@ -18,7 +18,7 @@ import { useCollectionStore } from '@/stores/collectionStore';
 import { useHistoryStore } from '@/stores/historyStore';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import { useEnvironment } from '@/hooks/useEnvironment';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
 const REQUEST_TABS: Array<{ id: RequestTab; label: string }> = [
@@ -157,9 +157,12 @@ export function MainPanel() {
   const [queryMatchError, setQueryMatchError] = useState<string | null>(null);
   const [syncQueryParams, setSyncQueryParams] = useState(false);
   const [requestDetailsOpen, setRequestDetailsOpen] = useState(true);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const editorFontSize = useUiSettingsStore((state) => state.editorFontSize);
   const requestTimeoutMs = useUiSettingsStore((s) => s.requestTimeoutMs);
   const sslVerify = useUiSettingsStore((s) => s.sslVerify);
+
+  const activeTabId = useTabStore((s) => s.activeTabId);
 
   const collectionStore = useCollectionStore();
   const historyStore = useHistoryStore();
@@ -236,6 +239,7 @@ export function MainPanel() {
   const sentUrl = res.sentUrl;
   const verboseLogs = res.verboseLogs;
   const requestBodyLanguage = res.requestBodyLanguage;
+  const wasCancelled = res.wasCancelled;
   const setRequestBodyLanguage = (lang: 'json' | 'html' | 'xml') => updateRes({ requestBodyLanguage: lang });
 
   const unresolvedVars = unresolvedIn(url);
@@ -367,7 +371,10 @@ export function MainPanel() {
     const sendBody = { ...body, raw: applyEnv(body.raw) };
     const requestedUrlForDisplay = buildRequestedUrlForDisplay(sendUrlForRequest, sendQueryParams, auth);
 
-    updateRes({ isSending: true, requestError: null, responseData: null, sentUrl: requestedUrlForDisplay });
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    updateRes({ isSending: true, requestError: null, responseData: null, wasCancelled: false, sentUrl: requestedUrlForDisplay });
 
     const requestSnapshot = {
       id: crypto.randomUUID(),
@@ -387,23 +394,33 @@ export function MainPanel() {
       updated_at: new Date().toISOString(),
     } as const;
 
+    const abortPromise = new Promise<never>((_, reject) => {
+      controller.signal.addEventListener('abort', () => {
+        reject(new DOMException('AbortError', 'AbortError'));
+      });
+    });
+
     try {
       appendLog('Invoking Rust command: send_request');
-      const response = await invokeWithTimeout(
-        invoke<ResponseData>('send_request', {
-          request: {
-            method,
-            url: sendUrlForRequest,
-            headers: sendHeaders,
-            queryParams: sendQueryParams,
-            body: sendBody,
-            auth,
-            timeout_ms: requestTimeoutMs,
-            ssl_verify: sslVerify,
-          },
-        }),
-        requestTimeoutMs + 5000,
-      );
+      const response = await Promise.race([
+        invokeWithTimeout(
+          invoke<ResponseData>('send_request', {
+            request: {
+              method,
+              url: sendUrlForRequest,
+              headers: sendHeaders,
+              queryParams: sendQueryParams,
+              body: sendBody,
+              auth,
+              timeout_ms: requestTimeoutMs,
+              ssl_verify: sslVerify,
+              requestId: activeTabId,
+            },
+          }),
+          requestTimeoutMs + 5000,
+        ),
+        abortPromise,
+      ]);
 
       appendLog(
         `Rust response received: status=${response.status}, time=${response.responseTimeMs}ms, size=${response.responseSizeBytes}bytes`,
@@ -421,7 +438,20 @@ export function MainPanel() {
       historyStore.addEntry(entry);
       appendLog('History persisted for successful response.');
     } catch (error) {
+      // Check for cancellation BEFORE general error handler — do NOT persist to history.
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        updateRes({ isSending: false, wasCancelled: true, responseData: null, requestError: null });
+        appendLog('Request cancelled by user.');
+        return;
+      }
+
       const reason = extractErrorReason(error);
+      if (reason === '__CANCELLED__') {
+        updateRes({ isSending: false, wasCancelled: true, responseData: null, requestError: null });
+        appendLog('Request cancelled by user.');
+        return;
+      }
+
       const message = `Request failed: ${reason}`;
       updateRes({ requestError: message });
       appendLog(`Send failed: ${reason}`);
@@ -441,9 +471,16 @@ export function MainPanel() {
         appendLog('History persistence failed after request failure.');
       }
     } finally {
+      abortControllerRef.current = null;
       updateRes({ isSending: false });
       appendLog('Send flow completed.');
     }
+  };
+
+  const handleCancelRequest = () => {
+    abortControllerRef.current?.abort();
+    invoke('cancel_request', { requestId: activeTabId }).catch(() => {});
+    appendLog('Cancel requested by user.');
   };
 
   const resolvedRequest: ResolvedRequest = {
@@ -504,15 +541,26 @@ export function MainPanel() {
           <div>
             <p className="text-app-secondary mb-1 block text-xs font-medium">Controls</p>
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleSendRequest}
-                disabled={isSending}
-                className="flex items-center gap-1.5 h-9 rounded-md border border-green-600 bg-green-600 px-4 text-sm font-medium text-white hover:bg-green-700 hover:border-green-700 cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 transition-colors"
-              >
-                <Send size={14} />
-                {isSending ? 'Sending...' : 'Send'}
-              </button>
+              {isSending ? (
+                <button
+                  type="button"
+                  onClick={handleCancelRequest}
+                  className="flex items-center gap-1.5 h-9 rounded-md border border-amber-500 bg-amber-500 px-4 text-sm font-medium text-white hover:bg-amber-600 hover:border-amber-600 cursor-pointer transition-colors"
+                  aria-label="Cancel request"
+                >
+                  <Loader2 size={14} className="animate-spin" />
+                  Cancel
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleSendRequest}
+                  className="flex items-center gap-1.5 h-9 rounded-md border border-green-600 bg-green-600 px-4 text-sm font-medium text-white hover:bg-green-700 hover:border-green-700 cursor-pointer transition-colors"
+                >
+                  <Send size={14} />
+                  Send
+                </button>
+              )}
               <span className="w-px self-stretch bg-app-subtle opacity-50" aria-hidden="true" />
               <button
                 type="button"
@@ -658,11 +706,12 @@ export function MainPanel() {
         >
           <p className="text-app-secondary text-sm font-medium">Response</p>
           <div className="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden">
-            {responseData || requestError || verboseLogs.length > 0 ? (
+            {responseData || requestError || verboseLogs.length > 0 || wasCancelled ? (
               <ResponseViewer
                 response={responseData}
                 error={requestError}
                 logs={verboseLogs}
+                wasCancelled={wasCancelled}
                 onClearLogs={() => updateRes({ verboseLogs: [] })}
                 requestedUrl={sentUrl ?? undefined}
               />

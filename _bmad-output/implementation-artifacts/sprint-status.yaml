@@ -85,7 +85,8 @@ development_status:
   # ─── Epic 6: Workspace Ergonomics & Developer Flow ─────────────────
   epic-6: in-progress
   6-1-foldable-side-panel: review
-  6-2-request-cancellation: ready-for-dev
-  6-3-keyboard-shortcut-to-send-request: backlog
-  6-4-request-timeout-configuration: backlog
+  6-2-request-cancellation: review
+  6-3-keyboard-shortcut-to-send-request: ready-for-dev
+  6-4-request-timeout-configuration: ready-for-dev
+  6-5-settings-in-sidebar-accordion: backlog
   epic-6-retrospective: optional

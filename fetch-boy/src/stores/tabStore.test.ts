@@ -246,6 +246,29 @@ describe('tabStore', () => {
         });
     });
 
+    describe('Story 6.2 cancellation state', () => {
+        it('createDefaultResponseSnapshot() has wasCancelled: false', () => {
+            const snapshot = createDefaultResponseSnapshot();
+            expect(snapshot.wasCancelled).toBe(false);
+        });
+
+        it('updateTabResponseState correctly patches wasCancelled to true', () => {
+            const { activeTabId } = useTabStore.getState();
+            useTabStore.getState().updateTabResponseState(activeTabId, { wasCancelled: true });
+            const updated = useTabStore.getState().tabs.find((t) => t.id === activeTabId);
+            expect(updated?.responseState.wasCancelled).toBe(true);
+        });
+
+        it('updateTabResponseState only patches wasCancelled without affecting other fields', () => {
+            const { activeTabId } = useTabStore.getState();
+            useTabStore.getState().updateTabResponseState(activeTabId, { requestError: 'oops' });
+            useTabStore.getState().updateTabResponseState(activeTabId, { wasCancelled: true });
+            const updated = useTabStore.getState().tabs.find((t) => t.id === activeTabId);
+            expect(updated?.responseState.wasCancelled).toBe(true);
+            expect(updated?.responseState.requestError).toBe('oops');
+        });
+    });
+
     describe('Story 5.4 tab actions', () => {
         it("navigateTab('next') with two tabs advances activeTabId to the second tab", () => {
             useTabStore.getState().addTab();

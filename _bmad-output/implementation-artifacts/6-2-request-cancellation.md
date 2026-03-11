@@ -1,6 +1,6 @@
 # Story 6.2: Request Cancellation
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -22,25 +22,25 @@ so that I don't have to wait for a slow or unresponsive endpoint to time out whe
 
 ## Tasks / Subtasks
 
-- [ ] Task 1 - Add `wasCancelled` state to `ResponseSnapshot` in `tabStore` (AC: 3, 5, 7)
-  - [ ] Add `wasCancelled: boolean` field to `ResponseSnapshot` interface in `fetch-boy/src/stores/tabStore.ts`
-  - [ ] Initialize `wasCancelled: false` in `createDefaultResponseSnapshot()`
-  - [ ] `wasCancelled` is reset to `false` at the start of each new send (`updateRes({ isSending: true, wasCancelled: false, ... })`)
+- [x] Task 1 - Add `wasCancelled` state to `ResponseSnapshot` in `tabStore` (AC: 3, 5, 7)
+  - [x] Add `wasCancelled: boolean` field to `ResponseSnapshot` interface in `fetch-boy/src/stores/tabStore.ts`
+  - [x] Initialize `wasCancelled: false` in `createDefaultResponseSnapshot()`
+  - [x] `wasCancelled` is reset to `false` at the start of each new send (`updateRes({ isSending: true, wasCancelled: false, ... })`)
 
-- [ ] Task 2 - Implement Rust-side cancellation registry (AC: 2, 4)
-  - [ ] Add `tokio = { version = "1", features = ["sync"] }` to `fetch-boy/src-tauri/Cargo.toml` dependencies
-  - [ ] Create `CancellationRegistry` struct in `fetch-boy/src-tauri/src/http.rs`:
+- [x] Task 2 - Implement Rust-side cancellation registry (AC: 2, 4)
+  - [x] Add `tokio = { version = "1", features = ["sync"] }` to `fetch-boy/src-tauri/Cargo.toml` dependencies
+  - [x] Create `CancellationRegistry` struct in `fetch-boy/src-tauri/src/http.rs`:
     ```rust
     use std::collections::HashMap;
     use std::sync::Mutex;
     use tokio::sync::oneshot;
     pub struct CancellationRegistry(pub Mutex<HashMap<String, oneshot::Sender<()>>>);
     ```
-  - [ ] Add `request_id: Option<String>` field to `SendRequestPayload` struct
-  - [ ] Modify `send_request` command signature to accept `tauri::State<'_, CancellationRegistry>` and `request_id`
-  - [ ] In `send_request`: if `request_id` is `Some`, create oneshot channel `(tx, rx)`, store `tx` in registry under `request_id`, then use `tokio::select!` to race `request_builder.send().await` vs `rx` receiver; on cancellation branch return `Err("__CANCELLED__".to_string())`
-  - [ ] Clean up registry entry after request completes or cancels
-  - [ ] Add new `cancel_request` command in `fetch-boy/src-tauri/src/http.rs`:
+  - [x] Add `request_id: Option<String>` field to `SendRequestPayload` struct
+  - [x] Modify `send_request` command signature to accept `tauri::State<'_, CancellationRegistry>` and `request_id`
+  - [x] In `send_request`: if `request_id` is `Some`, create oneshot channel `(tx, rx)`, store `tx` in registry under `request_id`, then use `tokio::select!` to race `request_builder.send().await` vs `rx` receiver; on cancellation branch return `Err("__CANCELLED__".to_string())`
+  - [x] Clean up registry entry after request completes or cancels
+  - [x] Add new `cancel_request` command in `fetch-boy/src-tauri/src/http.rs`:
     ```rust
     #[tauri::command]
     pub async fn cancel_request(
@@ -54,16 +54,16 @@ so that I don't have to wait for a slow or unresponsive endpoint to time out whe
         Ok(())
     }
     ```
-  - [ ] Register `CancellationRegistry` state and `cancel_request` command in `fetch-boy/src-tauri/src/lib.rs`:
+  - [x] Register `CancellationRegistry` state and `cancel_request` command in `fetch-boy/src-tauri/src/lib.rs`:
     - Add `.manage(http::CancellationRegistry(std::sync::Mutex::new(std::collections::HashMap::new())))`
     - Add `http::cancel_request` to `tauri::generate_handler![]`
 
-- [ ] Task 3 - Update frontend request/cancel flow in `MainPanel.tsx` (AC: 1, 2, 4, 5, 6, 7)
-  - [ ] Add `import { useRef } from 'react'` (already has `useEffect, useState` — add `useRef`)
-  - [ ] Add `import { Loader2, X } from 'lucide-react'` for cancel button icons
-  - [ ] Add abort controller ref: `const abortControllerRef = useRef<AbortController | null>(null)` inside `MainPanel`
-  - [ ] Get `activeTabId` from tabStore: `const activeTabId = useTabStore((s) => s.activeTabId)`
-  - [ ] Modify `handleSendRequest()`:
+- [x] Task 3 - Update frontend request/cancel flow in `MainPanel.tsx` (AC: 1, 2, 4, 5, 6, 7)
+  - [x] Add `import { useRef } from 'react'` (already has `useEffect, useState` — add `useRef`)
+  - [x] Add `import { Loader2, X } from 'lucide-react'` for cancel button icons
+  - [x] Add abort controller ref: `const abortControllerRef = useRef<AbortController | null>(null)` inside `MainPanel`
+  - [x] Get `activeTabId` from tabStore: `const activeTabId = useTabStore((s) => s.activeTabId)`
+  - [x] Modify `handleSendRequest()`:
     - Create new `AbortController` at start: `const controller = new AbortController(); abortControllerRef.current = controller;`
     - Pass `requestId: activeTabId` in the invoke payload
     - Set `wasCancelled: false` in the initial state update: `updateRes({ isSending: true, requestError: null, responseData: null, wasCancelled: false, sentUrl: requestedUrlForDisplay })`
@@ -86,7 +86,7 @@ so that I don't have to wait for a slow or unresponsive endpoint to time out whe
       ```
     - Also check for the Rust-side `__CANCELLED__` signal: if `reason` includes `__CANCELLED__`, treat same as AbortError
     - Clear abort controller ref in `finally`: `abortControllerRef.current = null`
-  - [ ] Add `handleCancelRequest()` function:
+  - [x] Add `handleCancelRequest()` function:
     ```typescript
     const handleCancelRequest = () => {
       abortControllerRef.current?.abort(); // immediately rejects the race
@@ -94,7 +94,7 @@ so that I don't have to wait for a slow or unresponsive endpoint to time out whe
       appendLog('Cancel requested by user.');
     };
     ```
-  - [ ] Update Send/Cancel button JSX — replace single button with conditional:
+  - [x] Update Send/Cancel button JSX — replace single button with conditional:
     ```tsx
     {isSending ? (
       <button
@@ -117,7 +117,7 @@ so that I don't have to wait for a slow or unresponsive endpoint to time out whe
       </button>
     )}
     ```
-  - [ ] Update ResponseViewer rendering condition in MainPanel to include `wasCancelled`:
+  - [x] Update ResponseViewer rendering condition in MainPanel to include `wasCancelled`:
     ```tsx
     {responseData || requestError || verboseLogs.length > 0 || wasCancelled ? (
       <ResponseViewer
@@ -132,11 +132,11 @@ so that I don't have to wait for a slow or unresponsive endpoint to time out whe
       <p className="text-app-muted text-sm">Send a request to see response details.</p>
     )}
     ```
-  - [ ] Destructure `wasCancelled` from response state alongside other response state values
+  - [x] Destructure `wasCancelled` from response state alongside other response state values
 
-- [ ] Task 4 - Update `ResponseViewer` to render cancellation state (AC: 3)
-  - [ ] Add `wasCancelled?: boolean` to `ResponseViewerProps` interface in `fetch-boy/src/components/ResponseViewer/ResponseViewer.tsx`
-  - [ ] In `ResponseViewer` function body, add early-return or conditional for cancelled state:
+- [x] Task 4 - Update `ResponseViewer` to render cancellation state (AC: 3)
+  - [x] Add `wasCancelled?: boolean` to `ResponseViewerProps` interface in `fetch-boy/src/components/ResponseViewer/ResponseViewer.tsx`
+  - [x] In `ResponseViewer` function body, add early-return or conditional for cancelled state:
     - When `wasCancelled` is `true` AND `response` is `null` AND `error` is `null`, show neutral cancellation message:
       ```tsx
       {wasCancelled && !response && !error && (
@@ -149,11 +149,11 @@ so that I don't have to wait for a slow or unresponsive endpoint to time out whe
     - This renders above or instead of the empty state — ensure it uses `text-app-secondary` (neutral, not red)
     - The normal error display path (`error` string) must NOT show for cancellations since we never set `requestError` on cancel
 
-- [ ] Task 5 - Write tests (AC: all)
-  - [ ] Update `fetch-boy/src/stores/tabStore.test.ts`:
+- [x] Task 5 - Write tests (AC: all)
+  - [x] Update `fetch-boy/src/stores/tabStore.test.ts`:
     - Verify `wasCancelled` initializes to `false` in `createDefaultResponseSnapshot()`
     - Verify `updateTabResponseState` correctly patches `wasCancelled`
-  - [ ] Update `fetch-boy/src/components/MainPanel/MainPanel.test.tsx`:
+  - [x] Update `fetch-boy/src/components/MainPanel/MainPanel.test.tsx`:
     - Verify Send button renders initially (not Cancel)
     - Mock `isSending = true` via `useTabStore.setState` and verify Cancel button renders with "Cancel" label
     - Verify clicking Cancel calls `invoke('cancel_request', ...)` (mock invoke)
@@ -161,20 +161,20 @@ so that I don't have to wait for a slow or unresponsive endpoint to time out whe
     - Verify "Request cancelled" text appears in response panel when `wasCancelled = true`
     - Verify cancellation does NOT call `persistHistoryEntry` (executeMock should not be called)
     - Verify race condition: if request completes before cancel (mock resolves first), response is shown normally
-  - [ ] Update `fetch-boy/src/components/ResponseViewer/ResponseViewer.test.tsx`:
+  - [x] Update `fetch-boy/src/components/ResponseViewer/ResponseViewer.test.tsx`:
     - Verify `wasCancelled={true}` renders neutral "Request cancelled" text (not error styling)
     - Verify `wasCancelled={false}` with no response shows nothing cancellation-related
     - Verify normal error display is unaffected
 
-- [ ] Task 6 - Verify and commit story changes
-  - [ ] Run `npx tsc --noEmit` from `fetch-boy/` to verify TypeScript compilation
-  - [ ] Run `npx vitest run` from `fetch-boy/` to verify all tests pass
-  - [ ] Verify Rust builds: `cargo build` from `fetch-boy/src-tauri/`
+- [x] Task 6 - Verify and commit story changes
+  - [x] Run `npx tsc --noEmit` from `fetch-boy/` to verify TypeScript compilation
+  - [x] Run `npx vitest run` from `fetch-boy/` to verify all tests pass (413 tests pass)
+  - [x] Verify Rust builds: `cargo build` from `fetch-boy/src-tauri/`
   - [ ] Manual test: Send a slow request (e.g., to `https://httpbin.org/delay/10`), click Cancel, verify instant "Request cancelled" state
   - [ ] Manual test: Send a fast request, verify it completes normally (no race-condition blank state)
   - [ ] Manual test: Open two tabs, start a slow request in Tab 1, verify Tab 2's Send button is unaffected
   - [ ] Manual test: Cancel in Tab 1, verify Tab 2's request is unaffected
-  - [ ] Commit all code and documentation changes with a message including `Story 6.2`
+  - [x] Commit all code and documentation changes with a message including `Story 6.2`
 
 ## Dev Notes
 
@@ -404,7 +404,7 @@ expect(el.closest('[class*="red"]')).toBeNull();
 
 ### Agent Model Used
 
-_To be filled by dev agent_
+claude-sonnet-4-6
 
 ### Debug Log References
 
@@ -415,12 +415,30 @@ _To be filled by dev agent_
 
 ### Completion Notes List
 
-_To be filled by dev agent during implementation_
+- Implemented `wasCancelled: boolean` in `ResponseSnapshot` interface and `createDefaultResponseSnapshot()`
+- Added `CancellationRegistry` (Mutex-guarded HashMap of oneshot senders) to `http.rs` for Rust-side cancellation
+- Extended `SendRequestPayload` with `requestId: Option<String>`; `send_request` now races the reqwest future against a oneshot channel using `tokio::select!`
+- Added `cancel_request` Tauri command that removes the sender from the registry and fires it
+- Registered `CancellationRegistry` state and `cancel_request` command in `lib.rs`
+- Frontend uses `AbortController` + `Promise.race([invokeWithTimeout(...), abortPromise])` for instant UI response
+- Send button transitions to amber Cancel button (with `Loader2` spinner) while `isSending=true`; Cancel is never disabled
+- Cancellation skips `persistHistoryEntry` entirely; uses `wasCancelled` flag (not `requestError`)
+- `ResponseViewer` renders neutral "Request cancelled" (with `X` icon, `text-app-secondary`) when `wasCancelled=true` and no response/error
+- 413 tests pass (0 failures); TypeScript and Rust both compile cleanly
 
 ### File List
 
-_To be filled by dev agent after implementation_
+- `fetch-boy/src/stores/tabStore.ts` — Added `wasCancelled: boolean` to `ResponseSnapshot` interface and `createDefaultResponseSnapshot()`
+- `fetch-boy/src/stores/tabStore.test.ts` — Added Story 6.2 cancellation state tests (3 tests)
+- `fetch-boy/src/components/MainPanel/MainPanel.tsx` — Added `useRef`, `Loader2`, `X` imports; `abortControllerRef`; `activeTabId`; `wasCancelled` destructuring; modified `handleSendRequest` with AbortController + Promise.race + `requestId`; added `handleCancelRequest`; replaced Send button with conditional Send/Cancel toggle; updated ResponseViewer rendering condition
+- `fetch-boy/src/components/MainPanel/MainPanel.test.tsx` — Added Story 6.2 cancellation tests (6 tests)
+- `fetch-boy/src/components/ResponseViewer/ResponseViewer.tsx` — Added `wasCancelled?: boolean` prop; updated null-check; added neutral cancellation message with `X` icon
+- `fetch-boy/src/components/ResponseViewer/ResponseViewer.test.tsx` — Added Story 6.2 cancellation state tests (4 tests)
+- `fetch-boy/src-tauri/Cargo.toml` — Added `tokio = { version = "1", features = ["sync"] }`
+- `fetch-boy/src-tauri/src/http.rs` — Added `CancellationRegistry` struct; added `requestId: Option<String>` to `SendRequestPayload`; modified `send_request` with `tokio::select!` cancellation registry; added `cancel_request` command
+- `fetch-boy/src-tauri/src/lib.rs` — Registered `CancellationRegistry` state and `cancel_request` command handler
 
 ## Change Log
 
 - 2026-03-11: Story 6.2 context created via automated create-story workflow — comprehensive developer guide with Rust cancellation registry, AbortController race pattern, architecture compliance, and testing requirements
+- 2026-03-11: Story 6.2 implemented — request cancellation via AbortController race + Rust tokio::select! CancellationRegistry; 13 new tests added; all 413 tests pass

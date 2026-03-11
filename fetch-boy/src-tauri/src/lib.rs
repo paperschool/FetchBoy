@@ -17,8 +17,10 @@ pub fn run() {
                 .add_migrations("sqlite:fetch-boy.db", db::migrations())
                 .build(),
         )
+        // Register app-wide state for request cancellation (tab-scoped via requestId).
+        .manage(http::CancellationRegistry(std::sync::Mutex::new(std::collections::HashMap::new())))
         // Expose Rust commands callable from the frontend via invoke().
-        .invoke_handler(tauri::generate_handler![http::send_request])
+        .invoke_handler(tauri::generate_handler![http::send_request, http::cancel_request])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

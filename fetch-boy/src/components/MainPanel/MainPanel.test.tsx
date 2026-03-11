@@ -535,4 +535,105 @@ describe('MainPanel request builder', () => {
     expect(activeTab?.requestState.queryParams).toEqual([{ key: 'tag', value: 'b', enabled: true }]);
     expect(activeTab?.requestState.url).toBe('https://api.example.com/items?tag=b');
   });
+
+  describe('Story 6.2 request cancellation', () => {
+    it('renders Send button (not Cancel) by default', () => {
+      render(<MainPanel />);
+      expect(screen.getByRole('button', { name: 'Send' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /cancel request/i })).not.toBeInTheDocument();
+    });
+
+    it('shows Cancel button when isSending is true via store state', () => {
+      const { activeTabId, tabs } = useTabStore.getState();
+      const tab = tabs.find((t) => t.id === activeTabId)!;
+      useTabStore.setState({
+        tabs: [{ ...tab, responseState: { ...tab.responseState, isSending: true } }],
+        activeTabId: tab.id,
+      });
+
+      render(<MainPanel />);
+
+      expect(screen.getByRole('button', { name: /cancel request/i })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Send' })).not.toBeInTheDocument();
+    });
+
+    it('shows "Request cancelled" message when wasCancelled is true via store state', () => {
+      const { activeTabId, tabs } = useTabStore.getState();
+      const tab = tabs.find((t) => t.id === activeTabId)!;
+      useTabStore.setState({
+        tabs: [{ ...tab, responseState: { ...tab.responseState, wasCancelled: true } }],
+        activeTabId: tab.id,
+      });
+
+      render(<MainPanel />);
+
+      expect(screen.getByText(/request cancelled/i)).toBeInTheDocument();
+    });
+
+    it('clicking Cancel shows "Request cancelled" and does NOT persist to history', async () => {
+      invokeMock.mockImplementation((command: string) => {
+        if (command === 'send_request') {
+          return new Promise(() => {}); // never resolves
+        }
+        return Promise.resolve(); // cancel_request resolves immediately
+      });
+
+      render(<MainPanel />);
+
+      fireEvent.change(screen.getByLabelText('Request URL'), {
+        target: { value: 'https://slow.example.com/delay' },
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+
+      const cancelButton = await screen.findByRole('button', { name: /cancel request/i });
+      expect(cancelButton).toBeInTheDocument();
+
+      fireEvent.click(cancelButton);
+
+      await screen.findByText(/request cancelled/i);
+
+      expect(executeMock).not.toHaveBeenCalled();
+      expect(invokeMock).toHaveBeenCalledWith('cancel_request', expect.objectContaining({ requestId: expect.any(String) }));
+    });
+
+    it('Send button reappears after cancellation', async () => {
+      invokeMock.mockImplementation((command: string) => {
+        if (command === 'send_request') {
+          return new Promise(() => {}); // never resolves
+        }
+        return Promise.resolve();
+      });
+
+      render(<MainPanel />);
+
+      fireEvent.change(screen.getByLabelText('Request URL'), {
+        target: { value: 'https://slow.example.com/delay' },
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+
+      const cancelButton = await screen.findByRole('button', { name: /cancel request/i });
+      fireEvent.click(cancelButton);
+
+      await screen.findByRole('button', { name: 'Send' });
+    });
+
+    it('race condition: request completes before cancel — response is shown normally', async () => {
+      // invokeMock resolves immediately (set in beforeEach)
+      render(<MainPanel />);
+
+      fireEvent.change(screen.getByLabelText('Request URL'), {
+        target: { value: 'https://fast.example.com' },
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+
+      await screen.findByText('200 OK');
+
+      expect(screen.getByText('200 OK')).toBeInTheDocument();
+      expect(screen.queryByText(/request cancelled/i)).not.toBeInTheDocument();
+      expect(executeMock).toHaveBeenCalledTimes(1);
+    });
+  });
 });
