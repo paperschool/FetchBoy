@@ -1,9 +1,11 @@
 import Editor from '@monaco-editor/react';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 
+type EditorLanguage = 'json' | 'html' | 'xml' | 'plaintext';
+
 interface MonacoEditorFieldProps {
   value: string;
-  language: 'json' | 'html' | 'xml';
+  language: EditorLanguage;
   readOnly?: boolean;
   fontSize: number;
   path: string;
@@ -27,7 +29,7 @@ export function MonacoEditorField({ value, language, readOnly = false, fontSize,
     <div data-testid={testId} className="border-app-subtle min-h-0 overflow-hidden rounded-md border" style={{ height }}>
       <Editor
         path={path}
-        language={language}
+        language={language === 'plaintext' ? 'plaintext' : language}
         theme={monacoTheme}
         value={value}
         onChange={(nextValue) => {
