@@ -1,8 +1,20 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useTabStore } from './tabStore';
+import { useTabStore, createDefaultRequestSnapshot, createDefaultResponseSnapshot } from './tabStore';
+
+function makeTestTab(overrides: Partial<Parameters<typeof useTabStore.setState>[0]> = {}) {
+    const id = crypto.randomUUID();
+    return {
+        id,
+        label: 'New Request',
+        isCustomLabel: false,
+        requestState: createDefaultRequestSnapshot(),
+        responseState: createDefaultResponseSnapshot(),
+        ...overrides,
+    };
+}
 
 const getInitialState = () => {
-    const firstTab = { id: crypto.randomUUID(), label: 'New Request', isCustomLabel: false };
+    const firstTab = makeTestTab();
     return {
         tabs: [firstTab],
         activeTabId: firstTab.id,
@@ -11,7 +23,7 @@ const getInitialState = () => {
 
 describe('tabStore', () => {
     beforeEach(() => {
-        const firstTab = { id: crypto.randomUUID(), label: 'New Request', isCustomLabel: false };
+        const firstTab = makeTestTab();
         useTabStore.setState({
             tabs: [firstTab],
             activeTabId: firstTab.id,
@@ -116,5 +128,70 @@ describe('tabStore', () => {
         const { tabs, activeTabId } = useTabStore.getState();
         expect(tabs).toHaveLength(1);
         expect(activeTabId).toBe(secondId);
+    });
+
+    describe('per-tab state isolation', () => {
+        it('addTab() creates new tab with default request state', () => {
+            useTabStore.getState().addTab();
+            const { tabs } = useTabStore.getState();
+            const newTab = tabs[1];
+            expect(newTab.requestState.method).toBe('GET');
+            expect(newTab.requestState.url).toBe('');
+            expect(newTab.requestState.isDirty).toBe(false);
+            expect(newTab.responseState.isSending).toBe(false);
+            expect(newTab.responseState.responseData).toBeNull();
+        });
+
+        it('updateTabRequestState modifies only the target tab', () => {
+            useTabStore.getState().addTab();
+            const { tabs } = useTabStore.getState();
+            const [tab1, tab2] = tabs;
+
+            useTabStore.getState().updateTabRequestState(tab1.id, { url: 'https://example.com' });
+
+            const updated = useTabStore.getState().tabs;
+            expect(updated[0].requestState.url).toBe('https://example.com');
+            expect(updated[1].requestState.url).toBe('');
+        });
+
+        it('updateTabResponseState modifies only the target tab', () => {
+            useTabStore.getState().addTab();
+            const { tabs } = useTabStore.getState();
+            const [tab1, tab2] = tabs;
+
+            useTabStore.getState().updateTabResponseState(tab2.id, { requestError: 'timeout' });
+
+            const updated = useTabStore.getState().tabs;
+            expect(updated[1].responseState.requestError).toBe('timeout');
+            expect(updated[0].responseState.requestError).toBeNull();
+        });
+
+        it('setActiveTab does not mutate either tab requestState', () => {
+            useTabStore.getState().addTab();
+            const { tabs } = useTabStore.getState();
+            const [tab1, tab2] = tabs;
+
+            useTabStore.getState().updateTabRequestState(tab1.id, { url: 'https://tab1.com', isDirty: true });
+            useTabStore.getState().updateTabRequestState(tab2.id, { url: 'https://tab2.com' });
+
+            // Switch to tab2
+            useTabStore.getState().setActiveTab(tab2.id);
+
+            const updated = useTabStore.getState().tabs;
+            expect(updated[0].requestState.url).toBe('https://tab1.com');
+            expect(updated[1].requestState.url).toBe('https://tab2.com');
+        });
+
+        it('appendResponseLog appends to the correct tab without affecting others', () => {
+            useTabStore.getState().addTab();
+            const { tabs } = useTabStore.getState();
+            const [tab1, tab2] = tabs;
+
+            useTabStore.getState().appendResponseLog(tab1.id, 'hello');
+
+            const updated = useTabStore.getState().tabs;
+            expect(updated[0].responseState.verboseLogs).toEqual(['hello']);
+            expect(updated[1].responseState.verboseLogs).toEqual([]);
+        });
     });
 });

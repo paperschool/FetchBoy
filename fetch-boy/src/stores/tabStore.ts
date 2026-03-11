@@ -1,11 +1,65 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
+import type { HttpMethod, RequestTab, AuthState, BodyMode, KeyValueRow } from './requestStore';
+import type { ResponseData } from '@/components/ResponseViewer/ResponseViewer';
+
+// ─── Per-tab Data Snapshots ───────────────────────────────────────────────────
+
+export interface RequestSnapshot {
+    method: HttpMethod;
+    url: string;
+    headers: KeyValueRow[];
+    queryParams: KeyValueRow[];
+    body: { mode: BodyMode; raw: string };
+    auth: AuthState;
+    activeTab: RequestTab;
+    isDirty: boolean;
+}
+
+export interface ResponseSnapshot {
+    responseData: ResponseData | null;
+    requestError: string | null;
+    sentUrl: string | null;
+    verboseLogs: string[];
+    requestBodyLanguage: 'json' | 'html' | 'xml';
+    isSending: boolean;
+}
+
+export function createDefaultRequestSnapshot(): RequestSnapshot {
+    return {
+        method: 'GET',
+        url: '',
+        headers: [],
+        queryParams: [],
+        body: { mode: 'none', raw: '' },
+        auth: { type: 'none' },
+        activeTab: 'headers',
+        isDirty: false,
+    };
+}
+
+export function createDefaultResponseSnapshot(): ResponseSnapshot {
+    return {
+        responseData: null,
+        requestError: null,
+        sentUrl: null,
+        verboseLogs: [],
+        requestBodyLanguage: 'json',
+        isSending: false,
+    };
+}
+
+// ─── Tab Entry ────────────────────────────────────────────────────────────────
 
 export interface TabEntry {
     id: string;
     label: string;
     isCustomLabel: boolean;
+    requestState: RequestSnapshot;
+    responseState: ResponseSnapshot;
 }
+
+// ─── Store Interface ──────────────────────────────────────────────────────────
 
 interface TabStore {
     tabs: TabEntry[];
@@ -15,12 +69,17 @@ interface TabStore {
     setActiveTab: (id: string) => void;
     renameTab: (id: string, label: string) => void;
     syncLabelFromRequest: (id: string, method: string, url: string) => void;
+    updateTabRequestState: (id: string, patch: Partial<RequestSnapshot>) => void;
+    updateTabResponseState: (id: string, patch: Partial<ResponseSnapshot>) => void;
+    appendResponseLog: (id: string, log: string) => void;
 }
 
 const createInitialTab = (): TabEntry => ({
     id: crypto.randomUUID(),
     label: 'New Request',
     isCustomLabel: false,
+    requestState: createDefaultRequestSnapshot(),
+    responseState: createDefaultResponseSnapshot(),
 });
 
 const initialTab = createInitialTab();
@@ -36,6 +95,8 @@ export const useTabStore = create<TabStore>()(
                     id: crypto.randomUUID(),
                     label: 'New Request',
                     isCustomLabel: false,
+                    requestState: createDefaultRequestSnapshot(),
+                    responseState: createDefaultResponseSnapshot(),
                 };
                 state.tabs.push(newTab);
                 state.activeTabId = newTab.id;
@@ -77,6 +138,24 @@ export const useTabStore = create<TabStore>()(
                 }
                 const raw = `${method} ${url}`;
                 tab.label = raw.length > 30 ? raw.slice(0, 27) + '…' : raw;
+            }),
+
+        updateTabRequestState: (id, patch) =>
+            set((state) => {
+                const tab = state.tabs.find((t) => t.id === id);
+                if (tab) Object.assign(tab.requestState, patch);
+            }),
+
+        updateTabResponseState: (id, patch) =>
+            set((state) => {
+                const tab = state.tabs.find((t) => t.id === id);
+                if (tab) Object.assign(tab.responseState, patch);
+            }),
+
+        appendResponseLog: (id, log) =>
+            set((state) => {
+                const tab = state.tabs.find((t) => t.id === id);
+                if (tab) tab.responseState.verboseLogs.push(log);
             }),
     })),
 );

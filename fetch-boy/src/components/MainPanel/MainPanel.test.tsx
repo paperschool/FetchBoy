@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MainPanel } from './MainPanel';
-import { useRequestStore } from '@/stores/requestStore';
+import { useTabStore, createDefaultRequestSnapshot, createDefaultResponseSnapshot } from '@/stores/tabStore';
 
 vi.mock('@monaco-editor/react', () => ({
   default: ({ value, onChange, options, path }: { value?: string; onChange?: (value?: string) => void; options?: { readOnly?: boolean; fontSize?: number }; path?: string }) => (
@@ -65,16 +65,15 @@ describe('MainPanel request builder', () => {
     interpolateFn.mockImplementation((str: string) => str);
     unresolvedInFn.mockReturnValue([]);
 
-    useRequestStore.setState({
-      method: 'GET',
-      url: '',
-      headers: [],
-      queryParams: [],
-      body: { mode: 'raw', raw: '' },
-      auth: { type: 'none' },
-      activeTab: 'headers',
-      isDirty: false,
-    });
+    // Reset tabStore to a clean tab with default per-tab state
+    const freshTab = {
+      id: crypto.randomUUID(),
+      label: 'New Request',
+      isCustomLabel: false,
+      requestState: createDefaultRequestSnapshot(),
+      responseState: createDefaultResponseSnapshot(),
+    };
+    useTabStore.setState({ tabs: [freshTab], activeTabId: freshTab.id });
   });
 
   it('renders method selector and url input', () => {
@@ -96,8 +95,10 @@ describe('MainPanel request builder', () => {
       target: { value: 'https://api.example.com/users' },
     });
 
-    expect(useRequestStore.getState().method).toBe('POST');
-    expect(useRequestStore.getState().url).toBe('https://api.example.com/users');
+    const { activeTabId, tabs } = useTabStore.getState();
+    const activeTab = tabs.find((t) => t.id === activeTabId);
+    expect(activeTab?.requestState.method).toBe('POST');
+    expect(activeTab?.requestState.url).toBe('https://api.example.com/users');
   });
 
   it('switches tabs and shows body/auth content', () => {
@@ -120,7 +121,9 @@ describe('MainPanel request builder', () => {
       target: { value: '{"name":"dispatch"}' },
     });
 
-    expect(useRequestStore.getState().body.raw).toBe('{"name":"dispatch"}');
+    const { activeTabId, tabs } = useTabStore.getState();
+    const activeTab = tabs.find((t) => t.id === activeTabId);
+    expect(activeTab?.requestState.body.raw).toBe('{"name":"dispatch"}');
   });
 
   it('adds and edits a header row', () => {
@@ -135,7 +138,9 @@ describe('MainPanel request builder', () => {
       target: { value: 'application/json' },
     });
 
-    expect(useRequestStore.getState().headers[0]).toEqual({
+    const { activeTabId, tabs } = useTabStore.getState();
+    const activeTab = tabs.find((t) => t.id === activeTabId);
+    expect(activeTab?.requestState.headers[0]).toEqual({
       key: 'Accept',
       value: 'application/json',
       enabled: true,

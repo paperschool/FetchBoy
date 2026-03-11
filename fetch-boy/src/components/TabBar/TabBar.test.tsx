@@ -1,19 +1,18 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useTabStore } from '@/stores/tabStore';
+import { useTabStore, createDefaultRequestSnapshot, createDefaultResponseSnapshot } from '@/stores/tabStore';
 import { TabBar } from './TabBar';
-
-// ─── Mock requestStore ────────────────────────────────────────────────────────
-
-vi.mock('@/stores/requestStore', () => ({
-    useRequestStore: (selector: (s: { method: string; url: string }) => unknown) =>
-        selector({ method: 'GET', url: '' }),
-}));
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function resetTabStore() {
-    const firstTab = { id: crypto.randomUUID(), label: 'New Request', isCustomLabel: false };
+    const firstTab = {
+        id: crypto.randomUUID(),
+        label: 'New Request',
+        isCustomLabel: false,
+        requestState: createDefaultRequestSnapshot(),
+        responseState: createDefaultResponseSnapshot(),
+    };
     useTabStore.setState({ tabs: [firstTab], activeTabId: firstTab.id });
 }
 

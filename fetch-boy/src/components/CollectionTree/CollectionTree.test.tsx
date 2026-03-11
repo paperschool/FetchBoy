@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { Collection, Folder, Request } from '@/lib/db';
 import { useCollectionStore } from '@/stores/collectionStore';
-import { useRequestStore } from '@/stores/requestStore';
+import { useTabStore, createDefaultRequestSnapshot, createDefaultResponseSnapshot } from '@/stores/tabStore';
 import { CollectionTree } from './CollectionTree';
 
 // ─── Mock collections lib ─────────────────────────────────────────────────────
@@ -83,22 +83,21 @@ const resetStore = () =>
         activeRequestId: null,
     });
 
-const resetRequestStore = () =>
-    useRequestStore.setState({
-        method: 'GET',
-        url: '',
-        headers: [],
-        queryParams: [],
-        body: { mode: 'raw', raw: '' },
-        auth: { type: 'none' },
-        activeTab: 'headers',
-        isDirty: false,
-    });
+const resetTabStore = () => {
+    const freshTab = {
+        id: 'test-tab-1',
+        label: 'New Request',
+        isCustomLabel: false,
+        requestState: createDefaultRequestSnapshot(),
+        responseState: createDefaultResponseSnapshot(),
+    };
+    useTabStore.setState({ tabs: [freshTab], activeTabId: freshTab.id });
+};
 
 describe('CollectionTree', () => {
     beforeEach(() => {
         resetStore();
-        resetRequestStore();
+        resetTabStore();
         vi.clearAllMocks();
         mockLoadAllCollections.mockResolvedValue({ collections: [], folders: [], requests: [] });
         mockCreateCollection.mockResolvedValue(makeCol());
@@ -274,14 +273,14 @@ describe('CollectionTree', () => {
             folders: [],
             requests: [req],
         });
-        useRequestStore.setState({ isDirty: false });
         render(<CollectionTree />);
         await waitFor(() => screen.getByTestId('collection-col-1'));
         fireEvent.click(screen.getByLabelText('Expand collection'));
         await waitFor(() => screen.getByTestId('request-req-1'));
         fireEvent.click(screen.getByTestId('request-req-1'));
         expect(useCollectionStore.getState().activeRequestId).toBe('req-1');
-        expect(useRequestStore.getState().url).toBe(req.url);
+        const { activeTabId, tabs } = useTabStore.getState();
+        expect(tabs.find((t) => t.id === activeTabId)?.requestState.url).toBe(req.url);
     });
 
     it('dirty guard shows confirm when isDirty is true before loading a request', async () => {
@@ -292,7 +291,8 @@ describe('CollectionTree', () => {
             folders: [],
             requests: [req],
         });
-        useRequestStore.setState({ isDirty: true, url: 'https://unsaved.example.com' });
+        const { activeTabId } = useTabStore.getState();
+        useTabStore.getState().updateTabRequestState(activeTabId, { isDirty: true, url: 'https://unsaved.example.com' });
         const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
         render(<CollectionTree />);
         await waitFor(() => screen.getByTestId('collection-col-1'));
@@ -311,7 +311,8 @@ describe('CollectionTree', () => {
             folders: [],
             requests: [req],
         });
-        useRequestStore.setState({ isDirty: true, url: 'https://unsaved.example.com' });
+        const { activeTabId } = useTabStore.getState();
+        useTabStore.getState().updateTabRequestState(activeTabId, { isDirty: true, url: 'https://unsaved.example.com' });
         vi.spyOn(window, 'confirm').mockReturnValue(false);
         render(<CollectionTree />);
         await waitFor(() => screen.getByTestId('collection-col-1'));
@@ -319,7 +320,8 @@ describe('CollectionTree', () => {
         await waitFor(() => screen.getByTestId('request-req-1'));
         fireEvent.click(screen.getByTestId('request-req-1'));
         // url should not change — load was cancelled
-        expect(useRequestStore.getState().url).toBe('https://unsaved.example.com');
+        const { tabs } = useTabStore.getState();
+        expect(tabs.find((t) => t.id === activeTabId)?.requestState.url).toBe('https://unsaved.example.com');
         expect(useCollectionStore.getState().activeRequestId).toBeNull();
     });
 });
