@@ -62,7 +62,7 @@ xcode-select --install
 ```bash
 # Clone and install
 git clone <repo-url>
-cd PostmanClone/fetch-boy
+cd FetchBoyApp/fetch-boy
 yarn install
 ```
 
@@ -94,7 +94,7 @@ yarn tauri dev
 ## Project Structure
 
 ```
-PostmanClone/
+FetchBoyApp/
 ├── fetch-boy/              # Vite + React frontend + Tauri config
 │   ├── src/                # React components, stores, hooks
 │   ├── src-tauri/          # Rust source, tauri.conf.json, icons

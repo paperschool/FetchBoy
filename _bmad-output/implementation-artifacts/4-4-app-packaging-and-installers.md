@@ -209,12 +209,14 @@ so that I can install the app natively on any platform without requiring a devel
 ## Dev Notes
 
 This is a **configuration and CI story** — no application source code (`src/`) needs to change. The work is entirely in:
+
 1. Creating `.github/workflows/build.yml`
 2. Verifying existing `tauri.conf.json` and `Cargo.toml` are correct
 
 ### Tauri v2 — Key Differences from v1
 
 This project uses **Tauri v2** (`"$schema": "https://schema.tauri.app/config/2"`). Key v2 facts:
+
 - `bundle.targets = "all"` is valid and produces format-appropriate bundles per OS.
 - Windows: Tauri v2 defaults to **NSIS** (produces `.exe` installer) in addition to or instead of WiX MSI. Both may be produced; accept either or both.
 - macOS: produces `.dmg` and `.app` bundle.
@@ -224,6 +226,7 @@ This project uses **Tauri v2** (`"$schema": "https://schema.tauri.app/config/2"`
 ### Emoji in Product Name
 
 `productName: "Fetch Boy 🦴"` — the dog-bone emoji is Unicode and works fine in:
+
 - macOS: `.app` bundle name and `.dmg` — fully supported.
 - Linux: `.AppImage` and `.deb` — supported.
 - Windows NSIS: Unicode is supported in NSIS; the installer `.exe` and window title should render correctly. If the CI Windows job fails with a character encoding error, fall back to `productName: "Fetch Boy"`.
@@ -232,20 +235,21 @@ This project uses **Tauri v2** (`"$schema": "https://schema.tauri.app/config/2"`
 
 All required icon formats are **already present** in `dispatch/src-tauri/icons/`:
 
-| File | Purpose |
-|---|---|
-| `icon.png` | Source PNG (1024×1024 or similar) |
-| `32x32.png` | Small PNG (taskbar / dock small) |
-| `128x128.png` | Medium PNG |
+| File             | Purpose                                |
+| ---------------- | -------------------------------------- |
+| `icon.png`       | Source PNG (1024×1024 or similar)      |
+| `32x32.png`      | Small PNG (taskbar / dock small)       |
+| `128x128.png`    | Medium PNG                             |
 | `128x128@2x.png` | Retina PNG (256×256 rendered at 128pt) |
-| `icon.icns` | macOS bundle icon |
-| `icon.ico` | Windows icon |
+| `icon.icns`      | macOS bundle icon                      |
+| `icon.ico`       | Windows icon                           |
 
 `tauri.conf.json` already references all of these under `bundle.icon`. **Do not regenerate** unless sizes are wrong. To regenerate if ever needed: `npx tauri icon <source.png>` from the `dispatch/` directory.
 
 ### Cargo.toml — Already Size-Optimised
 
 `[profile.release]` already applies all size-reduction flags:
+
 - `lto = true` — link-time optimisation (biggest win, enables cross-crate inlining and dead code elimination)
 - `opt-level = "s"` — optimise for binary size (not `"z"` which sacrifices more speed)
 - `codegen-units = 1` — single codegen unit for maximum LTO effectiveness
@@ -257,6 +261,7 @@ All required icon formats are **already present** in `dispatch/src-tauri/icons/`
 ### Bundle Output Paths
 
 The `tauri build` command outputs to `dispatch/src-tauri/target/release/bundle/`:
+
 ```
 bundle/
   deb/              ← Linux .deb
@@ -271,18 +276,19 @@ The CI `upload-artifact` step uses glob patterns across all these subdirectories
 
 ### GitHub Actions — Dependencies
 
-| Step | Reason |
-|---|---|
-| `actions/checkout@v4` | Latest stable checkout |
-| `actions/setup-node@v4` | Node 20 LTS; `cache: yarn` with `cache-dependency-path` scoped to `dispatch/yarn.lock` |
-| `dtolnay/rust-toolchain@stable` | Installs Rust stable — the simplest and most reliable Rust installer for CI |
-| `swatinem/rust-cache@v2` | Caches Rust build artifacts (critical — Tauri builds are slow; 10–20 min without cache) |
-| `tauri-apps/tauri-action@v0` | Official Tauri action — handles `tauri build` invocation and platform quirks |
-| `actions/upload-artifact@v4` | v4 is the current major; v3 is deprecated |
+| Step                            | Reason                                                                                  |
+| ------------------------------- | --------------------------------------------------------------------------------------- |
+| `actions/checkout@v4`           | Latest stable checkout                                                                  |
+| `actions/setup-node@v4`         | Node 20 LTS; `cache: yarn` with `cache-dependency-path` scoped to `dispatch/yarn.lock`  |
+| `dtolnay/rust-toolchain@stable` | Installs Rust stable — the simplest and most reliable Rust installer for CI             |
+| `swatinem/rust-cache@v2`        | Caches Rust build artifacts (critical — Tauri builds are slow; 10–20 min without cache) |
+| `tauri-apps/tauri-action@v0`    | Official Tauri action — handles `tauri build` invocation and platform quirks            |
+| `actions/upload-artifact@v4`    | v4 is the current major; v3 is deprecated                                               |
 
 ### Linux System Dependencies (Ubuntu)
 
 Required for the Tauri WebView2 / WebKit renderer on Ubuntu 22.04:
+
 - `libwebkit2gtk-4.1-dev` — **Note**: Tauri v2 requires webkit2gtk **4.1**, not 4.0. This is a breaking difference from Tauri v1.
 - `libayatana-appindicator3-dev` — Tray icon support (included for completeness even if tray not used)
 - `librsvg2-dev` — SVG icon rendering
@@ -294,8 +300,8 @@ For unsigned development builds, Tauri will produce the `.dmg` without a valid s
 
 ### Project Structure Notes
 
-- The workspace root is `/PostmanClone/` and the Tauri project lives in `dispatch/`.
-- The CI workflow file goes at the **repository root**: `/PostmanClone/.github/workflows/build.yml` — NOT inside `dispatch/`.
+- The workspace root is `/FetchBoyApp/` and the Tauri project lives in `dispatch/`.
+- The CI workflow file goes at the **repository root**: `/FetchBoyApp/.github/workflows/build.yml` — NOT inside `dispatch/`.
 - `tauri-action`'s `projectPath: dispatch` tells the action where `tauri.conf.json` lives.
 - `working-directory: dispatch` must be set for the `yarn install` step since `package.json` is in `dispatch/`.
 - Rust cache uses `workspaces: dispatch/src-tauri -> target` (relative to repo root) per `swatinem/rust-cache` v2 syntax.
