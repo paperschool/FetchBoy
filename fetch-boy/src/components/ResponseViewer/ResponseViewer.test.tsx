@@ -51,6 +51,30 @@ describe('Story 6.2 cancellation state', () => {
   });
 });
 
+describe('Story 6.4 timeout state', () => {
+  it('renders "Timed out after Xs" in neutral styling when wasTimedOut=true', () => {
+    render(<ResponseViewer response={null} error={null} wasTimedOut={true} timedOutAfterSec={30} />);
+    const el = screen.getByText(/timed out after 30s/i);
+    expect(el).toBeInTheDocument();
+    expect(el.closest('[class*="red"]')).toBeNull();
+  });
+
+  it('renders fallback timeout message when timedOutAfterSec is null', () => {
+    render(<ResponseViewer response={null} error={null} wasTimedOut={true} timedOutAfterSec={null} />);
+    expect(screen.getByText(/request timed out/i)).toBeInTheDocument();
+  });
+
+  it('does not render timeout message when wasTimedOut=false', () => {
+    render(<ResponseViewer response={null} error={null} wasTimedOut={false} />);
+    expect(screen.queryByText(/timed out/i)).not.toBeInTheDocument();
+  });
+
+  it('returns null when wasTimedOut=false, no response, no error, no logs, no cancellation', () => {
+    const { container } = render(<ResponseViewer response={null} error={null} wasTimedOut={false} />);
+    expect(container.firstChild).toBeNull();
+  });
+});
+
 describe('ResponseViewer Monaco integration', () => {
   it('renders body with read-only Monaco editor', () => {
     render(<ResponseViewer response={sampleResponse} error={null} />);

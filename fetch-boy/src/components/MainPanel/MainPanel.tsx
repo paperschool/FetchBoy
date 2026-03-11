@@ -8,6 +8,7 @@ import { KeyValueRows } from '@/components/RequestBuilder/KeyValueRows';
 import { ResponseViewer, type ResponseData } from '@/components/ResponseViewer/ResponseViewer';
 import { SaveRequestDialog } from '@/components/SaveRequestDialog/SaveRequestDialog';
 import { AuthPanel } from '@/components/AuthPanel/AuthPanel';
+import { TimeoutInput } from '@/components/RequestBuilder/TimeoutInput';
 import { createFullSavedRequest, updateSavedRequest } from '@/lib/collections';
 import { extractQueryParamsFromUrl } from '@/lib/extractQueryParamsFromUrl';
 import { persistHistoryEntry } from '@/lib/history';
@@ -27,6 +28,7 @@ const REQUEST_TABS: Array<{ id: RequestTab; label: string }> = [
   { id: 'query', label: 'Query Params' },
   { id: 'body', label: 'Body' },
   { id: 'auth', label: 'Auth' },
+  { id: 'options', label: 'Options' },
 ];
 
 function extractErrorReason(error: unknown): string {
@@ -160,7 +162,6 @@ export function MainPanel() {
   const [requestDetailsOpen, setRequestDetailsOpen] = useState(true);
   const abortControllerRef = useRef<AbortController | null>(null);
   const editorFontSize = useUiSettingsStore((state) => state.editorFontSize);
-  const requestTimeoutMs = useUiSettingsStore((s) => s.requestTimeoutMs);
   const sslVerify = useUiSettingsStore((s) => s.sslVerify);
 
   const activeTabId = useTabStore((s) => s.activeTabId);
@@ -180,9 +181,11 @@ export function MainPanel() {
   const body = req.body;
   const auth = req.auth;
   const activeTab = req.activeTab;
+  const timeout = req.timeout;
 
 
   // Request state setters (adapted from requestStore actions)
+  const setTimeout = (ms: number) => updateReq({ timeout: ms });
   const setMethod = (m: HttpMethod) => updateReq({ method: m, isDirty: true });
   const setUrl = (u: string) => {
     setQueryMatchError(null);
@@ -241,6 +244,8 @@ export function MainPanel() {
   const verboseLogs = res.verboseLogs;
   const requestBodyLanguage = res.requestBodyLanguage;
   const wasCancelled = res.wasCancelled;
+  const wasTimedOut = res.wasTimedOut;
+  const timedOutAfterSec = res.timedOutAfterSec;
   const setRequestBodyLanguage = (lang: 'json' | 'html' | 'xml') => updateRes({ requestBodyLanguage: lang });
 
   const unresolvedVars = unresolvedIn(url);
@@ -375,7 +380,7 @@ export function MainPanel() {
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
-    updateRes({ isSending: true, requestError: null, responseData: null, wasCancelled: false, sentUrl: requestedUrlForDisplay });
+    updateRes({ isSending: true, requestError: null, responseData: null, wasCancelled: false, wasTimedOut: false, timedOutAfterSec: null, sentUrl: requestedUrlForDisplay });
 
     const requestSnapshot = {
       id: crypto.randomUUID(),
@@ -403,25 +408,25 @@ export function MainPanel() {
 
     try {
       appendLog('Invoking Rust command: send_request');
-      const response = await Promise.race([
-        invokeWithTimeout(
-          invoke<ResponseData>('send_request', {
-            request: {
-              method,
-              url: sendUrlForRequest,
-              headers: sendHeaders,
-              queryParams: sendQueryParams,
-              body: sendBody,
-              auth,
-              timeout_ms: requestTimeoutMs,
-              ssl_verify: sslVerify,
-              requestId: activeTabId,
-            },
-          }),
-          requestTimeoutMs + 5000,
-        ),
-        abortPromise,
-      ]);
+      // Use per-tab timeout; timeout=0 means no timeout (pass 0 to Rust which disables client timeout)
+      const invokePromise = invoke<ResponseData>('send_request', {
+        request: {
+          method,
+          url: sendUrlForRequest,
+          headers: sendHeaders,
+          queryParams: sendQueryParams,
+          body: sendBody,
+          auth,
+          timeout_ms: timeout,
+          ssl_verify: sslVerify,
+          requestId: activeTabId,
+        },
+      });
+      // JS-side guard: only apply if timeout > 0 (add 5s buffer for network overhead)
+      const timedInvoke = timeout > 0
+        ? invokeWithTimeout(invokePromise, timeout + 5000)
+        : invokePromise;
+      const response = await Promise.race([timedInvoke, abortPromise]);
 
       appendLog(
         `Rust response received: status=${response.status}, time=${response.responseTimeMs}ms, size=${response.responseSizeBytes}bytes`,
@@ -453,6 +458,13 @@ export function MainPanel() {
         return;
       }
 
+      if (reason === '__TIMEOUT__') {
+        const sec = timeout > 0 ? timeout / 1000 : 0;
+        updateRes({ isSending: false, wasTimedOut: true, timedOutAfterSec: sec, responseData: null, requestError: null });
+        appendLog(`Request timed out after ${sec}s.`);
+        return;
+      }
+
       const message = `Request failed: ${reason}`;
       updateRes({ requestError: message });
       appendLog(`Send failed: ${reason}`);
@@ -477,7 +489,7 @@ export function MainPanel() {
       appendLog('Send flow completed.');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [url, method, headers, queryParams, body, auth, syncQueryParams, applyEnv, requestTimeoutMs, sslVerify, activeTabId]);
+  }, [url, method, headers, queryParams, body, auth, syncQueryParams, applyEnv, timeout, sslVerify, activeTabId]);
 
   useSendRequestKeyboardShortcut(handleSendRequest);
 
@@ -700,6 +712,22 @@ export function MainPanel() {
             {activeTab === 'auth' ? (
               <AuthPanel auth={auth} onAuthChange={setAuth} />
             ) : null}
+
+            {activeTab === 'options' ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <label className="text-app-secondary text-sm font-medium w-32 shrink-0">
+                    Timeout
+                  </label>
+                  <TimeoutInput
+                    value={timeout}
+                    onChange={setTimeout}
+                    disabled={isSending}
+                  />
+                  <p className="text-app-muted text-xs">0 = no timeout. Overrides the global default for this tab.</p>
+                </div>
+              </div>
+            ) : null}
             </div>
           ) : null}
         </details>
@@ -710,12 +738,14 @@ export function MainPanel() {
         >
           <p className="text-app-secondary text-sm font-medium">Response</p>
           <div className="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden">
-            {responseData || requestError || verboseLogs.length > 0 || wasCancelled ? (
+            {responseData || requestError || verboseLogs.length > 0 || wasCancelled || wasTimedOut ? (
               <ResponseViewer
                 response={responseData}
                 error={requestError}
                 logs={verboseLogs}
                 wasCancelled={wasCancelled}
+                wasTimedOut={wasTimedOut}
+                timedOutAfterSec={timedOutAfterSec}
                 onClearLogs={() => updateRes({ verboseLogs: [] })}
                 requestedUrl={sentUrl ?? undefined}
               />

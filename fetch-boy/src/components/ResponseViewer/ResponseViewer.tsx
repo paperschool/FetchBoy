@@ -24,6 +24,8 @@ interface ResponseViewerProps {
   onClearLogs?: () => void;
   requestedUrl?: string;
   wasCancelled?: boolean;
+  wasTimedOut?: boolean;
+  timedOutAfterSec?: number | null;
 }
 
 type ResponseTab = 'body' | 'headers' | 'logs';
@@ -40,7 +42,7 @@ function getStatusColorClass(status: number): string {
   return 'text-app-primary';
 }
 
-export function ResponseViewer({ response, error, logs = [], onClearLogs, requestedUrl, wasCancelled = false }: ResponseViewerProps) {
+export function ResponseViewer({ response, error, logs = [], onClearLogs, requestedUrl, wasCancelled = false, wasTimedOut = false, timedOutAfterSec = null }: ResponseViewerProps) {
   const [activeTab, setActiveTab] = useState<ResponseTab>('body');
   const [responseBodyLanguage, setResponseBodyLanguage] = useState<'json' | 'html' | 'xml'>('json');
   const editorFontSize = useUiSettingsStore((state) => state.editorFontSize);
@@ -63,7 +65,7 @@ export function ResponseViewer({ response, error, logs = [], onClearLogs, reques
     }
   }, [formattedJsonBody]);
 
-  if (!response && !error && logs.length === 0 && !wasCancelled) {
+  if (!response && !error && logs.length === 0 && !wasCancelled && !wasTimedOut) {
     return null;
   }
 
@@ -103,6 +105,17 @@ export function ResponseViewer({ response, error, logs = [], onClearLogs, reques
         <div className="flex items-center gap-2 text-app-secondary text-sm py-2">
           <X size={14} className="text-app-muted" />
           <span>Request cancelled</span>
+        </div>
+      )}
+
+      {wasTimedOut && !response && !error && (
+        <div className="flex items-center gap-2 text-app-secondary text-sm py-2">
+          <X size={14} className="text-app-muted" />
+          <span>
+            {timedOutAfterSec !== null
+              ? `Timed out after ${timedOutAfterSec}s`
+              : 'Request timed out'}
+          </span>
         </div>
       )}
 

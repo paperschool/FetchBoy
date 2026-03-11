@@ -3,6 +3,7 @@ import { immer } from 'zustand/middleware/immer';
 import { current } from 'immer';
 import type { HttpMethod, RequestTab, AuthState, BodyMode, KeyValueRow } from './requestStore';
 import type { ResponseData } from '@/components/ResponseViewer/ResponseViewer';
+import { useUiSettingsStore } from './uiSettingsStore';
 
 // ─── Per-tab Data Snapshots ───────────────────────────────────────────────────
 
@@ -15,6 +16,7 @@ export interface RequestSnapshot {
     auth: AuthState;
     activeTab: RequestTab;
     isDirty: boolean;
+    timeout: number; // milliseconds; 0 = no timeout
 }
 
 export interface ResponseSnapshot {
@@ -25,6 +27,8 @@ export interface ResponseSnapshot {
     requestBodyLanguage: 'json' | 'html' | 'xml';
     isSending: boolean;
     wasCancelled: boolean;
+    wasTimedOut: boolean;
+    timedOutAfterSec: number | null;
 }
 
 export function createDefaultRequestSnapshot(): RequestSnapshot {
@@ -37,6 +41,7 @@ export function createDefaultRequestSnapshot(): RequestSnapshot {
         auth: { type: 'none' },
         activeTab: 'headers',
         isDirty: false,
+        timeout: useUiSettingsStore.getState().requestTimeoutMs,
     };
 }
 
@@ -49,6 +54,8 @@ export function createDefaultResponseSnapshot(): ResponseSnapshot {
         requestBodyLanguage: 'json',
         isSending: false,
         wasCancelled: false,
+        wasTimedOut: false,
+        timedOutAfterSec: null,
     };
 }
 

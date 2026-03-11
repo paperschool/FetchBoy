@@ -130,9 +130,13 @@ pub async fn send_request(
     }
 
     // Build a reusable reqwest client with user-configured timeout and SSL settings.
-    let client = Client::builder()
-        .timeout(std::time::Duration::from_millis(request.timeout_ms))
-        .danger_accept_invalid_certs(!request.ssl_verify)
+    // timeout_ms == 0 means no timeout; skip setting timeout on the client.
+    let mut client_builder = Client::builder()
+        .danger_accept_invalid_certs(!request.ssl_verify);
+    if request.timeout_ms > 0 {
+        client_builder = client_builder.timeout(std::time::Duration::from_millis(request.timeout_ms));
+    }
+    let client = client_builder
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {e}"))?;
 
@@ -188,7 +192,10 @@ pub async fn send_request(
                 // Cleanup registry entry on normal completion.
                 let mut map = state.0.lock().map_err(|e| e.to_string())?;
                 map.remove(request_id);
-                res.map_err(|e| format!("Network request failed: {e}"))
+                res.map_err(|e| {
+                    if e.is_timeout() { "__TIMEOUT__".to_string() }
+                    else { format!("Network request failed: {e}") }
+                })
             }
             _ = rx => {
                 // Cleanup registry entry on cancellation.
@@ -202,7 +209,10 @@ pub async fn send_request(
         request_builder
             .send()
             .await
-            .map_err(|e| format!("Network request failed: {e}"))?
+            .map_err(|e| {
+                if e.is_timeout() { "__TIMEOUT__".to_string() }
+                else { format!("Network request failed: {e}") }
+            })?
     };
 
     let status = response.status();
