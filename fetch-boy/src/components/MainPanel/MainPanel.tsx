@@ -514,7 +514,7 @@ export function MainPanel() {
       className="bg-app-main text-app-primary flex flex-col overflow-hidden p-4"
     >
       <div className="flex min-h-0 flex-1 flex-col gap-4">
-        <p className="text-app-muted text-sm">Request Builder</p>
+        <p className="text-app-muted text-sm" data-tour="request-builder">Request Builder</p>
 
         <div className="grid grid-cols-[8rem_1fr_auto] items-start gap-3">
           <div>
@@ -571,6 +571,7 @@ export function MainPanel() {
                 <button
                   type="button"
                   onClick={handleSendRequest}
+                  data-tour="send-button"
                   className="flex items-center gap-1.5 h-9 rounded-md border border-green-600 bg-green-600 px-4 text-sm font-medium text-white hover:bg-green-700 hover:border-green-700 cursor-pointer transition-colors"
                 >
                   <Send size={14} />
@@ -735,6 +736,7 @@ export function MainPanel() {
         <section
           className="border-app-subtle flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border p-2"
           data-testid="response-panel"
+          data-tour="response-panel"
         >
           <p className="text-app-secondary text-sm font-medium">Response</p>
           <div className="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden">
