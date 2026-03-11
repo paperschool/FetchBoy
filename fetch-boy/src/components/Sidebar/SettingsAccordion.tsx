@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronRight, Settings as SettingsIcon } from 'lucide-react';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import { saveSetting } from '@/lib/settings';
+import { useTourStore } from '@/stores/tourStore';
 
 interface SettingsAccordionProps {
     isExpanded: boolean;
@@ -16,6 +17,7 @@ export function SettingsAccordion({ isExpanded, onToggle }: SettingsAccordionPro
     const setSslVerify = useUiSettingsStore((s) => s.setSslVerify);
     const editorFontSize = useUiSettingsStore((s) => s.editorFontSize);
     const setEditorFontSize = useUiSettingsStore((s) => s.setEditorFontSize);
+    const resetTour = useTourStore((s) => s.resetTour);
 
     function handleThemeChange(value: 'light' | 'dark' | 'system') {
         setTheme(value);
@@ -150,6 +152,19 @@ export function SettingsAccordion({ isExpanded, onToggle }: SettingsAccordionPro
                                 +
                             </button>
                         </div>
+                    </div>
+
+                    {/* Tutorial */}
+                    <div className="space-y-1" data-testid="sidebar-tutorial-section">
+                        <p className="text-app-muted text-xs font-medium">Tutorial</p>
+                        <button
+                            type="button"
+                            onClick={resetTour}
+                            className="w-full text-left px-2 py-1 text-xs border border-gray-700 rounded text-app-muted hover:bg-gray-700 cursor-pointer transition-colors"
+                            data-testid="sidebar-restart-tutorial-button"
+                        >
+                            Restart Tutorial
+                        </button>
                     </div>
 
                     {/* Keyboard shortcuts */}
