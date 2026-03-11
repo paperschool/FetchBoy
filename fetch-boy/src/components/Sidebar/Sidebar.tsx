@@ -1,7 +1,10 @@
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Folder, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Folder, Clock, Settings as SettingsIcon } from 'lucide-react';
 import { CollectionTree } from '@/components/CollectionTree/CollectionTree';
 import { HistoryPanel } from '@/components/HistoryPanel/HistoryPanel';
+import { SettingsAccordion } from './SettingsAccordion';
+import { useUiSettingsStore } from '@/stores/uiSettingsStore';
+import { saveSetting } from '@/lib/settings';
 
 type SidebarPanel = 'collections' | 'history';
 
@@ -12,6 +15,14 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     const [activePanel, setActivePanel] = useState<SidebarPanel>('collections');
+    const sidebarSettingsExpanded = useUiSettingsStore((s) => s.sidebarSettingsExpanded);
+    const setSidebarSettingsExpanded = useUiSettingsStore((s) => s.setSidebarSettingsExpanded);
+
+    function handleSettingsToggle() {
+        const next = !sidebarSettingsExpanded;
+        setSidebarSettingsExpanded(next);
+        void saveSetting('sidebar_settings_expanded', next);
+    }
 
     if (collapsed) {
         return (
@@ -51,6 +62,20 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     title="History"
                 >
                     <Clock size={20} className="text-app-muted" />
+                </button>
+                <button
+                    type="button"
+                    onClick={() => {
+                        setSidebarSettingsExpanded(true);
+                        void saveSetting('sidebar_settings_expanded', true);
+                        onToggle();
+                    }}
+                    className="p-2 hover:bg-gray-700 rounded transition-colors mt-auto"
+                    aria-label="Settings"
+                    title="Settings"
+                    data-testid="collapsed-settings-button"
+                >
+                    <SettingsIcon size={20} className="text-app-muted" />
                 </button>
             </aside>
         );
@@ -99,7 +124,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 </button>
             </div>
 
-            {activePanel === 'collections' ? <CollectionTree /> : <HistoryPanel />}
+            <div className="flex-1 min-h-0 overflow-y-auto">
+                {activePanel === 'collections' ? <CollectionTree /> : <HistoryPanel />}
+            </div>
+
+            <SettingsAccordion isExpanded={sidebarSettingsExpanded} onToggle={handleSettingsToggle} />
         </aside>
     );
 }

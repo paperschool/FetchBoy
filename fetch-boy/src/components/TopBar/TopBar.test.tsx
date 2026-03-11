@@ -38,11 +38,6 @@ vi.mock('@/components/EnvironmentPanel/EnvironmentPanel', () => ({
         open ? <div data-testid="environment-panel-mock" /> : null,
 }));
 
-vi.mock('@/components/Settings/SettingsPanel', () => ({
-    SettingsPanel: ({ open }: { open: boolean }) =>
-        open ? <div data-testid="settings-panel-mock" /> : null,
-}));
-
 const makeEnv = (overrides: Partial<Environment> = {}): Environment => ({
     id: crypto.randomUUID(),
     name: 'Dev',
@@ -114,16 +109,9 @@ describe('TopBar', () => {
         expect(screen.getByTestId('environment-panel-mock')).toBeInTheDocument();
     });
 
-    it('renders Open settings button with correct aria-label', () => {
+    it('does not render a settings button in the TopBar', () => {
         render(<TopBar />);
-        expect(screen.getByRole('button', { name: /open settings/i })).toBeInTheDocument();
-    });
-
-    it('clicking Open settings button opens SettingsPanel', () => {
-        render(<TopBar />);
-        const settingsBtn = screen.getByRole('button', { name: /open settings/i });
-        fireEvent.click(settingsBtn);
-        expect(screen.getByTestId('settings-panel-mock')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /open settings/i })).not.toBeInTheDocument();
     });
 });
 

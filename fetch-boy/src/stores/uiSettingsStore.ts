@@ -9,10 +9,10 @@ interface UiSettingsState {
     setRequestTimeoutMs: (ms: number) => void;
     sslVerify: boolean;
     setSslVerify: (v: boolean) => void;
-    settingsPanelOpen: boolean;
-    setSettingsPanelOpen: (open: boolean) => void;
     sidebarCollapsed: boolean;
     setSidebarCollapsed: (collapsed: boolean) => void;
+    sidebarSettingsExpanded: boolean;
+    setSidebarSettingsExpanded: (expanded: boolean) => void;
 }
 
 export const useUiSettingsStore = create<UiSettingsState>((set) => ({
@@ -24,8 +24,8 @@ export const useUiSettingsStore = create<UiSettingsState>((set) => ({
     setRequestTimeoutMs: (ms) => set({ requestTimeoutMs: ms }),
     sslVerify: true,
     setSslVerify: (v) => set({ sslVerify: v }),
-    settingsPanelOpen: false,
-    setSettingsPanelOpen: (open) => set({ settingsPanelOpen: open }),
     sidebarCollapsed: false,
     setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
+    sidebarSettingsExpanded: false,
+    setSidebarSettingsExpanded: (expanded) => set({ sidebarSettingsExpanded: expanded }),
 }));

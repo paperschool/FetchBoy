@@ -1,17 +1,13 @@
 import { useState } from 'react';
-import { Globe, Settings } from 'lucide-react';
+import { Globe } from 'lucide-react';
 import { useEnvironmentStore } from '@/stores/environmentStore';
 import { setActiveEnvironment } from '@/lib/environments';
 import { EnvironmentPanel } from '@/components/EnvironmentPanel/EnvironmentPanel';
-import { SettingsPanel } from '@/components/Settings/SettingsPanel';
-import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 
 export function TopBar() {
   const environments = useEnvironmentStore((s) => s.environments);
   const activeEnvironmentId = useEnvironmentStore((s) => s.activeEnvironmentId);
   const [panelOpen, setPanelOpen] = useState(false);
-  const settingsPanelOpen = useUiSettingsStore((s) => s.settingsPanelOpen);
-  const setSettingsPanelOpen = useUiSettingsStore((s) => s.setSettingsPanelOpen);
 
   async function handleEnvChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const newId = e.target.value || null;
@@ -46,20 +42,9 @@ export function TopBar() {
         >
           <Globe size={18} />
         </button>
-        <button
-          aria-label="Open settings"
-          title="Open settings"
-          className="text-app-inverse border border-white/20 rounded p-1.5 hover:bg-white/10 flex items-center justify-center"
-          onClick={() => setSettingsPanelOpen(true)}
-        >
-          <Settings size={18} />
-        </button>
       </div>
       {panelOpen && (
         <EnvironmentPanel open={panelOpen} onClose={() => setPanelOpen(false)} />
-      )}
-      {settingsPanelOpen && (
-        <SettingsPanel open={settingsPanelOpen} onClose={() => setSettingsPanelOpen(false)} />
       )}
     </header>
   );

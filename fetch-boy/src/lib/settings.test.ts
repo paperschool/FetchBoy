@@ -38,6 +38,7 @@ describe('loadAllSettings', () => {
             ssl_verify: false,
             editor_font_size: 16,
             sidebar_collapsed: false,
+            sidebar_settings_expanded: false,
         });
     });
 
@@ -52,6 +53,7 @@ describe('loadAllSettings', () => {
             ssl_verify: true,
             editor_font_size: 14,
             sidebar_collapsed: false,
+            sidebar_settings_expanded: false,
         });
     });
 
@@ -66,6 +68,7 @@ describe('loadAllSettings', () => {
             ssl_verify: true,
             editor_font_size: 14,
             sidebar_collapsed: false,
+            sidebar_settings_expanded: false,
         });
     });
 });

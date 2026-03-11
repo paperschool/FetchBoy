@@ -17,9 +17,9 @@ export function AppShell() {
   useTabKeyboardShortcuts();
   useSidebarKeyboardShortcut();
 
-  const setSettingsPanelOpen = useUiSettingsStore((s) => s.setSettingsPanelOpen);
   const sidebarCollapsed = useUiSettingsStore((s) => s.sidebarCollapsed);
   const setSidebarCollapsed = useUiSettingsStore((s) => s.setSidebarCollapsed);
+  const setSidebarSettingsExpanded = useUiSettingsStore((s) => s.setSidebarSettingsExpanded);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
@@ -46,6 +46,7 @@ export function AppShell() {
         useUiSettingsStore.getState().setRequestTimeoutMs(s.request_timeout_ms);
         useUiSettingsStore.getState().setSslVerify(s.ssl_verify);
         useUiSettingsStore.getState().setSidebarCollapsed(s.sidebar_collapsed ?? false);
+        useUiSettingsStore.getState().setSidebarSettingsExpanded(s.sidebar_settings_expanded ?? false);
       })
       .catch(() => {}); // defaults already set in store initial state
   }, []);
@@ -76,7 +77,10 @@ export function AppShell() {
             role="menuitem"
             className="flex cursor-pointer items-center gap-2 px-3 py-2 text-app-primary hover:bg-gray-100 dark:hover:bg-gray-700"
             onClick={() => {
-              setSettingsPanelOpen(true);
+              setSidebarCollapsed(false);
+              saveSetting('sidebar_collapsed', false).catch(() => {});
+              setSidebarSettingsExpanded(true);
+              saveSetting('sidebar_settings_expanded', true).catch(() => {});
               dismissContextMenu();
             }}
           >

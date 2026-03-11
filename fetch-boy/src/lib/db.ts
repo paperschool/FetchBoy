@@ -70,6 +70,7 @@ export interface AppSettings {
     ssl_verify: boolean;
     editor_font_size: number;
     sidebar_collapsed?: boolean;
+    sidebar_settings_expanded?: boolean;
 }
 
 // ─── Singleton Database Handle ────────────────────────────────────────────────
