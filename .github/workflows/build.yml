@@ -150,6 +150,12 @@ jobs:
           pattern: installers-*
           merge-multiple: false
 
+      - name: Collect installer files
+        id: files
+        run: |
+          FILES=$(find artifacts -type f \( -name "*.dmg" -o -name "*.msi" -o -name "*.exe" -o -name "*.deb" -o -name "*.AppImage" \) | tr '\n' ' ')
+          echo "files=$FILES" >> $GITHUB_OUTPUT
+
       - name: Create GitHub release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -190,8 +196,4 @@ jobs:
           ```
           EOF
           )" \
-            artifacts/installers-macos/*.dmg \
-            artifacts/installers-windows/*.msi \
-            artifacts/installers-windows/*.exe \
-            artifacts/installers-linux/*.deb \
-            artifacts/installers-linux/*.AppImage
+            ${{ steps.files.outputs.files }}
