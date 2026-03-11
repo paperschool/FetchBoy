@@ -1,34 +1,48 @@
-import { invoke } from '@tauri-apps/api/core';
-import { Loader2, Save, Send } from 'lucide-react';
-import { MonacoEditorField } from '@/components/Editor/MonacoEditorField';
-import { CopyAsButton } from './CopyAsButton';
-import { HighlightedUrlInput } from './HighlightedUrlInput';
-import type { ResolvedRequest } from '@/lib/generateSnippet';
-import { KeyValueRows } from '@/components/RequestBuilder/KeyValueRows';
-import { ResponseViewer, type ResponseData } from '@/components/ResponseViewer/ResponseViewer';
-import { SaveRequestDialog } from '@/components/SaveRequestDialog/SaveRequestDialog';
-import { AuthPanel } from '@/components/AuthPanel/AuthPanel';
-import { TimeoutInput } from '@/components/RequestBuilder/TimeoutInput';
-import { createFullSavedRequest, updateSavedRequest } from '@/lib/collections';
-import { extractQueryParamsFromUrl } from '@/lib/extractQueryParamsFromUrl';
-import { persistHistoryEntry } from '@/lib/history';
-import type { AuthState, HttpMethod, RequestTab } from '@/stores/requestStore';
-import { useTabStore } from '@/stores/tabStore';
-import { useActiveRequestState, useActiveResponseState } from '@/hooks/useActiveTabState';
-import { useCollectionStore } from '@/stores/collectionStore';
-import { useHistoryStore } from '@/stores/historyStore';
-import { useUiSettingsStore } from '@/stores/uiSettingsStore';
-import { useEnvironment } from '@/hooks/useEnvironment';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import useSendRequestKeyboardShortcut from '@/hooks/useSendRequestKeyboardShortcut';
+import { invoke } from "@tauri-apps/api/core";
+import { Loader2, Save, Send } from "lucide-react";
+import { MonacoEditorField } from "@/components/Editor/MonacoEditorField";
+import { CopyAsButton } from "./CopyAsButton";
+import { HighlightedUrlInput } from "./HighlightedUrlInput";
+import type { ResolvedRequest } from "@/lib/generateSnippet";
+import { KeyValueRows } from "@/components/RequestBuilder/KeyValueRows";
+import {
+  ResponseViewer,
+  type ResponseData,
+} from "@/components/ResponseViewer/ResponseViewer";
+import { SaveRequestDialog } from "@/components/SaveRequestDialog/SaveRequestDialog";
+import { AuthPanel } from "@/components/AuthPanel/AuthPanel";
+import { TimeoutInput } from "@/components/RequestBuilder/TimeoutInput";
+import { createFullSavedRequest, updateSavedRequest } from "@/lib/collections";
+import { extractQueryParamsFromUrl } from "@/lib/extractQueryParamsFromUrl";
+import { persistHistoryEntry } from "@/lib/history";
+import type { AuthState, HttpMethod, RequestTab } from "@/stores/requestStore";
+import { useTabStore } from "@/stores/tabStore";
+import {
+  useActiveRequestState,
+  useActiveResponseState,
+} from "@/hooks/useActiveTabState";
+import { useCollectionStore } from "@/stores/collectionStore";
+import { useHistoryStore } from "@/stores/historyStore";
+import { useUiSettingsStore } from "@/stores/uiSettingsStore";
+import { useEnvironment } from "@/hooks/useEnvironment";
+import { useCallback, useEffect, useRef, useState } from "react";
+import useSendRequestKeyboardShortcut from "@/hooks/useSendRequestKeyboardShortcut";
 
-const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
+const HTTP_METHODS: HttpMethod[] = [
+  "GET",
+  "POST",
+  "PUT",
+  "PATCH",
+  "DELETE",
+  "HEAD",
+  "OPTIONS",
+];
 const REQUEST_TABS: Array<{ id: RequestTab; label: string }> = [
-  { id: 'headers', label: 'Headers' },
-  { id: 'query', label: 'Query Params' },
-  { id: 'body', label: 'Body' },
-  { id: 'auth', label: 'Auth' },
-  { id: 'options', label: 'Options' },
+  { id: "headers", label: "Headers" },
+  { id: "query", label: "Query Params" },
+  { id: "body", label: "Body" },
+  { id: "auth", label: "Auth" },
+  { id: "options", label: "Options" },
 ];
 
 function extractErrorReason(error: unknown): string {
@@ -36,15 +50,15 @@ function extractErrorReason(error: unknown): string {
     return error.message;
   }
 
-  if (typeof error === 'string' && error.trim().length > 0) {
+  if (typeof error === "string" && error.trim().length > 0) {
     return error;
   }
 
-  if (typeof error === 'object' && error !== null) {
+  if (typeof error === "object" && error !== null) {
     const maybeMessage =
-      'message' in error && typeof error.message === 'string'
+      "message" in error && typeof error.message === "string"
         ? error.message
-        : 'error' in error && typeof error.error === 'string'
+        : "error" in error && typeof error.error === "string"
           ? error.error
           : null;
 
@@ -55,11 +69,11 @@ function extractErrorReason(error: unknown): string {
     try {
       return JSON.stringify(error);
     } catch {
-      return 'Unknown error';
+      return "Unknown error";
     }
   }
 
-  return 'Unknown error';
+  return "Unknown error";
 }
 
 function buildRequestedUrlForDisplay(
@@ -76,7 +90,11 @@ function buildRequestedUrlForDisplay(
       }
     }
 
-    if (auth.type === 'api-key' && auth.in === 'query' && auth.key.trim().length > 0) {
+    if (
+      auth.type === "api-key" &&
+      auth.in === "query" &&
+      auth.key.trim().length > 0
+    ) {
       parsedUrl.searchParams.append(auth.key, auth.value);
     }
 
@@ -110,15 +128,16 @@ function parseUrlWithFallback(rawUrl: string): URL | null {
 function stripQueryFromUrl(rawUrl: string): string {
   const parsedUrl = parseUrlWithFallback(rawUrl);
   if (!parsedUrl) {
-    const hashIndex = rawUrl.indexOf('#');
+    const hashIndex = rawUrl.indexOf("#");
     const beforeHash = hashIndex >= 0 ? rawUrl.slice(0, hashIndex) : rawUrl;
-    const hash = hashIndex >= 0 ? rawUrl.slice(hashIndex) : '';
-    const queryIndex = beforeHash.indexOf('?');
-    const withoutQuery = queryIndex >= 0 ? beforeHash.slice(0, queryIndex) : beforeHash;
+    const hash = hashIndex >= 0 ? rawUrl.slice(hashIndex) : "";
+    const queryIndex = beforeHash.indexOf("?");
+    const withoutQuery =
+      queryIndex >= 0 ? beforeHash.slice(0, queryIndex) : beforeHash;
     return `${withoutQuery}${hash}`;
   }
 
-  parsedUrl.search = '';
+  parsedUrl.search = "";
   return parsedUrl.toString();
 }
 
@@ -131,7 +150,7 @@ function buildUrlFromQueryParams(
     return null;
   }
 
-  parsedUrl.search = '';
+  parsedUrl.search = "";
   for (const param of params) {
     if (param.enabled && param.key.trim().length > 0) {
       parsedUrl.searchParams.append(param.key, param.value);
@@ -151,7 +170,11 @@ function areQueryParamsEqual(
 
   return left.every((row, index) => {
     const other = right[index];
-    return row.key === other.key && row.value === other.value && row.enabled === other.enabled;
+    return (
+      row.key === other.key &&
+      row.value === other.value &&
+      row.enabled === other.enabled
+    );
   });
 }
 
@@ -168,7 +191,11 @@ export function MainPanel() {
 
   const collectionStore = useCollectionStore();
   const historyStore = useHistoryStore();
-  const { interpolate: applyEnv, unresolvedIn, activeVariables } = useEnvironment();
+  const {
+    interpolate: applyEnv,
+    unresolvedIn,
+    activeVariables,
+  } = useEnvironment();
 
   const { state: req, update: updateReq } = useActiveRequestState();
   const { state: res, update: updateRes } = useActiveResponseState();
@@ -183,7 +210,6 @@ export function MainPanel() {
   const activeTab = req.activeTab;
   const timeout = req.timeout;
 
-
   // Request state setters (adapted from requestStore actions)
   const setRequestTimeout = (ms: number) => updateReq({ timeout: ms });
   const setMethod = (m: HttpMethod) => updateReq({ method: m, isDirty: true });
@@ -192,18 +218,36 @@ export function MainPanel() {
     updateReq({ url: u, isDirty: true });
   };
   const setActiveTab = (t: RequestTab) => updateReq({ activeTab: t });
-  const addHeader = () => updateReq({ headers: [...req.headers, { key: '', value: '', enabled: true }], isDirty: true });
-  const updateHeader = (index: number, field: 'key' | 'value', value: string) => {
-    const newHeaders = req.headers.map((h, i) => i === index ? { ...h, [field]: value } : h);
+  const addHeader = () =>
+    updateReq({
+      headers: [...req.headers, { key: "", value: "", enabled: true }],
+      isDirty: true,
+    });
+  const updateHeader = (
+    index: number,
+    field: "key" | "value",
+    value: string,
+  ) => {
+    const newHeaders = req.headers.map((h, i) =>
+      i === index ? { ...h, [field]: value } : h,
+    );
     updateReq({ headers: newHeaders, isDirty: true });
   };
   const toggleHeaderEnabled = (index: number) => {
-    const newH = req.headers.map((h, i) => i === index ? { ...h, enabled: !h.enabled } : h);
+    const newH = req.headers.map((h, i) =>
+      i === index ? { ...h, enabled: !h.enabled } : h,
+    );
     updateReq({ headers: newH, isDirty: true });
   };
-  const removeHeader = (index: number) => updateReq({ headers: req.headers.filter((_, i) => i !== index), isDirty: true });
+  const removeHeader = (index: number) =>
+    updateReq({
+      headers: req.headers.filter((_, i) => i !== index),
+      isDirty: true,
+    });
 
-  const updateSyncUrlFromQueryParams = (nextQueryParams: Array<{ key: string; value: string; enabled: boolean }>) => {
+  const updateSyncUrlFromQueryParams = (
+    nextQueryParams: Array<{ key: string; value: string; enabled: boolean }>,
+  ) => {
     if (!syncQueryParams) {
       updateReq({ queryParams: nextQueryParams, isDirty: true });
       return;
@@ -211,7 +255,9 @@ export function MainPanel() {
 
     const nextUrl = buildUrlFromQueryParams(req.url, nextQueryParams);
     if (!nextUrl) {
-      setQueryMatchError('Unable to parse URL. Enter a valid URL and try again.');
+      setQueryMatchError(
+        "Unable to parse URL. Enter a valid URL and try again.",
+      );
       updateReq({ queryParams: nextQueryParams, isDirty: true });
       return;
     }
@@ -221,19 +267,32 @@ export function MainPanel() {
   };
 
   const addQueryParam = () => {
-    updateSyncUrlFromQueryParams([...req.queryParams, { key: '', value: '', enabled: true }]);
+    updateSyncUrlFromQueryParams([
+      ...req.queryParams,
+      { key: "", value: "", enabled: true },
+    ]);
   };
-  const updateQueryParam = (index: number, field: 'key' | 'value', value: string) => {
-    const newParams = req.queryParams.map((p, i) => i === index ? { ...p, [field]: value } : p);
+  const updateQueryParam = (
+    index: number,
+    field: "key" | "value",
+    value: string,
+  ) => {
+    const newParams = req.queryParams.map((p, i) =>
+      i === index ? { ...p, [field]: value } : p,
+    );
     updateSyncUrlFromQueryParams(newParams);
   };
   const toggleQueryParamEnabled = (index: number) => {
-    const newP = req.queryParams.map((p, i) => i === index ? { ...p, enabled: !p.enabled } : p);
+    const newP = req.queryParams.map((p, i) =>
+      i === index ? { ...p, enabled: !p.enabled } : p,
+    );
     updateSyncUrlFromQueryParams(newP);
   };
-  const removeQueryParam = (index: number) => updateSyncUrlFromQueryParams(req.queryParams.filter((_, i) => i !== index));
+  const removeQueryParam = (index: number) =>
+    updateSyncUrlFromQueryParams(req.queryParams.filter((_, i) => i !== index));
   const setAuth = (a: AuthState) => updateReq({ auth: a, isDirty: true });
-  const setBodyRaw = (raw: string) => updateReq({ body: { ...req.body, raw }, isDirty: true });
+  const setBodyRaw = (raw: string) =>
+    updateReq({ body: { ...req.body, raw }, isDirty: true });
   const markDirty = (dirty = true) => updateReq({ isDirty: dirty });
 
   // Response state destructuring
@@ -246,7 +305,8 @@ export function MainPanel() {
   const wasCancelled = res.wasCancelled;
   const wasTimedOut = res.wasTimedOut;
   const timedOutAfterSec = res.timedOutAfterSec;
-  const setRequestBodyLanguage = (lang: 'json' | 'html' | 'xml') => updateRes({ requestBodyLanguage: lang });
+  const setRequestBodyLanguage = (lang: "json" | "html" | "xml") =>
+    updateRes({ requestBodyLanguage: lang });
 
   const unresolvedVars = unresolvedIn(url);
 
@@ -257,7 +317,9 @@ export function MainPanel() {
 
     const result = extractQueryParamsFromUrl(url);
     if (!result.ok) {
-      setQueryMatchError('Unable to parse URL. Enter a valid URL and try again.');
+      setQueryMatchError(
+        "Unable to parse URL. Enter a valid URL and try again.",
+      );
       return;
     }
 
@@ -275,20 +337,34 @@ export function MainPanel() {
 
   function authStateToConfig(authState: AuthState): Record<string, string> {
     switch (authState.type) {
-      case 'bearer': return { token: authState.token };
-      case 'basic': return { username: authState.username, password: authState.password };
-      case 'api-key': return { key: authState.key, value: authState.value, in: authState.in };
-      default: return {};
+      case "bearer":
+        return { token: authState.token };
+      case "basic":
+        return { username: authState.username, password: authState.password };
+      case "api-key":
+        return { key: authState.key, value: authState.value, in: authState.in };
+      default:
+        return {};
     }
   }
 
-  const handleDialogSave = async (saveName: string, collectionId: string, folderId: string | null) => {
+  const handleDialogSave = async (
+    saveName: string,
+    collectionId: string,
+    folderId: string | null,
+  ) => {
     const existing = collectionStore.requests.find(
-      (r) => r.name === saveName && r.collection_id === collectionId && (r.folder_id ?? null) === folderId,
+      (r) =>
+        r.name === saveName &&
+        r.collection_id === collectionId &&
+        (r.folder_id ?? null) === folderId,
     );
 
     if (existing) {
-      if (!window.confirm('A request with this name already exists. Overwrite?')) return;
+      if (
+        !window.confirm("A request with this name already exists. Overwrite?")
+      )
+        return;
       await updateSavedRequest(existing.id, {
         name: saveName,
         method,
@@ -335,10 +411,15 @@ export function MainPanel() {
     setSaveDialogOpen(false);
   };
 
-  const invokeWithTimeout = async <T,>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
+  const invokeWithTimeout = async <T,>(
+    promise: Promise<T>,
+    timeoutMs: number,
+  ): Promise<T> => {
     return new Promise<T>((resolve, reject) => {
       const timeoutHandle = setTimeout(() => {
-        reject(new Error(`Timed out after ${timeoutMs}ms waiting for Rust response`));
+        reject(
+          new Error(`Timed out after ${timeoutMs}ms waiting for Rust response`),
+        );
       }, timeoutMs);
 
       promise
@@ -355,43 +436,74 @@ export function MainPanel() {
 
   const handleSendRequest = useCallback(async () => {
     const rawUrl = url.trim();
-    appendLog(`Send clicked with method=${method}, rawUrl=${rawUrl || '<empty>'}`);
+    appendLog(
+      `Send clicked with method=${method}, rawUrl=${rawUrl || "<empty>"}`,
+    );
 
     if (!rawUrl) {
-      updateRes({ requestError: 'Please enter a URL first.', responseData: null });
-      appendLog('Validation failed: URL is empty.');
+      updateRes({
+        requestError: "Please enter a URL first.",
+        responseData: null,
+      });
+      appendLog("Validation failed: URL is empty.");
       return;
     }
 
-    const normalizedUrl = /^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`;
+    const normalizedUrl = /^https?:\/\//i.test(rawUrl)
+      ? rawUrl
+      : `https://${rawUrl}`;
     appendLog(`Normalized URL: ${normalizedUrl}`);
 
     const sendUrl = applyEnv(normalizedUrl);
     const sendUrlBase = stripQueryFromUrl(sendUrl);
     const sendUrlForRequest = syncQueryParams ? sendUrlBase : sendUrl;
-    if (syncQueryParams && !parseUrlWithFallback(sendUrl) && sendUrl.includes('?')) {
-      appendLog('Sync Query Parameters: using string-based query stripping fallback for an unparseable URL.');
+    if (
+      syncQueryParams &&
+      !parseUrlWithFallback(sendUrl) &&
+      sendUrl.includes("?")
+    ) {
+      appendLog(
+        "Sync Query Parameters: using string-based query stripping fallback for an unparseable URL.",
+      );
     }
-    const sendHeaders = headers.map((h) => ({ ...h, value: applyEnv(h.value) }));
-    const sendQueryParams = queryParams.map((q) => ({ ...q, value: applyEnv(q.value) }));
+    const sendHeaders = headers.map((h) => ({
+      ...h,
+      value: applyEnv(h.value),
+    }));
+    const sendQueryParams = queryParams.map((q) => ({
+      ...q,
+      value: applyEnv(q.value),
+    }));
     const sendBody = { ...body, raw: applyEnv(body.raw) };
-    const requestedUrlForDisplay = buildRequestedUrlForDisplay(sendUrlForRequest, sendQueryParams, auth);
+    const requestedUrlForDisplay = buildRequestedUrlForDisplay(
+      sendUrlForRequest,
+      sendQueryParams,
+      auth,
+    );
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
-    updateRes({ isSending: true, requestError: null, responseData: null, wasCancelled: false, wasTimedOut: false, timedOutAfterSec: null, sentUrl: requestedUrlForDisplay });
+    updateRes({
+      isSending: true,
+      requestError: null,
+      responseData: null,
+      wasCancelled: false,
+      wasTimedOut: false,
+      timedOutAfterSec: null,
+      sentUrl: requestedUrlForDisplay,
+    });
 
     const requestSnapshot = {
       id: crypto.randomUUID(),
       collection_id: null,
       folder_id: null,
-      name: 'Untitled Request',
+      name: "Untitled Request",
       method,
       url: sendUrlForRequest,
       headers: sendHeaders,
       query_params: sendQueryParams,
-      body_type: sendBody.raw.trim() ? 'raw' : 'none',
+      body_type: sendBody.raw.trim() ? "raw" : "none",
       body_content: sendBody.raw,
       auth_type: auth.type,
       auth_config: {},
@@ -401,15 +513,15 @@ export function MainPanel() {
     } as const;
 
     const abortPromise = new Promise<never>((_, reject) => {
-      controller.signal.addEventListener('abort', () => {
-        reject(new DOMException('AbortError', 'AbortError'));
+      controller.signal.addEventListener("abort", () => {
+        reject(new DOMException("AbortError", "AbortError"));
       });
     });
 
     try {
-      appendLog('Invoking Rust command: send_request');
+      appendLog("Invoking Rust command: send_request");
       // Use per-tab timeout; timeout=0 means no timeout (pass 0 to Rust which disables client timeout)
-      const invokePromise = invoke<ResponseData>('send_request', {
+      const invokePromise = invoke<ResponseData>("send_request", {
         request: {
           method,
           url: sendUrlForRequest,
@@ -423,9 +535,10 @@ export function MainPanel() {
         },
       });
       // JS-side guard: only apply if timeout > 0 (add 5s buffer for network overhead)
-      const timedInvoke = timeout > 0
-        ? invokeWithTimeout(invokePromise, timeout + 5000)
-        : invokePromise;
+      const timedInvoke =
+        timeout > 0
+          ? invokeWithTimeout(invokePromise, timeout + 5000)
+          : invokePromise;
       const response = await Promise.race([timedInvoke, abortPromise]);
 
       appendLog(
@@ -442,25 +555,41 @@ export function MainPanel() {
         requestSnapshot,
       });
       historyStore.addEntry(entry);
-      appendLog('History persisted for successful response.');
+      appendLog("History persisted for successful response.");
     } catch (error) {
       // Check for cancellation BEFORE general error handler — do NOT persist to history.
-      if (error instanceof DOMException && error.name === 'AbortError') {
-        updateRes({ isSending: false, wasCancelled: true, responseData: null, requestError: null });
-        appendLog('Request cancelled by user.');
+      if (error instanceof DOMException && error.name === "AbortError") {
+        updateRes({
+          isSending: false,
+          wasCancelled: true,
+          responseData: null,
+          requestError: null,
+        });
+        appendLog("Request cancelled by user.");
         return;
       }
 
       const reason = extractErrorReason(error);
-      if (reason === '__CANCELLED__') {
-        updateRes({ isSending: false, wasCancelled: true, responseData: null, requestError: null });
-        appendLog('Request cancelled by user.');
+      if (reason === "__CANCELLED__") {
+        updateRes({
+          isSending: false,
+          wasCancelled: true,
+          responseData: null,
+          requestError: null,
+        });
+        appendLog("Request cancelled by user.");
         return;
       }
 
-      if (reason === '__TIMEOUT__') {
+      if (reason === "__TIMEOUT__") {
         const sec = timeout > 0 ? timeout / 1000 : 0;
-        updateRes({ isSending: false, wasTimedOut: true, timedOutAfterSec: sec, responseData: null, requestError: null });
+        updateRes({
+          isSending: false,
+          wasTimedOut: true,
+          timedOutAfterSec: sec,
+          responseData: null,
+          requestError: null,
+        });
         appendLog(`Request timed out after ${sec}s.`);
         return;
       }
@@ -478,30 +607,48 @@ export function MainPanel() {
           requestSnapshot,
         });
         historyStore.addEntry(errorEntry);
-        appendLog('History persisted for failed response.');
+        appendLog("History persisted for failed response.");
       } catch {
         // Keep UI focused on request failure; history persistence errors should not crash send flow.
-        appendLog('History persistence failed after request failure.');
+        appendLog("History persistence failed after request failure.");
       }
     } finally {
       abortControllerRef.current = null;
       updateRes({ isSending: false });
-      appendLog('Send flow completed.');
+      appendLog("Send flow completed.");
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [url, method, headers, queryParams, body, auth, syncQueryParams, applyEnv, timeout, sslVerify, activeTabId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    url,
+    method,
+    headers,
+    queryParams,
+    body,
+    auth,
+    syncQueryParams,
+    applyEnv,
+    timeout,
+    sslVerify,
+    activeTabId,
+  ]);
 
   useSendRequestKeyboardShortcut(handleSendRequest);
 
   const handleCancelRequest = () => {
     abortControllerRef.current?.abort();
-    invoke('cancel_request', { requestId: activeTabId }).catch(() => {});
-    appendLog('Cancel requested by user.');
+    invoke("cancel_request", { requestId: activeTabId }).catch(() => {});
+    appendLog("Cancel requested by user.");
   };
 
   const resolvedRequest: ResolvedRequest = {
     method,
-    url: applyEnv(url.trim() ? (/^https?:\/\//i.test(url.trim()) ? url.trim() : `https://${url.trim()}`) : url.trim()),
+    url: applyEnv(
+      url.trim()
+        ? /^https?:\/\//i.test(url.trim())
+          ? url.trim()
+          : `https://${url.trim()}`
+        : url.trim(),
+    ),
     headers: headers.map((h) => ({ ...h, value: applyEnv(h.value) })),
     queryParams: queryParams.map((q) => ({ ...q, value: applyEnv(q.value) })),
     body: { ...body, raw: applyEnv(body.raw) },
@@ -514,11 +661,17 @@ export function MainPanel() {
       className="bg-app-main text-app-primary flex flex-col overflow-hidden p-4"
     >
       <div className="flex min-h-0 flex-1 flex-col gap-4">
-        <p className="text-app-muted text-sm" data-tour="request-builder">Request Builder</p>
+        <p className="text-app-muted text-sm">Request Builder</p>
 
-        <div className="grid grid-cols-[8rem_1fr_auto] items-start gap-3">
+        <div
+          className="grid grid-cols-[8rem_1fr_auto] items-start gap-3"
+          data-tour="request-builder"
+        >
           <div>
-            <label htmlFor="http-method" className="text-app-secondary mb-1 block text-xs font-medium">
+            <label
+              htmlFor="http-method"
+              className="text-app-secondary mb-1 block text-xs font-medium"
+            >
               HTTP Method
             </label>
             <select
@@ -537,7 +690,10 @@ export function MainPanel() {
           </div>
 
           <div>
-            <label htmlFor="request-url" className="text-app-secondary mb-1 block text-xs font-medium">
+            <label
+              htmlFor="request-url"
+              className="text-app-secondary mb-1 block text-xs font-medium"
+            >
               Request URL
             </label>
             <HighlightedUrlInput
@@ -549,14 +705,19 @@ export function MainPanel() {
             />
             {unresolvedVars.length > 0 && (
               <p className="mt-1 text-xs text-orange-400">
-                ⚠ Unresolved: {unresolvedVars.map((v) => `{{${v}}}`).join(', ')}
+                ⚠ Unresolved: {unresolvedVars.map((v) => `{{${v}}}`).join(", ")}
               </p>
             )}
           </div>
 
           <div>
-            <p className="text-app-secondary mb-1 block text-xs font-medium">Controls</p>
-            <div className="flex items-center gap-2">
+            <p className="text-app-secondary mb-1 block text-xs font-medium">
+              Controls
+            </p>
+            <div
+              className="flex items-center gap-2"
+              data-tour="request-controls"
+            >
               {isSending ? (
                 <button
                   type="button"
@@ -571,14 +732,16 @@ export function MainPanel() {
                 <button
                   type="button"
                   onClick={handleSendRequest}
-                  data-tour="send-button"
                   className="flex items-center gap-1.5 h-9 rounded-md border border-green-600 bg-green-600 px-4 text-sm font-medium text-white hover:bg-green-700 hover:border-green-700 cursor-pointer transition-colors"
                 >
                   <Send size={14} />
                   Send
                 </button>
               )}
-              <span className="w-px self-stretch bg-app-subtle opacity-50" aria-hidden="true" />
+              <span
+                className="w-px self-stretch bg-app-subtle opacity-50"
+                aria-hidden="true"
+              />
               <button
                 type="button"
                 onClick={() => setSaveDialogOpen(true)}
@@ -594,141 +757,161 @@ export function MainPanel() {
 
         <details
           open
-          onToggle={(event) => setRequestDetailsOpen((event.currentTarget as HTMLDetailsElement).open)}
+          onToggle={(event) =>
+            setRequestDetailsOpen(
+              (event.currentTarget as HTMLDetailsElement).open,
+            )
+          }
           className="border-app-subtle min-h-0 rounded-md border p-2 open:flex open:min-h-[18rem] open:flex-col"
           data-testid="request-details-accordion"
+          data-tour="request-details"
         >
-          <summary className="text-app-secondary cursor-pointer text-sm font-medium">Request Details</summary>
+          <summary className="text-app-secondary cursor-pointer text-sm font-medium">
+            Request Details
+          </summary>
           {requestDetailsOpen ? (
             <div className="mt-3 flex min-h-0 flex-1 flex-col space-y-3">
-            <div className="border-app-subtle border-b">
-              <div className="flex gap-2">
-                {REQUEST_TABS.map((tab) => {
-                  const isActive = activeTab === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`rounded-t-md px-3 py-2 text-sm ${
-                        isActive
-                          ? 'border-app-subtle bg-app-main text-app-primary border border-b-0 font-medium'
-                          : 'text-app-muted hover:text-app-primary'
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
-                  );
-                })}
+              <div className="border-app-subtle border-b">
+                <div className="flex gap-2">
+                  {REQUEST_TABS.map((tab) => {
+                    const isActive = activeTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setActiveTab(tab.id)}
+                        className={`rounded-t-md px-3 py-2 text-sm ${
+                          isActive
+                            ? "border-app-subtle bg-app-main text-app-primary border border-b-0 font-medium"
+                            : "text-app-muted hover:text-app-primary"
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
 
-            {activeTab === 'headers' ? (
-              <KeyValueRows
-                sectionName="headers"
-                rows={headers}
-                addLabel="Add Header"
-                onAdd={addHeader}
-                onUpdate={updateHeader}
-                onToggleEnabled={toggleHeaderEnabled}
-                onRemove={removeHeader}
-              />
-            ) : null}
+              {activeTab === "headers" ? (
+                <KeyValueRows
+                  sectionName="headers"
+                  rows={headers}
+                  addLabel="Add Header"
+                  onAdd={addHeader}
+                  onUpdate={updateHeader}
+                  onToggleEnabled={toggleHeaderEnabled}
+                  onRemove={removeHeader}
+                />
+              ) : null}
 
-            {activeTab === 'query' ? (
-              <KeyValueRows
-                sectionName="query"
-                rows={queryParams}
-                addLabel="Add Query Param"
-                onAdd={addQueryParam}
-                onUpdate={updateQueryParam}
-                onToggleEnabled={toggleQueryParamEnabled}
-                onRemove={removeQueryParam}
-                toolbarRightAction={(
-                  <label className="text-app-secondary inline-flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={syncQueryParams}
-                      onChange={(event) => {
-                        const nextChecked = event.target.checked;
-                        setSyncQueryParams(nextChecked);
+              {activeTab === "query" ? (
+                <KeyValueRows
+                  sectionName="query"
+                  rows={queryParams}
+                  addLabel="Add Query Param"
+                  onAdd={addQueryParam}
+                  onUpdate={updateQueryParam}
+                  onToggleEnabled={toggleQueryParamEnabled}
+                  onRemove={removeQueryParam}
+                  toolbarRightAction={
+                    <label className="text-app-secondary inline-flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={syncQueryParams}
+                        onChange={(event) => {
+                          const nextChecked = event.target.checked;
+                          setSyncQueryParams(nextChecked);
 
-                        if (!nextChecked) {
+                          if (!nextChecked) {
+                            setQueryMatchError(null);
+                            return;
+                          }
+
+                          const result = extractQueryParamsFromUrl(req.url);
+                          if (!result.ok) {
+                            setQueryMatchError(
+                              "Unable to parse URL. Enter a valid URL and try again.",
+                            );
+                            return;
+                          }
+
                           setQueryMatchError(null);
-                          return;
-                        }
+                          if (
+                            !areQueryParamsEqual(queryParams, result.params)
+                          ) {
+                            updateReq({
+                              queryParams: result.params,
+                              isDirty: true,
+                            });
+                          }
+                        }}
+                        aria-label="Sync Query Parameters"
+                      />
+                      Sync Query Parameters
+                    </label>
+                  }
+                  toolbarInlineMessage={queryMatchError}
+                />
+              ) : null}
 
-                        const result = extractQueryParamsFromUrl(req.url);
-                        if (!result.ok) {
-                          setQueryMatchError('Unable to parse URL. Enter a valid URL and try again.');
-                          return;
+              {activeTab === "body" ? (
+                <div className="flex min-h-0 flex-1 flex-col space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <label className="text-app-secondary block text-sm font-medium">
+                      Request Body
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <select
+                        id="request-body-language"
+                        aria-label="Request Body Language"
+                        value={requestBodyLanguage}
+                        onChange={(event) =>
+                          setRequestBodyLanguage(
+                            event.target.value as "json" | "html" | "xml",
+                          )
                         }
+                        className="select-flat border-app-subtle bg-app-main text-app-primary h-8 rounded-md border pl-2 pr-7 text-xs"
+                      >
+                        <option value="json">JSON</option>
+                        <option value="html">HTML</option>
+                        <option value="xml">XML</option>
+                      </select>
+                    </div>
+                  </div>
 
-                        setQueryMatchError(null);
-                        if (!areQueryParamsEqual(queryParams, result.params)) {
-                          updateReq({ queryParams: result.params, isDirty: true });
-                        }
-                      }}
-                      aria-label="Sync Query Parameters"
+                  <MonacoEditorField
+                    testId="request-body-editor"
+                    path="request-body"
+                    language={requestBodyLanguage}
+                    value={body.raw}
+                    fontSize={editorFontSize}
+                    onChange={setBodyRaw}
+                  />
+                </div>
+              ) : null}
+
+              {activeTab === "auth" ? (
+                <AuthPanel auth={auth} onAuthChange={setAuth} />
+              ) : null}
+
+              {activeTab === "options" ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <label className="text-app-secondary text-sm font-medium w-32 shrink-0">
+                      Timeout
+                    </label>
+                    <TimeoutInput
+                      value={timeout}
+                      onChange={setRequestTimeout}
+                      disabled={isSending}
                     />
-                    Sync Query Parameters
-                  </label>
-                )}
-                toolbarInlineMessage={queryMatchError}
-              />
-            ) : null}
-
-            {activeTab === 'body' ? (
-              <div className="flex min-h-0 flex-1 flex-col space-y-2">
-                <div className="flex items-center justify-between gap-3">
-                  <label className="text-app-secondary block text-sm font-medium">
-                    Request Body
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <select
-                      id="request-body-language"
-                      aria-label="Request Body Language"
-                      value={requestBodyLanguage}
-                      onChange={(event) => setRequestBodyLanguage(event.target.value as 'json' | 'html' | 'xml')}
-                      className="select-flat border-app-subtle bg-app-main text-app-primary h-8 rounded-md border pl-2 pr-7 text-xs"
-                    >
-                      <option value="json">JSON</option>
-                      <option value="html">HTML</option>
-                      <option value="xml">XML</option>
-                    </select>
+                    <p className="text-app-muted text-xs">
+                      0 = no timeout. Overrides the global default for this tab.
+                    </p>
                   </div>
                 </div>
-
-                <MonacoEditorField
-                  testId="request-body-editor"
-                  path="request-body"
-                  language={requestBodyLanguage}
-                  value={body.raw}
-                  fontSize={editorFontSize}
-                  onChange={setBodyRaw}
-                />
-              </div>
-            ) : null}
-
-            {activeTab === 'auth' ? (
-              <AuthPanel auth={auth} onAuthChange={setAuth} />
-            ) : null}
-
-            {activeTab === 'options' ? (
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <label className="text-app-secondary text-sm font-medium w-32 shrink-0">
-                    Timeout
-                  </label>
-                  <TimeoutInput
-                    value={timeout}
-                    onChange={setRequestTimeout}
-                    disabled={isSending}
-                  />
-                  <p className="text-app-muted text-xs">0 = no timeout. Overrides the global default for this tab.</p>
-                </div>
-              </div>
-            ) : null}
+              ) : null}
             </div>
           ) : null}
         </details>
@@ -740,7 +923,11 @@ export function MainPanel() {
         >
           <p className="text-app-secondary text-sm font-medium">Response</p>
           <div className="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden">
-            {responseData || requestError || verboseLogs.length > 0 || wasCancelled || wasTimedOut ? (
+            {responseData ||
+            requestError ||
+            verboseLogs.length > 0 ||
+            wasCancelled ||
+            wasTimedOut ? (
               <ResponseViewer
                 response={responseData}
                 error={requestError}
@@ -752,7 +939,9 @@ export function MainPanel() {
                 requestedUrl={sentUrl ?? undefined}
               />
             ) : (
-              <p className="text-app-muted text-sm">Send a request to see response details.</p>
+              <p className="text-app-muted text-sm">
+                Send a request to see response details.
+              </p>
             )}
           </div>
         </section>

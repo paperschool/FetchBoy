@@ -109,21 +109,21 @@ describe('TourController', () => {
     expect(screen.getByTestId('joyride-content')).toHaveTextContent('Build your HTTP request');
   });
 
-  it('shows correct step content for step 3 (send button)', () => {
+  it('shows correct step content for step 3 (request details)', () => {
     useTourStore.setState({ hasCompletedTour: false, currentStep: 2 });
+    render(<TourController />);
+    expect(screen.getByTestId('joyride-content')).toHaveTextContent('The details section allows you to configure');
+  });
+
+  it('shows correct step content for step 4 (request controls)', () => {
+    useTourStore.setState({ hasCompletedTour: false, currentStep: 3 });
     render(<TourController />);
     expect(screen.getByTestId('joyride-content')).toHaveTextContent('Click to send your request');
   });
 
-  it('shows correct step content for step 4 (response panel)', () => {
-    useTourStore.setState({ hasCompletedTour: false, currentStep: 3 });
-    render(<TourController />);
-    expect(screen.getByTestId('joyride-content')).toHaveTextContent('View your API response here');
-  });
-
-  it('shows correct step content for step 5 (settings/env)', () => {
+  it('shows correct step content for step 5 (response panel)', () => {
     useTourStore.setState({ hasCompletedTour: false, currentStep: 4 });
     render(<TourController />);
-    expect(screen.getByTestId('joyride-content')).toHaveTextContent('Configure environments and auth');
+    expect(screen.getByTestId('joyride-content')).toHaveTextContent('View your API response here');
   });
 });

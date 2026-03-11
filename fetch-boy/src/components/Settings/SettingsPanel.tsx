@@ -60,7 +60,7 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
             data-testid="settings-overlay"
         >
             <div
-                className="bg-app-main border border-app-subtle rounded-lg p-6 w-96 space-y-6 shadow-xl"
+                className="bg-app-main border border-app-subtle rounded-lg p-6 w-96 space-y-6 shadow-xl max-h-[90vh] overflow-y-auto"
                 onClick={(e) => e.stopPropagation()}
                 data-testid="settings-panel"
             >
