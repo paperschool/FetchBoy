@@ -15,7 +15,7 @@ type SortableTabItemProps = {
     isOnly: boolean;
     isEditing: boolean;
     editValue: string;
-    inputRef: RefObject<HTMLInputElement | null>;
+    inputRef: RefObject<HTMLInputElement>;
     onTabClick: () => void;
     onLabelDoubleClick: (event: MouseEvent) => void;
     onCloseClick: (event: MouseEvent) => void;
