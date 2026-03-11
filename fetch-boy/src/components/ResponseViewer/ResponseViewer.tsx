@@ -139,9 +139,6 @@ export function ResponseViewer({ response, error, logs = [], onClearLogs, reques
         {activeTab === 'body' && response ? (
         <div className="relative min-h-[220px] flex-1">
           <div className="absolute top-2 right-2 z-10 flex items-center gap-2">
-            <label htmlFor="response-body-language" className="text-app-secondary text-xs font-medium">
-              Language
-            </label>
             <select
               id="response-body-language"
               aria-label="Response Body Language"
