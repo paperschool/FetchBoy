@@ -83,7 +83,7 @@ describe('MainPanel request builder', () => {
     expect(screen.getByLabelText('Request URL')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Send' })).toBeInTheDocument();
     expect(screen.getByTestId('request-details-accordion')).toBeInTheDocument();
-    expect(screen.getByTestId('response-accordion')).toBeInTheDocument();
+    expect(screen.getByTestId('response-panel')).toBeInTheDocument();
     expect(screen.getByText('Send a request to see response details.')).toBeInTheDocument();
   });
 
