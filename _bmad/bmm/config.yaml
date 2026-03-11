@@ -3,7 +3,7 @@
 # Version: 6.0.4
 # Date: 2026-03-10T13:18:44.310Z
 
-project_name: PostmanClone
+project_name: FetchBoyApp
 user_skill_level: intermediate
 planning_artifacts: "{project-root}/_bmad-output/planning-artifacts"
 implementation_artifacts: "{project-root}/_bmad-output/implementation-artifacts"
