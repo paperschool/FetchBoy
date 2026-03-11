@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronRight, Download, FilePlus, FolderPlus, Pencil, Plus, Save, Trash2, Upload } from 'lucide-react';
+import { ChevronDown, ChevronRight, Download, FilePlus, Folder, FolderPlus, Pencil, Plus, Save, Trash2, Upload } from 'lucide-react';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
 import {
@@ -282,17 +283,13 @@ export function CollectionTree() {
 
             {/* Empty state */}
             {tree.length === 0 && (
-                <div
-                    data-testid="empty-state"
-                    className="text-app-muted text-sm text-center py-6 px-2"
-                >
-                    <p>No collections yet.</p>
-                    <button
-                        onClick={handleAddCollection}
-                        className="text-blue-300 hover:underline mt-1 text-sm cursor-pointer"
-                    >
-                        Create one
-                    </button>
+                <div data-testid="empty-state">
+                    <EmptyState
+                        icon={Folder}
+                        label="No collections yet — create one to get started"
+                        action={handleAddCollection}
+                        actionLabel="Create Collection"
+                    />
                 </div>
             )}
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Trash2, X, Check } from 'lucide-react';
+import { Trash2, X, Check, History } from 'lucide-react';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { clearHistory, loadHistory } from '@/lib/history';
 import { formatRelativeTime } from '@/lib/utils';
 import { useHistoryStore } from '@/stores/historyStore';
@@ -115,11 +116,11 @@ export function HistoryPanel() {
             </div>
 
             {entries.length === 0 ? (
-                <div
-                    data-testid="history-empty-state"
-                    className="flex-1 flex items-center justify-center text-xs text-app-muted text-center"
-                >
-                    No history yet. Send a request to get started.
+                <div data-testid="history-empty-state">
+                    <EmptyState
+                        icon={History}
+                        label="Your sent requests will appear here"
+                    />
                 </div>
             ) : (
                 <ul className="flex-1 min-h-0 overflow-y-auto space-y-0.5">

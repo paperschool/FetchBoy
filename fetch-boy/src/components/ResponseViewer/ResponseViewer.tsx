@@ -1,7 +1,8 @@
 import { MonacoEditorField } from '@/components/Editor/MonacoEditorField';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
-import { X } from 'lucide-react';
+import { Send, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 export interface ResponseHeaderRow {
   key: string;
@@ -66,7 +67,14 @@ export function ResponseViewer({ response, error, logs = [], onClearLogs, reques
   }, [formattedJsonBody]);
 
   if (!response && !error && logs.length === 0 && !wasCancelled && !wasTimedOut) {
-    return null;
+    return (
+      <section data-testid="response-viewer" className="border-app-subtle flex min-h-0 flex-1 flex-col gap-3 overflow-hidden rounded-md border p-3">
+        <EmptyState
+          icon={Send}
+          label="Hit Send to see your response"
+        />
+      </section>
+    );
   }
 
   return (
