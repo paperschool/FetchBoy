@@ -1,4 +1,25 @@
-# Fetch Boy 🦴
+<p align="center">
+  <img src="./fetch-boy/src-tauri/icons/fetch-boi-logo.svg" alt="Fetch Boy Logo" width="265" height="265" />
+</p>
+
+<h1 align="left">Fetch Boy</h1>
+
+<p align="center">
+  A lightweight, open source API client built with Tauri and React. For all your rest fetching needs! 🦴
+</p>
+
+## Screenshots
+
+<table>
+  <tr>
+    <td>
+      <img src="screenshots/main.png" alt="Fetch Boy Main Interface" width="100%" />
+    </td>
+    <td>
+      <img src="screenshots/main-2.png" alt="Fetch Boy Main Interface" width="100%" />
+    </td>
+  </tr>
+</table>
 
 A lightweight, cross-platform API client — a focused alternative to Postman that strips away enterprise complexity in favour of a clean, fast, and intuitive experience.
 
@@ -62,8 +83,12 @@ xcode-select --install
 ```bash
 # Clone and install
 git clone <repo-url>
+
 cd FetchBoyApp/fetch-boy
+
 yarn install
+
+yarn tauri dev
 ```
 
 ---
@@ -82,12 +107,6 @@ All scripts run from the `fetch-boy/` directory.
 | `yarn test:watch`    | Run tests in watch mode                            |
 | `yarn test:coverage` | Run tests with coverage report                     |
 | `yarn typecheck`     | Type-check without emitting output                 |
-
-```bash
-# Start development
-cd fetch-boy
-yarn tauri dev
-```
 
 ---
 

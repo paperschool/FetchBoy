@@ -48,6 +48,7 @@ export function buildSnapshotFromSaved(request: Request): RequestSnapshot {
         auth: authConfigToState(request.auth_type, request.auth_config),
         activeTab: 'headers',
         isDirty: false,
+        timeout: 0,
     };
 }
 
