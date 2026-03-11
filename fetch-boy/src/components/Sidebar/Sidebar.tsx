@@ -124,11 +124,13 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 </button>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto">
+            <div className="flex-1 min-h-0 overflow-y-auto" data-tour="collections-sidebar">
                 {activePanel === 'collections' ? <CollectionTree /> : <HistoryPanel />}
             </div>
 
-            <SettingsAccordion isExpanded={sidebarSettingsExpanded} onToggle={handleSettingsToggle} />
+            <div data-tour="settings-env">
+                <SettingsAccordion isExpanded={sidebarSettingsExpanded} onToggle={handleSettingsToggle} />
+            </div>
         </aside>
     );
 }

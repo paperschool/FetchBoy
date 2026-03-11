@@ -1,6 +1,7 @@
 import { Settings } from 'lucide-react';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import { saveSetting } from '@/lib/settings';
+import { useTourStore } from '@/stores/tourStore';
 
 interface SettingsPanelProps {
     open: boolean;
@@ -16,6 +17,7 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
     const setSslVerify = useUiSettingsStore((s) => s.setSslVerify);
     const editorFontSize = useUiSettingsStore((s) => s.editorFontSize);
     const setEditorFontSize = useUiSettingsStore((s) => s.setEditorFontSize);
+    const resetTour = useTourStore((s) => s.resetTour);
 
     if (!open) return null;
 
@@ -148,6 +150,19 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
                             +
                         </button>
                     </div>
+                </div>
+
+                {/* Tutorial section */}
+                <div className="space-y-2" data-testid="tutorial-section">
+                    <p className="text-app-primary text-sm font-medium">Tutorial</p>
+                    <button
+                        type="button"
+                        onClick={() => { resetTour(); onClose(); }}
+                        className="w-full text-left px-3 py-2 text-sm border border-app-subtle rounded text-app-primary hover:bg-black/10 cursor-pointer transition-colors"
+                        data-testid="restart-tutorial-button"
+                    >
+                        Restart Tutorial
+                    </button>
                 </div>
 
                 {/* Keyboard shortcuts section */}
