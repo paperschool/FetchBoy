@@ -496,6 +496,9 @@ export function MainPanel() {
       sentUrl: requestedUrlForDisplay,
     });
 
+    // Auto-close request details accordion when sending
+    setRequestDetailsOpen(false);
+
     const requestSnapshot = {
       id: crypto.randomUUID(),
       collection_id: null,
@@ -813,7 +816,7 @@ export function MainPanel() {
         </div>
 
         <details
-          open
+          open={requestDetailsOpen}
           onToggle={(event) =>
             setRequestDetailsOpen(
               (event.currentTarget as HTMLDetailsElement).open,
