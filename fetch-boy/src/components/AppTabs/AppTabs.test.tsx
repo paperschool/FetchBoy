@@ -7,7 +7,7 @@ vi.mock("@tauri-apps/api/event", () => ({
   listen: vi.fn().mockResolvedValue(vi.fn()),
 }));
 
-vi.mock("@/components/Intercept/InterceptView", () => ({
+vi.mock("@/components/Intercept view/InterceptView", () => ({
   InterceptView: () => (
     <div data-testid="intercept-view">Traffic Intercept Placeholder</div>
   ),

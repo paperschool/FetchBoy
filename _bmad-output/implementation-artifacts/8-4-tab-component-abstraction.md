@@ -13,7 +13,7 @@ so that the codebase follows DRY/SRP principles and has full test coverage.
 ## Acceptance Criteria
 
 1. Abstract `AppTopBar` component created that both `TopBar` and `InterceptTopBar` can extend
-2. Abstract `AppSidebar` component created that both `Sidebar` and `InterceptSidebar` can extend  
+2. Abstract `AppSidebar` component created that both `Sidebar` and `InterceptSidebar` can extend
 3. Abstract `TabLayout` component created for common tab shell layout
 4. All tourStore and TourController tests fixed (storage.setItem mock issues)
 5. All tests pass with proper coverage
@@ -37,7 +37,7 @@ so that the codebase follows DRY/SRP principles and has full test coverage.
 ### Phase 2: Component Abstraction
 
 - [x] Task 3 - Create Abstract TopBar Component (AC: 1, 2)
-  - [x] Create `fetch-boy/src/components/Layout/AppTopBar.tsx` 
+  - [x] Create `fetch-boy/src/components/Layout/AppTopBar.tsx`
   - [x] Extract common props: title, logo/icon, actions
   - [x] Refactor `TopBar.tsx` to use AppTopBar
   - [x] Refactor `InterceptTopBar.tsx` to use AppTopBar
@@ -60,33 +60,38 @@ so that the codebase follows DRY/SRP principles and has full test coverage.
   - [x] Run `npx tsc --noEmit` from `fetch-boy/` to verify TypeScript compilation
   - [x] Run `cargo check` from `fetch-boy/src-tauri/` to verify Rust compilation
   - [x] Run `npx vitest run` from `fetch-boy/` to verify all tests pass
-  - [ ] Commit all code and documentation changes for this story with a message that includes Story 8.4
+  - [x] Commit all code and documentation changes for this story with a message that includes Story 8.4
 
 ## Dev Notes
 
 ### Current Component Analysis
 
 **FetchView.tsx (48 lines):**
+
 ```tsx
 // Uses: TopBar, Sidebar, MainPanel, TabBar
 // Layout: grid with 3 rows, collapsible sidebar
 ```
 
 **InterceptView.tsx (70 lines):**
+
 ```tsx
 // Uses: InterceptTopBar, InterceptSidebar, InterceptTable
 // Layout: same grid pattern as FetchView
-// Differences: 
+// Differences:
 //   - TopBar is simpler (no environment selector)
 //   - Sidebar has proxy settings instead of collections/history
 //   - Main content shows empty state or InterceptTable
 ```
 
 **Common Grid Pattern:**
+
 ```tsx
-<div className={`grid h-full ${
-  sidebarCollapsed ? 'grid-cols-[3.5rem_1fr]' : 'grid-cols-[16rem_1fr]'
-} grid-rows-[3rem_2.25rem_1fr] overflow-hidden ...`}>
+<div
+  className={`grid h-full ${
+    sidebarCollapsed ? "grid-cols-[3.5rem_1fr]" : "grid-cols-[16rem_1fr]"
+  } grid-rows-[3rem_2.25rem_1fr] overflow-hidden ...`}
+>
   <TopBar />
   <Sidebar collapsed={sidebarCollapsed} onToggle={handleToggleSidebar} />
   <div className="col-start-2 row-start-2">TabBar or InterceptTable</div>
@@ -97,23 +102,27 @@ so that the codebase follows DRY/SRP principles and has full test coverage.
 ### Current TopBar Components
 
 **TopBar.tsx (40 lines):**
+
 - Title: "Fetch Boy 🦴"
 - Environment selector dropdown
 - Environment panel button
 
 **InterceptTopBar.tsx (12 lines):**
+
 - Title: "Intercept Boy 🛡️"
 - No other elements
 
 ### Current Sidebar Components
 
 **Sidebar.tsx (120+ lines):**
+
 - Collections/History toggle
 - CollectionTree or HistoryPanel
 - Settings accordion
 - Collapse button
 
 **InterceptSidebar.tsx (120+ lines):**
+
 - Proxy status indicator
 - Proxy enable/disable toggle
 - Proxy port configuration
@@ -124,6 +133,7 @@ so that the codebase follows DRY/SRP principles and has full test coverage.
 ### Proposed Abstract Components
 
 **1. AppTopBar.tsx:**
+
 ```typescript
 // components/Layout/AppTopBar.tsx
 interface AppTopBarProps {
@@ -150,6 +160,7 @@ export function AppTopBar({ title, icon, actions, className }: AppTopBarProps) {
 ```
 
 **2. AppSidebar.tsx:**
+
 ```typescript
 // components/Layout/AppSidebar.tsx
 interface AppSidebarProps {
@@ -170,7 +181,7 @@ export function AppSidebar({ collapsed, onToggle, children, className }: AppSide
       </aside>
     );
   }
-  
+
   return (
     <aside className={`bg-app-sidebar flex flex-col ${className ?? ''}`}>
       <div className="flex items-center justify-between p-2 border-b border-gray-700">
@@ -187,6 +198,7 @@ export function AppSidebar({ collapsed, onToggle, children, className }: AppSide
 ```
 
 **3. TabLayout.tsx:**
+
 ```typescript
 // components/Layout/TabLayout.tsx
 interface TabLayoutProps {
@@ -227,7 +239,7 @@ beforeAll(() => {
     removeItem: vi.fn(),
     clear: vi.fn(),
   };
-  vi.stubGlobal('localStorage', localStorageMock);
+  vi.stubGlobal("localStorage", localStorageMock);
 });
 
 afterAll(() => {
@@ -236,9 +248,10 @@ afterAll(() => {
 ```
 
 Or mock at test level:
+
 ```typescript
 beforeEach(() => {
-  vi.stubGlobal('localStorage', {
+  vi.stubGlobal("localStorage", {
     getItem: vi.fn(),
     setItem: vi.fn(),
     removeItem: vi.fn(),
@@ -250,27 +263,32 @@ beforeEach(() => {
 ### Architecture Compliance
 
 **Tech Stack:**
+
 - React 18+ with TypeScript
 - Tailwind CSS v4 with dark mode
 - Vitest + React Testing Library for tests
 
 **Component Pattern:**
+
 - Follow existing component patterns in `fetch-boy/src/components/Layout/`
 - Use barrel exports
 - Props interfaces with component files
 
 **Naming Conventions:**
+
 - Layout components: `AppTopBar`, `AppSidebar`, `TabLayout`
 - Feature-specific: `FetchTopBar` (alias for TopBar), `InterceptTopBar`
 
 ### Integration Points
 
 **New Files:**
+
 - `fetch-boy/src/components/Layout/AppTopBar.tsx` - Abstract top bar
 - `fetch-boy/src/components/Layout/AppSidebar.tsx` - Abstract sidebar
 - `fetch-boy/src/components/Layout/TabLayout.tsx` - Abstract tab layout
 
 **Modified Files:**
+
 - `fetch-boy/src/components/TopBar/TopBar.tsx` - Use AppTopBar
 - `fetch-boy/src/components/Intercept/InterceptTopBar.tsx` - Use AppTopBar
 - `fetch-boy/src/components/Sidebar/Sidebar.tsx` - Use AppSidebar
@@ -279,6 +297,7 @@ beforeEach(() => {
 - `fetch-boy/src/components/Intercept/InterceptView.tsx` - Use TabLayout
 
 **Test Files:**
+
 - `fetch-boy/src/stores/tourStore.test.ts` - Fix localStorage mock
 - `fetch-boy/src/components/Layout/TourController.test.tsx` - Fix localStorage mock
 
@@ -327,7 +346,7 @@ claude-sonnet-4-20250514
 ### Completion Notes List
 
 - Story 8.1 (MainPanel refactoring) should be implemented first
-- Story 8.2 (ResponseViewer refactoring) should be implemented second  
+- Story 8.2 (ResponseViewer refactoring) should be implemented second
 - Story 8.3 (Settings/Auth refactoring) should be implemented third
 - Story 8.4 (component abstraction) builds on above
 

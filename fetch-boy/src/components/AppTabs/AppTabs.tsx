@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 import { useAppTabStore } from "@/stores/appTabStore";
-import { InterceptView } from "@/components/Intercept/InterceptView";
+import { InterceptView } from "@/components/Intercept view/InterceptView";
 import { useInterceptEvents } from "@/hooks/useInterceptEvents";
 
 type AppTab = "fetch" | "intercept";
