@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { ChevronDown, ChevronLeft, ChevronRight, Settings as SettingsIcon, FolderOpen, Copy } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Settings as SettingsIcon, FolderOpen, Copy, ShieldCheck, Globe } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
-import { open } from '@tauri-apps/plugin-shell';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import { saveSetting } from '@/lib/settings';
 
@@ -9,6 +8,8 @@ interface CaCertificateInfo {
     certPath: string;
     certExists: boolean;
 }
+
+type InstallStatus = 'idle' | 'loading' | 'success' | 'error';
 
 interface InterceptSidebarProps {
     collapsed: boolean;
@@ -23,11 +24,23 @@ export function InterceptSidebar({ collapsed, onToggle }: InterceptSidebarProps)
     const sidebarSettingsExpanded = useUiSettingsStore((s) => s.sidebarSettingsExpanded);
     const setSidebarSettingsExpanded = useUiSettingsStore((s) => s.setSidebarSettingsExpanded);
     const [caCertInfo, setCaCertInfo] = useState<CaCertificateInfo | null>(null);
+    const [caInstalled, setCaInstalled] = useState(false);
+    const [proxyConfigured, setProxyConfigured] = useState(false);
+    const [certStatus, setCertStatus] = useState<InstallStatus>('idle');
+    const [certMessage, setCertMessage] = useState('');
+    const [proxyStatus, setProxyStatus] = useState<InstallStatus>('idle');
+    const [proxyMessage, setProxyMessage] = useState('');
 
     useEffect(() => {
         invoke<CaCertificateInfo>('get_ca_certificate_path')
             .then(setCaCertInfo)
             .catch(() => setCaCertInfo(null));
+        invoke<boolean>('is_ca_installed')
+            .then(setCaInstalled)
+            .catch(() => setCaInstalled(false));
+        invoke<boolean>('is_system_proxy_configured', { port: proxyPort })
+            .then(setProxyConfigured)
+            .catch(() => setProxyConfigured(false));
     }, []);
 
     function handleProxyEnabledChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -45,11 +58,39 @@ export function InterceptSidebar({ collapsed, onToggle }: InterceptSidebarProps)
         void invoke('set_proxy_config', { enabled: proxyEnabled, port: clamped }).catch(() => {});
     }
 
+    async function handleInstallCert() {
+        setCertStatus('loading');
+        setCertMessage('');
+        try {
+            await invoke('install_ca_to_system');
+            setCertStatus('success');
+            setCertMessage('Certificate installed successfully.');
+            setCaInstalled(true);
+        } catch (err) {
+            setCertStatus('error');
+            setCertMessage(String(err));
+        }
+    }
+
+    async function handleConfigureProxy() {
+        setProxyStatus('loading');
+        setProxyMessage('');
+        try {
+            await invoke('configure_system_proxy', { port: proxyPort });
+            setProxyStatus('success');
+            setProxyMessage('System proxy configured successfully.');
+            setProxyConfigured(true);
+        } catch (err) {
+            setProxyStatus('error');
+            setProxyMessage(String(err));
+        }
+    }
+
     async function handleOpenCaFolder() {
         if (caCertInfo?.certPath) {
             const caDir = caCertInfo.certPath.substring(0, caCertInfo.certPath.lastIndexOf('/'));
             try {
-                await open(caDir);
+                await invoke('open_folder', { path: caDir });
             } catch (err) {
                 console.error('Failed to open CA folder:', err);
             }
@@ -175,7 +216,7 @@ export function InterceptSidebar({ collapsed, onToggle }: InterceptSidebarProps)
                                     <p className="text-app-muted text-xs font-medium">CA Certificate</p>
                                     <button
                                         onClick={handleOpenCaFolder}
-                                        className="flex items-center gap-1 text-xs text-app-muted hover:text-app-inverse"
+                                        className="flex items-center gap-1 px-2 py-1 text-xs text-app-muted hover:text-app-inverse hover:bg-gray-700 rounded transition-colors cursor-pointer"
                                     >
                                         <FolderOpen size={12} /> Open Folder
                                     </button>
@@ -193,6 +234,42 @@ export function InterceptSidebar({ collapsed, onToggle }: InterceptSidebarProps)
                                     </div>
                                 </div>
                             )}
+
+                            {/* Install Certificate */}
+                            <div className="space-y-1 pt-2 border-t border-gray-700">
+                                <p className="text-app-muted text-xs font-medium">Setup</p>
+                                <button
+                                    type="button"
+                                    onClick={handleInstallCert}
+                                    disabled={caInstalled || certStatus === 'loading'}
+                                    className="flex items-center gap-1 px-2 py-1 text-xs text-app-muted hover:text-app-inverse hover:bg-gray-700 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                    title={caInstalled ? 'Certificate already installed' : 'Install CA certificate to OS trust store'}
+                                >
+                                    <ShieldCheck size={12} />
+                                    {certStatus === 'loading' ? 'Installing…' : caInstalled ? 'Cert Installed' : 'Install Certificate'}
+                                </button>
+                                {certMessage && (
+                                    <p className={`text-xs px-1 ${certStatus === 'error' ? 'text-red-400' : 'text-green-400'}`}>
+                                        {certMessage}
+                                    </p>
+                                )}
+
+                                <button
+                                    type="button"
+                                    onClick={handleConfigureProxy}
+                                    disabled={proxyConfigured || proxyStatus === 'loading'}
+                                    className="flex items-center gap-1 px-2 py-1 text-xs text-app-muted hover:text-app-inverse hover:bg-gray-700 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                    title={proxyConfigured ? 'System proxy already configured' : 'Configure OS to route traffic through this proxy'}
+                                >
+                                    <Globe size={12} />
+                                    {proxyStatus === 'loading' ? 'Configuring…' : proxyConfigured ? 'Proxy Configured' : 'Configure Proxy'}
+                                </button>
+                                {proxyMessage && (
+                                    <p className={`text-xs px-1 ${proxyStatus === 'error' ? 'text-red-400' : 'text-green-400'}`}>
+                                        {proxyMessage}
+                                    </p>
+                                )}
+                            </div>
                         </div>
                     )}
                 </div>
