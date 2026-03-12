@@ -209,6 +209,18 @@ export async function updateRequestOrder(requestId: string, sortOrder: number): 
     ]);
 }
 
+export async function moveRequestToFolder(
+    requestId: string,
+    collectionId: string,
+    folderId: string | null,
+): Promise<void> {
+    const db = await getDb();
+    await db.execute(
+        'UPDATE requests SET collection_id = ?, folder_id = ?, updated_at = ? WHERE id = ?',
+        [collectionId, folderId, now(), requestId],
+    );
+}
+
 export async function updateSavedRequest(
     id: string,
     data: Partial<Omit<Request, 'id' | 'created_at'>>,
