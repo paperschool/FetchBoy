@@ -13,7 +13,7 @@ export interface RequestRowProps {
     isActive: boolean;
     editingId: string | null;
     editingValue: string;
-    editRef: React.Ref<HTMLInputElement>;
+    editRef: React.MutableRefObject<HTMLInputElement | null>;
     onEditChange: (v: string) => void;
     onStartEdit: () => void;
     onCommitEdit: () => void;

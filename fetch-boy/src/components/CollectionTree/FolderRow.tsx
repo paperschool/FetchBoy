@@ -12,7 +12,7 @@ export interface FolderRowProps {
     isExpanded: boolean;
     editingId: string | null;
     editingValue: string;
-    editRef: React.RefObject<HTMLInputElement | null>;
+    editRef: React.MutableRefObject<HTMLInputElement | null>;
     activeRequestId: string | null;
     onToggle: () => void;
     onEditChange: (v: string) => void;
@@ -147,7 +147,7 @@ export function FolderRow({
                                 isActive={activeRequestId === reqNode.item.id}
                                 editingId={editingId}
                                 editingValue={editingValue}
-                                editRef={editRef as React.Ref<HTMLInputElement>}
+                                editRef={editRef}
                                 onEditChange={onEditChange}
                                 onStartEdit={() => onEditFolder(reqNode.item.id, reqNode.item.name)}
                                 onCommitEdit={onCommitEdit}
