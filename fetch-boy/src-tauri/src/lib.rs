@@ -34,6 +34,16 @@ fn get_proxy_config(config: tauri::State<'_, ProxyConfigState>) -> serde_json::V
 }
 
 #[tauri::command]
+fn get_ca_certificate_path(restart_info: tauri::State<'_, ProxyRestartInfo>) -> serde_json::Value {
+    let ca_dir = restart_info.app_data_dir.join("ca");
+    let cert_path = ca_dir.join("ca.pem");
+    serde_json::json!({
+        "certPath": cert_path.to_string_lossy(),
+        "certExists": cert_path.exists()
+    })
+}
+
+#[tauri::command]
 fn set_proxy_config(
     enabled: bool,
     port: u16,
@@ -140,7 +150,8 @@ pub fn run() {
             http::send_request,
             http::cancel_request,
             get_proxy_config,
-            set_proxy_config
+            set_proxy_config,
+            get_ca_certificate_path
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
