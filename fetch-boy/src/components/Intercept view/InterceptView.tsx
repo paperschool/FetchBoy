@@ -42,9 +42,14 @@ export function InterceptView() {
   return (
     <TabLayout
       topBar={<InterceptTopBar />}
-      sidebar={<InterceptSidebar collapsed={sidebarCollapsed} onToggle={handleToggleSidebar} />}
-      middleContent={middleContent}
-      mainContent={<div />}
+      sidebar={
+        <InterceptSidebar
+          collapsed={sidebarCollapsed}
+          onToggle={handleToggleSidebar}
+        />
+      }
+      // middleContent={middleContent}
+      mainContent={middleContent}
       sidebarCollapsed={sidebarCollapsed}
     />
   );
