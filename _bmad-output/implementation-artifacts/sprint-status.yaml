@@ -102,3 +102,13 @@ development_status:
   7-7-image-binary-response-handling: review
   7-8-request-progress-bar: review
   epic-7-retrospective: optional
+
+  # ─── Epic 8: Code Quality & Styling Compliance ────────────────────
+  epic-8: in-progress
+  8-1-mainpanel-refactoring: ready-for-dev
+  8-2-responseviewer-refactoring: ready-for-dev
+  8-3-settings-auth-refactoring: ready-for-dev
+  8-4-environmentpanel-refactoring: backlog
+  8-5-historypanel-refactoring: backlog
+  8-6-collectiontree-refactoring: backlog
+  epic-8-retrospective: optional
