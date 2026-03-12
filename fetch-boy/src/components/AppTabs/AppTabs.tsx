@@ -1,21 +1,21 @@
-import { type ReactNode } from 'react'
-import { useAppTabStore } from '@/stores/appTabStore'
-import { InterceptView } from '@/components/Intercept/InterceptView'
+import { type ReactNode } from "react";
+import { useAppTabStore } from "@/stores/appTabStore";
+import { InterceptView } from "@/components/Intercept/InterceptView";
 
-type AppTab = 'client' | 'intercept'
+type AppTab = "fetch" | "intercept";
 
 const TAB_LABELS: Record<AppTab, string> = {
-  client: 'Client',
-  intercept: 'Intercept',
-}
+  fetch: "Fetch",
+  intercept: "Intercept",
+};
 
 interface AppTabsProps {
-  children: ReactNode
+  children: ReactNode;
 }
 
 export function AppTabs({ children }: AppTabsProps) {
-  const activeTab = useAppTabStore((s) => s.activeTab)
-  const setActiveTab = useAppTabStore((s) => s.setActiveTab)
+  const activeTab = useAppTabStore((s) => s.activeTab);
+  const setActiveTab = useAppTabStore((s) => s.setActiveTab);
 
   return (
     <div className="flex h-screen flex-col">
@@ -33,8 +33,8 @@ export function AppTabs({ children }: AppTabsProps) {
             onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 text-sm font-medium transition-colors ${
               activeTab === tab
-                ? '-mb-px border-b-2 border-blue-500 text-app-primary'
-                : 'text-app-muted hover:text-app-secondary'
+                ? "-mb-px border-b-2 border-blue-500 text-app-primary"
+                : "text-app-muted hover:text-app-secondary"
             }`}
           >
             {TAB_LABELS[tab]}
@@ -44,19 +44,22 @@ export function AppTabs({ children }: AppTabsProps) {
 
       {/* Panel content — visibility toggled, NOT unmounted */}
       <div className="min-h-0 flex-1">
-        {/* Client panel: keep mounted to preserve AppShell/TourController effects */}
-        <div className={activeTab === 'client' ? 'h-full' : 'hidden'} data-testid="client-panel">
+        {/* Fetch panel: keep mounted to preserve AppShell/TourController effects */}
+        <div
+          className={activeTab === "fetch" ? "h-full" : "hidden"}
+          data-testid="fetch-panel"
+        >
           {children}
         </div>
 
         {/* Intercept panel: placeholder ready for Story 9.2 */}
         <div
-          className={activeTab === 'intercept' ? 'h-full' : 'hidden'}
+          className={activeTab === "intercept" ? "h-full" : "hidden"}
           data-testid="intercept-panel"
         >
           <InterceptView />
         </div>
       </div>
     </div>
-  )
+  );
 }
