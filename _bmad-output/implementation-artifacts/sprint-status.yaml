@@ -1,4 +1,4 @@
-# generated: 2026-03-11
+# generated: 2026-03-12
 # project: FetchBoyApp
 # project_key: NOKEY
 # tracking_system: file-system
@@ -33,7 +33,7 @@
 # - SM typically creates next story after previous one is 'done' to incorporate learnings
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
-generated: 2026-03-11
+generated: 2026-03-12
 project: FetchBoyApp
 project_key: NOKEY
 tracking_system: file-system
@@ -112,3 +112,11 @@ development_status:
   8-5-historypanel-refactoring: backlog
   8-6-collectiontree-refactoring: backlog
   epic-8-retrospective: optional
+
+  # ─── Epic 9: TLS Proxy Intercept — MVP (Visual Only) ──────────────
+  epic-9: in-progress
+  9-1-top-level-tab-shell: review
+  9-2-intercept-table-view-ui: backlog
+  9-3-mitm-proxy-backend: backlog
+  9-4-event-streaming-bridge: backlog
+  epic-9-retrospective: optional

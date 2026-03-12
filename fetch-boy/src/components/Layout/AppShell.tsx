@@ -45,7 +45,7 @@ export function AppShell() {
 
   return (
     <div
-      className={`grid h-screen ${
+      className={`grid h-full ${
         sidebarCollapsed ? 'grid-cols-[3.5rem_1fr]' : 'grid-cols-[16rem_1fr]'
       } grid-rows-[3rem_2.25rem_1fr] overflow-hidden transition-[grid-template-columns] duration-200 ease-in-out [&>aside]:row-span-2 [&>main]:col-start-2 [&>main]:row-start-3`}
     >
