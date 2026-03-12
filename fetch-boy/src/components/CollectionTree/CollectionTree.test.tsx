@@ -18,6 +18,8 @@ const mockRenameRequest = vi.fn();
 const mockDeleteRequest = vi.fn();
 const mockUpdateFolderOrder = vi.fn();
 const mockUpdateRequestOrder = vi.fn();
+const mockMoveRequestToFolder = vi.fn();
+const mockUpdateSavedRequest = vi.fn();
 
 vi.mock('@/lib/collections', () => ({
     loadAllCollections: () => mockLoadAllCollections(),
@@ -32,6 +34,28 @@ vi.mock('@/lib/collections', () => ({
     deleteRequest: (...a: unknown[]) => mockDeleteRequest(...a),
     updateFolderOrder: (...a: unknown[]) => mockUpdateFolderOrder(...a),
     updateRequestOrder: (...a: unknown[]) => mockUpdateRequestOrder(...a),
+    moveRequestToFolder: (...a: unknown[]) => mockMoveRequestToFolder(...a),
+    updateSavedRequest: (...a: unknown[]) => mockUpdateSavedRequest(...a),
+}));
+
+// ─── Mock import/export lib ──────────────────────────────────────────────────
+const mockExportCollectionToJson = vi.fn();
+const mockImportCollectionFromJson = vi.fn();
+
+vi.mock('@/lib/importExport', () => ({
+    exportCollectionToJson: (...a: unknown[]) => mockExportCollectionToJson(...a),
+    importCollectionFromJson: (...a: unknown[]) => mockImportCollectionFromJson(...a),
+}));
+
+// ─── Mock Tauri dialog and fs ───────────────────────────────────────────────
+vi.mock('@tauri-apps/plugin-dialog', () => ({
+    save: vi.fn(),
+    open: vi.fn(),
+}));
+
+vi.mock('@tauri-apps/plugin-fs', () => ({
+    writeTextFile: vi.fn(),
+    readTextFile: vi.fn(),
 }));
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
