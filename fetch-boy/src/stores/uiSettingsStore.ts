@@ -17,6 +17,10 @@ interface UiSettingsState {
     setHasSeededSampleData: (seeded: boolean) => void;
     lastSeenVersion: string | null;
     setLastSeenVersion: (version: string | null) => void;
+    proxyEnabled: boolean;
+    setProxyEnabled: (enabled: boolean) => void;
+    proxyPort: number;
+    setProxyPort: (port: number) => void;
 }
 
 export const useUiSettingsStore = create<UiSettingsState>((set) => ({
@@ -36,4 +40,8 @@ export const useUiSettingsStore = create<UiSettingsState>((set) => ({
     setHasSeededSampleData: (seeded) => set({ hasSeededSampleData: seeded }),
     lastSeenVersion: null,
     setLastSeenVersion: (version) => set({ lastSeenVersion: version }),
+    proxyEnabled: true,
+    setProxyEnabled: (enabled) => set({ proxyEnabled: enabled }),
+    proxyPort: 8080,
+    setProxyPort: (port) => set({ proxyPort: port }),
 }));

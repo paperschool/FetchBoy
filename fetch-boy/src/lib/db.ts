@@ -73,6 +73,8 @@ export interface AppSettings {
     sidebar_settings_expanded?: boolean;
     has_seeded_sample_data?: boolean;
     last_seen_version?: string | null;
+    proxy_enabled?: boolean;
+    proxy_port?: number;
 }
 
 // ─── Singleton Database Handle ────────────────────────────────────────────────
