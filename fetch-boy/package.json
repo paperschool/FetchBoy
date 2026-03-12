@@ -11,7 +11,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "changelog:generate": "node scripts/generate-changelog.js",
+    "changelog:update": "node scripts/update-changelog.js"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
