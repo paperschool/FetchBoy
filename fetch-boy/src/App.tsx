@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { AppShell } from '@/components/Layout/AppShell';
 import { AppTabs } from '@/components/AppTabs/AppTabs';
+import { FetchView } from '@/components/FetchView/FetchView';
 import { SplashScreen } from '@/components/Layout/SplashScreen';
 import { TourController } from '@/components/Layout/TourController';
 import { KeyboardShortcutsModal } from '@/components/ui/KeyboardShortcutsModal';
@@ -76,11 +76,9 @@ function App() {
       <span data-testid="active-method" className="sr-only">
         {method}
       </span>
+      {showTour && <TourController />}
       <AppTabs>
-        <>
-          {showTour && <TourController />}
-          <AppShell />
-        </>
+        <FetchView />
       </AppTabs>
       <KeyboardShortcutsModal
         open={showKeyboardShortcuts}

@@ -108,14 +108,15 @@ development_status:
   8-1-mainpanel-refactoring: ready-for-dev
   8-2-responseviewer-refactoring: ready-for-dev
   8-3-settings-auth-refactoring: ready-for-dev
-  8-4-environmentpanel-refactoring: backlog
-  8-5-historypanel-refactoring: backlog
-  8-6-collectiontree-refactoring: backlog
+  8-4-tab-component-abstraction: review
+  8-5-environmentpanel-refactoring: backlog
+  8-6-historypanel-refactoring: backlog
+  8-7-collectiontree-refactoring: backlog
   epic-8-retrospective: optional
 
   # ─── Epic 9: TLS Proxy Intercept — MVP (Visual Only) ──────────────
   epic-9: in-progress
-  9-1-top-level-tab-shell: in-progress
+  9-1-top-level-tab-shell: review
   9-2-intercept-table-view-ui: done
   9-3-mitm-proxy-backend: review
   9-4-event-streaming-bridge: review

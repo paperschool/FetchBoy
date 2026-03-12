@@ -15,3 +15,14 @@ Object.defineProperty(window, 'matchMedia', {
         dispatchEvent: vi.fn(),
     })),
 });
+
+// Mock localStorage for tests - zustand persist middleware uses storage
+const localStorageMock = {
+    getItem: vi.fn(),
+    setItem: vi.fn(),
+    removeItem: vi.fn(),
+    clear: vi.fn(),
+    get length() { return 0; },
+    key: vi.fn(),
+};
+vi.stubGlobal('localStorage', localStorageMock);
