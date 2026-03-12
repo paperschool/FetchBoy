@@ -50,7 +50,7 @@ export function WhatsNewModal({ version, changelog, onDismiss }: WhatsNewModalPr
                         <span className="text-app-muted text-sm">{latestChanges?.date}</span>
                     </div>
 
-                    <ul className="space-y-2" data-testid="changelog-list">
+                    <ul className="space-y-2 max-h-60 overflow-y-auto" data-testid="changelog-list">
                         {latestChanges?.changes.map((change, index) => (
                             <li key={index} className="flex items-start gap-2 text-app-primary text-sm">
                                 <span className="text-amber-500 mt-1">•</span>

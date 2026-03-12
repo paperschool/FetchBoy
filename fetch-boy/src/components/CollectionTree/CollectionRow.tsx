@@ -33,7 +33,7 @@ export interface CollectionRowProps {
     expandedFolders: Record<string, boolean>;
     editingId: string | null;
     editingValue: string;
-    editRef: React.RefObject<HTMLInputElement | null>;
+    editRef: React.MutableRefObject<HTMLInputElement | null>;
     activeRequestId: string | null;
     // Collection callbacks
     onToggle: () => void;
@@ -112,7 +112,7 @@ export function CollectionRow({
 
                 {isEditing ? (
                     <input
-                        ref={editRef as React.RefObject<HTMLInputElement>}
+                        ref={editRef}
                         className="flex-1 bg-gray-700 text-app-inverse text-sm outline-none px-1 rounded"
                         value={editingValue}
                         onChange={(e) => onEditChange(e.target.value)}
@@ -214,7 +214,7 @@ export function CollectionRow({
                                     isActive={activeRequestId === reqNode.item.id}
                                     editingId={editingId}
                                     editingValue={editingValue}
-                                    editRef={editRef as React.Ref<HTMLInputElement>}
+                                    editRef={editRef}
                                     onEditChange={onEditChange}
                                     onStartEdit={() => onEditFolder(reqNode.item.id, reqNode.item.name)}
                                     onCommitEdit={onCommitEdit}

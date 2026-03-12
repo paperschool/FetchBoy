@@ -38,7 +38,7 @@ interface UseCollectionTreeStateReturn {
   editingId: string | null;
   editingType: EditingType | null;
   editingValue: string;
-  editRef: React.RefObject<HTMLInputElement | null>;
+  editRef: React.MutableRefObject<HTMLInputElement | null>;
   tree: TreeCollection[];
   activeRequestId: string | null;
 
