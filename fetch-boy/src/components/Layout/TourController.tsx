@@ -61,7 +61,7 @@ const TOUR_STEPS: Step[] = [
     content:
       "Configure application settings such as theme, request timeouts, and more to tailor the app to your preferences and needs.",
     title: "Settings",
-    placement: "right",
+    placement: "top",
     disableBeacon: true,
   },
 ];
@@ -106,6 +106,7 @@ export function TourController() {
       showProgress={true}
       disableCloseOnEsc={false}
       disableOverlayClose={false}
+      disableScrolling={true}
       floaterProps={{ disableAnimation: true }}
       styles={{
         options: {
