@@ -3,6 +3,10 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { AppTabs } from "./AppTabs";
 import { useAppTabStore } from "@/stores/appTabStore";
 
+vi.mock("@tauri-apps/api/event", () => ({
+  listen: vi.fn().mockResolvedValue(vi.fn()),
+}));
+
 vi.mock("@/components/Intercept/InterceptView", () => ({
   InterceptView: () => (
     <div data-testid="intercept-view">Traffic Intercept Placeholder</div>
