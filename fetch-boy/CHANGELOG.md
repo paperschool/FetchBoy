@@ -6,6 +6,16 @@ All notable changes to this project will be documented in this file.
 
 ### ✨ Features
 
+- feat: Story 9.2 - Intercept Table View UI
+  - Created `useInterceptStore` (Zustand) for managing intercepted HTTP request metadata
+  - Created `InterceptTable` component with 6 columns: Timestamp, Method, Host+Path, Status Code, Content-Type, Size
+  - Added method badge styling (GET=green, POST=blue, PUT=orange, DELETE=red, etc.)
+  - Added status code coloring (2xx=green, 3xx=blue, 4xx=orange, 5xx=red)
+  - Implemented empty state when no requests captured
+  - Created `InterceptTable.utils.tsx` with column definitions and formatters
+  - Added comprehensive tests for table rendering and formatting
+  - Used existing CSS tokens (`bg-app-main`, `text-app-primary`, etc.) for consistent theming
+
 - feat: fix build, make start up screen same as splash screen
 - feat: image viewer ui tweaks
 - feat: implement 7-7, design 7-8
