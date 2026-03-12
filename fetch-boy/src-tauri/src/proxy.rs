@@ -12,15 +12,14 @@ use tokio::sync::oneshot;
 // ─── Event payload emitted to the frontend ────────────────────────────────────
 
 #[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct InterceptEvent {
     pub id: String,
     pub timestamp: i64,
     pub method: String,
     pub host: String,
     pub path: String,
-    #[serde(rename = "statusCode")]
     pub status_code: Option<u16>,
-    #[serde(rename = "contentType")]
     pub content_type: Option<String>,
     pub size: Option<u64>,
 }
