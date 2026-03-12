@@ -51,8 +51,8 @@ so that the Intercept table updates live as traffic is captured without a manual
   - [x] Test: `listen` is called with `'intercept:request'` on mount
   - [x] Test: receiving an event calls `addRequest` on the store with correct payload
   - [x] Test: `unlisten()` is called on unmount (cleanup)
-- [ ] Final Task — Commit story changes
-  - [ ] Commit all code and documentation changes for this story with a message that includes Story 9.4
+- [x] Final Task — Commit story changes
+  - [x] Commit all code and documentation changes for this story with a message that includes Story 9.4
 
 ## Dev Notes
 
