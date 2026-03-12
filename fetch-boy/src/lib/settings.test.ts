@@ -41,6 +41,8 @@ describe('loadAllSettings', () => {
             sidebar_settings_expanded: false,
             has_seeded_sample_data: false,
             last_seen_version: null,
+            proxy_enabled: true,
+            proxy_port: 8080,
         });
     });
 
@@ -58,6 +60,8 @@ describe('loadAllSettings', () => {
             sidebar_settings_expanded: false,
             has_seeded_sample_data: false,
             last_seen_version: null,
+            proxy_enabled: true,
+            proxy_port: 8080,
         });
     });
 
@@ -75,6 +79,8 @@ describe('loadAllSettings', () => {
             sidebar_settings_expanded: false,
             has_seeded_sample_data: false,
             last_seen_version: null,
+            proxy_enabled: true,
+            proxy_port: 8080,
         });
     });
 });

@@ -1,4 +1,5 @@
 import { Settings } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import { saveSetting } from '@/lib/settings';
 import { useTourStore } from '@/stores/tourStore';
@@ -18,6 +19,10 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
     const setSslVerify = useUiSettingsStore((s) => s.setSslVerify);
     const editorFontSize = useUiSettingsStore((s) => s.editorFontSize);
     const setEditorFontSize = useUiSettingsStore((s) => s.setEditorFontSize);
+    const proxyEnabled = useUiSettingsStore((s) => s.proxyEnabled);
+    const setProxyEnabled = useUiSettingsStore((s) => s.setProxyEnabled);
+    const proxyPort = useUiSettingsStore((s) => s.proxyPort);
+    const setProxyPort = useUiSettingsStore((s) => s.setProxyPort);
     const resetTour = useTourStore((s) => s.resetTour);
     const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().includes('MAC');
 
@@ -53,6 +58,25 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
         if (next === editorFontSize) return;
         setEditorFontSize(next);
         void saveSetting('editor_font_size', next);
+    }
+
+    function handleProxyEnabledChange(e: React.ChangeEvent<HTMLInputElement>) {
+        const checked = e.target.checked;
+        setProxyEnabled(checked);
+        void saveSetting('proxy_enabled', checked);
+        void invoke('set_proxy_config', { enabled: checked, port: proxyPort }).catch((err) =>
+            console.error('Failed to update proxy config:', err),
+        );
+    }
+
+    function handleProxyPortChange(e: React.ChangeEvent<HTMLInputElement>) {
+        const raw = parseInt(e.target.value, 10);
+        const clamped = Math.min(65535, Math.max(1024, isNaN(raw) ? 8080 : raw));
+        setProxyPort(clamped);
+        void saveSetting('proxy_port', clamped);
+        void invoke('set_proxy_config', { enabled: proxyEnabled, port: clamped }).catch((err) =>
+            console.error('Failed to update proxy config:', err),
+        );
     }
 
     return (
@@ -152,6 +176,37 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
                             +
                         </button>
                     </div>
+                </div>
+
+                {/* Proxy intercept section */}
+                <div className="space-y-2" data-testid="proxy-section">
+                    <p className="text-app-primary text-sm font-medium">Proxy Intercept</p>
+                    <label className="flex items-center gap-2 text-app-primary text-sm cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={proxyEnabled}
+                            onChange={handleProxyEnabledChange}
+                            data-testid="proxy-enabled-checkbox"
+                        />
+                        Enable MITM Proxy
+                    </label>
+                    <div className="flex items-center gap-2">
+                        <label className="text-app-secondary text-sm w-10">Port</label>
+                        <input
+                            type="number"
+                            min={1024}
+                            max={65535}
+                            value={proxyPort}
+                            onChange={handleProxyPortChange}
+                            disabled={!proxyEnabled}
+                            className="w-24 bg-app-main border border-app-subtle rounded px-2 py-1 text-app-primary text-sm disabled:opacity-50"
+                            data-testid="proxy-port-input"
+                        />
+                    </div>
+                    <p className="text-app-secondary text-xs">
+                        Configure your system to use <span className="font-mono">127.0.0.1:{proxyPort}</span> as
+                        an HTTP proxy to capture traffic.
+                    </p>
                 </div>
 
                 {/* Tutorial section */}

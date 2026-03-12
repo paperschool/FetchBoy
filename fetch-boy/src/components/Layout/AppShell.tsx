@@ -39,6 +39,8 @@ export function AppShell() {
         useUiSettingsStore.getState().setSidebarSettingsExpanded(s.sidebar_settings_expanded ?? false);
         useUiSettingsStore.getState().setHasSeededSampleData(s.has_seeded_sample_data ?? false);
         useUiSettingsStore.getState().setLastSeenVersion(s.last_seen_version ?? null);
+        useUiSettingsStore.getState().setProxyEnabled(s.proxy_enabled ?? true);
+        useUiSettingsStore.getState().setProxyPort(s.proxy_port ?? 8080);
       })
       .catch(() => {}); // defaults already set in store initial state
   }, []);

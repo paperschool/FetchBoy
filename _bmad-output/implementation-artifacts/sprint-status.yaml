@@ -117,6 +117,6 @@ development_status:
   epic-9: in-progress
   9-1-top-level-tab-shell: in-progress
   9-2-intercept-table-view-ui: done
-  9-3-mitm-proxy-backend: ready-for-dev
+  9-3-mitm-proxy-backend: in-progress
   9-4-event-streaming-bridge: backlog
   epic-9-retrospective: optional

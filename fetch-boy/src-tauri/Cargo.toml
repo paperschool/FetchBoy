@@ -17,9 +17,13 @@ tauri-plugin-shell = "2"
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls-native-roots"] }
 base64 = "0.22"
-tokio = { version = "1", features = ["sync"] }
+tokio = { version = "1", features = ["sync", "macros"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+hudsucker = { version = "0.24.0", features = ["rcgen-ca"] }
+rustls = { version = "0.23", features = ["ring"] }
+uuid = { version = "1", features = ["v4"] }
+log = "0.4"
 
 [profile.release]
 panic = "abort"
