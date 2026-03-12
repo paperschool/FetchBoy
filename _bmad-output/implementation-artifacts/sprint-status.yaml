@@ -118,5 +118,5 @@ development_status:
   9-1-top-level-tab-shell: in-progress
   9-2-intercept-table-view-ui: done
   9-3-mitm-proxy-backend: review
-  9-4-event-streaming-bridge: in-progress
+  9-4-event-streaming-bridge: review
   epic-9-retrospective: optional
