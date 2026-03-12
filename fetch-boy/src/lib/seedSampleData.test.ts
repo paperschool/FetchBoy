@@ -76,10 +76,10 @@ describe('seedSampleDataIfNeeded', () => {
         expect(addedCollection.name).toBe('Getting Started');
     });
 
-    it('creates 4 sample requests', async () => {
+    it('creates 6 sample requests', async () => {
         await seedSampleDataIfNeeded();
 
-        expect(addRequestMock).toHaveBeenCalledTimes(4);
+        expect(addRequestMock).toHaveBeenCalledTimes(6);
     });
 
     it('sets hasSeededSampleData to true after seeding', async () => {
@@ -109,14 +109,14 @@ describe('seedSampleDataIfNeeded', () => {
         expect(insertCollectionCall).toBeDefined();
     });
 
-    it('writes 4 requests to DB when seeding', async () => {
+    it('writes 6 requests to DB when seeding', async () => {
         await seedSampleDataIfNeeded();
 
         const insertRequestCalls = mockDb.execute.mock.calls.filter(
             (call: unknown[]) =>
                 typeof call[0] === 'string' && call[0].includes('INSERT INTO requests'),
         );
-        expect(insertRequestCalls).toHaveLength(4);
+        expect(insertRequestCalls).toHaveLength(6);
     });
 
     it('persists has_seeded_sample_data flag to DB', async () => {
