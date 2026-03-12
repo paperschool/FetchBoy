@@ -1,0 +1,178 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Bump version and create PR with changelog
+  changelog:
+    name: Bump Version & Changelog
+    runs-on: ubuntu-latest
+    outputs:
+      new_tag: ${{ steps.version.outputs.new_tag }}
+      changelog: ${{ steps.changelog.outputs.changelog }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Install GitHub CLI
+        run: |
+          gh extension install github/gh-autobump || true
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Generate changelog from conventional commits
+          yarn changelog:generate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Bump version
+        id: version
+        run: |
+          # Get current version
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "Current version: $CURRENT_VERSION"
+          
+          # Read changelog to determine version bump type
+          CHANGES=$(cat CHANGELOG.md 2>/dev/null | head -50 || echo "")
+          
+          # Determine if this is a major, minor, or patch bump
+          if echo "$CHANGES" | grep -q "BREAKING CHANGE"; then
+            VERSION_BUMP="major"
+          elif echo "$CHANGES" | grep -q "feat:"; then
+            VERSION_BUMP="minor"
+          else
+            VERSION_BUMP="patch"
+          fi
+          
+          # Bump version
+          NEW_VERSION=$(npm version $VERSION_BUMP --no-git-tag-version 2>/dev/null | sed 's/v//')
+          echo "New version: $NEW_VERSION"
+          echo "new_tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "new_tag=v$NEW_VERSION"
+
+      - name: Update package.json version
+        run: |
+          # Update the version in package.json is already done by npm version
+          cat package.json | grep version
+
+      - name: Commit version bump
+        if: github.event_name == 'push'
+        run: |
+          git add package.json CHANGELOG.md src/data/changelog.json
+          git commit -m "chore(release): v${{ steps.version.outputs.new_tag }}"
+
+      - name: Create Pull Request
+        if: github.event_name == 'push'
+        run: |
+          gh pr create --title "chore(release): Bump version" --body "Automated version bump and changelog update" || echo "PR may already exist"
+
+  # Build Tauri app
+  build-tauri:
+    name: Build Tauri App
+    needs: changelog
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest]
+        include:
+          - os: macos-latest
+            args: --target aarch64-apple-darwin
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-action@stable
+        with:
+          targets: ${{ matrix.args.target }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install frontend dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ needs.changelog.outputs.new_tag }}
+          releaseName: 'FetchBoy v${{ needs.changelog.outputs.new_tag }}'
+          releaseBody: ${{ needs.changelog.outputs.changelog }}
+          releaseDraft: true
+          prerelease: false
+
+  # Create GitHub Release
+  release:
+    name: Create GitHub Release
+    needs: [changelog, build-tauri]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && needs.changelog.outputs.new_tag
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List artifacts
+        run: ls -la artifacts/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.changelog.outputs.new_tag }}
+          name: 'FetchBoy ${{ needs.changelog.outputs.new_tag }}'
+          body: ${{ needs.changelog.outputs.changelog }}
+          draft: true
+          files: |
+            artifacts/*.dmg
+            artifacts/*.app.tar.gz
+            artifacts/*.msi
+            artifacts*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
