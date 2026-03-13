@@ -120,5 +120,17 @@ development_status:
   9-2-intercept-table-view-ui: done
   9-3-mitm-proxy-backend: review
   9-4-event-streaming-bridge: review
-  9-5-proxy-install-wizard: in-progress
+  9-5-proxy-install-wizard: review
   epic-9-retrospective: optional
+
+  # ─── Epic 10: Intercept Control Features — Breakpoints & Request Editing ──────────────
+  epic-10: backlog
+  10-1-intercept-split-view-with-request-table: backlog
+  10-2-request-detail-view-with-subtabs: backlog
+  10-3-breakpoints-tab-interface: backlog
+  10-4-breakpoint-editor-with-fuzzy-url-matching: backlog
+  10-5-extended-breakpoint-actions-response-mapping: backlog
+  10-6-extended-breakpoint-actions-status-header-editing: backlog
+  10-7-extended-breakpoint-actions-request-blocking: backlog
+  10-8-play-button-continue-interrupted-request: backlog
+  epic-10-retrospective: optional

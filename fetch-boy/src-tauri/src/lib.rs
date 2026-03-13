@@ -74,10 +74,6 @@ fn set_proxy_config(
         let ca = cert::CertificateAuthority::load_or_create(restart_info.app_data_dir.clone())
             .map_err(|e| format!("Failed to load CA for proxy restart: {e}"))?;
 
-        if let Err(e) = ca.install_to_system() {
-            log::warn!("CA trust-store install skipped during proxy restart: {e}");
-        }
-
         let ca_authority = ca.into_authority();
         let mut new_proxy = proxy::ProxyServer::new(port);
         new_proxy.start(ca_authority, Arc::clone(&restart_info.emit_fn));
@@ -90,23 +86,242 @@ fn set_proxy_config(
 // ─── Certificate & Proxy installation commands ───────────────────────────────
 
 #[tauri::command]
-fn install_ca_to_system(restart_info: tauri::State<'_, ProxyRestartInfo>) -> Result<(), String> {
-    let ca = cert::CertificateAuthority::load_or_create(restart_info.app_data_dir.clone())
-        .map_err(|e| format!("Failed to load CA: {e}"))?;
-    ca.install_to_system().map_err(|e| e.to_string())
+fn install_ca_to_system(
+    app: tauri::AppHandle,
+    restart_info: tauri::State<'_, ProxyRestartInfo>,
+) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        use tauri::Manager;
+
+        let _ = app; // icon resolved via system caution icon instead
+
+        // Pre-confirmation dialog. AppleScript line breaks use `& return &`;
+        // `with icon caution` shows the native macOS warning triangle.
+        let pre_dialog =
+            "display dialog \
+             \"FetchBoy needs to install its CA certificate to your keychain.\" \
+             & return & return & \
+             \"This lets FetchBoy intercept and inspect HTTPS traffic on this device.\" \
+             & return & return & \
+             \"macOS may ask you to confirm access to your keychain.\" \
+             with title \"FetchBoy \u{2014} Install CA Certificate\" \
+             buttons {\"Cancel\", \"Install\"} \
+             default button \"Install\" \
+             cancel button \"Cancel\" \
+             with icon caution";
+
+        let confirm = std::process::Command::new("osascript")
+            .args(["-e", pre_dialog])
+            .current_dir("/tmp")
+            .output()
+            .map_err(|e| format!("Failed to show dialog: {e}"))?;
+
+        if !confirm.status.success() {
+            return Err("Installation cancelled.".to_string());
+        }
+
+        // User confirmed — run the install directly from the app process.
+        // Running `security` directly (not through `do shell script with administrator
+        // privileges`) lets macOS show its own interactive auth dialog, which supports
+        // Touch ID and avoids the "no user interaction was possible" sandbox restriction.
+        cert::CertificateAuthority::load_or_create(restart_info.app_data_dir.clone())
+            .map_err(|e| format!("Failed to load CA: {e}"))?;
+
+        let cert_path = restart_info.app_data_dir.join("ca").join("ca.pem");
+
+        // Two-step install into the user's login keychain (no admin required).
+        // Step 1: import the cert file into the login keychain.
+        // Step 2: mark it as a trusted root so macOS SecTrust honours it for SSL.
+        let home = std::env::var("HOME").unwrap_or_else(|_| "/Users/Shared".to_string());
+        let login_keychain = format!("{}/Library/Keychains/login.keychain-db", home);
+        let cert_str = cert_path.to_string_lossy();
+
+        let import = std::process::Command::new("/usr/bin/security")
+            .args([
+                "import", &cert_str,
+                "-k", &login_keychain,
+                "-A",          // allow any app to access without prompting
+                "-T", "/usr/bin/security",
+            ])
+            .current_dir("/tmp")
+            .output()
+            .map_err(|e| format!("Failed to import certificate: {e}"))?;
+
+        // Exit code 1 with "already exists" is fine — cert was previously imported.
+        let import_err = String::from_utf8_lossy(&import.stderr);
+        if !import.status.success() && !import_err.contains("already exists") {
+            return Err(format!("Certificate import failed: {}", import_err));
+        }
+
+        let trust = std::process::Command::new("/usr/bin/security")
+            .args([
+                "add-trusted-cert",
+                "-r", "trustRoot",
+                "-p", "ssl",
+                "-k", &login_keychain,
+                &cert_str,
+            ])
+            .current_dir("/tmp")
+            .output()
+            .map_err(|e| format!("Failed to set certificate trust: {e}"))?;
+
+        if !trust.status.success() {
+            return Err(format!(
+                "Certificate trust failed: {}",
+                String::from_utf8_lossy(&trust.stderr)
+            ));
+        }
+
+        return Ok(());
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = app;
+        let ca = cert::CertificateAuthority::load_or_create(restart_info.app_data_dir.clone())
+            .map_err(|e| format!("Failed to load CA: {e}"))?;
+        ca.install_to_system().map_err(|e| e.to_string())
+    }
+}
+
+#[tauri::command]
+fn uninstall_ca_from_system(app: tauri::AppHandle) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        let _ = app;
+
+        let pre_dialog =
+            "display dialog \
+             \"This will remove the FetchBoy CA certificate from your keychain.\" \
+             & return & return & \
+             \"HTTPS interception will stop working until the certificate is reinstalled.\" \
+             with title \"FetchBoy \u{2014} Remove CA Certificate\" \
+             buttons {\"Cancel\", \"Remove\"} \
+             default button \"Remove\" \
+             cancel button \"Cancel\" \
+             with icon caution";
+
+        let confirm = std::process::Command::new("osascript")
+            .args(["-e", pre_dialog])
+            .current_dir("/tmp")
+            .output()
+            .map_err(|e| format!("Failed to show dialog: {e}"))?;
+
+        if !confirm.status.success() {
+            return Err("Removal cancelled.".to_string());
+        }
+
+        let home = std::env::var("HOME").unwrap_or_else(|_| "/Users/Shared".to_string());
+        let login_keychain = format!("{}/Library/Keychains/login.keychain-db", home);
+
+        // First, try to find the certificate by common name and get its SHA-1 hash
+        let find_result = std::process::Command::new("/usr/bin/security")
+            .args([
+                "find-certificate",
+                "-c", "FetchBoy Proxy CA",
+                "-p",  // Print certificate info in PEM format
+                &login_keychain,
+            ])
+            .current_dir("/tmp")
+            .output()
+            .map_err(|e| format!("Failed to find certificate: {}", e))?;
+
+        if !find_result.status.success() {
+            // Certificate not found - might already be removed
+            let stderr = String::from_utf8_lossy(&find_result.stderr);
+            if stderr.contains("unable to find") || stderr.contains("not found") {
+                return Ok(());
+            }
+            return Err(format!(
+                "Failed to find certificate: {}",
+                stderr
+            ));
+        }
+
+        // Get the SHA-1 hash of the certificate using security command
+        let hash_result = std::process::Command::new("/usr/bin/security")
+            .args([
+                "find-certificate",
+                "-c", "FetchBoy Proxy CA",
+                "-Z",  // Print SHA-1 hash
+                &login_keychain,
+            ])
+            .current_dir("/tmp")
+            .output()
+            .map_err(|e| format!("Failed to get certificate hash: {}", e))?;
+
+        if !hash_result.status.success() {
+            // Fallback: try deleting by common name
+            return uninstall_by_common_name(&login_keychain);
+        }
+
+        let hash_output = String::from_utf8_lossy(&hash_result.stdout);
+        // Extract the SHA-1 hash from the output (format: "SHA-1 hash: XX:XX:XX:...")
+        let hash_part = hash_output
+            .lines()
+            .find(|l| l.contains("SHA-1 hash:"))
+            .and_then(|l| l.split("SHA-1 hash:").nth(1))
+            .map(|s| s.trim().replace(":", ""))
+            .unwrap_or_default();
+
+        if hash_part.is_empty() {
+            return uninstall_by_common_name(&login_keychain);
+        }
+
+        // Delete by hash
+        let delete_result = std::process::Command::new("/usr/bin/security")
+            .args(["delete-certificate", "-Z", &hash_part, &login_keychain])
+            .current_dir("/tmp")
+            .output()
+            .map_err(|e| format!("Failed to delete certificate by hash: {}", e))?;
+
+        if !delete_result.status.success() {
+            // Fallback to common name if hash deletion fails
+            return uninstall_by_common_name(&login_keychain);
+        }
+
+        return Ok(());
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = app;
+        Err("Certificate removal not supported on this platform".to_string())
+    }
+}
+
+/// Helper function to uninstall certificate by common name as fallback
+#[cfg(target_os = "macos")]
+fn uninstall_by_common_name(keychain: &str) -> Result<(), String> {
+    let result = std::process::Command::new("/usr/bin/security")
+        .args(["delete-certificate", "-c", "FetchBoy Proxy CA", keychain])
+        .current_dir("/tmp")
+        .output()
+        .map_err(|e| format!("Failed to run security command: {}", e))?;
+
+    if !result.status.success() {
+        let stderr = String::from_utf8_lossy(&result.stderr);
+        // If cert not found, that's OK - it might have already been removed
+        if stderr.contains("unable to find") || stderr.contains("not found") {
+            return Ok(());
+        }
+        return Err(format!(
+            "Certificate removal failed: {}",
+            stderr
+        ));
+    }
+
+    Ok(())
 }
 
 #[tauri::command]
 fn is_ca_installed() -> bool {
     #[cfg(target_os = "macos")]
     {
-        std::process::Command::new("security")
-            .args([
-                "find-certificate",
-                "-c",
-                "FetchBoy Proxy CA",
-                "/Library/Keychains/System.keychain",
-            ])
+        // Search all keychains in the default search list (user + system).
+        std::process::Command::new("/usr/bin/security")
+            .args(["find-certificate", "-c", "FetchBoy Proxy CA"])
             .output()
             .map(|o| o.status.success())
             .unwrap_or(false)
@@ -247,6 +462,49 @@ fn is_system_proxy_configured(port: u16) -> bool {
     }
 }
 
+#[tauri::command]
+fn unconfigure_system_proxy() -> Result<(), String> {
+    disable_os_proxy_all_services();
+    Ok(())
+}
+
+// ─── OS proxy helpers ─────────────────────────────────────────────────────────
+
+/// Disable the system-level proxy on all active network services.
+/// Safe to call from any context (exit handler, command, etc.).
+fn disable_os_proxy_all_services() {
+    #[cfg(target_os = "macos")]
+    {
+        if let Ok(out) = std::process::Command::new("networksetup")
+            .args(["-listallnetworkservices"])
+            .current_dir("/tmp")
+            .output()
+        {
+            let text = String::from_utf8_lossy(&out.stdout);
+            for service in text
+                .lines()
+                .skip(1)
+                .filter(|s| !s.starts_with('*') && !s.trim().is_empty())
+            {
+                let _ = std::process::Command::new("networksetup")
+                    .args(["-setwebproxystate", service, "off"])
+                    .current_dir("/tmp")
+                    .output();
+                let _ = std::process::Command::new("networksetup")
+                    .args(["-setsecurewebproxystate", service, "off"])
+                    .current_dir("/tmp")
+                    .output();
+            }
+        }
+    }
+    #[cfg(target_os = "windows")]
+    {
+        let _ = std::process::Command::new("netsh")
+            .args(["winhttp", "reset", "proxy"])
+            .output();
+    }
+}
+
 // ─── App entry point ─────────────────────────────────────────────────────────
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -289,11 +547,6 @@ pub fn run() {
             // Initialise the CA and start the proxy.
             match cert::CertificateAuthority::load_or_create(app_data_dir) {
                 Ok(ca) => {
-                    if let Err(e) = ca.install_to_system() {
-                        log::warn!(
-                            "CA trust-store install failed (HTTPS interception may not work until the CA is trusted manually): {e}"
-                        );
-                    }
                     let ca_authority = ca.into_authority();
                     let mut proxy = proxy::ProxyServer::new(8080);
                     proxy.start(ca_authority, emit_fn);
@@ -319,10 +572,17 @@ pub fn run() {
             get_ca_certificate_path,
             open_folder,
             install_ca_to_system,
+            uninstall_ca_from_system,
             is_ca_installed,
             configure_system_proxy,
+            unconfigure_system_proxy,
             is_system_proxy_configured
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|_app, event| {
+            if let tauri::RunEvent::Exit = event {
+                disable_os_proxy_all_services();
+            }
+        });
 }

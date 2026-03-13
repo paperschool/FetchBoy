@@ -24,6 +24,7 @@ hudsucker = { version = "0.24.0", features = ["rcgen-ca"] }
 rustls = { version = "0.23", features = ["ring"] }
 uuid = { version = "1", features = ["v4"] }
 log = "0.4"
+open = "5"
 
 [profile.release]
 panic = "abort"

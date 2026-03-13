@@ -7,6 +7,7 @@ import { loadAllEnvironments } from '@/lib/environments';
 import { useEnvironmentStore } from '@/stores/environmentStore';
 import { loadAllSettings, saveSetting } from '@/lib/settings';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
+import { invoke } from '@tauri-apps/api/core';
 import { useTheme } from '@/hooks/useTheme';
 import useTabKeyboardShortcuts from '@/hooks/useTabKeyboardShortcuts';
 import useSidebarKeyboardShortcut from '@/hooks/useSidebarKeyboardShortcut';
@@ -39,8 +40,13 @@ export function AppShell() {
         useUiSettingsStore.getState().setSidebarSettingsExpanded(s.sidebar_settings_expanded ?? false);
         useUiSettingsStore.getState().setHasSeededSampleData(s.has_seeded_sample_data ?? false);
         useUiSettingsStore.getState().setLastSeenVersion(s.last_seen_version ?? null);
-        useUiSettingsStore.getState().setProxyEnabled(s.proxy_enabled ?? true);
-        useUiSettingsStore.getState().setProxyPort(s.proxy_port ?? 8080);
+        const proxyEnabled = s.proxy_enabled ?? true;
+        const proxyPort = s.proxy_port ?? 8080;
+        useUiSettingsStore.getState().setProxyEnabled(proxyEnabled);
+        useUiSettingsStore.getState().setProxyPort(proxyPort);
+        // Sync the backend proxy server with the saved enabled/port state.
+        // Without this call the proxy always starts enabled regardless of the saved setting.
+        void invoke('set_proxy_config', { enabled: proxyEnabled, port: proxyPort }).catch(() => {});
       })
       .catch(() => {}); // defaults already set in store initial state
   }, []);
