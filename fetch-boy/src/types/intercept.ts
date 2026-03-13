@@ -12,6 +12,7 @@ export interface InterceptEventPayload {
   contentType?: string                       // Content-Type header value (optional)
   size?: number                              // Response body size in bytes (actual, not content-length)
   requestHeaders?: Record<string, string>    // All request headers
+  requestBody?: string                       // Request body as UTF-8 string (text content types ≤1 MB only)
   responseHeaders?: Record<string, string>   // All response headers
   responseBody?: string                      // Response body as UTF-8 string (text content types ≤1 MB only)
 }

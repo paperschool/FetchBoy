@@ -34,6 +34,7 @@ pub struct InterceptEvent {
     pub content_type: Option<String>,
     pub size: Option<u64>,
     pub request_headers: HashMap<String, String>,
+    pub request_body: Option<String>,
     pub response_headers: HashMap<String, String>,
     pub response_body: Option<String>,
 }
@@ -48,6 +49,10 @@ struct PendingRequest {
     host: String,
     path: String,
     request_headers: HashMap<String, String>,
+    /// Written by handle_request's async block; read by handle_response.
+    /// Uses Arc<Mutex> so the async future (which can't hold &mut self) can write it
+    /// while handle_response reads it from self.pending after the future completes.
+    request_body: Arc<Mutex<Option<String>>>,
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -145,10 +150,20 @@ impl HttpHandler for InterceptHandler {
 
         let request_headers = collect_headers(req.headers());
 
+        // Capture request content-type before moving req into the async block.
+        let req_content_type = request_headers
+            .get("content-type")
+            .cloned()
+            .unwrap_or_default();
+
         // Strip Accept-Encoding so the server sends uncompressed responses.
         // This makes response bodies directly readable without a decompression step.
         // Standard practice for MITM inspection proxies (Burp Suite does the same).
         req.headers_mut().remove("accept-encoding");
+
+        // Shared slot: the async block writes the captured request body; handle_response reads it.
+        let body_slot: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
+        let slot_for_async = Arc::clone(&body_slot);
 
         // Store synchronously before returning the future — safe because this clone
         // of the handler is dedicated to this single request/response pair.
@@ -159,9 +174,25 @@ impl HttpHandler for InterceptHandler {
             host,
             path,
             request_headers,
+            request_body: body_slot,
         });
 
-        async move { RequestOrResponse::Request(req) }
+        async move {
+            // Buffer the request body so we can both capture it and forward it upstream.
+            let (parts, body) = req.into_parts();
+            let bytes: Bytes = body.collect().await.unwrap_or_default().to_bytes();
+
+            if !bytes.is_empty()
+                && bytes.len() <= MAX_BODY_CAPTURE_BYTES
+                && is_text_content_type(&req_content_type)
+            {
+                *slot_for_async.lock().unwrap() =
+                    Some(String::from_utf8_lossy(&bytes).into_owned());
+            }
+
+            let new_body: Body = Full::new(bytes).into();
+            RequestOrResponse::Request(Request::from_parts(parts, new_body))
+        }
     }
 
     fn handle_error(
@@ -176,6 +207,7 @@ impl HttpHandler for InterceptHandler {
 
         async move {
             if let Some(req_info) = req_info {
+                let request_body = req_info.request_body.lock().unwrap().clone();
                 let event = InterceptEvent {
                     id: req_info.id,
                     timestamp: req_info.timestamp,
@@ -186,6 +218,7 @@ impl HttpHandler for InterceptHandler {
                     content_type: None,
                     size: None,
                     request_headers: req_info.request_headers,
+                    request_body,
                     response_headers: HashMap::new(),
                     response_body: Some(err_str),
                 };
@@ -278,6 +311,7 @@ impl HttpHandler for InterceptHandler {
             let res = Response::from_parts(parts, new_body);
 
             if let Some(req_info) = req_info {
+                let request_body = req_info.request_body.lock().unwrap().clone();
                 let event = InterceptEvent {
                     id: req_info.id,
                     timestamp: req_info.timestamp,
@@ -288,6 +322,7 @@ impl HttpHandler for InterceptHandler {
                     content_type: final_content_type,
                     size: Some(size),
                     request_headers: req_info.request_headers,
+                    request_body,
                     response_headers,
                     response_body,
                 };
@@ -505,6 +540,7 @@ mod tests {
             content_type: Some("application/json".to_string()),
             size: Some(1024),
             request_headers,
+            request_body: Some("{\"query\":\"test\"}".to_string()),
             response_headers,
             response_body: Some("{\"ok\":true}".to_string()),
         };
@@ -515,6 +551,7 @@ mod tests {
         assert_eq!(json["method"], "GET");
         assert_eq!(json["host"], "example.com");
         assert_eq!(json["requestHeaders"]["content-type"], "application/json");
+        assert_eq!(json["requestBody"], "{\"query\":\"test\"}");
         assert_eq!(json["responseHeaders"]["x-request-id"], "abc123");
         assert_eq!(json["responseBody"], "{\"ok\":true}");
     }
@@ -531,6 +568,7 @@ mod tests {
             content_type: None,
             size: None,
             request_headers: HashMap::new(),
+            request_body: None,
             response_headers: HashMap::new(),
             response_body: None,
         };
@@ -539,6 +577,7 @@ mod tests {
         assert!(json["statusCode"].is_null());
         assert!(json["contentType"].is_null());
         assert!(json["size"].is_null());
+        assert!(json["requestBody"].is_null());
         assert!(json["responseBody"].is_null());
     }
 
