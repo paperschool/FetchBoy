@@ -28,10 +28,12 @@ export function WhatsNewModal({ version, changelog, onDismiss }: WhatsNewModalPr
         <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
             data-testid="whats-new-overlay"
+            onClick={onDismiss}
         >
             <div
-                className="bg-app-main border border-app-subtle rounded-lg p-6 w-[520px] shadow-xl flex flex-col max-h-[80vh]"
+                className="bg-app-main border border-app-subtle rounded-lg p-6 w-[520px] h-[480px] shadow-xl flex flex-col"
                 data-testid="whats-new-modal"
+                onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex items-center gap-2 mb-4 shrink-0">
                     <Sparkles className="text-amber-500" size={24} />
