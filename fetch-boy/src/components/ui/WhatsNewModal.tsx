@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { Sparkles } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Sparkles, ChevronDown } from 'lucide-react';
 
 export interface ChangelogEntry {
     version: string;
@@ -14,17 +14,15 @@ interface WhatsNewModalProps {
 }
 
 export function WhatsNewModal({ version, changelog, onDismiss }: WhatsNewModalProps) {
+    const [openVersion, setOpenVersion] = useState<string | null>(changelog[0]?.version ?? null);
+
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                onDismiss();
-            }
+            if (e.key === 'Escape') onDismiss();
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [onDismiss]);
-
-    const latestChanges = changelog[0];
 
     return (
         <div
@@ -32,35 +30,52 @@ export function WhatsNewModal({ version, changelog, onDismiss }: WhatsNewModalPr
             data-testid="whats-new-overlay"
         >
             <div
-                className="bg-app-main border border-app-subtle rounded-lg p-6 w-[480px] shadow-xl"
+                className="bg-app-main border border-app-subtle rounded-lg p-6 w-[520px] shadow-xl flex flex-col max-h-[80vh]"
                 data-testid="whats-new-modal"
             >
-                <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                        <Sparkles className="text-amber-500" size={24} />
-                        <h2 className="text-app-primary font-semibold text-xl">What's New</h2>
-                    </div>
+                <div className="flex items-center gap-2 mb-4 shrink-0">
+                    <Sparkles className="text-amber-500" size={24} />
+                    <h2 className="text-app-primary font-semibold text-xl">What's New</h2>
+                    <span className="ml-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded text-sm font-medium">
+                        v{version}
+                    </span>
                 </div>
 
-                <div className="mb-6">
-                    <div className="flex items-center gap-2 mb-3">
-                        <span className="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded text-sm font-medium">
-                            v{version}
-                        </span>
-                        <span className="text-app-muted text-sm">{latestChanges?.date}</span>
-                    </div>
-
-                    <ul className="space-y-2 max-h-60 overflow-y-auto" data-testid="changelog-list">
-                        {latestChanges?.changes.map((change, index) => (
-                            <li key={index} className="flex items-start gap-2 text-app-primary text-sm">
-                                <span className="text-amber-500 mt-1">•</span>
-                                <span>{change}</span>
-                            </li>
-                        ))}
-                    </ul>
+                <div className="overflow-y-auto flex-1 space-y-1 pr-1" data-testid="changelog-list">
+                    {changelog.map((entry) => {
+                        const isOpen = openVersion === entry.version;
+                        return (
+                            <div key={entry.version} className="border border-app-subtle rounded-md overflow-hidden">
+                                <button
+                                    type="button"
+                                    onClick={() => setOpenVersion(isOpen ? null : entry.version)}
+                                    className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-app-subtle transition-colors"
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium text-app-primary">v{entry.version}</span>
+                                        <span className="text-xs text-app-muted">{entry.date}</span>
+                                    </div>
+                                    <ChevronDown
+                                        size={14}
+                                        className={`text-app-muted transition-transform duration-150 ${isOpen ? 'rotate-180' : ''}`}
+                                    />
+                                </button>
+                                {isOpen && (
+                                    <ul className="px-3 pb-3 pt-1 space-y-1.5 border-t border-app-subtle">
+                                        {entry.changes.map((change, i) => (
+                                            <li key={i} className="flex items-start gap-2 text-app-primary text-sm">
+                                                <span className="text-amber-500 mt-0.5 shrink-0">•</span>
+                                                <span>{change}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
 
-                <div className="flex justify-end">
+                <div className="flex justify-end mt-4 shrink-0">
                     <button
                         onClick={onDismiss}
                         className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"

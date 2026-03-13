@@ -10,6 +10,24 @@ const mockChangelog: ChangelogEntry[] = [
     },
 ];
 
+const multiChangelog: ChangelogEntry[] = [
+    {
+        version: '0.3.0',
+        date: '2026-03-13',
+        changes: ['Intercept detail view', 'Open in Fetch button'],
+    },
+    {
+        version: '0.2.0',
+        date: '2026-03-12',
+        changes: ['Tab shell', 'MITM proxy'],
+    },
+    {
+        version: '0.1.0',
+        date: '2026-03-11',
+        changes: ['Initial release'],
+    },
+];
+
 describe('WhatsNewModal', () => {
     it('renders modal with title', () => {
         render(<WhatsNewModal version="0.1.0" changelog={mockChangelog} onDismiss={vi.fn()} />);
@@ -19,7 +37,7 @@ describe('WhatsNewModal', () => {
 
     it('displays version badge', () => {
         render(<WhatsNewModal version="0.1.0" changelog={mockChangelog} onDismiss={vi.fn()} />);
-        expect(screen.getByText('v0.1.0')).toBeInTheDocument();
+        expect(screen.getAllByText('v0.1.0').length).toBeGreaterThanOrEqual(1);
     });
 
     it('displays changelog date', () => {
@@ -69,5 +87,32 @@ describe('WhatsNewModal', () => {
     it('renders overlay backdrop', () => {
         render(<WhatsNewModal version="0.1.0" changelog={mockChangelog} onDismiss={vi.fn()} />);
         expect(screen.getByTestId('whats-new-overlay')).toBeInTheDocument();
+    });
+
+    it('opens the latest version accordion by default', () => {
+        render(<WhatsNewModal version="0.3.0" changelog={multiChangelog} onDismiss={vi.fn()} />);
+        expect(screen.getByText('Intercept detail view')).toBeInTheDocument();
+        expect(screen.queryByText('Tab shell')).not.toBeInTheDocument();
+    });
+
+    it('renders an accordion row for every version', () => {
+        render(<WhatsNewModal version="0.3.0" changelog={multiChangelog} onDismiss={vi.fn()} />);
+        const buttons = screen.getAllByRole('button');
+        const versionButtons = buttons.filter((b) => b.textContent?.includes('v0.'));
+        expect(versionButtons.length).toBeGreaterThanOrEqual(3);
+    });
+
+    it('expands another version when its header is clicked', () => {
+        render(<WhatsNewModal version="0.3.0" changelog={multiChangelog} onDismiss={vi.fn()} />);
+        const v02Button = screen.getAllByRole('button').find((b) => b.textContent?.includes('v0.2.0'))!;
+        fireEvent.click(v02Button);
+        expect(screen.getByText('Tab shell')).toBeInTheDocument();
+    });
+
+    it('collapses open version when its header is clicked again', () => {
+        render(<WhatsNewModal version="0.3.0" changelog={multiChangelog} onDismiss={vi.fn()} />);
+        const v03Button = screen.getAllByRole('button').find((b) => b.textContent?.includes('v0.3.0'))!;
+        fireEvent.click(v03Button);
+        expect(screen.queryByText('Intercept detail view')).not.toBeInTheDocument();
     });
 });
