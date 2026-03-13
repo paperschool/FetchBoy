@@ -11,6 +11,7 @@ export interface InterceptRequest {
   size?: number
   responseBody?: string
   requestHeaders?: Record<string, string>
+  requestBody?: string
   responseHeaders?: Record<string, string>
 }
 
