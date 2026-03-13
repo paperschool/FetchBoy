@@ -1,0 +1,49 @@
+import { Play, Square, Pencil, Clock } from 'lucide-react'
+import { useInterceptStore } from '@/stores/interceptStore'
+
+interface Props {
+  breakpointId: string
+}
+
+export function BreakpointActionPanel({ breakpointId }: Props) {
+  const pauseState = useInterceptStore((s) => s.pauseState)
+  const pausedRequest = useInterceptStore((s) => s.pausedRequest)
+  const continueRequest = useInterceptStore((s) => s.continueRequest)
+  const dropRequest = useInterceptStore((s) => s.dropRequest)
+
+  const isPausedForThis =
+    pauseState === 'paused' && pausedRequest?.breakpointId === breakpointId
+
+  if (!isPausedForThis) return null
+
+  return (
+    <div className="flex items-center gap-2 mt-1 p-1.5 bg-amber-900/20 border border-amber-500/30 rounded">
+      <div className="flex items-center gap-1 text-amber-400">
+        <Clock size={12} />
+        <span className="text-xs">Paused</span>
+      </div>
+
+      <div className="flex gap-1 ml-auto">
+        <button
+          type="button"
+          onClick={() => void continueRequest()}
+          className="p-1 bg-green-700/60 hover:bg-green-600/80 rounded text-white transition-colors"
+          title="Continue"
+          aria-label="Continue request"
+        >
+          <Play size={12} />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => void dropRequest()}
+          className="p-1 bg-red-700/60 hover:bg-red-600/80 rounded text-white transition-colors"
+          title="Drop"
+          aria-label="Drop request"
+        >
+          <Square size={12} />
+        </button>
+      </div>
+    </div>
+  )
+}

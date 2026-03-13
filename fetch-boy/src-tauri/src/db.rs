@@ -35,5 +35,11 @@ pub fn migrations() -> Vec<Migration> {
             sql: include_str!("../migrations/005_block_request.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 6,
+            description: "add_paused_requests_table",
+            sql: include_str!("../migrations/006_paused_requests.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }

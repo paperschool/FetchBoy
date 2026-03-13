@@ -16,6 +16,7 @@ pub struct ProxyState(pub std::sync::Mutex<Option<proxy::ProxyServer>>);
 pub struct ProxyRestartInfo {
     pub app_data_dir: PathBuf,
     pub emit_fn: proxy::EmitFn,
+    pub paused_emit_fn: proxy::PausedEmitFn,
 }
 
 /// Current proxy configuration (port + enabled flag).
@@ -26,6 +27,12 @@ pub struct ProxyConfigState {
 
 /// Shared breakpoint rules — kept in sync via the sync_breakpoints command.
 pub struct BreakpointsState(pub proxy::BreakpointsRef);
+
+/// Pause registry — maps request_id to a oneshot sender so Tauri commands can resume paused proxy handlers.
+pub struct PauseRegistryState(pub proxy::PauseRegistryRef);
+
+/// Configurable pause timeout in seconds (0 = never).
+pub struct PauseTimeoutState(pub proxy::PauseTimeoutRef);
 
 // ─── Proxy commands ───────────────────────────────────────────────────────────
 
@@ -59,6 +66,8 @@ fn set_proxy_config(
     proxy_state: tauri::State<'_, ProxyState>,
     restart_info: tauri::State<'_, ProxyRestartInfo>,
     breakpoints: tauri::State<'_, BreakpointsState>,
+    pause_registry: tauri::State<'_, PauseRegistryState>,
+    pause_timeout: tauri::State<'_, PauseTimeoutState>,
 ) -> Result<(), String> {
     // Update stored config.
     *config.port.lock().unwrap() = port;
@@ -80,7 +89,14 @@ fn set_proxy_config(
 
         let ca_authority = ca.into_authority();
         let mut new_proxy = proxy::ProxyServer::new(port);
-        new_proxy.start(ca_authority, Arc::clone(&restart_info.emit_fn), Arc::clone(&breakpoints.0));
+        new_proxy.start(
+            ca_authority,
+            Arc::clone(&restart_info.emit_fn),
+            Arc::clone(&restart_info.paused_emit_fn),
+            Arc::clone(&breakpoints.0),
+            Arc::clone(&pause_registry.0),
+            Arc::clone(&pause_timeout.0),
+        );
         *proxy_state.0.lock().unwrap() = Some(new_proxy);
     }
 
@@ -527,6 +543,49 @@ fn sync_breakpoints(
     Ok(())
 }
 
+// ─── Pause / resume commands ──────────────────────────────────────────────────
+
+/// Resume a paused request. `action` is "continue", "drop", or "modify".
+/// When action is "modify", the modifications fields are applied to the response.
+#[tauri::command]
+fn resume_request(
+    request_id: String,
+    action: String,
+    status_code: Option<u16>,
+    response_body: Option<String>,
+    content_type: Option<String>,
+    extra_headers: Option<Vec<[String; 2]>>,
+    state: tauri::State<'_, PauseRegistryState>,
+) -> Result<(), String> {
+    let decision = match action.as_str() {
+        "drop" => proxy::PauseDecision::Drop,
+        "modify" => proxy::PauseDecision::Modify(proxy::BreakpointModifications {
+            status_code,
+            response_body,
+            content_type,
+            headers: extra_headers.unwrap_or_default(),
+        }),
+        _ => proxy::PauseDecision::Continue,
+    };
+
+    let sender = state.0.lock().unwrap().remove(&request_id);
+    if let Some(tx) = sender {
+        let _ = tx.send(decision);
+    }
+    Ok(())
+}
+
+/// Get and set the pause timeout (seconds; 0 = never timeout).
+#[tauri::command]
+fn get_pause_timeout(state: tauri::State<'_, PauseTimeoutState>) -> u64 {
+    *state.0.lock().unwrap()
+}
+
+#[tauri::command]
+fn set_pause_timeout(seconds: u64, state: tauri::State<'_, PauseTimeoutState>) {
+    *state.0.lock().unwrap() = seconds;
+}
+
 // ─── Exit command ─────────────────────────────────────────────────────────────
 
 /// Stop the proxy and clear OS proxy settings, then exit the process.
@@ -573,10 +632,18 @@ pub fn run() {
                 }
             });
 
+            let app_handle2 = app.handle().clone();
+            let paused_emit_fn: proxy::PausedEmitFn = Arc::new(move |event| {
+                if let Err(e) = app_handle2.emit("breakpoint:paused", event) {
+                    log::warn!("Failed to emit breakpoint-paused event: {e}");
+                }
+            });
+
             // Register restart info so the set_proxy_config command can recreate the proxy.
             app.manage(ProxyRestartInfo {
                 app_data_dir: app_data_dir.clone(),
                 emit_fn: Arc::clone(&emit_fn),
+                paused_emit_fn: Arc::clone(&paused_emit_fn),
             });
 
             // Default config: enabled on port 8080.
@@ -590,12 +657,26 @@ pub fn run() {
                 Arc::new(std::sync::Mutex::new(Vec::new()));
             app.manage(BreakpointsState(Arc::clone(&breakpoints_ref)));
 
+            // Pause registry and timeout state.
+            let pause_registry_ref: proxy::PauseRegistryRef =
+                Arc::new(std::sync::Mutex::new(std::collections::HashMap::new()));
+            let pause_timeout_ref: proxy::PauseTimeoutRef = Arc::new(std::sync::Mutex::new(30));
+            app.manage(PauseRegistryState(Arc::clone(&pause_registry_ref)));
+            app.manage(PauseTimeoutState(Arc::clone(&pause_timeout_ref)));
+
             // Initialise the CA and start the proxy.
             match cert::CertificateAuthority::load_or_create(app_data_dir) {
                 Ok(ca) => {
                     let ca_authority = ca.into_authority();
                     let mut proxy = proxy::ProxyServer::new(8080);
-                    proxy.start(ca_authority, emit_fn, breakpoints_ref);
+                    proxy.start(
+                        ca_authority,
+                        emit_fn,
+                        paused_emit_fn,
+                        breakpoints_ref,
+                        pause_registry_ref,
+                        pause_timeout_ref,
+                    );
                     app.manage(ProxyState(std::sync::Mutex::new(Some(proxy))));
                 }
                 Err(e) => {
@@ -625,6 +706,9 @@ pub fn run() {
             is_system_proxy_configured,
             match_breakpoint_url,
             sync_breakpoints,
+            resume_request,
+            get_pause_timeout,
+            set_pause_timeout,
             exit_app
         ])
         .build(tauri::generate_context!())

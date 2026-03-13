@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use tokio::sync::oneshot;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -105,14 +106,61 @@ pub struct BreakpointRule {
 
 pub type BreakpointsRef = Arc<Mutex<Vec<BreakpointRule>>>;
 
+// ─── Pause / resume types ──────────────────────────────────────────────────────
+
+/// User-supplied modifications when resuming via "Edit & Continue".
+#[derive(Deserialize, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct BreakpointModifications {
+    pub status_code: Option<u16>,
+    pub response_body: Option<String>,
+    pub content_type: Option<String>,
+    pub headers: Vec<[String; 2]>,
+}
+
+/// Decision sent through the pause channel to unblock handle_response.
+pub enum PauseDecision {
+    Continue,
+    Drop,
+    Modify(BreakpointModifications),
+}
+
+/// Pause registry: maps request_id → oneshot sender so Tauri commands can unblock waiting handlers.
+pub type PauseRegistryRef = Arc<Mutex<HashMap<String, oneshot::Sender<PauseDecision>>>>;
+
+/// Shared configurable timeout (seconds) for paused requests.
+pub type PauseTimeoutRef = Arc<Mutex<u64>>;
+
+/// Event emitted to the frontend when a request is paused at a breakpoint.
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BreakpointPausedEvent {
+    pub request_id: String,
+    pub breakpoint_id: String,
+    pub breakpoint_name: String,
+    pub timeout_at: i64,
+    pub method: String,
+    pub host: String,
+    pub path: String,
+    pub status_code: Option<u16>,
+    pub response_body: Option<String>,
+    pub response_headers: HashMap<String, String>,
+    pub request_headers: HashMap<String, String>,
+    pub request_body: Option<String>,
+}
+
 // ─── HTTP handler ─────────────────────────────────────────────────────────────
 
 pub type EmitFn = Arc<dyn Fn(&InterceptEvent) + Send + Sync + 'static>;
+pub type PausedEmitFn = Arc<dyn Fn(&BreakpointPausedEvent) + Send + Sync + 'static>;
 
 #[derive(Clone)]
 pub struct InterceptHandler {
     emit_fn: EmitFn,
+    paused_emit_fn: PausedEmitFn,
     breakpoints: BreakpointsRef,
+    pause_registry: PauseRegistryRef,
+    pause_timeout: PauseTimeoutRef,
     /// Pending request captured in handle_request, consumed in handle_response.
     /// Hudsucker clones the handler once per request (see internal.rs `self.clone().proxy(req)`),
     /// so each clone handles exactly one request/response pair sequentially — no shared
@@ -121,10 +169,19 @@ pub struct InterceptHandler {
 }
 
 impl InterceptHandler {
-    fn new(emit_fn: EmitFn, breakpoints: BreakpointsRef) -> Self {
+    fn new(
+        emit_fn: EmitFn,
+        paused_emit_fn: PausedEmitFn,
+        breakpoints: BreakpointsRef,
+        pause_registry: PauseRegistryRef,
+        pause_timeout: PauseTimeoutRef,
+    ) -> Self {
         Self {
             emit_fn,
+            paused_emit_fn,
             breakpoints,
+            pause_registry,
+            pause_timeout,
             pending: None,
         }
     }
@@ -318,13 +375,29 @@ impl HttpHandler for InterceptHandler {
         // Take the pending request that was stored by handle_request on this same clone.
         let req_info = self.pending.take();
         let emit_fn = Arc::clone(&self.emit_fn);
+        let paused_emit_fn = Arc::clone(&self.paused_emit_fn);
         let breakpoints = Arc::clone(&self.breakpoints);
+        let pause_registry = Arc::clone(&self.pause_registry);
+        let pause_timeout_ref = Arc::clone(&self.pause_timeout);
 
         async move {
             let (mut parts, body) = res.into_parts();
             let response_headers = collect_headers(&parts.headers);
 
             let orig_bytes: Bytes = body.collect().await.unwrap_or_default().to_bytes();
+
+            // Capture the response body for potential pausing.
+            let orig_response_body: Option<String> =
+                if orig_bytes.len() <= MAX_BODY_CAPTURE_BYTES
+                    && orig_content_type
+                        .as_deref()
+                        .map(is_text_content_type)
+                        .unwrap_or(false)
+                {
+                    Some(String::from_utf8_lossy(&orig_bytes).into_owned())
+                } else {
+                    None
+                };
 
             // Find the first enabled breakpoint that matches this URL.
             let url = req_info
@@ -336,69 +409,188 @@ impl HttpHandler for InterceptHandler {
                 let guard = breakpoints.lock().unwrap();
                 guard
                     .iter()
-                    .filter(|bp| bp.enabled)
+                    .filter(|bp| bp.enabled && !bp.block_request_enabled)
                     .find(|bp| match_url(&url, &bp.url_pattern, &bp.match_type).matches)
                     .cloned()
             };
 
-            // Apply status code override.
-            let mut effective_status_code = status_code;
-            if let Some(ref bp) = matched_bp {
-                if bp.status_code_enabled {
-                    log::info!(
-                        "Status code override: '{}' matched '{}' — {} → {}",
-                        url,
-                        bp.url_pattern,
-                        status_code,
-                        bp.status_code_value,
-                    );
-                    effective_status_code = bp.status_code_value;
-                }
-            }
+            // ── Pause logic ──────────────────────────────────────────────────
+            // When a non-blocking breakpoint matches, pause the response and
+            // wait for user action (Continue / Drop / Modify) or timeout.
+            let user_decision: Option<PauseDecision> = if let Some(ref bp) = matched_bp {
+                let timeout_secs = *pause_timeout_ref.lock().unwrap();
+                let (tx, rx) = oneshot::channel::<PauseDecision>();
 
-            // Apply response body mapping.
-            let (final_bytes, final_content_type) = match matched_bp.as_ref().filter(|bp| bp.response_mapping_enabled) {
-                Some(bp) => {
-                    log::info!(
-                        "Response mapping: '{}' matched '{}' — {} B → {} B",
-                        url,
-                        bp.url_pattern,
-                        orig_bytes.len(),
-                        bp.response_mapping_body.len(),
-                    );
-                    let mapped = Bytes::from(bp.response_mapping_body.clone().into_bytes());
-                    let ct = bp.response_mapping_content_type.clone();
-                    if let Ok(val) = HeaderValue::from_str(&ct) {
-                        parts.headers.insert(CONTENT_TYPE, val);
-                    }
-                    if let Ok(val) = HeaderValue::from_str(&mapped.len().to_string()) {
-                        parts.headers.insert(CONTENT_LENGTH, val);
-                    }
-                    (mapped, Some(ct))
-                }
-                None => (orig_bytes, orig_content_type),
-            };
+                let request_id = req_info
+                    .as_ref()
+                    .map(|r| r.id.clone())
+                    .unwrap_or_default();
 
-            // Apply custom header injection.
-            if let Some(ref bp) = matched_bp {
-                for header in &bp.custom_headers {
-                    if header.enabled && !header.key.is_empty() {
-                        log::info!(
-                            "Custom header: '{}' matched '{}' — {} = {}",
-                            url,
-                            bp.url_pattern,
-                            header.key,
-                            header.value,
-                        );
-                        if let (Ok(name), Ok(val)) = (
-                            hudsucker::hyper::header::HeaderName::from_bytes(header.key.as_bytes()),
-                            HeaderValue::from_str(&header.value),
-                        ) {
-                            parts.headers.insert(name, val);
+                // Store the sender so a Tauri command can signal us.
+                pause_registry.lock().unwrap().insert(request_id.clone(), tx);
+
+                // Emit the paused event to the frontend.
+                if let Some(ref ri) = req_info {
+                    let timeout_at = std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_secs() as i64
+                        + timeout_secs as i64;
+
+                    let request_body = ri.request_body.lock().unwrap().clone();
+                    let paused_event = BreakpointPausedEvent {
+                        request_id: request_id.clone(),
+                        breakpoint_id: bp.id.clone(),
+                        breakpoint_name: bp.id.clone(), // name not stored in rule; id used as fallback
+                        timeout_at,
+                        method: ri.method.clone(),
+                        host: ri.host.clone(),
+                        path: ri.path.clone(),
+                        status_code: Some(status_code),
+                        response_body: orig_response_body.clone(),
+                        response_headers: response_headers.clone(),
+                        request_headers: ri.request_headers.clone(),
+                        request_body,
+                    };
+                    paused_emit_fn(&paused_event);
+                }
+
+                // Wait for user input (or timeout).
+                if timeout_secs == 0 {
+                    // 0 means "never" — wait indefinitely.
+                    match rx.await {
+                        Ok(decision) => {
+                            pause_registry.lock().unwrap().remove(&request_id);
+                            Some(decision)
+                        }
+                        Err(_) => None,
+                    }
+                } else {
+                    match tokio::time::timeout(Duration::from_secs(timeout_secs), rx).await {
+                        Ok(Ok(decision)) => {
+                            pause_registry.lock().unwrap().remove(&request_id);
+                            Some(decision)
+                        }
+                        _ => {
+                            // Timeout or channel closed → clean up and auto-continue.
+                            pause_registry.lock().unwrap().remove(&request_id);
+                            Some(PauseDecision::Continue)
                         }
                     }
                 }
+            } else {
+                None
+            };
+
+            // ── Handle Drop ──────────────────────────────────────────────────
+            if matches!(user_decision, Some(PauseDecision::Drop)) {
+                // Emit a "dropped" event so the intercept table shows it.
+                if let Some(ref ri) = req_info {
+                    let request_body = ri.request_body.lock().unwrap().clone();
+                    let event = InterceptEvent {
+                        id: ri.id.clone(),
+                        timestamp: ri.timestamp,
+                        method: ri.method.clone(),
+                        host: ri.host.clone(),
+                        path: ri.path.clone(),
+                        status_code: Some(0),
+                        content_type: None,
+                        size: Some(0),
+                        request_headers: ri.request_headers.clone(),
+                        request_body,
+                        response_headers: HashMap::new(),
+                        response_body: Some("Request dropped by user".to_string()),
+                        is_blocked: Some(true),
+                    };
+                    emit_fn(&event);
+                }
+                return Response::builder()
+                    .status(502)
+                    .body(Body::empty())
+                    .unwrap();
             }
+
+            // ── Apply modifications ───────────────────────────────────────────
+            // Determine effective values from either user mods (Edit & Continue)
+            // or breakpoint rules (Continue / timeout / no breakpoint match).
+            let mut effective_status_code = status_code;
+            let (final_bytes, final_content_type) = if let Some(PauseDecision::Modify(ref mods)) = user_decision {
+                // User supplied modifications via Edit & Continue.
+                if let Some(sc) = mods.status_code {
+                    effective_status_code = sc;
+                }
+                let body_bytes = if let Some(ref body_str) = mods.response_body {
+                    Bytes::from(body_str.clone().into_bytes())
+                } else {
+                    orig_bytes
+                };
+                let ct = mods.content_type.clone().or(orig_content_type);
+                if let Some(ref ct_str) = ct {
+                    if let Ok(val) = HeaderValue::from_str(ct_str) {
+                        parts.headers.insert(CONTENT_TYPE, val);
+                    }
+                }
+                if let Ok(val) = HeaderValue::from_str(&body_bytes.len().to_string()) {
+                    parts.headers.insert(CONTENT_LENGTH, val);
+                }
+                for pair in &mods.headers {
+                    if let (Ok(name), Ok(val)) = (
+                        hudsucker::hyper::header::HeaderName::from_bytes(pair[0].as_bytes()),
+                        HeaderValue::from_str(&pair[1]),
+                    ) {
+                        parts.headers.insert(name, val);
+                    }
+                }
+                (body_bytes, ct)
+            } else {
+                // Apply breakpoint rules (Continue / no pause).
+                if let Some(ref bp) = matched_bp {
+                    if bp.status_code_enabled {
+                        log::info!(
+                            "Status code override: '{}' matched '{}' — {} → {}",
+                            url, bp.url_pattern, status_code, bp.status_code_value,
+                        );
+                        effective_status_code = bp.status_code_value;
+                    }
+                }
+
+                let (bytes, ct) = match matched_bp.as_ref().filter(|bp| bp.response_mapping_enabled) {
+                    Some(bp) => {
+                        log::info!(
+                            "Response mapping: '{}' matched '{}' — {} B → {} B",
+                            url, bp.url_pattern, orig_bytes.len(), bp.response_mapping_body.len(),
+                        );
+                        let mapped = Bytes::from(bp.response_mapping_body.clone().into_bytes());
+                        let ct = bp.response_mapping_content_type.clone();
+                        if let Ok(val) = HeaderValue::from_str(&ct) {
+                            parts.headers.insert(CONTENT_TYPE, val);
+                        }
+                        if let Ok(val) = HeaderValue::from_str(&mapped.len().to_string()) {
+                            parts.headers.insert(CONTENT_LENGTH, val);
+                        }
+                        (mapped, Some(ct))
+                    }
+                    None => (orig_bytes, orig_content_type),
+                };
+
+                if let Some(ref bp) = matched_bp {
+                    for header in &bp.custom_headers {
+                        if header.enabled && !header.key.is_empty() {
+                            log::info!(
+                                "Custom header: '{}' matched '{}' — {} = {}",
+                                url, bp.url_pattern, header.key, header.value,
+                            );
+                            if let (Ok(name), Ok(val)) = (
+                                hudsucker::hyper::header::HeaderName::from_bytes(header.key.as_bytes()),
+                                HeaderValue::from_str(&header.value),
+                            ) {
+                                parts.headers.insert(name, val);
+                            }
+                        }
+                    }
+                }
+                (bytes, ct)
+            };
 
             let size = final_bytes.len() as u64;
 
@@ -463,12 +655,20 @@ impl ProxyServer {
     }
 
     /// Start the proxy on a background async task.
-    pub fn start(&mut self, ca: RcgenAuthority, emit_fn: EmitFn, breakpoints: BreakpointsRef) {
+    pub fn start(
+        &mut self,
+        ca: RcgenAuthority,
+        emit_fn: EmitFn,
+        paused_emit_fn: PausedEmitFn,
+        breakpoints: BreakpointsRef,
+        pause_registry: PauseRegistryRef,
+        pause_timeout: PauseTimeoutRef,
+    ) {
         let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
         self.shutdown_tx = Some(shutdown_tx);
 
         let port = self.port;
-        let handler = InterceptHandler::new(emit_fn, breakpoints);
+        let handler = InterceptHandler::new(emit_fn, paused_emit_fn, breakpoints, pause_registry, pause_timeout);
         let crypto_provider = rustls::crypto::ring::default_provider();
 
         tauri::async_runtime::spawn(async move {
@@ -719,9 +919,11 @@ mod tests {
         let emit_fn: EmitFn = Arc::new(move |_event| {
             called_clone.store(true, Ordering::SeqCst);
         });
-
+        let paused_emit_fn: PausedEmitFn = Arc::new(|_| {});
         let breakpoints: BreakpointsRef = Arc::new(Mutex::new(Vec::new()));
-        let handler = InterceptHandler::new(emit_fn, breakpoints);
+        let pause_registry: PauseRegistryRef = Arc::new(Mutex::new(HashMap::new()));
+        let pause_timeout: PauseTimeoutRef = Arc::new(Mutex::new(30));
+        let handler = InterceptHandler::new(emit_fn, paused_emit_fn, breakpoints, pause_registry, pause_timeout);
         assert!(handler.pending.is_none());
     }
 
