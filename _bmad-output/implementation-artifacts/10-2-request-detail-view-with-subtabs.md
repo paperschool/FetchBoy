@@ -1,6 +1,6 @@
 # Story 10.2: Request Detail View with Subtabs
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -61,8 +61,8 @@ so that I can inspect the full content of intercepted HTTP traffic including bod
   - [x] Test: Headers tab shows request/response headers
   - [x] Test: Clicking tab switches content
 
-- [ ] Final Task — Commit story changes
-  - [ ] Commit all code and documentation changes for this story with a message that includes Story 10.2
+- [x] Final Task — Commit story changes
+  - [x] Commit all code and documentation changes for this story with a message that includes Story 10.2
 
 ## Dev Notes
 
