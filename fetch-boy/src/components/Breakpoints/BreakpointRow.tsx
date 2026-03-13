@@ -1,4 +1,4 @@
-import { Bug, Pencil, Trash2 } from 'lucide-react';
+import { Bug, ArrowLeftRight, Pencil, Trash2 } from 'lucide-react';
 import type { Breakpoint } from '@/lib/db';
 
 interface BreakpointRowProps {
@@ -16,6 +16,15 @@ export function BreakpointRow({ breakpoint, onEdit, onDelete }: BreakpointRowPro
         >
             <Bug size={12} className={`flex-shrink-0 ${breakpoint.enabled ? 'text-blue-400' : 'text-app-muted'}`} />
             <span className="flex-1 text-app-secondary text-xs truncate">{breakpoint.name}</span>
+            {breakpoint.response_mapping_enabled && (
+                <span
+                    title="Has response mapping"
+                    className="flex-shrink-0 text-purple-400"
+                    data-testid="rm-indicator"
+                >
+                    <ArrowLeftRight size={10} />
+                </span>
+            )}
             <div className="hidden group-hover:flex items-center gap-0.5">
                 <button
                     onClick={(e) => { e.stopPropagation(); onEdit(); }}
