@@ -5,6 +5,7 @@ import { SplashScreen } from '@/components/Layout/SplashScreen';
 import { TourController } from '@/components/Layout/TourController';
 import { KeyboardShortcutsModal } from '@/components/ui/KeyboardShortcutsModal';
 import { WhatsNewModal } from '@/components/ui/WhatsNewModal';
+import { useProxyExitCleanup } from '@/hooks/useProxyExitCleanup';
 import { useRequestStore } from '@/stores/requestStore';
 import { useTourStore } from '@/stores/tourStore';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
@@ -27,6 +28,8 @@ async function persistLastSeenVersion(version: string): Promise<void> {
 }
 
 function App() {
+  useProxyExitCleanup();
+
   const method = useRequestStore((s) => s.method);
   const hasCompletedTour = useTourStore((s) => s.hasCompletedTour);
   const [showSplash, setShowSplash] = useState(true);
