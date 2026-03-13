@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { invoke } from '@tauri-apps/api/core'
 import { useUiSettingsStore } from '@/stores/uiSettingsStore'
@@ -10,16 +10,23 @@ import { saveSetting } from '@/lib/settings'
  * 2. Persist proxy_enabled = false so the next launch starts with proxy off
  * 3. Reset the store so in-session UI reflects the stopped state
  *
+ * Returns `shuttingDown: true` while the proxy is being stopped on close,
+ * so the caller can show a progress overlay.
+ *
  * The Rust RunEvent::Exit hook is a safety net that also stops the proxy and
  * clears OS settings — this hook handles the persisted SQLite state.
  */
-export function useProxyExitCleanup(): void {
+export function useProxyExitCleanup(): { shuttingDown: boolean } {
+  const [shuttingDown, setShuttingDown] = useState(false)
+
   useEffect(() => {
     let unlisten: (() => void) | undefined
 
     getCurrentWindow()
       .onCloseRequested(async (event) => {
         event.preventDefault()
+
+        setShuttingDown(true)
 
         // Persist disabled state so the next launch doesn't re-enable it unexpectedly.
         await saveSetting('proxy_enabled', false).catch(() => {})
@@ -47,4 +54,6 @@ export function useProxyExitCleanup(): void {
 
     return () => unlisten?.()
   }, [])
+
+  return { shuttingDown }
 }

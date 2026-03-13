@@ -1,14 +1,8 @@
 <p align="center">
-  <img src="./fetch-boy/src-tauri/icons/fetch-boi-logo.svg" alt="Fetch Boy Logo" width="512" height="512" />
+  <img src="./fetch-boy/src-tauri/icons/fetch-boi-logo.svg" alt="Fetch Boy Logo" width="512" height="512" scale="2" />
 </p>
 
 <h1 align="left">Fetch Boy</h1>
-
-<p align="center">
-  A lightweight, open source API client built with Tauri and React. For all your rest fetching needs! 🦴
-</p>
-
-## Screenshots
 
 <table>
   <tr>
@@ -29,17 +23,31 @@ Runs entirely offline. No account required. All data stored locally.
 
 ## Features
 
-- **Request Builder** — method selector, URL bar, headers, query params, raw body, and auth tabs
-- **Monaco Editor** — syntax highlighting and JSON auto-formatting for request/response bodies
-- **Collections** — tree-based sidebar with nested folders, CRUD, and drag-and-drop reordering
-- **Save & Load Requests** — persist requests to collections and reload them from the sidebar
-- **Request History** — auto-populated log of the last 200 sent requests
-- **Tab Bar** — multi-tab workspace with inline rename, close-on-hover, and auto-label sync
-- **Environments** — named key-value variable stores with `{{variable}}` interpolation at send time
-- **Auth Schemes** — Bearer Token, Basic Auth, and API Key injection
-- **Light / Dark / System Theme** — persisted across restarts
-- **Import / Export** — collections and environments as JSON
-- **Cross-platform Installers** — macOS, Windows, Linux under 15MB
+### Request Building & Execution
+
+- Construct HTTP requests with full control over headers, body, query parameters, and authentication
+- Organize requests into collections with folders and drag-and-drop ordering
+- Use environment variables with `{{variable}}` interpolation across requests
+- View and edit request/response bodies in a syntax-highlighted Monaco editor
+
+### HTTP Interception & Debugging
+
+- Intercept HTTP/HTTPS traffic through a local MITM proxy
+- Set breakpoints on requests and modify them before forwarding
+- Override status codes, response headers, and response bodies on the fly
+- Block specific requests or simulate timeouts
+
+### User Experience & Productivity
+
+- Work in multiple tabs simultaneously with per-tab state isolation
+- Use keyboard shortcuts (Cmd/Ctrl+Enter to send, ? for shortcuts overlay)
+- Customize the application theme (light/dark/system)
+- Import and export collections and environments as JSON
+
+### History & Persistence
+
+- View history of all sent requests with quick replay
+- Automatic persistence of collections and settings to SQLite
 
 ---
 
@@ -109,23 +117,6 @@ Then open the app from Applications as usual.
 
 ---
 
-## Scripts
-
-All scripts run from the `fetch-boy/` directory.
-
-| Command              | Description                                        |
-| -------------------- | -------------------------------------------------- |
-| `yarn tauri dev`     | Start the app in development mode (hot-reload)     |
-| `yarn tauri build`   | Build a release installer for the current platform |
-| `yarn dev`           | Run the Vite frontend only (no Tauri shell)        |
-| `yarn build`         | Type-check and build the frontend bundle           |
-| `yarn test`          | Run the unit test suite once                       |
-| `yarn test:watch`    | Run tests in watch mode                            |
-| `yarn test:coverage` | Run tests with coverage report                     |
-| `yarn typecheck`     | Type-check without emitting output                 |
-
----
-
 ## Project Structure
 
 ```
@@ -141,8 +132,12 @@ FetchBoyApp/
 └── docs/
 ```
 
----
-
 ## Author
 
-- **Ono**
+<div align="center">
+
+**Connect with the developer:**
+
+Dominic Jomaa • [LinkedIn](https://www.linkedin.com/in/dominicjomaa/) • [Instagram](https://www.instagram.com/ono.sendai.runner/)
+
+</div>
