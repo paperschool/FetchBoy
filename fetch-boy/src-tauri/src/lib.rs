@@ -527,6 +527,25 @@ fn sync_breakpoints(
     Ok(())
 }
 
+// ─── Exit command ─────────────────────────────────────────────────────────────
+
+/// Stop the proxy and clear OS proxy settings, then exit the process.
+/// Called from the frontend close handler so we bypass the JS window-close API
+/// and guarantee the process actually terminates.
+#[tauri::command]
+fn exit_app(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, ProxyState>,
+) {
+    if let Ok(mut guard) = state.0.lock() {
+        if let Some(mut proxy) = guard.take() {
+            proxy.stop();
+        }
+    }
+    disable_os_proxy_all_services();
+    app.exit(0);
+}
+
 // ─── App entry point ─────────────────────────────────────────────────────────
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -605,7 +624,8 @@ pub fn run() {
             unconfigure_system_proxy,
             is_system_proxy_configured,
             match_breakpoint_url,
-            sync_breakpoints
+            sync_breakpoints,
+            exit_app
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
