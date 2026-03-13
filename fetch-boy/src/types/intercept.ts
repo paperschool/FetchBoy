@@ -4,11 +4,14 @@
 
 export interface InterceptEventPayload {
   id: string
-  timestamp: number      // Unix timestamp in milliseconds (i64 from Rust)
-  method: string         // HTTP method (GET, POST, etc.)
-  host: string           // Hostname without protocol or port
-  path: string           // Full path including query string
-  statusCode?: number    // HTTP status code (optional — set by response handler)
-  contentType?: string   // Content-Type header value (optional)
-  size?: number          // Response size in bytes (optional)
+  timestamp: number                          // Unix timestamp in milliseconds (i64 from Rust)
+  method: string                             // HTTP method (GET, POST, etc.)
+  host: string                               // Hostname without protocol or port
+  path: string                               // Full path including query string
+  statusCode?: number                        // HTTP status code (optional — set by response handler)
+  contentType?: string                       // Content-Type header value (optional)
+  size?: number                              // Response body size in bytes (actual, not content-length)
+  requestHeaders?: Record<string, string>    // All request headers
+  responseHeaders?: Record<string, string>   // All response headers
+  responseBody?: string                      // Response body as UTF-8 string (text content types ≤1 MB only)
 }

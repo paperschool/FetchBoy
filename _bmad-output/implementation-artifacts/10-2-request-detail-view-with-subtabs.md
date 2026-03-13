@@ -61,6 +61,23 @@ so that I can inspect the full content of intercepted HTTP traffic including bod
   - [x] Test: Headers tab shows request/response headers
   - [x] Test: Clicking tab switches content
 
+- [x] Task 6 — Extend Rust proxy to capture headers and response body (AC: #6, #7)
+  - [x] Add `bytes` and `http-body-util` as direct dependencies in `Cargo.toml`
+  - [x] Extend `InterceptEvent` struct with `request_headers`, `response_headers`, `response_body` fields
+  - [x] Extend `PendingRequest` with `request_headers: HashMap<String, String>`
+  - [x] In `handle_request`: collect all request headers into `HashMap<String, String>`, store in `PendingRequest`
+  - [x] In `handle_response`: buffer response body bytes (cap at 1 MB for text content types), collect all response headers, reconstruct response with original bytes, include all in emitted event
+  - [x] Add `is_text_content_type` helper to determine whether to capture body
+
+- [x] Task 7 — Update frontend types to match new payload (AC: #6, #7)
+  - [x] Add `responseBody?`, `requestHeaders?`, `responseHeaders?` to `InterceptEventPayload` in `fetch-boy/src/types/intercept.ts`
+  - [x] Verify `useInterceptEvents.ts` correctly passes new fields through to the store
+
+- [x] Task 8 — Update proxy tests
+  - [x] Update `intercept_event_serialises_camelcase_fields` test to include new fields
+  - [x] Add test: `is_text_content_type_matches_common_types`
+  - [x] Add test: `intercept_event_optional_fields_are_null_when_none` covers response_body: None
+
 - [x] Final Task — Commit story changes
   - [x] Commit all code and documentation changes for this story with a message that includes Story 10.2
 
@@ -445,7 +462,13 @@ None.
 - Reused `formatTimestamp`, `formatSize`, `formatHostPath`, `CopyButton` from `InterceptTable.utils.tsx` for consistency
 - Body tab: JSON auto-pretty-prints; falls back to plain text for other content types
 - Headers tab: "Request Headers" and "Response Headers" sections with key-value rows; graceful empty state
-- All 15 new tests pass; all 44 existing InterceptTable/InterceptView tests pass (no regressions)
+- All 15 new frontend tests pass; all 44 existing InterceptTable/InterceptView tests pass (no regressions)
+- Extended Rust `proxy.rs`: `InterceptEvent` now includes `requestHeaders`, `responseHeaders`, `responseBody`
+- Response body buffered via `http_body_util::BodyExt::collect()` then reconstructed as `Full<Bytes>` so the proxied client still receives the response unchanged
+- Body capture limited to text content types (json, xml, html, text/*, javascript) and capped at 1 MB
+- `size` field now reflects actual buffered byte count rather than `content-length` header (more accurate)
+- Updated `InterceptEventPayload` in `types/intercept.ts` to include new optional fields
+- All 13 Rust tests pass
 
 ### File List
 
@@ -453,3 +476,6 @@ None.
 - `fetch-boy/src/components/Intercept view/RequestDetailView.test.tsx` (new)
 - `fetch-boy/src/components/Intercept view/InterceptView.tsx` (modified)
 - `fetch-boy/src/stores/interceptStore.ts` (modified — added responseBody, requestHeaders, responseHeaders fields)
+- `fetch-boy/src/types/intercept.ts` (modified — added responseBody, requestHeaders, responseHeaders to payload type)
+- `fetch-boy/src-tauri/src/proxy.rs` (modified — capture request headers, buffer and emit response body + headers)
+- `fetch-boy/src-tauri/Cargo.toml` (modified — added bytes, http-body-util direct dependencies)
