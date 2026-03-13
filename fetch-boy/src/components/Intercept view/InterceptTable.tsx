@@ -68,7 +68,7 @@ export function InterceptTable() {
       </div>
 
       {/* Filter bar */}
-      <div className="flex items-center gap-2 px-3 py-1.5 bg-app-main border-b border-app-subtle shrink-0">
+      <div data-tour="intercept-search" className="flex items-center gap-2 px-3 py-1.5 bg-app-main border-b border-app-subtle shrink-0">
         <input
           type="text"
           value={searchQuery}
@@ -130,6 +130,7 @@ export function InterceptTable() {
           {/* Virtualized body */}
           <div
             ref={parentRef}
+            data-tour="intercept-request-table"
             className="flex-1 overflow-auto h-0"
           >
             <div

@@ -183,7 +183,7 @@ export function InterceptSidebar({
       </div>
 
       <div data-tour="settings-env" className="mt-auto">
-        <div className="shrink-0 border-t border-gray-700">
+        <div data-tour="intercept-settings" className="shrink-0 border-t border-gray-700">
           <button
             type="button"
             className="w-full flex items-center gap-2 p-2 text-app-muted hover:text-app-inverse hover:bg-gray-700 rounded transition-colors"

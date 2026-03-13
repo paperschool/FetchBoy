@@ -7,6 +7,7 @@ import Joyride, {
 } from "react-joyride";
 import { useTourStore } from "@/stores/tourStore";
 import { useUiSettingsStore } from "@/stores/uiSettingsStore";
+import { useAppTabStore } from "@/stores/appTabStore";
 
 const TOUR_STEPS: Step[] = [
   {
@@ -64,7 +65,51 @@ const TOUR_STEPS: Step[] = [
     placement: "top",
     disableBeacon: true,
   },
+  // ── Intercept tab steps ────────────────────────────────────────────────────
+  {
+    target: '[data-tour="intercept-tab"]',
+    content:
+      "The Intercept tab lets you monitor all HTTP and HTTPS traffic flowing through the app's built-in MITM proxy. You can inspect request and response details in real time, filter by method or status, and load any captured request directly into the Fetch builder.",
+    title: "Intercept",
+    placement: "bottom",
+    disableBeacon: true,
+  },
+  {
+    target: '[data-tour="intercept-settings"]',
+    content:
+      "Before you can capture HTTPS traffic, install the CA certificate into your system trust store — this is what lets the proxy decrypt and inspect TLS connections. You can also adjust the proxy port here if the default 8080 conflicts with another service.",
+    title: "Certificate & Proxy Setup",
+    placement: "right",
+    disableBeacon: true,
+  },
+  {
+    target: '[data-tour="intercept-search"]',
+    content:
+      "Filter captured traffic by keyword or regular expression, and narrow down results by HTTP method or status code range. The request count updates live to reflect the current filter.",
+    title: "Search & Filter",
+    placement: "bottom",
+    disableBeacon: true,
+  },
+  {
+    target: '[data-tour="intercept-request-table"]',
+    content:
+      "Every request that flows through the proxy appears here in real time. Click any row to load its full details in the panel below, or hover a row to reveal the Fetch button which opens that request in the Fetch tab ready to replay or modify.",
+    title: "Request Table",
+    placement: "top",
+    disableBeacon: true,
+  },
+  {
+    target: '[data-testid="intercept-detail-viewer"]',
+    content:
+      "The detail panel shows the full response body with syntax highlighting, request and response headers, and parsed query parameters. Use the Open in Fetch button at the top to send the captured request to the Fetch tab with all its method, URL, params and headers pre-filled.",
+    title: "Request Detail",
+    placement: "left",
+    disableBeacon: true,
+  },
 ];
+
+/** Index of the first intercept-specific tour step. */
+const INTERCEPT_STEPS_START = 7;
 
 export function TourController() {
   const hasCompletedTour = useTourStore((s) => s.hasCompletedTour);
@@ -86,7 +131,19 @@ export function TourController() {
 
     if (type === EVENTS.STEP_AFTER || type === EVENTS.TARGET_NOT_FOUND) {
       const nextStep = index + (action === ACTIONS.PREV ? -1 : 1);
-      setCurrentStep(nextStep);
+
+      if (nextStep >= INTERCEPT_STEPS_START) {
+        // Switch to intercept tab and ensure sidebar is expanded so all targets are visible.
+        useAppTabStore.getState().setActiveTab("intercept");
+        useUiSettingsStore.getState().setSidebarCollapsed(false);
+        useUiSettingsStore.getState().setSidebarSettingsExpanded(true);
+      } else {
+        useAppTabStore.getState().setActiveTab("fetch");
+      }
+
+      // Small delay so the DOM updates from the tab switch propagate before
+      // Joyride looks for the next step's target element.
+      setTimeout(() => setCurrentStep(nextStep), 50);
     } else if (status === STATUS.FINISHED || status === STATUS.SKIPPED) {
       completeTour();
     }
