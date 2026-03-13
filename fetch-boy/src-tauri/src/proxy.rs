@@ -4,6 +4,7 @@ use hudsucker::{
     builder::ProxyBuilder,
     certificate_authority::RcgenAuthority,
     hyper::{Request, Response},
+    hyper_util::client::legacy::Error as UpstreamError,
     Body, HttpContext, HttpHandler, RequestOrResponse,
 };
 use serde::Serialize;
@@ -37,6 +38,7 @@ pub struct InterceptEvent {
 
 // ─── Per-request state held between handle_request and handle_response ────────
 
+#[derive(Clone)]
 struct PendingRequest {
     id: String,
     timestamp: i64,
@@ -74,14 +76,18 @@ pub type EmitFn = Arc<dyn Fn(&InterceptEvent) + Send + Sync + 'static>;
 #[derive(Clone)]
 pub struct InterceptHandler {
     emit_fn: EmitFn,
-    pending: Arc<std::sync::Mutex<Option<PendingRequest>>>,
+    /// Pending request captured in handle_request, consumed in handle_response.
+    /// Hudsucker clones the handler once per request (see internal.rs `self.clone().proxy(req)`),
+    /// so each clone handles exactly one request/response pair sequentially — no shared
+    /// state or locking is needed.
+    pending: Option<PendingRequest>,
 }
 
 impl InterceptHandler {
     fn new(emit_fn: EmitFn) -> Self {
         Self {
             emit_fn,
-            pending: Arc::new(std::sync::Mutex::new(None)),
+            pending: None,
         }
     }
 }
@@ -90,8 +96,14 @@ impl HttpHandler for InterceptHandler {
     fn handle_request(
         &mut self,
         _ctx: &HttpContext,
-        req: Request<Body>,
+        mut req: Request<Body>,
     ) -> impl std::future::Future<Output = RequestOrResponse> + Send {
+        let id = uuid::Uuid::new_v4().to_string();
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis() as i64;
+
         let method = req.method().to_string();
 
         let host: String = req
@@ -113,25 +125,58 @@ impl HttpHandler for InterceptHandler {
             .unwrap_or_else(|| "/".to_string());
 
         let request_headers = collect_headers(req.headers());
-        let pending = Arc::clone(&self.pending);
+
+        // Strip Accept-Encoding so the server sends uncompressed responses.
+        // This makes response bodies directly readable without a decompression step.
+        // Standard practice for MITM inspection proxies (Burp Suite does the same).
+        req.headers_mut().remove("accept-encoding");
+
+        // Store synchronously before returning the future — safe because this clone
+        // of the handler is dedicated to this single request/response pair.
+        self.pending = Some(PendingRequest {
+            id,
+            timestamp,
+            method,
+            host,
+            path,
+            request_headers,
+        });
+
+        async move { RequestOrResponse::Request(req) }
+    }
+
+    fn handle_error(
+        &mut self,
+        _ctx: &HttpContext,
+        err: UpstreamError,
+    ) -> impl std::future::Future<Output = Response<Body>> + Send {
+        // Emit an event so failed requests still appear in the intercept table.
+        let req_info = self.pending.take();
+        let emit_fn = Arc::clone(&self.emit_fn);
+        let err_str = err.to_string();
 
         async move {
-            let id = uuid::Uuid::new_v4().to_string();
-            let timestamp = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_millis() as i64;
+            if let Some(req_info) = req_info {
+                let event = InterceptEvent {
+                    id: req_info.id,
+                    timestamp: req_info.timestamp,
+                    method: req_info.method,
+                    host: req_info.host,
+                    path: req_info.path,
+                    status_code: None,
+                    content_type: None,
+                    size: None,
+                    request_headers: req_info.request_headers,
+                    response_headers: HashMap::new(),
+                    response_body: Some(err_str),
+                };
+                emit_fn(&event);
+            }
 
-            *pending.lock().unwrap() = Some(PendingRequest {
-                id,
-                timestamp,
-                method,
-                host,
-                path,
-                request_headers,
-            });
-
-            RequestOrResponse::Request(req)
+            Response::builder()
+                .status(502)
+                .body(Body::empty())
+                .unwrap()
         }
     }
 
@@ -148,22 +193,17 @@ impl HttpHandler for InterceptHandler {
             .and_then(|v| v.to_str().ok())
             .map(str::to_string);
 
-        let pending = Arc::clone(&self.pending);
+        // Take the pending request that was stored by handle_request on this same clone.
+        let req_info = self.pending.take();
         let emit_fn = Arc::clone(&self.emit_fn);
 
         async move {
-            // Split response so we can buffer the body while preserving headers/status
             let (parts, body) = res.into_parts();
-
-            // Collect response headers before parts is consumed by from_parts
             let response_headers = collect_headers(&parts.headers);
 
-            // Buffer the body bytes
             let bytes: Bytes = body.collect().await.unwrap_or_default().to_bytes();
-
             let size = bytes.len() as u64;
 
-            // Capture as UTF-8 string only for text-like content types within size limit
             let response_body: Option<String> =
                 if bytes.len() <= MAX_BODY_CAPTURE_BYTES
                     && content_type
@@ -176,12 +216,10 @@ impl HttpHandler for InterceptHandler {
                     None
                 };
 
-            // Reconstruct the response with the original bytes so the client still receives them
-            // hudsucker::Body implements From<Full<Bytes>>
             let new_body: Body = Full::new(bytes).into();
             let res = Response::from_parts(parts, new_body);
 
-            if let Some(req_info) = pending.lock().unwrap().take() {
+            if let Some(req_info) = req_info {
                 let event = InterceptEvent {
                     id: req_info.id,
                     timestamp: req_info.timestamp,
