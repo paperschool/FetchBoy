@@ -211,7 +211,7 @@ export function InterceptTable() {
                 return (
                   <div
                     key={req.id}
-                    className={`group absolute w-full flex border-b border-app-subtle transition-colors cursor-pointer ${
+                    className={`group absolute w-full flex items-center border-b border-app-subtle transition-colors cursor-pointer ${
                       isSelected
                         ? "bg-blue-500/10 border-l-2 border-l-blue-500"
                         : "hover:bg-app-subtle"
@@ -223,25 +223,25 @@ export function InterceptTable() {
                     onClick={() => setSelectedRequestId(req.id)}
                   >
                     {/* Timestamp */}
-                    <div className="px-2 py-2 text-xs text-app-muted w-[82px] shrink-0 tabular-nums">
+                    <div className="px-2 text-xs text-app-muted w-[100px] shrink-0 tabular-nums">
                       {formatTimestamp(req.timestamp)}
                     </div>
                     {/* Host + Path — dominant column */}
-                    <div className="px-2 py-2 text-xs text-app-primary flex-1 min-w-0 flex items-center gap-1 overflow-hidden">
+                    <div className="px-2 text-xs text-app-primary flex-1 min-w-0 flex items-center gap-1 overflow-hidden">
                       <span className="truncate" title={fullUrl}>
                         {fullUrl}
                       </span>
                       <CopyButton text={fullUrl} />
                     </div>
                     {/* Controls */}
-                    <div className="px-1 py-2 w-[76px] shrink-0 flex items-center justify-end gap-1">
+                    <div className="px-1 w-[100px] shrink-0 flex items-center justify-end gap-1">
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           openInFetch(req);
                         }}
-                        className="opacity-0 group-hover:opacity-100 rounded px-1.5 py-0.5 text-xs font-medium bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-all"
+                        className="opacity-0 group-hover:opacity-100 rounded px-1.5 py-0.5 text-xs font-medium bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-all cursor-pointer"
                         title="Open in Fetch tab"
                       >
                         Fetch
@@ -249,22 +249,22 @@ export function InterceptTable() {
                       <button
                         type="button"
                         onClick={(e) => handleBreakClick(e, req)}
-                        className="opacity-0 group-hover:opacity-100 rounded px-1.5 py-0.5 text-xs font-medium bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-all"
+                        className="opacity-0 group-hover:opacity-100 rounded px-1.5 py-0.5 text-xs font-medium bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-all cursor-pointer"
                         title="Save as breakpoint"
                       >
                         Break
                       </button>
                     </div>
                     {/* Method */}
-                    <div className="px-2 py-2 w-[70px] shrink-0">
+                    <div className="px-2 w-[75px] shrink-0">
                       {formatMethod(req.method)}
                     </div>
                     {/* Status */}
-                    <div className="px-2 py-2 w-[70px] shrink-0 text-xs tabular-nums">
+                    <div className="px-2 w-[70px] shrink-0 text-xs tabular-nums">
                       {formatStatusCode(req.statusCode)}
                     </div>
                     {/* Content-Type */}
-                    <div className="px-2 py-2 w-[100px] shrink-0 text-xs text-app-muted overflow-hidden">
+                    <div className="px-2 w-[100px] shrink-0 text-xs text-app-muted overflow-hidden">
                       <span
                         className="truncate block"
                         title={req.contentType || ""}
@@ -273,7 +273,7 @@ export function InterceptTable() {
                       </span>
                     </div>
                     {/* Size */}
-                    <div className="px-2 py-2 w-[70px] shrink-0 text-xs text-app-muted tabular-nums">
+                    <div className="px-2 w-[70px] shrink-0 text-xs text-app-muted tabular-nums">
                       {formatSize(req.size)}
                     </div>
                   </div>
