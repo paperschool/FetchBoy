@@ -110,10 +110,6 @@ export const useInterceptStore = create<InterceptStore>((set, get) => ({
   clearRequests: () => set({
     requests: [],
     selectedRequestId: null,
-    searchQuery: '',
-    searchMode: 'fuzzy',
-    verbFilter: null,
-    statusFilter: null,
   }),
 
   setSelectedRequestId: (id) => set({ selectedRequestId: id }),
