@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Bug, Plus } from 'lucide-react';
+import { Bug, Plus, FolderPlus } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FolderRow } from './FolderRow';
 import { BreakpointRow } from './BreakpointRow';
@@ -9,13 +9,20 @@ import {
     createBreakpointFolder,
     renameBreakpointFolder,
     deleteBreakpointFolder,
-    createBreakpoint,
     deleteBreakpoint as dbDeleteBreakpoint,
 } from '@/lib/breakpoints';
 
 export function BreakpointsTree() {
-    const { folders, breakpoints, loadAll, addFolder, renameFolder, deleteFolder, addBreakpoint, deleteBreakpoint } =
-        useBreakpointsStore();
+    const {
+        folders,
+        breakpoints,
+        loadAll,
+        addFolder,
+        renameFolder,
+        deleteFolder,
+        deleteBreakpoint,
+        startEditing,
+    } = useBreakpointsStore();
     const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
@@ -50,9 +57,13 @@ export function BreakpointsTree() {
         deleteFolder(id);
     }
 
-    async function handleAddBreakpoint(folderId: string | null) {
-        const bp = await createBreakpoint(folderId, 'New Breakpoint', '', 'partial').catch(() => null);
-        if (bp) addBreakpoint(bp);
+    function handleAddBreakpoint(folderId: string | null) {
+        startEditing(undefined, folderId);
+    }
+
+    function handleEditBreakpoint(id: string) {
+        const bp = breakpoints.find((b) => b.id === id);
+        if (bp) startEditing(bp, bp.folder_id);
     }
 
     async function handleDeleteBreakpoint(id: string) {
@@ -67,13 +78,23 @@ export function BreakpointsTree() {
                     <span className="text-app-muted text-xs font-semibold uppercase tracking-widest">
                         Breakpoints
                     </span>
-                    <button
-                        onClick={() => void handleAddFolder()}
-                        aria-label="Add Folder"
-                        className="text-gray-300 hover:text-white p-1 rounded cursor-pointer"
-                    >
-                        <Plus size={16} />
-                    </button>
+                    <div className="flex items-center gap-1">
+                        <button
+                            onClick={() => handleAddBreakpoint(null)}
+                            aria-label="New Breakpoint"
+                            title="New Breakpoint"
+                            className="text-gray-300 hover:text-white p-1 rounded cursor-pointer"
+                        >
+                            <Bug size={16} />
+                        </button>
+                        <button
+                            onClick={() => void handleAddFolder()}
+                            aria-label="Add Folder"
+                            className="text-gray-300 hover:text-white p-1 rounded cursor-pointer"
+                        >
+                            <FolderPlus size={16} />
+                        </button>
+                    </div>
                 </div>
                 <div data-testid="empty-state">
                     <EmptyState
@@ -93,17 +114,33 @@ export function BreakpointsTree() {
                 <span className="text-app-muted text-xs font-semibold uppercase tracking-widest">
                     Breakpoints
                 </span>
-                <button
-                    onClick={() => void handleAddFolder()}
-                    aria-label="Add Folder"
-                    className="text-gray-300 hover:text-white p-1 rounded cursor-pointer"
-                >
-                    <Plus size={16} />
-                </button>
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={() => handleAddBreakpoint(null)}
+                        aria-label="New Breakpoint"
+                        title="New Breakpoint"
+                        className="text-gray-300 hover:text-white p-1 rounded cursor-pointer"
+                    >
+                        <Plus size={16} />
+                    </button>
+                    <button
+                        onClick={() => void handleAddFolder()}
+                        aria-label="Add Folder"
+                        title="Add Folder"
+                        className="text-gray-300 hover:text-white p-1 rounded cursor-pointer"
+                    >
+                        <FolderPlus size={16} />
+                    </button>
+                </div>
             </div>
 
             {rootBreakpoints.map((bp) => (
-                <BreakpointRow key={bp.id} breakpoint={bp} onDelete={() => void handleDeleteBreakpoint(bp.id)} />
+                <BreakpointRow
+                    key={bp.id}
+                    breakpoint={bp}
+                    onEdit={() => handleEditBreakpoint(bp.id)}
+                    onDelete={() => void handleDeleteBreakpoint(bp.id)}
+                />
             ))}
 
             {tree.map(({ folder, breakpoints: folderBps }) => (
@@ -115,7 +152,8 @@ export function BreakpointsTree() {
                     onToggle={() => toggle(folder.id)}
                     onRename={(id, name) => void handleRenameFolder(id, name)}
                     onDelete={() => void handleDeleteFolder(folder.id)}
-                    onAddBreakpoint={() => void handleAddBreakpoint(folder.id)}
+                    onAddBreakpoint={() => handleAddBreakpoint(folder.id)}
+                    onEditBreakpoint={(id) => handleEditBreakpoint(id)}
                     onDeleteBreakpoint={(id) => void handleDeleteBreakpoint(id)}
                 />
             ))}

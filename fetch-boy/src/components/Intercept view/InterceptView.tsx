@@ -3,9 +3,11 @@ import { InterceptSidebar } from "./InterceptSidebar";
 import { InterceptTopBar } from "./InterceptTopBar";
 import { InterceptTable } from "./InterceptTable";
 import { RequestDetailView } from "./RequestDetailView";
+import { BreakpointEditor } from "@/components/Breakpoints/BreakpointEditor";
 import { TabLayout } from "@/components/Layout/TabLayout";
 import { useUiSettingsStore } from "@/stores/uiSettingsStore";
 import { useInterceptStore } from "@/stores/interceptStore";
+import { useBreakpointsStore } from "@/stores/breakpointsStore";
 import { useInterceptEvents } from "@/hooks/useInterceptEvents";
 import { useSplitPane } from "@/hooks/useSplitPane";
 import { saveSetting } from "@/lib/settings";
@@ -17,6 +19,8 @@ export function InterceptView() {
   const selectedRequest = useInterceptStore((state) =>
     state.requests.find((r) => r.id === state.selectedRequestId) ?? null
   );
+
+  const { isEditing, cancelEditing } = useBreakpointsStore();
 
   const sidebarCollapsed = useUiSettingsStore((s) => s.sidebarCollapsed);
   const setSidebarCollapsed = useUiSettingsStore((s) => s.setSidebarCollapsed);
@@ -39,8 +43,14 @@ export function InterceptView() {
         role="separator"
         aria-orientation="horizontal"
       />
-      <div className="flex-1 min-h-0 flex flex-col p-2 overflow-hidden">
-        <RequestDetailView selectedRequest={selectedRequest} />
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        {isEditing ? (
+          <BreakpointEditor onClose={cancelEditing} />
+        ) : (
+          <div className="p-2 h-full">
+            <RequestDetailView selectedRequest={selectedRequest} />
+          </div>
+        )}
       </div>
     </div>
   );
