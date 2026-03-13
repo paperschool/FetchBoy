@@ -10,7 +10,85 @@ permissions:
   contents: write
 
 jobs:
+  # Phase 1: Install dependencies and build Rust dependencies (runs once on Ubuntu)
+  install-deps:
+    runs-on: ubuntu-22.04
+    outputs:
+      cache-key: ${{ steps.cache-key.outputs.key }}
+      sha: ${{ steps.sha.outputs.sha }}
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get commit SHA
+        id: sha
+        run: |
+          echo "sha=${{ github.sha }}" >> $GITHUB_OUTPUT
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+          cache-dependency-path: ./yarn.lock
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ./src-tauri -> target
+
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+
+      - name: Install frontend dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build Rust dependencies
+        working-directory: src-tauri
+        run: |
+          # Pre-build Rust dependencies to cache them
+          cargo build --release
+
+      - name: Generate cache key
+        id: cache-key
+        run: |
+          # Create a unique key based on lockfile hashes and Rust toolchain
+          NODE_HASH=$(shasum yarn.lock | cut -d' ' -f1)
+          CARGO_LOCK_HASH=$(shasum src-tauri/Cargo.lock | cut -d' ' -f1)
+          RUST_VERSION=$(rustc --version)
+          echo "key=node-${NODE_HASH}-cargo-${CARGO_LOCK_HASH}-${RUST_VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Upload node_modules
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-modules
+          path: node_modules/
+          retention-days: 1
+
+      - name: Upload Rust target directory
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-target
+          path: src-tauri/target/
+          retention-days: 1
+
+  # Phase 2: Build Tauri app for each platform (runs in parallel)
   build:
+    needs: install-deps
     strategy:
       fail-fast: false
       matrix:
@@ -37,11 +115,6 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Rust cache
-        uses: swatinem/rust-cache@v2
-        with:
-          workspaces: ./src-tauri -> target
-
       - name: Install Linux system dependencies
         if: matrix.platform == 'ubuntu-22.04'
         run: |
@@ -57,9 +130,17 @@ jobs:
             libayatana-appindicator3-dev \
             librsvg2-dev
 
-      - name: Install frontend dependencies
-        working-directory: .
-        run: yarn install --frozen-lockfile
+      - name: Download node_modules
+        uses: actions/download-artifact@v4
+        with:
+          name: node-modules
+          path: .
+
+      - name: Download Rust target
+        uses: actions/download-artifact@v4
+        with:
+          name: rust-target
+          path: src-tauri/target/
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
@@ -142,11 +223,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Get version
+      - name: Get version and SHA
         id: version
         run: |
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "sha=${{ github.sha }}" >> $GITHUB_OUTPUT
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -170,7 +252,7 @@ jobs:
           # Read files from JSON array into a bash array to properly handle spaces
           mapfile -t FILE_ARRAY < <(echo "${{ steps.files.outputs.files }}" | jq -r '.[]')
           gh release create "v${{ steps.version.outputs.version }}" \
-            --title "Fetch Boy v${{ steps.version.outputs.version }}" \
+            --title "Fetch Boy v${{ steps.version.outputs.version }} (${{ steps.version.outputs.sha }})" \
             --draft \
             --notes "$(cat <<'EOF'
           ## Downloads
