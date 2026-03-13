@@ -5,15 +5,17 @@ import type { InterceptRequest } from '@/stores/interceptStore'
 export interface ColumnDef {
   id: string
   label: string
+  className: string
 }
 
 export const columnDefs: ColumnDef[] = [
-  { id: 'timestamp', label: 'Timestamp' },
-  { id: 'method', label: 'Method' },
-  { id: 'hostPath', label: 'Host + Path' },
-  { id: 'statusCode', label: 'Status Code' },
-  { id: 'contentType', label: 'Content-Type' },
-  { id: 'size', label: 'Size' },
+  { id: 'timestamp',   label: 'Time',        className: 'w-[82px] shrink-0' },
+  { id: 'hostPath',    label: 'Host + Path', className: 'flex-1 min-w-0' },
+  { id: 'controls',   label: '',            className: 'w-[76px] shrink-0' },
+  { id: 'method',     label: 'Method',      className: 'w-[70px] shrink-0' },
+  { id: 'statusCode', label: 'Status',      className: 'w-[70px] shrink-0' },
+  { id: 'contentType',label: 'Type',        className: 'w-[100px] shrink-0' },
+  { id: 'size',       label: 'Size',        className: 'w-[70px] shrink-0' },
 ]
 
 export function formatTimestamp(timestamp: number): string {

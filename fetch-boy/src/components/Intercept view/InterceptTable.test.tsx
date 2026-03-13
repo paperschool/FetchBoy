@@ -60,14 +60,14 @@ beforeEach(() => {
 })
 
 describe('InterceptTable', () => {
-  it('renders all 6 column headers', () => {
+  it('renders all column headers', () => {
     useInterceptStore.setState({ requests: sampleRequests })
     render(<InterceptTable />)
-    expect(screen.getByText('Timestamp')).toBeInTheDocument()
+    expect(screen.getByText('Time')).toBeInTheDocument()
     expect(screen.getByText('Method')).toBeInTheDocument()
     expect(screen.getByText('Host + Path')).toBeInTheDocument()
-    expect(screen.getByText('Status Code')).toBeInTheDocument()
-    expect(screen.getByText('Content-Type')).toBeInTheDocument()
+    expect(screen.getByText('Status')).toBeInTheDocument()
+    expect(screen.getByText('Type')).toBeInTheDocument()
     expect(screen.getByText('Size')).toBeInTheDocument()
   })
 
@@ -213,14 +213,14 @@ describe('InterceptView', () => {
   it('shows table when requests exist', () => {
     useInterceptStore.setState({ requests: sampleRequests })
     render(<InterceptView />)
-    expect(screen.getByText('Timestamp')).toBeInTheDocument()
+    expect(screen.getByText('Time')).toBeInTheDocument()
     // GET appears in both the method badge and filter dropdown option
     expect(screen.getAllByText('GET').length).toBeGreaterThanOrEqual(1)
   })
 
   it('does not show table column headers in empty state', () => {
     render(<InterceptView />)
-    expect(screen.queryByText('Timestamp')).not.toBeInTheDocument()
+    expect(screen.queryByText('Time')).not.toBeInTheDocument()
   })
 
   it('shows split-pane bottom placeholder', () => {
