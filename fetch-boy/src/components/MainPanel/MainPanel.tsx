@@ -718,7 +718,7 @@ export function MainPanel() {
       />
       <main
         data-testid="main-panel"
-        className="bg-app-main text-app-primary flex flex-col overflow-hidden p-4"
+        className="bg-app-main text-app-primary flex flex-col overflow-hidden p-4 h-full"
       >
         <div className="flex min-h-0 flex-1 flex-col gap-4">
         <p className="text-app-muted text-sm">Request Builder</p>

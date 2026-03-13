@@ -1,5 +1,6 @@
 import { type ReactNode } from "react";
 import { useAppTabStore } from "@/stores/appTabStore";
+import { useUiSettingsStore } from "@/stores/uiSettingsStore";
 import { InterceptView } from "@/components/Intercept view/InterceptView";
 import { useInterceptEvents } from "@/hooks/useInterceptEvents";
 
@@ -17,6 +18,7 @@ interface AppTabsProps {
 export function AppTabs({ children }: AppTabsProps) {
   const activeTab = useAppTabStore((s) => s.activeTab);
   const setActiveTab = useAppTabStore((s) => s.setActiveTab);
+  const proxyEnabled = useUiSettingsStore((s) => s.proxyEnabled);
 
   useInterceptEvents();
 
@@ -34,13 +36,21 @@ export function AppTabs({ children }: AppTabsProps) {
             role="tab"
             aria-selected={activeTab === tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 text-sm font-medium transition-colors ${
+            className={`group flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
               activeTab === tab
                 ? "-mb-px border-b-2 border-blue-500 text-app-primary"
                 : "text-app-muted hover:text-app-secondary"
             }`}
           >
             {TAB_LABELS[tab]}
+            {tab === "intercept" && (
+              <span
+                className={`h-2 w-2 rounded-full transition-colors ${
+                  proxyEnabled ? "bg-green-500" : "bg-gray-500"
+                }`}
+                title={proxyEnabled ? "Intercepting" : "Not intercepting"}
+              />
+            )}
           </button>
         ))}
       </div>

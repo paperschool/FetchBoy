@@ -28,7 +28,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         return (
             <aside
                 data-testid="sidebar"
-                className="bg-app-sidebar text-app-inverse overflow-hidden p-2 flex flex-col items-center gap-2"
+                className="bg-app-sidebar text-app-inverse overflow-hidden p-2 flex flex-col items-center gap-2 h-full"
             >
                 <button
                     type="button"
@@ -84,7 +84,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     return (
         <aside
             data-testid="sidebar"
-            className="bg-app-sidebar text-app-inverse overflow-hidden p-3 flex flex-col"
+            className="bg-app-sidebar text-app-inverse overflow-hidden p-3 flex flex-col h-full"
         >
             <div className="flex items-center justify-between mb-3">
                 <button

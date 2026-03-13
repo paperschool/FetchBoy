@@ -9,7 +9,9 @@ export function useInterceptEvents(): void {
     let unlisten: UnlistenFn | undefined
 
     listen<InterceptEventPayload>('intercept:request', (event) => {
+      console.log('[Intercept] Received event:', event.payload)
       useInterceptStore.getState().addRequest(event.payload)
+      console.log('[Intercept] Store state after add:', useInterceptStore.getState().requests.length, 'requests')
     })
       .then((fn) => {
         unlisten = fn

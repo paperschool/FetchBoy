@@ -2,19 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.1.0] - 2026-03-12
+## [0.2.0] - 2026-03-12
 
 ### ✨ Features
 
+- feat: Story 9.1 - Top Level Tab Shell
 - feat: Story 9.2 - Intercept Table View UI
-  - Created `useInterceptStore` (Zustand) for managing intercepted HTTP request metadata
-  - Created `InterceptTable` component with 6 columns: Timestamp, Method, Host+Path, Status Code, Content-Type, Size
-  - Added method badge styling (GET=green, POST=blue, PUT=orange, DELETE=red, etc.)
-  - Added status code coloring (2xx=green, 3xx=blue, 4xx=orange, 5xx=red)
-  - Implemented empty state when no requests captured
-  - Created `InterceptTable.utils.tsx` with column definitions and formatters
-  - Added comprehensive tests for table rendering and formatting
-  - Used existing CSS tokens (`bg-app-main`, `text-app-primary`, etc.) for consistent theming
+- feat: Story 9.3 - MITM Https proxy
+- feat: Story 9.4 - Event Streaming Bridge
+- feat: Story 9.5 - Proxy Installation / Proxy starting logic.
+
+## [0.1.0] - 2026-03-12
+
+### ✨ Features
 
 - feat: fix build, make start up screen same as splash screen
 - feat: image viewer ui tweaks
@@ -89,7 +89,7 @@ All notable changes to this project will be documented in this file.
 - - Theme-aware colors for light/dark modes
 - - Cancel handling resets progress
 - - Fade-out animation after completion
-- 
+-
 - when a new version is detected, showing a bullet-point changelog entry.
 - - Created changelog.json with initial v0.1.0 entries
 - - Created appVersion utility (getCurrentVersion, isNewVersion)
@@ -98,23 +98,23 @@ All notable changes to this project will be documented in this file.
 - - Integrated version check in App.tsx after splash/tour sequence
 - - All 532 tests pass, TypeScript clean
 - Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
-- 
+-
 - - Create KeyboardShortcutsModal component with category grouping and Escape/click-outside close
 - - Add global ? key listener in App.tsx (skips inputs and Monaco editor)
 - - Update SettingsPanel and SettingsAccordion to use constants (no more hardcoded strings)
 - Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
-- 
+-
 - HistoryPanel, and ResponseViewer with theme-aware styling and Lucide icons.
 - Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
-- 
+-
 - (GET posts, GET single post, POST create, GET user) on first launch.
 - Uses has_seeded_sample_data flag in SQLite settings to prevent
 - re-seeding. Triggered in App.tsx after tour completion.
 - Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
-- 
+-
 - SettingsAccordion in the sidebar. Move Restart Tutorial button there.
 - Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
-- 
+-
 - - Create tourStore (Zustand + persist) for tour state with localStorage persistence
 - - Create TourController component with 5-step tour covering all key UI areas
 - - Integrate TourController into App.tsx after splash screen (500ms settle delay)
@@ -122,8 +122,8 @@ All notable changes to this project will be documented in this file.
 - - Add "Restart Tutorial" button in SettingsPanel wired to tourStore.resetTour()
 - - Add 17 new tests (5 store unit tests + 12 component tests), all 492 tests pass
 - Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
-- 
-- 
+-
+-
 - - SplashScreen component with fade-in/scale CSS animation
 - - Min 1.5s display, max 3s safety cutoff, click-to-skip after min
 - - Theme-aware via useTheme hook (light/dark/system via .dark class)
@@ -133,7 +133,7 @@ All notable changes to this project will be documented in this file.
 - - vite-env.d.ts for SVG import type declarations
 - - 12 new unit tests; 475 total tests pass, no regressions
 - Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
-- 
+-
 - Complete Story 6.5: Settings in Sidebar Accordion
 - - Add Settings icon to collapsed sidebar strip
 - - Persist Settings accordion state in app settings
@@ -141,7 +141,7 @@ All notable changes to this project will be documented in this file.
 - - Ensure settings sync between Sidebar and app
 - - Add unit tests for SettingsAccordion component
 - - Update sprint status to review
-- 
+-
 - Story 6.5: Implement settings in sidebar accordion
 - - Add Settings icon to collapsed sidebar strip; clicking expands sidebar and opens accordion
 - - Persist sidebarSettingsExpanded state to SQLite via saveSetting/loadAllSettings
@@ -150,27 +150,27 @@ All notable changes to this project will be documented in this file.
 - - Add sidebar_settings_expanded to AppSettings and settings loader
 - - Add SettingsAccordion.test.tsx (18 tests) and update Sidebar.test.tsx, TopBar.test.tsx, settings.test.ts
 - Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
-- 
-- 
+-
+-
 - Story 6.4: Implement request timeout configuration
 - - Add wasTimedOut / timedOutAfterSec to ResponseSnapshot for neutral display
 - - Create TimeoutInput component (digit-only validation, reverts invalid on blur)
 - - Move TimeoutInput into new "Options" tab in Request Details accordion
 - - Add 'options' to RequestTab union type
-- - Detect Rust __TIMEOUT__ signal → show neutral "Timed out after Xs" in ResponseViewer
+- - Detect Rust **TIMEOUT** signal → show neutral "Timed out after Xs" in ResponseViewer
 - - Handle timeout_ms=0 in Rust (skip client.timeout → no timeout behaviour)
-- - Detect reqwest timeout errors via e.is_timeout() → return __TIMEOUT__ sentinel
+- - Detect reqwest timeout errors via e.is_timeout() → return **TIMEOUT** sentinel
 - - JS-side invokeWithTimeout guard honours per-tab timeout (disabled when timeout=0)
 - - 12 new unit tests for TimeoutInput, 4 new tests for ResponseViewer timeout state
 - Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
-- 
+-
 - Story 6.3: Implement Cmd/Ctrl+Enter keyboard shortcut to send requests
--   open modals ([role="dialog"]), and Headless UI dropdowns
+- open modals ([role="dialog"]), and Headless UI dropdowns
 - - Integrate hook into MainPanel via useCallback-wrapped handleSendRequest
 - - Add keyboard shortcuts reference section to SettingsPanel (AC 3)
 - - 12 new unit tests; full suite 425/425 passing, zero regressions
 - Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
-- 
+-
 - Story 6.2: Implement request cancellation with AbortController + Rust CancellationRegistry
 - - Created Rust `CancellationRegistry` (Mutex-guarded HashMap of oneshot senders) in http.rs
 - - Modified `send_request` to race reqwest future vs oneshot channel using `tokio::select!`
@@ -180,8 +180,8 @@ All notable changes to this project will be documented in this file.
 - - Cancellation skips history persistence; shows neutral "Request cancelled" in ResponseViewer
 - - Added 13 new tests across tabStore, MainPanel, and ResponseViewer (413 total, all pass)
 - Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
-- 
-- 
+-
+-
 - Story 6.1: Implement foldable sidebar with Cmd/Ctrl+B shortcut
 - - Implemented keyboard shortcut (Cmd/Ctrl+B) to toggle sidebar
 - - Updated AppShell with dynamic grid layout (16rem expanded, 3.5rem collapsed)
@@ -191,12 +191,12 @@ All notable changes to this project will be documented in this file.
 - - Sidebar state persists to SQLite database across sessions
 - - Maintained full accessibility (keyboard navigation, proper ARIA labels)
 - - No regressions in collections, history, or other panels
-- 
+-
 - - CollectionTree: right-click context menu + middle-click on request rows
 - - HistoryPanel: right-click context menu + middle-click on history rows
 - - Left-click behaviour fully preserved (no regression)
 - - 11 new tests: 4 tabStore, 4 CollectionTree, 3 HistoryPanel (302 passing)
-- 
+-
 - - Add createDefaultRequestSnapshot / createDefaultResponseSnapshot factories
 - - Add updateTabRequestState / updateTabResponseState immer actions to tabStore
 - - New useActiveRequestState and useActiveResponseState selector hooks
@@ -206,7 +206,7 @@ All notable changes to this project will be documented in this file.
 - - Update HistoryPanel handleRowClick to use updateTabRequestState
 - - Update TabBar syncLabelFromRequest to read from useActiveRequestState
 - - TypeScript: 0 errors; 291 tests passing
-- 
+-
 - - Update package.json name to fetch-boy
 - - Update Cargo.toml name and description
 - - Update Cargo.lock package entry
@@ -214,15 +214,14 @@ All notable changes to this project will be documented in this file.
 - - Rename DB file to fetch-boy.db
 - - Rename format version key dispatch_version → fetch_boy_version
 - - Update README.md, .github/workflows/build.yml, and api-client-spec.md folder paths and app name references
-- 
+-
 - - Add TabBar component with active/inactive tabs, hover close, inline rename, auto-label sync
 - - Update AppShell grid to 3 rows (3rem/2.25rem/1fr) with TabBar slot at col-2 row-2
 - - Use Tailwind v4 arbitrary child selectors for Sidebar row-span-2 and MainPanel row-start-3
 - - Add 10 tabStore unit tests + 8 TabBar component tests (18 new, 0 regressions)
-- 
+-
 - - Add useEnvironment hook wiring store to interpolation util
 - - Apply env variable interpolation at send time in MainPanel (non-destructive)
 - - Show unresolved variable warning below URL input
 - - 197 tests passing, typecheck clean
-- 
-
+-
