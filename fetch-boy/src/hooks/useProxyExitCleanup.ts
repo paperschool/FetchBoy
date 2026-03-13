@@ -21,19 +21,21 @@ export function useProxyExitCleanup(): void {
       .onCloseRequested(async (event) => {
         event.preventDefault()
 
-        const port = useUiSettingsStore.getState().proxyPort
+        try {
+          const port = useUiSettingsStore.getState().proxyPort
 
-        // Stop the proxy backend and clear OS proxy settings.
-        await invoke('set_proxy_config', { enabled: false, port }).catch(() => {})
+          // Stop the proxy backend and clear OS proxy settings.
+          await invoke('set_proxy_config', { enabled: false, port }).catch(() => {})
 
-        // Persist disabled state so the next launch doesn't re-enable it unexpectedly.
-        await saveSetting('proxy_enabled', false).catch(() => {})
+          // Persist disabled state so the next launch doesn't re-enable it unexpectedly.
+          await saveSetting('proxy_enabled', false).catch(() => {})
 
-        // Reset in-memory store (cosmetic — window is closing, but keeps state clean).
-        useUiSettingsStore.getState().setProxyEnabled(false)
-
-        // Proceed with close now that cleanup is done.
-        await getCurrentWindow().destroy()
+          // Reset in-memory store.
+          useUiSettingsStore.getState().setProxyEnabled(false)
+        } finally {
+          // Always close — even if cleanup fails, the user must be able to exit.
+          await getCurrentWindow().destroy()
+        }
       })
       .then((fn) => {
         unlisten = fn
