@@ -1,11 +1,16 @@
-import { useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import type { InterceptRequest } from '@/stores/interceptStore'
+import { MonacoEditorField } from '@/components/Editor/MonacoEditorField'
+import { useUiSettingsStore } from '@/stores/uiSettingsStore'
+import { HeadersTable } from '@/components/ui/HeadersTable'
 import {
   formatTimestamp,
   formatSize,
   formatHostPath,
   CopyButton,
 } from './InterceptTable.utils'
+
+type BodyLanguage = 'json' | 'html' | 'xml' | 'plaintext'
 
 const METHOD_COLORS: Record<string, string> = {
   GET: 'bg-green-500/20 text-green-400',
@@ -25,75 +30,32 @@ function getStatusBadgeClass(code: number): string {
   return 'bg-gray-500/20 text-gray-400'
 }
 
-function BodyContent({ body, contentType }: { body?: string; contentType?: string }) {
-  if (!body) {
-    return <div className="text-app-muted text-sm">No response body</div>
-  }
-
-  const looksLikeJson =
-    contentType?.includes('json') ||
-    body.trim().startsWith('{') ||
-    body.trim().startsWith('[')
-
-  if (looksLikeJson) {
-    try {
-      const parsed: unknown = JSON.parse(body)
-      return (
-        <pre className="text-xs font-mono text-app-primary whitespace-pre-wrap">
-          {JSON.stringify(parsed, null, 2)}
-        </pre>
-      )
-    } catch {
-      // fall through to plain text
-    }
-  }
-
-  return (
-    <pre className="text-xs font-mono text-app-primary whitespace-pre-wrap">{body}</pre>
-  )
-}
-
-function HeadersContent({
-  requestHeaders,
-  responseHeaders,
-}: {
-  requestHeaders?: Record<string, string>
-  responseHeaders?: Record<string, string>
-}) {
-  function renderKeyValue(headers: Record<string, string> | undefined, title: string) {
-    return (
-      <div className="mb-4">
-        <div className="text-xs font-medium text-app-secondary mb-2">{title}</div>
-        {!headers || Object.keys(headers).length === 0 ? (
-          <div className="text-app-muted text-sm italic">No headers</div>
-        ) : (
-          <div className="space-y-1">
-            {Object.entries(headers).map(([key, value]) => (
-              <div key={key} className="flex gap-2 text-xs">
-                <span className="text-blue-400 font-mono shrink-0">{key}:</span>
-                <span className="text-app-primary font-mono break-all">{value}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    )
-  }
-
-  return (
-    <div>
-      {renderKeyValue(requestHeaders, 'Request Headers')}
-      {renderKeyValue(responseHeaders, 'Response Headers')}
-    </div>
-  )
-}
-
 interface RequestDetailViewProps {
   selectedRequest: InterceptRequest | null
 }
 
 export function RequestDetailView({ selectedRequest }: RequestDetailViewProps) {
   const [activeTab, setActiveTab] = useState<'body' | 'headers'>('body')
+  const [bodyLanguage, setBodyLanguage] = useState<BodyLanguage>('plaintext')
+  const editorFontSize = useUiSettingsStore((s) => s.editorFontSize)
+
+  const formattedBody = useMemo(() => {
+    if (!selectedRequest?.responseBody) return null
+    try {
+      return JSON.stringify(JSON.parse(selectedRequest.responseBody), null, 2)
+    } catch {
+      return null
+    }
+  }, [selectedRequest?.responseBody])
+
+  useEffect(() => {
+    if (!selectedRequest) return
+    const ct = selectedRequest.contentType?.toLowerCase() ?? ''
+    if (formattedBody || ct.includes('json')) setBodyLanguage('json')
+    else if (ct.includes('html')) setBodyLanguage('html')
+    else if (ct.includes('xml')) setBodyLanguage('xml')
+    else setBodyLanguage('plaintext')
+  }, [selectedRequest?.id, formattedBody])
 
   if (!selectedRequest) {
     return (
@@ -104,8 +66,9 @@ export function RequestDetailView({ selectedRequest }: RequestDetailViewProps) {
   }
 
   const fullUrl = formatHostPath(selectedRequest.host, selectedRequest.path)
-  const methodColor =
-    METHOD_COLORS[selectedRequest.method.toUpperCase()] ?? 'bg-gray-500/20 text-gray-400'
+  const methodColor = METHOD_COLORS[selectedRequest.method.toUpperCase()] ?? 'bg-gray-500/20 text-gray-400'
+  const requestHeaderEntries = Object.entries(selectedRequest.requestHeaders ?? {}).map(([key, value]) => ({ key, value }))
+  const responseHeaderEntries = Object.entries(selectedRequest.responseHeaders ?? {}).map(([key, value]) => ({ key, value }))
 
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
@@ -155,20 +118,47 @@ export function RequestDetailView({ selectedRequest }: RequestDetailViewProps) {
         </button>
       </div>
 
-      {/* Tab content */}
-      <div className="flex-1 min-h-0 overflow-auto p-3">
-        {activeTab === 'body' ? (
-          <BodyContent
-            body={selectedRequest.responseBody}
-            contentType={selectedRequest.contentType}
+      {/* Body tab */}
+      {activeTab === 'body' && (
+        <div className="flex-1 min-h-0 relative">
+          <div className="absolute top-2 right-2 z-10">
+            <select
+              value={bodyLanguage}
+              onChange={(e) => setBodyLanguage(e.target.value as BodyLanguage)}
+              className="select-flat border-app-subtle bg-app-main text-app-primary h-8 rounded-md border pl-2 pr-7 text-xs"
+              aria-label="Body language"
+            >
+              <option value="json">JSON</option>
+              <option value="html">HTML</option>
+              <option value="xml">XML</option>
+              <option value="plaintext">Raw</option>
+            </select>
+          </div>
+          <MonacoEditorField
+            testId="intercept-response-body-editor"
+            path="intercept-response-body"
+            language={bodyLanguage}
+            value={formattedBody ?? selectedRequest.responseBody ?? ''}
+            fontSize={editorFontSize}
+            height="100%"
+            readOnly
           />
-        ) : (
-          <HeadersContent
-            requestHeaders={selectedRequest.requestHeaders}
-            responseHeaders={selectedRequest.responseHeaders}
-          />
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Headers tab */}
+      {activeTab === 'headers' && (
+        <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-4">
+          <div>
+            <p className="text-xs font-medium text-app-secondary mb-2">Request Headers</p>
+            <HeadersTable headers={requestHeaderEntries} emptyMessage="No request headers" />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-app-secondary mb-2">Response Headers</p>
+            <HeadersTable headers={responseHeaderEntries} emptyMessage="No response headers" />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

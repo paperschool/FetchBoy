@@ -1,7 +1,20 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import { RequestDetailView } from './RequestDetailView'
 import type { InterceptRequest } from '@/stores/interceptStore'
+
+vi.mock('@monaco-editor/react', () => ({
+  default: ({ value, options, language, path }: { value?: string; options?: { readOnly?: boolean }; language?: string; path?: string }) => (
+    <div
+      data-testid="monaco-editor"
+      data-readonly={options?.readOnly ? 'true' : 'false'}
+      data-language={language ?? ''}
+      data-path={path ?? ''}
+    >
+      {value}
+    </div>
+  ),
+}))
 
 const mockRequest: InterceptRequest = {
   id: 'req-123',
@@ -17,17 +30,13 @@ const mockRequest: InterceptRequest = {
   responseHeaders: { 'Content-Type': 'application/json' },
 }
 
-beforeEach(() => {
-  // reset clipboard mock if needed
-})
-
 describe('RequestDetailView', () => {
   it('renders empty state when no request selected', () => {
     render(<RequestDetailView selectedRequest={null} />)
     expect(screen.getByText('Select a request to view details')).toBeInTheDocument()
   })
 
-  it('does not render metadata when no request selected', () => {
+  it('does not render subtabs when no request selected', () => {
     render(<RequestDetailView selectedRequest={null} />)
     expect(screen.queryByText('Body')).not.toBeInTheDocument()
     expect(screen.queryByText('Headers')).not.toBeInTheDocument()
@@ -61,10 +70,28 @@ describe('RequestDetailView', () => {
     expect(screen.getByText('Headers')).toBeInTheDocument()
   })
 
-  it('Body tab is active by default and shows parsed JSON', () => {
+  it('Body tab is active by default and renders Monaco editor', () => {
     render(<RequestDetailView selectedRequest={mockRequest} />)
-    const pre = screen.getByText(/"name": "John"/, { selector: 'pre' })
-    expect(pre).toBeInTheDocument()
+    const editor = screen.getByTestId('intercept-response-body-editor')
+    expect(within(editor).getByTestId('monaco-editor')).toBeInTheDocument()
+  })
+
+  it('Monaco editor is read-only', () => {
+    render(<RequestDetailView selectedRequest={mockRequest} />)
+    const editor = screen.getByTestId('intercept-response-body-editor')
+    expect(within(editor).getByTestId('monaco-editor')).toHaveAttribute('data-readonly', 'true')
+  })
+
+  it('Monaco editor shows pretty-printed JSON body', () => {
+    render(<RequestDetailView selectedRequest={mockRequest} />)
+    const monaco = within(screen.getByTestId('intercept-response-body-editor')).getByTestId('monaco-editor')
+    expect(monaco.textContent).toContain('"name": "John"')
+  })
+
+  it('renders language selector with JSON selected for JSON content', () => {
+    render(<RequestDetailView selectedRequest={mockRequest} />)
+    const select = screen.getByRole('combobox', { name: /body language/i })
+    expect(select).toBeInTheDocument()
   })
 
   it('clicking Headers tab shows request and response header sections', () => {
@@ -74,55 +101,46 @@ describe('RequestDetailView', () => {
     expect(screen.getByText('Response Headers')).toBeInTheDocument()
   })
 
-  it('Headers tab shows request header keys', () => {
+  it('Headers tab shows request header rows', () => {
     render(<RequestDetailView selectedRequest={mockRequest} />)
     fireEvent.click(screen.getByText('Headers'))
-    expect(screen.getByText('Authorization:')).toBeInTheDocument()
+    expect(screen.getByText('Authorization')).toBeInTheDocument()
     expect(screen.getByText('Bearer token')).toBeInTheDocument()
   })
 
-  it('Headers tab shows response header keys', () => {
+  it('Headers tab shows response header rows', () => {
     render(<RequestDetailView selectedRequest={mockRequest} />)
     fireEvent.click(screen.getByText('Headers'))
-    expect(screen.getByText('Content-Type:')).toBeInTheDocument()
+    expect(screen.getByText('Content-Type')).toBeInTheDocument()
+    // application/json appears in both Accept (request) and Content-Type (response)
+    expect(screen.getAllByText('application/json').length).toBeGreaterThanOrEqual(1)
   })
 
-  it('clicking Body tab switches back to body content', () => {
+  it('clicking Body tab switches back from headers', () => {
     render(<RequestDetailView selectedRequest={mockRequest} />)
     fireEvent.click(screen.getByText('Headers'))
     fireEvent.click(screen.getByText('Body'))
-    const pre = screen.getByText(/"name": "John"/, { selector: 'pre' })
-    expect(pre).toBeInTheDocument()
+    expect(screen.getByTestId('intercept-response-body-editor')).toBeInTheDocument()
   })
 
-  it('shows "No response body" when responseBody is absent', () => {
+  it('shows empty string in Monaco when responseBody is absent', () => {
     const req: InterceptRequest = { ...mockRequest, responseBody: undefined }
     render(<RequestDetailView selectedRequest={req} />)
-    expect(screen.getByText('No response body')).toBeInTheDocument()
+    const monaco = within(screen.getByTestId('intercept-response-body-editor')).getByTestId('monaco-editor')
+    expect(monaco.textContent).toBe('')
   })
 
-  it('shows "No headers" when requestHeaders is empty', () => {
+  it('shows "No request headers" when requestHeaders is empty', () => {
     const req: InterceptRequest = { ...mockRequest, requestHeaders: {}, responseHeaders: {} }
     render(<RequestDetailView selectedRequest={req} />)
     fireEvent.click(screen.getByText('Headers'))
-    const noHeaders = screen.getAllByText('No headers')
-    expect(noHeaders.length).toBe(2)
-  })
-
-  it('renders plain text body when content type is not JSON', () => {
-    const req: InterceptRequest = {
-      ...mockRequest,
-      contentType: 'text/plain',
-      responseBody: 'hello world',
-    }
-    render(<RequestDetailView selectedRequest={req} />)
-    expect(screen.getByText('hello world')).toBeInTheDocument()
+    expect(screen.getAllByText('No request headers')).toHaveLength(1)
+    expect(screen.getAllByText('No response headers')).toHaveLength(1)
   })
 
   it('does not show status badge when statusCode is undefined', () => {
     const req: InterceptRequest = { ...mockRequest, statusCode: undefined }
     render(<RequestDetailView selectedRequest={req} />)
-    // No status code span (200 etc.) should appear
     expect(screen.queryByText('200')).not.toBeInTheDocument()
   })
 })

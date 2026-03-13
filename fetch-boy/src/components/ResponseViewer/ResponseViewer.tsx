@@ -3,6 +3,7 @@ import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import { Download, Send, X, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { HeadersTable } from '@/components/ui/HeadersTable';
 
 export interface ResponseHeaderRow {
   key: string;
@@ -368,20 +369,8 @@ export function ResponseViewer({ response, error, logs = [], onClearLogs, reques
       ) : null}
 
       {activeTab === 'headers' && response ? (
-        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto">
-          {response.headers.length === 0 ? (
-            <p className="text-app-muted text-sm">No headers returned.</p>
-          ) : (
-            response.headers.map((header, index) => (
-              <div
-                key={`${header.key}-${index}`}
-                className="border-app-subtle grid grid-cols-[minmax(140px,_220px)_1fr] gap-2 rounded-md border p-2"
-              >
-                <p className="text-app-secondary text-sm font-medium">{header.key}</p>
-                <p className="text-app-primary text-sm break-all">{header.value}</p>
-              </div>
-            ))
-          )}
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <HeadersTable headers={response.headers} emptyMessage="No headers returned." />
         </div>
       ) : activeTab === 'headers' ? (
         <p className="text-app-muted text-sm">Send a request to see response headers.</p>
