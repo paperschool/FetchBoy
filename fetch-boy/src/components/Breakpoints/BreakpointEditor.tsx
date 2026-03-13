@@ -2,8 +2,11 @@ import { useState, useEffect } from 'react';
 import { Check, AlertCircle } from 'lucide-react';
 import { useBreakpointsStore, validateUrlPattern } from '@/stores/breakpointsStore';
 import type { MatchType, EditForm } from '@/stores/breakpointsStore';
+import type { BreakpointHeader } from '@/lib/db';
 import { ViewerShell } from '@/components/ui/ViewerShell';
 import { ResponseMappingEditor } from './ResponseMappingEditor';
+import { StatusCodeEditor } from './StatusCodeEditor';
+import { HeadersEditor } from './HeadersEditor';
 
 interface Props {
     onClose: () => void;
@@ -39,6 +42,9 @@ export function BreakpointEditor({ onClose }: Props) {
         body: editForm.responseMappingBody,
         contentType: editForm.responseMappingContentType,
     });
+    const [statusCodeEnabled, setStatusCodeEnabled] = useState(editForm.statusCodeEnabled);
+    const [statusCodeValue, setStatusCodeValue] = useState(editForm.statusCodeValue);
+    const [customHeaders, setCustomHeaders] = useState<BreakpointHeader[]>(editForm.customHeaders);
     const [urlError, setUrlError] = useState<string | null>(null);
     const [rmJsonError, setRmJsonError] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -57,12 +63,13 @@ export function BreakpointEditor({ onClose }: Props) {
         }
     }, [responseMapping]);
 
-    const canSave = !urlError && !!urlPattern && !rmJsonError && !saving;
+    const hasEmptyHeaderKey = customHeaders.some((h) => h.enabled && h.key.trim() === '');
+    const canSave = !urlError && !!urlPattern && !rmJsonError && !hasEmptyHeaderKey && !saving;
 
     const handleSave = async () => {
         const validationError = validateUrlPattern(urlPattern, matchType);
         if (validationError) { setUrlError(validationError); setActiveTab('match'); return; }
-        if (rmJsonError) { setActiveTab('response'); return; }
+        if (rmJsonError || hasEmptyHeaderKey) { setActiveTab('response'); return; }
         setSaving(true);
         const form: EditForm = {
             id: editForm.id,
@@ -74,6 +81,9 @@ export function BreakpointEditor({ onClose }: Props) {
             responseMappingEnabled: responseMapping.enabled,
             responseMappingBody: responseMapping.body,
             responseMappingContentType: responseMapping.contentType,
+            statusCodeEnabled,
+            statusCodeValue,
+            customHeaders,
         };
         try {
             await saveBreakpoint(form);
@@ -83,14 +93,19 @@ export function BreakpointEditor({ onClose }: Props) {
         }
     };
 
+    const activeBadgeCount =
+        (responseMapping.enabled ? 1 : 0) +
+        (statusCodeEnabled ? 1 : 0) +
+        (customHeaders.some((h) => h.enabled) ? 1 : 0);
+
     const header = (
         <div className="flex items-center justify-between">
             <h3 className="text-app-inverse font-medium text-sm">
                 {isNew ? 'New Breakpoint' : 'Edit Breakpoint'}
             </h3>
-            {responseMapping.enabled && (
+            {activeBadgeCount > 0 && (
                 <span className="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-400">
-                    Response mapped
+                    {activeBadgeCount} override{activeBadgeCount > 1 ? 's' : ''}
                 </span>
             )}
         </div>
@@ -170,10 +185,21 @@ export function BreakpointEditor({ onClose }: Props) {
                     )}
 
                     {activeTab === 'response' && (
-                        <ResponseMappingEditor
-                            mapping={responseMapping}
-                            onChange={setResponseMapping}
-                        />
+                        <>
+                            <ResponseMappingEditor
+                                mapping={responseMapping}
+                                onChange={setResponseMapping}
+                            />
+                            <StatusCodeEditor
+                                enabled={statusCodeEnabled}
+                                value={statusCodeValue}
+                                onChange={(en, val) => { setStatusCodeEnabled(en); setStatusCodeValue(val); }}
+                            />
+                            <HeadersEditor
+                                headers={customHeaders}
+                                onChange={setCustomHeaders}
+                            />
+                        </>
                     )}
                 </div>
 

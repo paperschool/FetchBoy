@@ -23,5 +23,11 @@ pub fn migrations() -> Vec<Migration> {
             sql: include_str!("../migrations/003_response_mapping.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 4,
+            description: "add_status_headers_to_breakpoints",
+            sql: include_str!("../migrations/004_status_headers.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }

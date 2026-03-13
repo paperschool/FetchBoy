@@ -1,4 +1,4 @@
-import { Bug, ArrowLeftRight, Pencil, Trash2 } from 'lucide-react';
+import { Bug, ArrowLeftRight, Pencil, Trash2, Gauge, ListPlus } from 'lucide-react';
 import type { Breakpoint } from '@/lib/db';
 
 interface BreakpointRowProps {
@@ -23,6 +23,24 @@ export function BreakpointRow({ breakpoint, onEdit, onDelete }: BreakpointRowPro
                     data-testid="rm-indicator"
                 >
                     <ArrowLeftRight size={10} />
+                </span>
+            )}
+            {breakpoint.status_code_enabled && (
+                <span
+                    title={`Overrides status code → ${breakpoint.status_code_value}`}
+                    className="flex-shrink-0 text-orange-400"
+                    data-testid="sc-indicator"
+                >
+                    <Gauge size={10} />
+                </span>
+            )}
+            {(breakpoint.custom_headers ?? []).some((h) => h.enabled) && (
+                <span
+                    title={`Injects ${(breakpoint.custom_headers ?? []).filter((h) => h.enabled).length} custom header(s)`}
+                    className="flex-shrink-0 text-teal-400"
+                    data-testid="headers-indicator"
+                >
+                    <ListPlus size={10} />
                 </span>
             )}
             <div className="hidden group-hover:flex items-center gap-0.5">

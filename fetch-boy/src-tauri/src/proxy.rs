@@ -79,6 +79,13 @@ fn collect_headers(
 // ─── Breakpoint rules (synced from frontend) ─────────────────────────────────
 
 #[derive(Deserialize, Clone)]
+pub struct BreakpointHeader {
+    pub key: String,
+    pub value: String,
+    pub enabled: bool,
+}
+
+#[derive(Deserialize, Clone)]
 pub struct BreakpointRule {
     pub id: String,
     pub url_pattern: String,
@@ -87,6 +94,9 @@ pub struct BreakpointRule {
     pub response_mapping_enabled: bool,
     pub response_mapping_body: String,
     pub response_mapping_content_type: String,
+    pub status_code_enabled: bool,
+    pub status_code_value: u16,
+    pub custom_headers: Vec<BreakpointHeader>,
 }
 
 pub type BreakpointsRef = Arc<Mutex<Vec<BreakpointRule>>>;
@@ -256,22 +266,38 @@ impl HttpHandler for InterceptHandler {
 
             let orig_bytes: Bytes = body.collect().await.unwrap_or_default().to_bytes();
 
-            // Check if an enabled breakpoint with response mapping matches this URL.
+            // Find the first enabled breakpoint that matches this URL.
             let url = req_info
                 .as_ref()
                 .map(|r| format!("https://{}{}", r.host, r.path))
                 .unwrap_or_default();
 
-            let active_mapping = {
+            let matched_bp = {
                 let guard = breakpoints.lock().unwrap();
                 guard
                     .iter()
-                    .filter(|bp| bp.enabled && bp.response_mapping_enabled)
+                    .filter(|bp| bp.enabled)
                     .find(|bp| match_url(&url, &bp.url_pattern, &bp.match_type).matches)
                     .cloned()
             };
 
-            let (final_bytes, final_content_type) = match active_mapping {
+            // Apply status code override.
+            let mut effective_status_code = status_code;
+            if let Some(ref bp) = matched_bp {
+                if bp.status_code_enabled {
+                    log::info!(
+                        "Status code override: '{}' matched '{}' — {} → {}",
+                        url,
+                        bp.url_pattern,
+                        status_code,
+                        bp.status_code_value,
+                    );
+                    effective_status_code = bp.status_code_value;
+                }
+            }
+
+            // Apply response body mapping.
+            let (final_bytes, final_content_type) = match matched_bp.as_ref().filter(|bp| bp.response_mapping_enabled) {
                 Some(bp) => {
                     log::info!(
                         "Response mapping: '{}' matched '{}' — {} B → {} B",
@@ -280,8 +306,8 @@ impl HttpHandler for InterceptHandler {
                         orig_bytes.len(),
                         bp.response_mapping_body.len(),
                     );
-                    let mapped = Bytes::from(bp.response_mapping_body.into_bytes());
-                    let ct = bp.response_mapping_content_type;
+                    let mapped = Bytes::from(bp.response_mapping_body.clone().into_bytes());
+                    let ct = bp.response_mapping_content_type.clone();
                     if let Ok(val) = HeaderValue::from_str(&ct) {
                         parts.headers.insert(CONTENT_TYPE, val);
                     }
@@ -292,6 +318,27 @@ impl HttpHandler for InterceptHandler {
                 }
                 None => (orig_bytes, orig_content_type),
             };
+
+            // Apply custom header injection.
+            if let Some(ref bp) = matched_bp {
+                for header in &bp.custom_headers {
+                    if header.enabled && !header.key.is_empty() {
+                        log::info!(
+                            "Custom header: '{}' matched '{}' — {} = {}",
+                            url,
+                            bp.url_pattern,
+                            header.key,
+                            header.value,
+                        );
+                        if let (Ok(name), Ok(val)) = (
+                            hudsucker::hyper::header::HeaderName::from_bytes(header.key.as_bytes()),
+                            HeaderValue::from_str(&header.value),
+                        ) {
+                            parts.headers.insert(name, val);
+                        }
+                    }
+                }
+            }
 
             let size = final_bytes.len() as u64;
 
@@ -307,6 +354,11 @@ impl HttpHandler for InterceptHandler {
                     None
                 };
 
+            // Rebuild response with potentially modified status code.
+            let new_status = hudsucker::hyper::StatusCode::from_u16(effective_status_code)
+                .unwrap_or(parts.status);
+            parts.status = new_status;
+
             let new_body: Body = Full::new(final_bytes).into();
             let res = Response::from_parts(parts, new_body);
 
@@ -318,7 +370,7 @@ impl HttpHandler for InterceptHandler {
                     method: req_info.method,
                     host: req_info.host,
                     path: req_info.path,
-                    status_code: Some(status_code),
+                    status_code: Some(effective_status_code),
                     content_type: final_content_type,
                     size: Some(size),
                     request_headers: req_info.request_headers,
@@ -608,5 +660,61 @@ mod tests {
         let breakpoints: BreakpointsRef = Arc::new(Mutex::new(Vec::new()));
         let handler = InterceptHandler::new(emit_fn, breakpoints);
         assert!(handler.pending.is_none());
+    }
+
+    // ─── BreakpointRule struct tests ───────────────────────────────────────────
+
+    #[test]
+    fn breakpoint_rule_deserialises_with_new_fields() {
+        let json = r#"{
+            "id": "bp1",
+            "url_pattern": "api/users",
+            "match_type": "partial",
+            "enabled": true,
+            "response_mapping_enabled": false,
+            "response_mapping_body": "",
+            "response_mapping_content_type": "application/json",
+            "status_code_enabled": true,
+            "status_code_value": 404,
+            "custom_headers": [
+                {"key": "X-Custom", "value": "test", "enabled": true}
+            ]
+        }"#;
+        let rule: BreakpointRule = serde_json::from_str(json).unwrap();
+        assert_eq!(rule.id, "bp1");
+        assert!(rule.status_code_enabled);
+        assert_eq!(rule.status_code_value, 404);
+        assert_eq!(rule.custom_headers.len(), 1);
+        assert_eq!(rule.custom_headers[0].key, "X-Custom");
+        assert!(rule.custom_headers[0].enabled);
+    }
+
+    #[test]
+    fn breakpoint_rule_deserialises_with_empty_custom_headers() {
+        let json = r#"{
+            "id": "bp2",
+            "url_pattern": "api/orders",
+            "match_type": "partial",
+            "enabled": true,
+            "response_mapping_enabled": false,
+            "response_mapping_body": "",
+            "response_mapping_content_type": "application/json",
+            "status_code_enabled": false,
+            "status_code_value": 200,
+            "custom_headers": []
+        }"#;
+        let rule: BreakpointRule = serde_json::from_str(json).unwrap();
+        assert!(!rule.status_code_enabled);
+        assert_eq!(rule.status_code_value, 200);
+        assert!(rule.custom_headers.is_empty());
+    }
+
+    #[test]
+    fn breakpoint_header_deserialises_correctly() {
+        let json = r#"{"key": "Authorization", "value": "Bearer test", "enabled": false}"#;
+        let header: BreakpointHeader = serde_json::from_str(json).unwrap();
+        assert_eq!(header.key, "Authorization");
+        assert_eq!(header.value, "Bearer test");
+        assert!(!header.enabled);
     }
 }
