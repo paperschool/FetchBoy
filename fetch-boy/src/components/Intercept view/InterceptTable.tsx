@@ -1,7 +1,10 @@
-import { useRef, useMemo } from 'react'
+import { useRef, useMemo, useState, useCallback } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { Trash2 } from 'lucide-react'
 import { useInterceptStore } from '@/stores/interceptStore'
+import { useBreakpointsStore } from '@/stores/breakpointsStore'
+import { createBreakpoint } from '@/lib/breakpoints'
+import { SaveBreakpointDialog } from '@/components/SaveBreakpointDialog/SaveBreakpointDialog'
 import {
   columnDefs,
   formatTimestamp,
@@ -16,6 +19,16 @@ import {
   CopyButton,
 } from './InterceptTable.utils'
 import { openInFetch } from './openInFetch'
+import type { InterceptRequest } from '@/stores/interceptStore'
+
+function deriveBreakpointName(req: InterceptRequest): string {
+  // Use the last non-empty path segment, falling back to host
+  const segments = req.path.split('/').filter(Boolean)
+  const last = segments[segments.length - 1]
+  if (last && !/^\d+$/.test(last)) return last
+  if (segments.length >= 2) return segments.slice(-2).join('/')
+  return req.host
+}
 
 export function InterceptTable() {
   const requests = useInterceptStore((state) => state.requests)
@@ -30,6 +43,21 @@ export function InterceptTable() {
   const setSearchMode = useInterceptStore((state) => state.setSearchMode)
   const setVerbFilter = useInterceptStore((state) => state.setVerbFilter)
   const setStatusFilter = useInterceptStore((state) => state.setStatusFilter)
+
+  const { addBreakpoint, startEditing } = useBreakpointsStore()
+  const [breakDialogReq, setBreakDialogReq] = useState<InterceptRequest | null>(null)
+
+  const handleBreakClick = useCallback((e: React.MouseEvent, req: InterceptRequest) => {
+    e.stopPropagation()
+    setBreakDialogReq(req)
+  }, [])
+
+  const handleBreakSave = useCallback(async (name: string, urlPattern: string, folderId: string | null) => {
+    const bp = await createBreakpoint(folderId, name, urlPattern, 'partial')
+    addBreakpoint(bp)
+    startEditing(bp, folderId)
+    setBreakDialogReq(null)
+  }, [addBreakpoint, startEditing])
 
   const hasItems = Array.isArray(requests) && requests.length > 0
 
@@ -177,6 +205,14 @@ export function InterceptTable() {
                       >
                         Fetch
                       </button>
+                      <button
+                        type="button"
+                        onClick={(e) => handleBreakClick(e, req)}
+                        className="shrink-0 opacity-0 group-hover:opacity-100 rounded px-1.5 py-0.5 text-xs font-medium bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-all"
+                        title="Save as breakpoint"
+                      >
+                        Break
+                      </button>
                     </div>
                     <div className="px-3 py-2 flex-1 min-w-[70px]">
                       {formatStatusCode(req.statusCode)}
@@ -202,6 +238,14 @@ export function InterceptTable() {
           No intercepted requests yet
         </div>
       )}
+
+      <SaveBreakpointDialog
+        open={breakDialogReq !== null}
+        onClose={() => setBreakDialogReq(null)}
+        onSave={handleBreakSave}
+        defaultName={breakDialogReq ? deriveBreakpointName(breakDialogReq) : ''}
+        defaultUrlPattern={breakDialogReq ? formatHostPath(breakDialogReq.host, breakDialogReq.path) : ''}
+      />
     </div>
   )
 }
