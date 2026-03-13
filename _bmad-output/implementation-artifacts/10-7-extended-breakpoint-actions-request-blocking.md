@@ -1,6 +1,6 @@
 # Story 10.7: Extended Breakpoint Actions — Request Blocking
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -22,35 +22,35 @@ so that I can simulate API unavailability and test error handling in my client a
 
 ## Tasks / Subtasks
 
-- [ ] Task 1 — Extend BreakpointsStore for blocking state (AC: #1, #2, #3)
-  - [ ] Add `blockRequest` field to breakpoint data structure: `{ enabled: boolean, statusCode: number, body: string }`
-  - [ ] Update Breakpoint interface in types
-  - [ ] Add updateBlockRequest action to breakpointsStore
+- [x] Task 1 — Extend BreakpointsStore for blocking state (AC: #1, #2, #3)
+  - [x] Add `blockRequest` field to breakpoint data structure: `{ enabled: boolean, statusCode: number, body: string }`
+  - [x] Update Breakpoint interface in types
+  - [x] Add updateBlockRequest action to breakpointsStore
 
-- [ ] Task 2 — Extend BreakpointEditor component (AC: #1-3)
-  - [ ] Add "Request Blocking" section to existing BreakpointEditor (extends Stories 10.5 & 10.6)
-  - [ ] Toggle switch to enable/disable blocking
-  - [ ] Status code dropdown (default: 501)
-  - [ ] Custom body textarea for block response
-  - [ ] Validation: ensure at least status code is set when enabled
+- [x] Task 2 — Extend BreakpointEditor component (AC: #1-3)
+  - [x] Add "Request Blocking" section to existing BreakpointEditor (extends Stories 10.5 & 10.6)
+  - [x] Toggle switch to enable/disable blocking
+  - [x] Status code dropdown (default: 501)
+  - [x] Custom body textarea for block response
+  - [x] Validation: ensure at least status code is set when enabled
 
-- [ ] Task 3 — Implement request blocking in Rust backend (AC: #4, #5, #7)
-  - [ ] Add block_request columns to breakpoints SQLite table
-  - [ ] Modify proxy handler to check for blocking breakpoints BEFORE forwarding request
-  - [ ] Return block response instead of forwarding when blocked
-  - [ ] Emit "BLOCKED" event to frontend for logging
+- [x] Task 3 — Implement request blocking in Rust backend (AC: #4, #5, #7)
+  - [x] Add block_request columns to breakpoints SQLite table
+  - [x] Modify proxy handler to check for blocking breakpoints BEFORE forwarding request
+  - [x] Return block response instead of forwarding when blocked
+  - [x] Emit "BLOCKED" event to frontend for logging
 
-- [ ] Task 4 — Add UI indicator for blocking breakpoints (AC: #6)
-  - [ ] Show icon/badge on BreakpointRow when blocking is enabled
-  - [ ] Tooltip showing "Blocks requests" on hover
+- [x] Task 4 — Add UI indicator for blocking breakpoints (AC: #6)
+  - [x] Show icon/badge on BreakpointRow when blocking is enabled
+  - [x] Tooltip showing "Blocks requests" on hover
 
-- [ ] Task 5 — Integration testing (AC: #4, #5)
-  - [ ] Test request blocking end-to-end
-  - [ ] Test custom status code and body
-  - [ ] Verify "BLOCKED" status appears in Intercept table
+- [x] Task 5 — Integration testing (AC: #4, #5)
+  - [x] Test request blocking end-to-end
+  - [x] Test custom status code and body
+  - [x] Verify "BLOCKED" status appears in Intercept table
 
-- [ ] Final Task — Commit story changes
-  - [ ] Commit all code and documentation changes for this story with a message that includes Story 10.7
+- [x] Final Task — Commit story changes
+  - [x] Commit all code and documentation changes for this story with a message that includes Story 10.7
 
 ## Dev Notes
 
@@ -410,11 +410,22 @@ describe('RequestBlockerEditor', () => {
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+claude-sonnet-4-6
 
 ### Debug Log References
 
 ### Completion Notes List
+
+- Extended `Breakpoint` interface in `db.ts` with `block_request_enabled`, `block_request_status_code`, `block_request_body` flat fields (consistent with existing pattern from 10.5/10.6).
+- Updated `RawBreakpoint`, `deserializeBreakpoint`, `createBreakpoint`, `updateBreakpoint`, and `syncBreakpointsToProxy` in `breakpoints.ts` to include new fields.
+- Added `blockRequestEnabled/StatusCode/Body` to `EditForm` and `defaultEditForm` in `breakpointsStore.ts`. Updated `startEditing` and `saveBreakpoint` accordingly.
+- Created `RequestBlockerEditor.tsx` (~80 lines) following the same pattern as `StatusCodeEditor.tsx`.
+- Integrated `RequestBlockerEditor` into `BreakpointEditor.tsx` response tab; badge count now includes blocking.
+- Added `Ban` icon to `BreakpointRow.tsx` as a visual indicator when `block_request_enabled`.
+- Extended `BreakpointRule` in `proxy.rs` with 3 blocking fields; extended `InterceptEvent` with `is_blocked: Option<bool>`.
+- Implemented blocking in `handle_request` BEFORE upstream forwarding: buffers body, checks breakpoints, returns early `RequestOrResponse::Response` and emits intercept event with `is_blocked: Some(true)`.
+- Migration `005_block_request.sql` adds 3 columns with appropriate defaults (0, 501, '').
+- All 11 new frontend tests pass; all 29 Rust tests pass; no regressions (183 Breakpoints+stores tests pass).
 
 ### File List
 
@@ -427,4 +438,4 @@ describe('RequestBlockerEditor', () => {
 - `fetch-boy/src/components/Breakpoints/RequestBlockerEditor.test.tsx` (new)
 - `fetch-boy/src-tauri/src/proxy.rs` (modified)
 - `fetch-boy/src-tauri/src/db.rs` (modified)
-- `fetch-boy/src-tauri/migrations/` (new migration file)
+- `fetch-boy/src-tauri/migrations/005_block_request.sql` (new)

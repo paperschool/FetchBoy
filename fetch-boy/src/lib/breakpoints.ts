@@ -17,6 +17,9 @@ interface RawBreakpoint {
     status_code_enabled: number;
     status_code_value: number;
     custom_headers: string;
+    block_request_enabled: number;
+    block_request_status_code: number;
+    block_request_body: string;
     created_at: string;
     updated_at: string;
 }
@@ -40,6 +43,9 @@ function deserializeBreakpoint(raw: RawBreakpoint): Breakpoint {
         status_code_enabled: raw.status_code_enabled === 1,
         status_code_value: raw.status_code_value ?? 200,
         custom_headers: parseHeaders(raw.custom_headers ?? '[]'),
+        block_request_enabled: raw.block_request_enabled === 1,
+        block_request_status_code: raw.block_request_status_code ?? 501,
+        block_request_body: raw.block_request_body ?? '',
     };
 }
 
@@ -101,8 +107,9 @@ export async function createBreakpoint(
          (id, folder_id, name, url_pattern, match_type, enabled,
           response_mapping_enabled, response_mapping_body, response_mapping_content_type,
           status_code_enabled, status_code_value, custom_headers,
+          block_request_enabled, block_request_status_code, block_request_body,
           created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, 0, '', 'application/json', 0, 200, '[]', ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, 0, '', 'application/json', 0, 200, '[]', 0, 501, '', ?, ?)`,
         [id, folderId, name, urlPattern, matchType, 1, ts, ts],
     );
     return {
@@ -114,6 +121,9 @@ export async function createBreakpoint(
         status_code_enabled: false,
         status_code_value: 200,
         custom_headers: [],
+        block_request_enabled: false,
+        block_request_status_code: 501,
+        block_request_body: '',
         created_at: ts, updated_at: ts,
     };
 }
@@ -123,7 +133,8 @@ export async function updateBreakpoint(
     changes: Partial<Pick<Breakpoint,
         'name' | 'url_pattern' | 'match_type' | 'enabled' |
         'response_mapping_enabled' | 'response_mapping_body' | 'response_mapping_content_type' |
-        'status_code_enabled' | 'status_code_value'> & { custom_headers?: BreakpointHeader[] }>,
+        'status_code_enabled' | 'status_code_value' |
+        'block_request_enabled' | 'block_request_status_code' | 'block_request_body'> & { custom_headers?: BreakpointHeader[] }>,
 ): Promise<void> {
     const db = await getDb();
     const parts: string[] = [];
@@ -156,6 +167,18 @@ export async function updateBreakpoint(
         parts.push('custom_headers = ?');
         values.push(JSON.stringify(changes.custom_headers));
     }
+    if (changes.block_request_enabled !== undefined) {
+        parts.push('block_request_enabled = ?');
+        values.push(changes.block_request_enabled ? 1 : 0);
+    }
+    if (changes.block_request_status_code !== undefined) {
+        parts.push('block_request_status_code = ?');
+        values.push(changes.block_request_status_code);
+    }
+    if (changes.block_request_body !== undefined) {
+        parts.push('block_request_body = ?');
+        values.push(changes.block_request_body);
+    }
     if (parts.length === 0) return;
     parts.push('updated_at = ?');
     values.push(now());
@@ -183,6 +206,9 @@ export async function syncBreakpointsToProxy(breakpoints: Breakpoint[]): Promise
             status_code_enabled: bp.status_code_enabled,
             status_code_value: bp.status_code_value,
             custom_headers: bp.custom_headers,
+            block_request_enabled: bp.block_request_enabled,
+            block_request_status_code: bp.block_request_status_code,
+            block_request_body: bp.block_request_body,
         })),
     }).catch(() => {});
 }

@@ -7,6 +7,7 @@ import { ViewerShell } from '@/components/ui/ViewerShell';
 import { ResponseMappingEditor } from './ResponseMappingEditor';
 import { StatusCodeEditor } from './StatusCodeEditor';
 import { HeadersEditor } from './HeadersEditor';
+import { RequestBlockerEditor } from './RequestBlockerEditor';
 
 interface Props {
     onClose: () => void;
@@ -45,6 +46,11 @@ export function BreakpointEditor({ onClose }: Props) {
     const [statusCodeEnabled, setStatusCodeEnabled] = useState(editForm.statusCodeEnabled);
     const [statusCodeValue, setStatusCodeValue] = useState(editForm.statusCodeValue);
     const [customHeaders, setCustomHeaders] = useState<BreakpointHeader[]>(editForm.customHeaders);
+    const [blockRequest, setBlockRequest] = useState({
+        enabled: editForm.blockRequestEnabled,
+        statusCode: editForm.blockRequestStatusCode,
+        body: editForm.blockRequestBody,
+    });
     const [urlError, setUrlError] = useState<string | null>(null);
     const [rmJsonError, setRmJsonError] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -84,6 +90,9 @@ export function BreakpointEditor({ onClose }: Props) {
             statusCodeEnabled,
             statusCodeValue,
             customHeaders,
+            blockRequestEnabled: blockRequest.enabled,
+            blockRequestStatusCode: blockRequest.statusCode,
+            blockRequestBody: blockRequest.body,
         };
         try {
             await saveBreakpoint(form);
@@ -96,7 +105,8 @@ export function BreakpointEditor({ onClose }: Props) {
     const activeBadgeCount =
         (responseMapping.enabled ? 1 : 0) +
         (statusCodeEnabled ? 1 : 0) +
-        (customHeaders.some((h) => h.enabled) ? 1 : 0);
+        (customHeaders.some((h) => h.enabled) ? 1 : 0) +
+        (blockRequest.enabled ? 1 : 0);
 
     const header = (
         <div className="flex items-center justify-between">
@@ -198,6 +208,10 @@ export function BreakpointEditor({ onClose }: Props) {
                             <HeadersEditor
                                 headers={customHeaders}
                                 onChange={setCustomHeaders}
+                            />
+                            <RequestBlockerEditor
+                                blockRequest={blockRequest}
+                                onChange={setBlockRequest}
                             />
                         </>
                     )}

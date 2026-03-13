@@ -37,6 +37,7 @@ pub struct InterceptEvent {
     pub request_body: Option<String>,
     pub response_headers: HashMap<String, String>,
     pub response_body: Option<String>,
+    pub is_blocked: Option<bool>,
 }
 
 // ─── Per-request state held between handle_request and handle_response ────────
@@ -97,6 +98,9 @@ pub struct BreakpointRule {
     pub status_code_enabled: bool,
     pub status_code_value: u16,
     pub custom_headers: Vec<BreakpointHeader>,
+    pub block_request_enabled: bool,
+    pub block_request_status_code: u16,
+    pub block_request_body: String,
 }
 
 pub type BreakpointsRef = Arc<Mutex<Vec<BreakpointRule>>>;
@@ -178,26 +182,81 @@ impl HttpHandler for InterceptHandler {
         // Store synchronously before returning the future — safe because this clone
         // of the handler is dedicated to this single request/response pair.
         self.pending = Some(PendingRequest {
-            id,
+            id: id.clone(),
             timestamp,
-            method,
-            host,
-            path,
-            request_headers,
+            method: method.clone(),
+            host: host.clone(),
+            path: path.clone(),
+            request_headers: request_headers.clone(),
             request_body: body_slot,
         });
+
+        let emit_fn = Arc::clone(&self.emit_fn);
+        let breakpoints = Arc::clone(&self.breakpoints);
 
         async move {
             // Buffer the request body so we can both capture it and forward it upstream.
             let (parts, body) = req.into_parts();
             let bytes: Bytes = body.collect().await.unwrap_or_default().to_bytes();
 
-            if !bytes.is_empty()
+            let captured_body: Option<String> = if !bytes.is_empty()
                 && bytes.len() <= MAX_BODY_CAPTURE_BYTES
                 && is_text_content_type(&req_content_type)
             {
-                *slot_for_async.lock().unwrap() =
-                    Some(String::from_utf8_lossy(&bytes).into_owned());
+                Some(String::from_utf8_lossy(&bytes).into_owned())
+            } else {
+                None
+            };
+            *slot_for_async.lock().unwrap() = captured_body.clone();
+
+            // Check for a blocking breakpoint BEFORE forwarding upstream.
+            let full_url = format!("https://{}{}", host, path);
+            let blocking_bp = {
+                let guard = breakpoints.lock().unwrap();
+                guard
+                    .iter()
+                    .filter(|bp| bp.enabled && bp.block_request_enabled)
+                    .find(|bp| match_url(&full_url, &bp.url_pattern, &bp.match_type).matches)
+                    .cloned()
+            };
+
+            if let Some(bp) = blocking_bp {
+                log::info!(
+                    "Request blocked: '{}' matched '{}' — returning {}",
+                    full_url,
+                    bp.url_pattern,
+                    bp.block_request_status_code,
+                );
+
+                let block_status = bp.block_request_status_code;
+                let block_body = bp.block_request_body.clone();
+                let block_body_bytes = Bytes::from(block_body.clone().into_bytes());
+
+                let event = InterceptEvent {
+                    id,
+                    timestamp,
+                    method,
+                    host,
+                    path,
+                    status_code: Some(block_status),
+                    content_type: Some("text/plain".to_string()),
+                    size: Some(block_body_bytes.len() as u64),
+                    request_headers,
+                    request_body: captured_body,
+                    response_headers: HashMap::new(),
+                    response_body: if block_body.is_empty() { None } else { Some(block_body) },
+                    is_blocked: Some(true),
+                };
+                emit_fn(&event);
+
+                let status = hudsucker::hyper::StatusCode::from_u16(block_status)
+                    .unwrap_or(hudsucker::hyper::StatusCode::NOT_IMPLEMENTED);
+                let response = Response::builder()
+                    .status(status)
+                    .header(CONTENT_LENGTH, block_body_bytes.len())
+                    .body(Full::new(block_body_bytes).into())
+                    .unwrap();
+                return RequestOrResponse::Response(response);
             }
 
             let new_body: Body = Full::new(bytes).into();
@@ -231,6 +290,7 @@ impl HttpHandler for InterceptHandler {
                     request_body,
                     response_headers: HashMap::new(),
                     response_body: Some(err_str),
+                    is_blocked: None,
                 };
                 emit_fn(&event);
             }
@@ -377,6 +437,7 @@ impl HttpHandler for InterceptHandler {
                     request_body,
                     response_headers,
                     response_body,
+                    is_blocked: None,
                 };
                 emit_fn(&event);
             }
@@ -595,6 +656,7 @@ mod tests {
             request_body: Some("{\"query\":\"test\"}".to_string()),
             response_headers,
             response_body: Some("{\"ok\":true}".to_string()),
+            is_blocked: None,
         };
 
         let json = serde_json::to_value(&event).unwrap();
@@ -623,6 +685,7 @@ mod tests {
             request_body: None,
             response_headers: HashMap::new(),
             response_body: None,
+            is_blocked: None,
         };
 
         let json = serde_json::to_value(&event).unwrap();
@@ -678,7 +741,10 @@ mod tests {
             "status_code_value": 404,
             "custom_headers": [
                 {"key": "X-Custom", "value": "test", "enabled": true}
-            ]
+            ],
+            "block_request_enabled": false,
+            "block_request_status_code": 501,
+            "block_request_body": ""
         }"#;
         let rule: BreakpointRule = serde_json::from_str(json).unwrap();
         assert_eq!(rule.id, "bp1");
@@ -687,6 +753,7 @@ mod tests {
         assert_eq!(rule.custom_headers.len(), 1);
         assert_eq!(rule.custom_headers[0].key, "X-Custom");
         assert!(rule.custom_headers[0].enabled);
+        assert!(!rule.block_request_enabled);
     }
 
     #[test]
@@ -701,12 +768,60 @@ mod tests {
             "response_mapping_content_type": "application/json",
             "status_code_enabled": false,
             "status_code_value": 200,
-            "custom_headers": []
+            "custom_headers": [],
+            "block_request_enabled": false,
+            "block_request_status_code": 501,
+            "block_request_body": ""
         }"#;
         let rule: BreakpointRule = serde_json::from_str(json).unwrap();
         assert!(!rule.status_code_enabled);
         assert_eq!(rule.status_code_value, 200);
         assert!(rule.custom_headers.is_empty());
+    }
+
+    #[test]
+    fn breakpoint_rule_deserialises_with_blocking_enabled() {
+        let json = r#"{
+            "id": "bp3",
+            "url_pattern": "api/blocked",
+            "match_type": "partial",
+            "enabled": true,
+            "response_mapping_enabled": false,
+            "response_mapping_body": "",
+            "response_mapping_content_type": "application/json",
+            "status_code_enabled": false,
+            "status_code_value": 200,
+            "custom_headers": [],
+            "block_request_enabled": true,
+            "block_request_status_code": 403,
+            "block_request_body": "{\"error\":\"blocked\"}"
+        }"#;
+        let rule: BreakpointRule = serde_json::from_str(json).unwrap();
+        assert!(rule.block_request_enabled);
+        assert_eq!(rule.block_request_status_code, 403);
+        assert_eq!(rule.block_request_body, "{\"error\":\"blocked\"}");
+    }
+
+    #[test]
+    fn intercept_event_is_blocked_field_serialises() {
+        let event = InterceptEvent {
+            id: "id".to_string(),
+            timestamp: 0,
+            method: "GET".to_string(),
+            host: "example.com".to_string(),
+            path: "/api/test".to_string(),
+            status_code: Some(501),
+            content_type: Some("text/plain".to_string()),
+            size: Some(0),
+            request_headers: HashMap::new(),
+            request_body: None,
+            response_headers: HashMap::new(),
+            response_body: None,
+            is_blocked: Some(true),
+        };
+        let json = serde_json::to_value(&event).unwrap();
+        assert_eq!(json["isBlocked"], true);
+        assert_eq!(json["statusCode"], 501);
     }
 
     #[test]

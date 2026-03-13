@@ -29,5 +29,11 @@ pub fn migrations() -> Vec<Migration> {
             sql: include_str!("../migrations/004_status_headers.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 5,
+            description: "add_block_request_to_breakpoints",
+            sql: include_str!("../migrations/005_block_request.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }
