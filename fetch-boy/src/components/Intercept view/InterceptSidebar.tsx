@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import {
+  Bug,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -8,6 +9,7 @@ import {
   Copy,
   ShieldCheck,
 } from "lucide-react";
+import { BreakpointsTree } from "@/components/Breakpoints/BreakpointsTree";
 import { invoke } from "@tauri-apps/api/core";
 import { useUiSettingsStore } from "@/stores/uiSettingsStore";
 import { saveSetting } from "@/lib/settings";
@@ -18,6 +20,7 @@ interface CaCertificateInfo {
 }
 
 type ActionStatus = "idle" | "loading" | "success" | "error";
+type InterceptPanel = "breakpoints" | "settings";
 
 interface InterceptSidebarProps {
   collapsed: boolean;
@@ -28,6 +31,7 @@ export function InterceptSidebar({
   collapsed,
   onToggle,
 }: InterceptSidebarProps) {
+  const [activePanel, setActivePanel] = useState<InterceptPanel>("breakpoints");
   const proxyEnabled = useUiSettingsStore((s) => s.proxyEnabled);
   const proxyPort = useUiSettingsStore((s) => s.proxyPort);
   const setProxyPort = useUiSettingsStore((s) => s.setProxyPort);
@@ -138,6 +142,18 @@ export function InterceptSidebar({
         <button
           type="button"
           onClick={() => {
+            setActivePanel("breakpoints");
+            onToggle();
+          }}
+          className="p-2 hover:bg-gray-700 rounded transition-colors"
+          aria-label="Breakpoints"
+          title="Breakpoints"
+        >
+          <Bug size={20} className="text-app-muted" />
+        </button>
+        <button
+          type="button"
+          onClick={() => {
             setSidebarSettingsExpanded(true);
             void saveSetting("sidebar_settings_expanded", true);
             onToggle();
@@ -181,6 +197,29 @@ export function InterceptSidebar({
           )}
         </div>
       </div>
+
+      {/* Panel tabs */}
+      <div className="flex shrink-0 mb-3 rounded overflow-hidden border border-gray-700">
+        <button
+          type="button"
+          onClick={() => setActivePanel("breakpoints")}
+          className={`flex-1 py-1.5 text-xs cursor-pointer ${
+            activePanel === "breakpoints"
+              ? "bg-gray-700 text-app-inverse font-medium"
+              : "text-app-muted hover:text-app-inverse"
+          }`}
+          aria-label="Breakpoints panel"
+        >
+          Breakpoints
+        </button>
+      </div>
+
+      {/* Panel content */}
+      {activePanel === "breakpoints" && (
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <BreakpointsTree />
+        </div>
+      )}
 
       <div data-tour="settings-env" className="mt-auto">
         <div data-tour="intercept-settings" className="shrink-0 border-t border-gray-700">
