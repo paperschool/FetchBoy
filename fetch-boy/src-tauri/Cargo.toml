@@ -22,6 +22,8 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 hudsucker = { version = "0.24.0", features = ["rcgen-ca"] }
 rustls = { version = "0.23", features = ["ring"] }
+bytes = "1"
+http-body-util = "0.1"
 uuid = { version = "1", features = ["v4"] }
 log = "0.4"
 open = "5"
