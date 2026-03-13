@@ -1,4 +1,6 @@
-import React from 'react'
+import React, { useState } from 'react'
+import { Copy, Check } from 'lucide-react'
+import type { InterceptRequest } from '@/stores/interceptStore'
 
 export interface ColumnDef {
   id: string
@@ -67,4 +69,70 @@ export function formatSize(size?: number): string {
   if (size < 1024) return `${size} B`
   if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
   return `${(size / (1024 * 1024)).toFixed(1)} MB`
+}
+
+export function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false)
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    await navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+  return (
+    <button onClick={handleCopy} className="ml-1 p-0.5 hover:bg-app-subtle rounded transition-colors" title="Copy URL">
+      {copied ? <Check size={12} className="text-green-400" /> : <Copy size={12} className="text-app-muted" />}
+    </button>
+  )
+}
+
+export const HTTP_VERBS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
+
+export const STATUS_FILTERS = [
+  { value: '2xx', label: '2xx Success' },
+  { value: '3xx', label: '3xx Redirect' },
+  { value: '4xx', label: '4xx Client Error' },
+  { value: '5xx', label: '5xx Server Error' },
+]
+
+export interface FilterOptions {
+  searchQuery: string
+  searchMode: 'fuzzy' | 'regex'
+  verbFilter: string | null
+  statusFilter: string | null
+}
+
+export function filterRequests(
+  requests: InterceptRequest[],
+  { searchQuery, searchMode, verbFilter, statusFilter }: FilterOptions
+): InterceptRequest[] {
+  return requests.filter((req) => {
+    // Verb filter
+    if (verbFilter && req.method.toUpperCase() !== verbFilter) return false
+
+    // Status filter
+    if (statusFilter) {
+      const code = req.statusCode ?? 0
+      if (statusFilter === '2xx' && !(code >= 200 && code < 300)) return false
+      if (statusFilter === '3xx' && !(code >= 300 && code < 400)) return false
+      if (statusFilter === '4xx' && !(code >= 400 && code < 500)) return false
+      if (statusFilter === '5xx' && !(code >= 500)) return false
+      if (!['2xx', '3xx', '4xx', '5xx'].includes(statusFilter) && String(code) !== statusFilter) return false
+    }
+
+    // Search filter
+    if (searchQuery) {
+      const haystack = `${req.method} ${formatHostPath(req.host, req.path)} ${req.statusCode ?? ''}`.toLowerCase()
+      if (searchMode === 'regex') {
+        try {
+          return new RegExp(searchQuery, 'i').test(haystack)
+        } catch {
+          return false // invalid regex → show nothing
+        }
+      }
+      return haystack.includes(searchQuery.toLowerCase())
+    }
+
+    return true
+  })
 }

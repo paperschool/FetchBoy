@@ -2,7 +2,6 @@ import { type ReactNode } from "react";
 import { useAppTabStore } from "@/stores/appTabStore";
 import { useUiSettingsStore } from "@/stores/uiSettingsStore";
 import { InterceptView } from "@/components/Intercept view/InterceptView";
-import { useInterceptEvents } from "@/hooks/useInterceptEvents";
 
 type AppTab = "fetch" | "intercept";
 
@@ -19,8 +18,6 @@ export function AppTabs({ children }: AppTabsProps) {
   const activeTab = useAppTabStore((s) => s.activeTab);
   const setActiveTab = useAppTabStore((s) => s.setActiveTab);
   const proxyEnabled = useUiSettingsStore((s) => s.proxyEnabled);
-
-  useInterceptEvents();
 
   return (
     <div className="flex h-screen flex-col">

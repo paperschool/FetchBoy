@@ -127,10 +127,11 @@ development_status:
   epic-10: in-progress
   10-1-intercept-split-view-with-request-table: in-progress
   10-2-request-detail-view-with-subtabs: review
-  10-3-breakpoints-tab-interface: backlog
+  10-3-breakpoints-tab-interface: ready-for-dev
   10-4-breakpoint-editor-with-fuzzy-url-matching: backlog
   10-5-extended-breakpoint-actions-response-mapping: backlog
   10-6-extended-breakpoint-actions-status-header-editing: backlog
   10-7-extended-breakpoint-actions-request-blocking: backlog
   10-8-play-button-continue-interrupted-request: backlog
+  10-9-split-request-response-capability: ready-for-dev
   epic-10-retrospective: optional

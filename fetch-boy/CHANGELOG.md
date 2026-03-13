@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2026-03-13
+
+### ✨ Features
+
+- feat: Intercept – request detail panel with Body / Headers / Params / Options subtabs
+- feat: Intercept – Monaco editor for response body display (read-only, auto-detects JSON/HTML/XML)
+- feat: Intercept – query params tab parses URLSearchParams from intercepted request path
+- feat: Intercept – shared ViewerShell component; ResponseViewer and RequestDetailView now use same tab-bar chrome
+- feat: Intercept – shared HeadersTable component for consistent header row rendering
+- feat: Intercept – resizable split pane between request table and detail view (useSplitPane hook)
+- feat: Intercept – "Open in Fetch" button in detail view and per-row table button; populates fetch tab with method, URL, params and headers
+- feat: Intercept – filter dropdowns in search bar now match app-wide select style
+
+### 🐛 Bug Fixes
+
+- fix: Intercept – duplicate rows and overlapping virtualizer items caused by duplicate Tauri event listener registration in React Strict Mode
+- fix: Intercept – duplicate requests in store when proxy emits the same event ID twice; addRequest now deduplicates by ID
+- fix: Intercept proxy – most requests were silently dropped; pending request state was stored in a shared Arc<Mutex<Option<…>>> across all handler clones instead of per-clone, causing concurrent requests to overwrite each other; now stored directly on each handler clone (one clone per request per hudsucker's internal.rs design)
+- fix: Intercept proxy – failed upstream requests (DNS errors, connection refused) were never emitted; handle_error now emits an intercept event with the error message
+- fix: Intercept proxy – response bodies displayed as garbled binary characters; proxy now strips Accept-Encoding from outgoing requests so servers respond with uncompressed, human-readable bodies
+
 ## [0.2.0] - 2026-03-12
 
 ### ✨ Features

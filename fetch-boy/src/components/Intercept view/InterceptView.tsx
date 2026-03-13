@@ -39,7 +39,7 @@ export function InterceptView() {
         role="separator"
         aria-orientation="horizontal"
       />
-      <div className="flex-1 min-h-0 flex flex-col">
+      <div className="flex-1 min-h-0 flex flex-col p-2 overflow-hidden">
         <RequestDetailView selectedRequest={selectedRequest} />
       </div>
     </div>
