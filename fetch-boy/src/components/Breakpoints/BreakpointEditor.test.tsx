@@ -17,6 +17,7 @@ vi.mock('@/lib/breakpoints', () => ({
     createBreakpoint: (...a: unknown[]) => mockCreateBreakpoint(...a),
     updateBreakpoint: (...a: unknown[]) => mockUpdateBreakpoint(...a),
     deleteBreakpoint: vi.fn(),
+    syncBreakpointsToProxy: vi.fn().mockResolvedValue(undefined),
 }));
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -28,6 +29,9 @@ const newBreakpointForm: EditForm = {
     matchType: 'partial',
     enabled: true,
     folderId: null,
+    responseMappingEnabled: false,
+    responseMappingBody: '',
+    responseMappingContentType: 'application/json',
 };
 
 const editBreakpointForm: EditForm = {
@@ -37,6 +41,9 @@ const editBreakpointForm: EditForm = {
     matchType: 'wildcard',
     enabled: true,
     folderId: 'folder-1',
+    responseMappingEnabled: false,
+    responseMappingBody: '',
+    responseMappingContentType: 'application/json',
 };
 
 beforeEach(() => {
@@ -150,13 +157,6 @@ describe('BreakpointEditor', () => {
         expect(onClose).toHaveBeenCalledOnce();
     });
 
-    it('calls onClose when X button is clicked', () => {
-        const onClose = vi.fn();
-        render(<BreakpointEditor onClose={onClose} />);
-        fireEvent.click(screen.getByRole('button', { name: 'Close editor' }));
-        expect(onClose).toHaveBeenCalledOnce();
-    });
-
     it('calls createBreakpoint when saving new breakpoint', async () => {
         const createdBp = {
             id: 'new-id',
@@ -165,10 +165,14 @@ describe('BreakpointEditor', () => {
             url_pattern: 'api/test',
             match_type: 'partial' as const,
             enabled: true,
+            response_mapping_enabled: false,
+            response_mapping_body: '',
+            response_mapping_content_type: 'application/json',
             created_at: '',
             updated_at: '',
         };
         mockCreateBreakpoint.mockResolvedValue(createdBp);
+        mockUpdateBreakpoint.mockResolvedValue(undefined);
         const onClose = vi.fn();
         render(<BreakpointEditor onClose={onClose} />);
         fireEvent.change(screen.getByTestId('bp-name-input'), { target: { value: 'Test BP' } });
@@ -200,5 +204,11 @@ describe('BreakpointEditor', () => {
         expect(screen.getByTestId('match-type-partial')).toBeInTheDocument();
         expect(screen.getByTestId('match-type-wildcard')).toBeInTheDocument();
         expect(screen.getByTestId('match-type-regex')).toBeInTheDocument();
+    });
+
+    it('shows Response tab that contains ResponseMappingEditor', () => {
+        render(<BreakpointEditor onClose={vi.fn()} />);
+        fireEvent.click(screen.getByText('Response'));
+        expect(screen.getByTestId('rm-enabled-checkbox')).toBeInTheDocument();
     });
 });

@@ -24,6 +24,9 @@ pub struct ProxyConfigState {
     pub enabled: std::sync::Mutex<bool>,
 }
 
+/// Shared breakpoint rules — kept in sync via the sync_breakpoints command.
+pub struct BreakpointsState(pub proxy::BreakpointsRef);
+
 // ─── Proxy commands ───────────────────────────────────────────────────────────
 
 #[tauri::command]
@@ -55,6 +58,7 @@ fn set_proxy_config(
     config: tauri::State<'_, ProxyConfigState>,
     proxy_state: tauri::State<'_, ProxyState>,
     restart_info: tauri::State<'_, ProxyRestartInfo>,
+    breakpoints: tauri::State<'_, BreakpointsState>,
 ) -> Result<(), String> {
     // Update stored config.
     *config.port.lock().unwrap() = port;
@@ -76,7 +80,7 @@ fn set_proxy_config(
 
         let ca_authority = ca.into_authority();
         let mut new_proxy = proxy::ProxyServer::new(port);
-        new_proxy.start(ca_authority, Arc::clone(&restart_info.emit_fn));
+        new_proxy.start(ca_authority, Arc::clone(&restart_info.emit_fn), Arc::clone(&breakpoints.0));
         *proxy_state.0.lock().unwrap() = Some(new_proxy);
     }
 
@@ -512,6 +516,17 @@ fn match_breakpoint_url(url: String, pattern: String, match_type: String) -> pro
     proxy::match_url(&url, &pattern, &match_type)
 }
 
+// ─── Breakpoints sync command ─────────────────────────────────────────────────
+
+#[tauri::command]
+fn sync_breakpoints(
+    breakpoints: Vec<proxy::BreakpointRule>,
+    state: tauri::State<'_, BreakpointsState>,
+) -> Result<(), String> {
+    *state.0.lock().unwrap() = breakpoints;
+    Ok(())
+}
+
 // ─── App entry point ─────────────────────────────────────────────────────────
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -551,12 +566,17 @@ pub fn run() {
                 enabled: std::sync::Mutex::new(true),
             });
 
+            // Shared breakpoints ref — populated at runtime via sync_breakpoints.
+            let breakpoints_ref: proxy::BreakpointsRef =
+                Arc::new(std::sync::Mutex::new(Vec::new()));
+            app.manage(BreakpointsState(Arc::clone(&breakpoints_ref)));
+
             // Initialise the CA and start the proxy.
             match cert::CertificateAuthority::load_or_create(app_data_dir) {
                 Ok(ca) => {
                     let ca_authority = ca.into_authority();
                     let mut proxy = proxy::ProxyServer::new(8080);
-                    proxy.start(ca_authority, emit_fn);
+                    proxy.start(ca_authority, emit_fn, breakpoints_ref);
                     app.manage(ProxyState(std::sync::Mutex::new(Some(proxy))));
                 }
                 Err(e) => {
@@ -584,7 +604,8 @@ pub fn run() {
             configure_system_proxy,
             unconfigure_system_proxy,
             is_system_proxy_configured,
-            match_breakpoint_url
+            match_breakpoint_url,
+            sync_breakpoints
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

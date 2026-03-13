@@ -79,6 +79,9 @@ export interface Breakpoint {
     url_pattern: string;
     match_type: 'exact' | 'partial' | 'wildcard' | 'regex';
     enabled: boolean;
+    response_mapping_enabled: boolean;
+    response_mapping_body: string;
+    response_mapping_content_type: string;
     created_at: string;
     updated_at: string;
 }

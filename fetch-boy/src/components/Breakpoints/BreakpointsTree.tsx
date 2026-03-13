@@ -10,6 +10,7 @@ import {
     renameBreakpointFolder,
     deleteBreakpointFolder,
     deleteBreakpoint as dbDeleteBreakpoint,
+    syncBreakpointsToProxy,
 } from '@/lib/breakpoints';
 
 export function BreakpointsTree() {
@@ -34,6 +35,10 @@ export function BreakpointsTree() {
             .catch(() => {});
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    useEffect(() => {
+        syncBreakpointsToProxy(breakpoints).catch(() => {});
+    }, [breakpoints]);
 
     useEffect(() => {
         if (creatingFolder) newFolderInputRef.current?.focus();

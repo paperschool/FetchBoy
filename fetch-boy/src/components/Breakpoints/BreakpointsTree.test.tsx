@@ -20,6 +20,7 @@ vi.mock('@/lib/breakpoints', () => ({
     deleteBreakpointFolder: (...a: unknown[]) => mockDeleteBreakpointFolder(...a),
     createBreakpoint: (...a: unknown[]) => mockCreateBreakpoint(...a),
     deleteBreakpoint: (...a: unknown[]) => mockDeleteBreakpoint(...a),
+    syncBreakpointsToProxy: vi.fn().mockResolvedValue(undefined),
 }));
 
 // ─── Test data ────────────────────────────────────────────────────────────────
@@ -39,6 +40,9 @@ const mockBreakpoint: Breakpoint = {
     url_pattern: '*/api/users*',
     match_type: 'wildcard',
     enabled: true,
+    response_mapping_enabled: false,
+    response_mapping_body: '',
+    response_mapping_content_type: 'application/json',
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
 };

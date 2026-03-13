@@ -7,11 +7,12 @@ use hudsucker::{
     hyper_util::client::legacy::Error as UpstreamError,
     Body, HttpContext, HttpHandler, RequestOrResponse,
 };
+use hudsucker::hyper::header::{HeaderValue, CONTENT_LENGTH, CONTENT_TYPE};
 use regex::Regex;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio::sync::oneshot;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -70,6 +71,21 @@ fn collect_headers(
         .collect()
 }
 
+// ─── Breakpoint rules (synced from frontend) ─────────────────────────────────
+
+#[derive(Deserialize, Clone)]
+pub struct BreakpointRule {
+    pub id: String,
+    pub url_pattern: String,
+    pub match_type: String,
+    pub enabled: bool,
+    pub response_mapping_enabled: bool,
+    pub response_mapping_body: String,
+    pub response_mapping_content_type: String,
+}
+
+pub type BreakpointsRef = Arc<Mutex<Vec<BreakpointRule>>>;
+
 // ─── HTTP handler ─────────────────────────────────────────────────────────────
 
 pub type EmitFn = Arc<dyn Fn(&InterceptEvent) + Send + Sync + 'static>;
@@ -77,6 +93,7 @@ pub type EmitFn = Arc<dyn Fn(&InterceptEvent) + Send + Sync + 'static>;
 #[derive(Clone)]
 pub struct InterceptHandler {
     emit_fn: EmitFn,
+    breakpoints: BreakpointsRef,
     /// Pending request captured in handle_request, consumed in handle_response.
     /// Hudsucker clones the handler once per request (see internal.rs `self.clone().proxy(req)`),
     /// so each clone handles exactly one request/response pair sequentially — no shared
@@ -85,9 +102,10 @@ pub struct InterceptHandler {
 }
 
 impl InterceptHandler {
-    fn new(emit_fn: EmitFn) -> Self {
+    fn new(emit_fn: EmitFn, breakpoints: BreakpointsRef) -> Self {
         Self {
             emit_fn,
+            breakpoints,
             pending: None,
         }
     }
@@ -188,7 +206,7 @@ impl HttpHandler for InterceptHandler {
     ) -> impl std::future::Future<Output = Response<Body>> + Send {
         let status_code = res.status().as_u16();
 
-        let content_type: Option<String> = res
+        let orig_content_type: Option<String> = res
             .headers()
             .get("content-type")
             .and_then(|v| v.to_str().ok())
@@ -197,27 +215,66 @@ impl HttpHandler for InterceptHandler {
         // Take the pending request that was stored by handle_request on this same clone.
         let req_info = self.pending.take();
         let emit_fn = Arc::clone(&self.emit_fn);
+        let breakpoints = Arc::clone(&self.breakpoints);
 
         async move {
-            let (parts, body) = res.into_parts();
+            let (mut parts, body) = res.into_parts();
             let response_headers = collect_headers(&parts.headers);
 
-            let bytes: Bytes = body.collect().await.unwrap_or_default().to_bytes();
-            let size = bytes.len() as u64;
+            let orig_bytes: Bytes = body.collect().await.unwrap_or_default().to_bytes();
+
+            // Check if an enabled breakpoint with response mapping matches this URL.
+            let url = req_info
+                .as_ref()
+                .map(|r| format!("https://{}{}", r.host, r.path))
+                .unwrap_or_default();
+
+            let active_mapping = {
+                let guard = breakpoints.lock().unwrap();
+                guard
+                    .iter()
+                    .filter(|bp| bp.enabled && bp.response_mapping_enabled)
+                    .find(|bp| match_url(&url, &bp.url_pattern, &bp.match_type).matches)
+                    .cloned()
+            };
+
+            let (final_bytes, final_content_type) = match active_mapping {
+                Some(bp) => {
+                    log::info!(
+                        "Response mapping: '{}' matched '{}' — {} B → {} B",
+                        url,
+                        bp.url_pattern,
+                        orig_bytes.len(),
+                        bp.response_mapping_body.len(),
+                    );
+                    let mapped = Bytes::from(bp.response_mapping_body.into_bytes());
+                    let ct = bp.response_mapping_content_type;
+                    if let Ok(val) = HeaderValue::from_str(&ct) {
+                        parts.headers.insert(CONTENT_TYPE, val);
+                    }
+                    if let Ok(val) = HeaderValue::from_str(&mapped.len().to_string()) {
+                        parts.headers.insert(CONTENT_LENGTH, val);
+                    }
+                    (mapped, Some(ct))
+                }
+                None => (orig_bytes, orig_content_type),
+            };
+
+            let size = final_bytes.len() as u64;
 
             let response_body: Option<String> =
-                if bytes.len() <= MAX_BODY_CAPTURE_BYTES
-                    && content_type
+                if final_bytes.len() <= MAX_BODY_CAPTURE_BYTES
+                    && final_content_type
                         .as_deref()
                         .map(is_text_content_type)
                         .unwrap_or(false)
                 {
-                    Some(String::from_utf8_lossy(&bytes).into_owned())
+                    Some(String::from_utf8_lossy(&final_bytes).into_owned())
                 } else {
                     None
                 };
 
-            let new_body: Body = Full::new(bytes).into();
+            let new_body: Body = Full::new(final_bytes).into();
             let res = Response::from_parts(parts, new_body);
 
             if let Some(req_info) = req_info {
@@ -228,7 +285,7 @@ impl HttpHandler for InterceptHandler {
                     host: req_info.host,
                     path: req_info.path,
                     status_code: Some(status_code),
-                    content_type,
+                    content_type: final_content_type,
                     size: Some(size),
                     request_headers: req_info.request_headers,
                     response_headers,
@@ -258,12 +315,12 @@ impl ProxyServer {
     }
 
     /// Start the proxy on a background async task.
-    pub fn start(&mut self, ca: RcgenAuthority, emit_fn: EmitFn) {
+    pub fn start(&mut self, ca: RcgenAuthority, emit_fn: EmitFn, breakpoints: BreakpointsRef) {
         let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
         self.shutdown_tx = Some(shutdown_tx);
 
         let port = self.port;
-        let handler = InterceptHandler::new(emit_fn);
+        let handler = InterceptHandler::new(emit_fn, breakpoints);
         let crypto_provider = rustls::crypto::ring::default_provider();
 
         tauri::async_runtime::spawn(async move {
@@ -509,7 +566,8 @@ mod tests {
             called_clone.store(true, Ordering::SeqCst);
         });
 
-        let handler = InterceptHandler::new(emit_fn);
+        let breakpoints: BreakpointsRef = Arc::new(Mutex::new(Vec::new()));
+        let handler = InterceptHandler::new(emit_fn, breakpoints);
         assert!(handler.pending.is_none());
     }
 }

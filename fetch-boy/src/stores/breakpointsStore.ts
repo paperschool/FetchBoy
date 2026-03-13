@@ -15,6 +15,9 @@ export interface EditForm {
     matchType: MatchType;
     enabled: boolean;
     folderId: string | null;
+    responseMappingEnabled: boolean;
+    responseMappingBody: string;
+    responseMappingContentType: string;
 }
 
 const defaultEditForm: EditForm = {
@@ -24,6 +27,9 @@ const defaultEditForm: EditForm = {
     matchType: 'partial',
     enabled: true,
     folderId: null,
+    responseMappingEnabled: false,
+    responseMappingBody: '',
+    responseMappingContentType: 'application/json',
 };
 
 // ─── URL Validation Utilities ─────────────────────────────────────────────────
@@ -134,6 +140,9 @@ export const useBreakpointsStore = create<BreakpointsState>()(
                         matchType: breakpoint.match_type,
                         enabled: breakpoint.enabled,
                         folderId: breakpoint.folder_id,
+                        responseMappingEnabled: breakpoint.response_mapping_enabled,
+                        responseMappingBody: breakpoint.response_mapping_body,
+                        responseMappingContentType: breakpoint.response_mapping_content_type,
                     };
                 } else {
                     state.selectedBreakpointId = null;
@@ -158,8 +167,18 @@ export const useBreakpointsStore = create<BreakpointsState>()(
                     form.urlPattern,
                     form.matchType,
                 );
+                await dbUpdateBreakpoint(bp.id, {
+                    response_mapping_enabled: form.responseMappingEnabled,
+                    response_mapping_body: form.responseMappingBody,
+                    response_mapping_content_type: form.responseMappingContentType,
+                });
                 set((state) => {
-                    state.breakpoints.push(bp);
+                    state.breakpoints.push({
+                        ...bp,
+                        response_mapping_enabled: form.responseMappingEnabled,
+                        response_mapping_body: form.responseMappingBody,
+                        response_mapping_content_type: form.responseMappingContentType,
+                    });
                     state.isEditing = false;
                     state.editForm = { ...defaultEditForm };
                 });
@@ -169,6 +188,9 @@ export const useBreakpointsStore = create<BreakpointsState>()(
                     url_pattern: form.urlPattern,
                     match_type: form.matchType,
                     enabled: form.enabled,
+                    response_mapping_enabled: form.responseMappingEnabled,
+                    response_mapping_body: form.responseMappingBody,
+                    response_mapping_content_type: form.responseMappingContentType,
                 });
                 set((state) => {
                     const bp = state.breakpoints.find((b) => b.id === form.id);
@@ -177,6 +199,9 @@ export const useBreakpointsStore = create<BreakpointsState>()(
                         bp.url_pattern = form.urlPattern;
                         bp.match_type = form.matchType;
                         bp.enabled = form.enabled;
+                        bp.response_mapping_enabled = form.responseMappingEnabled;
+                        bp.response_mapping_body = form.responseMappingBody;
+                        bp.response_mapping_content_type = form.responseMappingContentType;
                     }
                     state.isEditing = false;
                     state.editForm = { ...defaultEditForm };
