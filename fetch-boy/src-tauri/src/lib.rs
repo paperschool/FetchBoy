@@ -580,8 +580,15 @@ pub fn run() {
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
-        .run(|_app, event| {
+        .run(|app_handle, event| {
             if let tauri::RunEvent::Exit = event {
+                // Stop the proxy server gracefully before the process dies.
+                if let Ok(mut guard) = app_handle.state::<ProxyState>().0.lock() {
+                    if let Some(mut proxy) = guard.take() {
+                        proxy.stop();
+                    }
+                }
+                // Ensure OS-level proxy settings are cleared regardless.
                 disable_os_proxy_all_services();
             }
         });
