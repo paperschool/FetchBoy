@@ -87,7 +87,7 @@ impl CertificateAuthority {
         #[cfg(target_os = "windows")]
         {
             let output = std::process::Command::new("certutil")
-                .args(["-addstore", "Root", self.cert_path.to_str().unwrap()])
+                .args(["-addstore", "-user", "Root", self.cert_path.to_str().unwrap()])
                 .output()?;
             if !output.status.success() {
                 return Err(format!(

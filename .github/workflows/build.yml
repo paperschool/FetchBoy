@@ -142,6 +142,11 @@ jobs:
           name: rust-target
           path: src-tauri/target/
 
+      - name: Add node_modules to PATH
+        shell: bash
+        run: |
+          echo "./node_modules/.bin" >> $GITHUB_PATH
+
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
