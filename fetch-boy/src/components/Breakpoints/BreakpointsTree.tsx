@@ -28,6 +28,8 @@ export function BreakpointsTree() {
     const [creatingFolder, setCreatingFolder] = useState(false);
     const [newFolderName, setNewFolderName] = useState('');
     const newFolderInputRef = useRef<HTMLInputElement>(null);
+    // Prevent onBlur from double-committing when Enter was already handled
+    const folderCommittedRef = useRef(false);
 
     useEffect(() => {
         loadAllBreakpoints()
@@ -58,12 +60,19 @@ export function BreakpointsTree() {
     }
 
     async function handleCommitNewFolder() {
+        // Guard: prevent double-commit when both onKeyDown(Enter) and the
+        // resulting onBlur fire in the same event cycle (input unmounts → blur).
+        if (folderCommittedRef.current) return;
+        folderCommittedRef.current = true;
         const name = newFolderName.trim();
         setCreatingFolder(false);
         setNewFolderName('');
-        if (!name) return;
-        const folder = await createBreakpointFolder(name, folders.length).catch(() => null);
-        if (folder) addFolder(folder);
+        if (name) {
+            const folder = await createBreakpointFolder(name, folders.length).catch(() => null);
+            if (folder) addFolder(folder);
+        }
+        // Reset after a tick so any pending blur event from input unmount is absorbed.
+        setTimeout(() => { folderCommittedRef.current = false; }, 0);
     }
 
     async function handleRenameFolder(id: string, name: string) {
