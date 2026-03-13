@@ -10,6 +10,7 @@ export function BreakpointActionPanel({ breakpointId }: Props) {
   const pausedRequest = useInterceptStore((s) => s.pausedRequest)
   const continueRequest = useInterceptStore((s) => s.continueRequest)
   const dropRequest = useInterceptStore((s) => s.dropRequest)
+  const enterEditMode = useInterceptStore((s) => s.enterEditMode)
 
   const isPausedForThis =
     pauseState === 'paused' && pausedRequest?.breakpointId === breakpointId
@@ -42,6 +43,16 @@ export function BreakpointActionPanel({ breakpointId }: Props) {
           aria-label="Drop request"
         >
           <Square size={12} />
+        </button>
+
+        <button
+          type="button"
+          onClick={enterEditMode}
+          className="p-1 bg-blue-700/60 hover:bg-blue-600/80 rounded text-white transition-colors"
+          title="Continue with Edits"
+          aria-label="Continue with edits"
+        >
+          <Pencil size={12} />
         </button>
       </div>
     </div>

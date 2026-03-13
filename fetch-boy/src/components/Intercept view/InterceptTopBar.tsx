@@ -37,14 +37,14 @@ export function InterceptTopBar() {
       actions={
         <button
           onClick={handleToggleProxy}
-          className={`flex items-center gap-1 px-2 py-1 text-xs transition-colors ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
             proxyEnabled
-              ? "text-red-400 hover:text-red-300 hover:bg-gray-700 rounded"
-              : "text-app-muted hover:text-app-inverse hover:bg-gray-700 rounded"
+              ? "bg-red-500/20 text-red-400 hover:bg-red-500/30"
+              : "bg-green-500/20 text-green-400 hover:bg-green-500/30"
           }`}
           title={proxyEnabled ? "Stop intercepting traffic and remove OS proxy configuration" : "Configure OS proxy and start intercepting traffic"}
         >
-          <Radio size={12} className={proxyEnabled ? "animate-pulse" : ""} />
+          <Radio size={13} className={proxyEnabled ? "animate-pulse" : ""} />
           {proxyEnabled ? "Stop Proxy" : "Start Proxy"}
         </button>
       }

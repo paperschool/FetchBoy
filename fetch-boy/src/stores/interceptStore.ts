@@ -33,6 +33,7 @@ export interface BreakpointModifications {
   responseBody?: string
   contentType?: string
   extraHeaders?: [string, string][]
+  queryParams?: [string, string][]
 }
 
 interface InterceptStore {
@@ -47,6 +48,10 @@ interface InterceptStore {
   pauseState: PauseState
   pausedRequest: PausedRequestInfo | null
   breakpointTimeout: number // seconds; 0 = never
+
+  // Inline edit mode
+  editMode: boolean
+  pendingMods: BreakpointModifications
 
   addRequest: (request: InterceptRequest) => void
   clearRequests: () => void
@@ -66,9 +71,14 @@ interface InterceptStore {
   ) => void
   continueRequest: () => Promise<void>
   dropRequest: () => Promise<void>
-  editAndResume: (modifications: BreakpointModifications) => Promise<void>
+  editAndResume: (modifications?: BreakpointModifications) => Promise<void>
   setBreakpointTimeout: (seconds: number) => void
   clearPauseState: () => void
+
+  // Inline edit mode actions
+  enterEditMode: () => void
+  updatePendingMods: (mods: Partial<BreakpointModifications>) => void
+  exitEditMode: () => void
 }
 
 export const useInterceptStore = create<InterceptStore>((set, get) => ({
@@ -82,6 +92,9 @@ export const useInterceptStore = create<InterceptStore>((set, get) => ({
   pauseState: 'idle',
   pausedRequest: null,
   breakpointTimeout: 30,
+
+  editMode: false,
+  pendingMods: {},
 
   addRequest: (request) => set((state) => {
     // Update existing paused request entry if it arrives with final data.
@@ -115,10 +128,25 @@ export const useInterceptStore = create<InterceptStore>((set, get) => ({
     statusFilter: null,
   }),
 
-  pauseAtBreakpoint: (request, breakpointId, breakpointName, timeoutAt) =>
+  pauseAtBreakpoint: (request, breakpointId, breakpointName, timeoutAt) => {
+    const paused = { ...request, isPaused: true }
+
+    const extraHeaders: [string, string][] = Object.entries(request.responseHeaders ?? {}).map(
+      ([k, v]) => [k, v]
+    )
+    let queryParams: [string, string][] = []
+    try {
+      const search = request.path?.includes('?')
+        ? request.path.slice(request.path.indexOf('?'))
+        : ''
+      queryParams = Array.from(new URLSearchParams(search).entries()) as [string, string][]
+    } catch { /* ignore */ }
+    let responseBody = request.responseBody ?? ''
+    try {
+      responseBody = JSON.stringify(JSON.parse(responseBody), null, 2)
+    } catch { /* not JSON */ }
+
     set((state) => {
-      // Add a placeholder entry in the request list so the table shows it as paused.
-      const paused = { ...request, isPaused: true }
       const alreadyExists = state.requests.some((r) => r.id === request.id)
       return {
         pauseState: 'paused',
@@ -133,13 +161,22 @@ export const useInterceptStore = create<InterceptStore>((set, get) => ({
           ? state.requests.map((r) => r.id === request.id ? paused : r)
           : [...state.requests, paused],
         selectedRequestId: request.id,
+        editMode: true,
+        pendingMods: {
+          statusCode: request.statusCode,
+          responseBody,
+          contentType: request.contentType ?? '',
+          extraHeaders,
+          queryParams,
+        },
       }
-    }),
+    })
+  },
 
   continueRequest: async () => {
     const { pausedRequest } = get()
     if (!pausedRequest) return
-    set({ pauseState: 'resuming' })
+    set({ pauseState: 'resuming', editMode: false, pendingMods: {} })
     try {
       await invoke('resume_request', { requestId: pausedRequest.request.id, action: 'continue' })
     } finally {
@@ -150,7 +187,7 @@ export const useInterceptStore = create<InterceptStore>((set, get) => ({
   dropRequest: async () => {
     const { pausedRequest } = get()
     if (!pausedRequest) return
-    set({ pauseState: 'resuming' })
+    set({ pauseState: 'resuming', editMode: false, pendingMods: {} })
     try {
       await invoke('resume_request', { requestId: pausedRequest.request.id, action: 'drop' })
     } finally {
@@ -158,18 +195,19 @@ export const useInterceptStore = create<InterceptStore>((set, get) => ({
     }
   },
 
-  editAndResume: async (modifications: BreakpointModifications) => {
-    const { pausedRequest } = get()
+  editAndResume: async (modifications?: BreakpointModifications) => {
+    const { pausedRequest, pendingMods } = get()
     if (!pausedRequest) return
-    set({ pauseState: 'resuming' })
+    const mods = modifications ?? pendingMods
+    set({ pauseState: 'resuming', editMode: false, pendingMods: {} })
     try {
       await invoke('resume_request', {
         requestId: pausedRequest.request.id,
         action: 'modify',
-        statusCode: modifications.statusCode ?? null,
-        responseBody: modifications.responseBody ?? null,
-        contentType: modifications.contentType ?? null,
-        extraHeaders: modifications.extraHeaders ?? null,
+        statusCode: mods.statusCode ?? null,
+        responseBody: mods.responseBody ?? null,
+        contentType: mods.contentType ?? null,
+        extraHeaders: mods.extraHeaders ?? null,
       })
     } finally {
       set({ pauseState: 'idle', pausedRequest: null })
@@ -181,5 +219,44 @@ export const useInterceptStore = create<InterceptStore>((set, get) => ({
     invoke('set_pause_timeout', { seconds }).catch(() => {})
   },
 
-  clearPauseState: () => set({ pauseState: 'idle', pausedRequest: null }),
+  clearPauseState: () => set({ pauseState: 'idle', pausedRequest: null, editMode: false, pendingMods: {} }),
+
+  enterEditMode: (request?: InterceptRequest) => {
+    const req = request ?? get().pausedRequest?.request
+    if (!req) return
+
+    const extraHeaders: [string, string][] = Object.entries(req.responseHeaders ?? {}).map(
+      ([k, v]) => [k, v]
+    )
+
+    let queryParams: [string, string][] = []
+    try {
+      const search = req.path?.includes('?')
+        ? req.path.slice(req.path.indexOf('?'))
+        : ''
+      queryParams = Array.from(new URLSearchParams(search).entries()) as [string, string][]
+    } catch { /* ignore */ }
+
+    let responseBody = req.responseBody ?? ''
+    try {
+      responseBody = JSON.stringify(JSON.parse(responseBody), null, 2)
+    } catch { /* not JSON — leave as-is */ }
+
+    set({
+      editMode: true,
+      pendingMods: {
+        statusCode: req.statusCode,
+        responseBody,
+        contentType: req.contentType ?? '',
+        extraHeaders,
+        queryParams,
+      },
+    })
+  },
+
+  updatePendingMods: (mods) => set((state) => ({
+    pendingMods: { ...state.pendingMods, ...mods },
+  })),
+
+  exitEditMode: () => set({ editMode: false, pendingMods: {} }),
 }))

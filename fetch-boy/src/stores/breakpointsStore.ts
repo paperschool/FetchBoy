@@ -79,6 +79,7 @@ interface BreakpointsState {
     // Breakpoint actions
     addBreakpoint: (breakpoint: Breakpoint) => void;
     updateBreakpoint: (id: string, changes: Partial<Pick<Breakpoint, 'name' | 'url_pattern' | 'match_type' | 'enabled'>>) => void;
+    toggleBreakpointEnabled: (id: string) => Promise<void>;
     deleteBreakpoint: (id: string) => void;
 
     // Editor actions
@@ -89,7 +90,7 @@ interface BreakpointsState {
 }
 
 export const useBreakpointsStore = create<BreakpointsState>()(
-    immer((set) => ({
+    immer((set, get) => ({
         folders: [],
         breakpoints: [],
         selectedBreakpointId: null,
@@ -129,6 +130,17 @@ export const useBreakpointsStore = create<BreakpointsState>()(
                 const bp = state.breakpoints.find((b) => b.id === id);
                 if (bp) Object.assign(bp, changes);
             }),
+
+        toggleBreakpointEnabled: async (id) => {
+            const bp = get().breakpoints.find((b) => b.id === id);
+            if (!bp) return;
+            const newEnabled = !bp.enabled;
+            set((state) => {
+                const found = state.breakpoints.find((b) => b.id === id);
+                if (found) found.enabled = newEnabled;
+            });
+            await dbUpdateBreakpoint(id, { enabled: newEnabled });
+        },
 
         deleteBreakpoint: (id) =>
             set((state) => {

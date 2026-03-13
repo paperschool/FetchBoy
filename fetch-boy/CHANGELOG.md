@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.0] - 2026-03-13
+
+- feat: Breakpoint intercept viewer opens in inline edit mode by default when a breakpoint is hit
+- feat: Inline response editing — status code, content-type, body (Monaco), response headers, and query params all editable in place; amber ring styles the entire detail viewer area during a pause
+- feat: "Continue with Edits" replaces modal dialog; "Add Breakpoint" button added to request detail header
+- feat: Play/pause toggle on each breakpoint row in the sidebar for quick enable/disable
+- feat: Enable/disable toggle in breakpoint editor restyled as a pill button (matches proxy Start/Stop style); stays in sync with sidebar toggle
+- feat: Proxy Start/Stop button restyled as a prominent colored pill
+- feat: Type and Size columns auto-hide when the intercept table is narrow
+- feat: Selecting a request in the intercept table dismisses the breakpoint editor
+- fix: Proxied responses with Transfer-Encoding: chunked were being cancelled by the client — strip the header and always set Content-Length when rebuilding the buffered response
+- fix: Breakpoint sidebar toggle was silently failing — `get` was missing from the Zustand immer store creator signature
+- fix: JSON response body in edit mode now pretty-prints on entry, matching read-only view
+
 ## [0.10.0] - 2026-03-13
 
 - Note - Changelog re-structured for clarity against stories/epics.

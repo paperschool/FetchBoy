@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { InterceptSidebar } from "./InterceptSidebar";
 import { InterceptTopBar } from "./InterceptTopBar";
 import { InterceptTable } from "./InterceptTable";
@@ -21,8 +21,17 @@ export function InterceptView() {
     state.requests.find((r) => r.id === state.selectedRequestId) ?? null
   );
   const pauseState = useInterceptStore((s) => s.pauseState);
+  const editMode = useInterceptStore((s) => s.editMode);
+  const pendingMods = useInterceptStore((s) => s.pendingMods);
+  const updatePendingMods = useInterceptStore((s) => s.updatePendingMods);
 
   const { isEditing, cancelEditing } = useBreakpointsStore();
+  const selectedRequestId = useInterceptStore((s) => s.selectedRequestId);
+
+  // Selecting a request dismisses the breakpoint editor
+  useEffect(() => {
+    if (selectedRequestId !== null) cancelEditing();
+  }, [selectedRequestId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const sidebarCollapsed = useUiSettingsStore((s) => s.sidebarCollapsed);
   const setSidebarCollapsed = useUiSettingsStore((s) => s.setSidebarCollapsed);
@@ -49,9 +58,14 @@ export function InterceptView() {
         {isEditing ? (
           <BreakpointEditor onClose={cancelEditing} />
         ) : (
-          <div className="flex-1 min-h-0 flex flex-col p-2 overflow-y-auto">
+          <div className={`flex-1 min-h-0 flex flex-col p-2 overflow-y-auto ${pauseState !== 'idle' ? 'ring-1 ring-amber-500/40 bg-amber-900/10 rounded-lg' : ''}`}>
             {pauseState !== 'idle' && <PausedRequestDetail />}
-            <RequestDetailView selectedRequest={selectedRequest} />
+            <RequestDetailView
+              selectedRequest={selectedRequest}
+              editMode={editMode}
+              pendingMods={pendingMods}
+              onModsChange={updatePendingMods}
+            />
           </div>
         )}
       </div>
