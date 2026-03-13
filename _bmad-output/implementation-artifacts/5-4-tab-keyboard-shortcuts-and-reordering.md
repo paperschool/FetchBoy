@@ -24,7 +24,7 @@ so that I can navigate and organise my workspace efficiently without reaching fo
 ## Tasks / Subtasks
 
 - [x] Task 1 — Add new actions to `tabStore` (AC: 6, 7, 8, 9)
-  - [x] Open `fetch-boy/src/stores/tabStore.ts`
+  - [x] Open `src/stores/tabStore.ts`
   - [x] Add `navigateTab(direction: 'next' | 'prev'): void` — cycles `activeTabId` through `tabs` array; wraps at both ends
   - [x] Add `reorderTabs(orderedIds: string[]): void` — validates all IDs exist, then reorders `tabs` array to match `orderedIds`; `activeTabId` unchanged
   - [x] Add `duplicateTab(id: string): void` — deep-copies source tab's `requestState` via `structuredClone()`; `responseState` is a fresh `createDefaultResponseSnapshot()`; `label` = source tab's label + ` (copy)`, `isCustomLabel: true`; new tab inserted immediately after source and becomes active
@@ -33,11 +33,11 @@ so that I can navigate and organise my workspace efficiently without reaching fo
   - [x] Update the `TabStore` interface to include all new actions
 
 - [x] Task 2 — Install `@dnd-kit` for drag-to-reorder (AC: 6)
-  - [x] From `fetch-boy/`, run: `yarn add @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities`
+  - [x] From ``, run: `yarn add @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities`
   - [x] Confirm all three packages appear in `package.json` `dependencies`
 
 - [x] Task 3 — Add drag-to-reorder to `TabBar` (AC: 6)
-  - [x] Open `fetch-boy/src/components/TabBar/TabBar.tsx`
+  - [x] Open `src/components/TabBar/TabBar.tsx`
   - [x] Import `DndContext`, `PointerSensor`, `useSensor`, `useSensors`, `DragEndEvent` from `@dnd-kit/core`
   - [x] Import `SortableContext`, `horizontalListSortingStrategy`, `useSortable`, `arrayMove` from `@dnd-kit/sortable`
   - [x] Import `CSS` from `@dnd-kit/utilities`
@@ -60,7 +60,7 @@ so that I can navigate and organise my workspace efficiently without reaching fo
   - [x] Click outside dismisses the menu (propagation handled by the global `AppShell` click dismiss or a transparent overlay)
 
 - [x] Task 5 — Create `useTabKeyboardShortcuts` hook (AC: 1–5, 10)
-  - [x] Create `fetch-boy/src/hooks/useTabKeyboardShortcuts.ts`
+  - [x] Create `src/hooks/useTabKeyboardShortcuts.ts`
   - [x] Hook attaches a `keydown` listener to `window` on mount (removes on unmount via cleanup)
   - [x] Guard: skip when the focused element is an `<input>`, `<textarea>`, or inside `.monaco-editor` to avoid interfering with typing:
     ```typescript
@@ -86,7 +86,7 @@ so that I can navigate and organise my workspace efficiently without reaching fo
     - "Close Tab" → ` ⌘W`
 
 - [x] Task 7 — Write unit tests (AC: 1–9)
-  - [x] Update `fetch-boy/src/stores/tabStore.test.ts`
+  - [x] Update `src/stores/tabStore.test.ts`
   - [x] Test: `navigateTab('next')` with two tabs advances `activeTabId` to the second tab
   - [x] Test: `navigateTab('next')` on the last tab wraps to the first tab
   - [x] Test: `navigateTab('prev')` on the first tab wraps to the last tab
@@ -95,15 +95,15 @@ so that I can navigate and organise my workspace efficiently without reaching fo
   - [x] Test: `duplicateTab(id)` makes the new tab active
   - [x] Test: `closeOtherTabs(id)` with three tabs leaves only the given tab
   - [x] Test: `closeAllTabs()` leaves exactly one fresh tab with label `'New Request'`
-  - [x] Create `fetch-boy/src/hooks/useTabKeyboardShortcuts.test.ts`
+  - [x] Create `src/hooks/useTabKeyboardShortcuts.test.ts`
   - [x] Test: firing `keydown` event `metaKey + 't'` on `window` triggers `addTab()`
   - [x] Test: firing `metaKey + 'w'` triggers `closeTab()` with the current `activeTabId`
   - [x] Test: firing `metaKey + 'Tab'` triggers `navigateTab('next')`
   - [x] Test: shortcut does NOT fire when `e.target` is an `<input>` (guard check)
 
 - [x] Task 8 — Final: commit story changes
-  - [x] Run `npx tsc --noEmit` from `fetch-boy/` — zero TypeScript errors
-  - [x] Run `npx vitest run` from `fetch-boy/` — all tests pass including new ones
+  - [x] Run `npx tsc --noEmit` from `` — zero TypeScript errors
+  - [x] Run `npx vitest run` from `` — all tests pass including new ones
   - [x] Commit all code and documentation changes for this story with a message that includes `Story 5.4`
 
 ## Dev Notes
@@ -115,7 +115,7 @@ so that I can navigate and organise my workspace efficiently without reaching fo
 
 ### dnd-kit Installation (not in package.json yet)
 ```bash
-cd fetch-boy && yarn add @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities
+cd . && yarn add @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities
 ```
 Use `PointerSensor` (best for Tauri WebView on both macOS and Windows). The `activationConstraint: { distance: 5 }` is critical — without it, every click on a tab triggers a drag, breaking all click interactions.
 
@@ -136,16 +136,16 @@ const mod = isMac ? '⌘' : 'Ctrl';
 `structuredClone()` is available in all modern browsers and Tauri WebView. It performs a true deep copy of the `RequestSnapshot` object, including nested arrays like `headers` and `queryParams`. No need for a custom deep-clone helper.
 
 ### File Locations
-- `fetch-boy/src/stores/tabStore.ts` — new actions: navigateTab, reorderTabs, duplicateTab, closeOtherTabs, closeAllTabs
-- `fetch-boy/src/hooks/useTabKeyboardShortcuts.ts` — new hook (new file)
-- `fetch-boy/src/components/TabBar/TabBar.tsx` — dnd-kit sortable + context menu per-tab + shortcut hints
-- `fetch-boy/src/components/Layout/AppShell.tsx` — call `useTabKeyboardShortcuts()`
-- `fetch-boy/package.json` — add @dnd-kit/core, @dnd-kit/sortable, @dnd-kit/utilities
+- `src/stores/tabStore.ts` — new actions: navigateTab, reorderTabs, duplicateTab, closeOtherTabs, closeAllTabs
+- `src/hooks/useTabKeyboardShortcuts.ts` — new hook (new file)
+- `src/components/TabBar/TabBar.tsx` — dnd-kit sortable + context menu per-tab + shortcut hints
+- `src/components/Layout/AppShell.tsx` — call `useTabKeyboardShortcuts()`
+- `package.json` — add @dnd-kit/core, @dnd-kit/sortable, @dnd-kit/utilities
 
 ### References
-- [Source: fetch-boy/src/stores/tabStore.ts] — existing actions, TabEntry, createInitialTab
-- [Source: fetch-boy/src/components/TabBar/TabBar.tsx] — existing TabBar structure to extend
-- [Source: fetch-boy/src/components/Layout/AppShell.tsx] — existing context menu pattern + hook mount location
+- [Source: src/stores/tabStore.ts] — existing actions, TabEntry, createInitialTab
+- [Source: src/components/TabBar/TabBar.tsx] — existing TabBar structure to extend
+- [Source: src/components/Layout/AppShell.tsx] — existing context menu pattern + hook mount location
 - [Source: _bmad-output/planning-artifacts/epic-5.md#Story 5.4]
 
 ## Dev Agent Record
@@ -171,16 +171,16 @@ GPT-5.3-Codex
 
 - _bmad-output/implementation-artifacts/5-4-tab-keyboard-shortcuts-and-reordering.md
 - _bmad-output/implementation-artifacts/sprint-status.yaml
-- fetch-boy/package.json
-- fetch-boy/yarn.lock
-- fetch-boy/src/components/Layout/AppShell.tsx
-- fetch-boy/src/components/TabBar/TabBar.tsx
-- fetch-boy/src/components/TabBar/TabBar.test.tsx
-- fetch-boy/src/hooks/useTabKeyboardShortcuts.ts
-- fetch-boy/src/hooks/useTabKeyboardShortcuts.test.tsx
-- fetch-boy/src/stores/tabStore.ts
-- fetch-boy/src/stores/tabStore.test.ts
-- fetch-boy/src/components/EnvironmentPanel/EnvironmentPanel.test.tsx
+- package.json
+- yarn.lock
+- src/components/Layout/AppShell.tsx
+- src/components/TabBar/TabBar.tsx
+- src/components/TabBar/TabBar.test.tsx
+- src/hooks/useTabKeyboardShortcuts.ts
+- src/hooks/useTabKeyboardShortcuts.test.tsx
+- src/stores/tabStore.ts
+- src/stores/tabStore.test.ts
+- src/components/EnvironmentPanel/EnvironmentPanel.test.tsx
 
 ## Change Log
 

@@ -57,8 +57,8 @@ So that I can immediately try the app without configuring anything myself.
   - [x] Test that seeded collection is editable/deletable
 
 - [x] Task 7 - Final Task - Commit story changes
-  - [x] Run `npx tsc --noEmit` from `fetch-boy/` to verify TypeScript compilation
-  - [x] Run `npx vitest run` from `fetch-boy/` to verify all tests pass
+  - [x] Run `npx tsc --noEmit` from `` to verify TypeScript compilation
+  - [x] Run `npx vitest run` from `` to verify all tests pass
   - [x] Commit all code and documentation changes for this story with a message that includes Story 7.3
 
 ## Dev Notes
@@ -315,7 +315,7 @@ Note: The TourController may handle its own completion, so adjust the integratio
 ### Previous Story Intelligence
 
 **From Story 7.2 (Onboarding Tooltip Tutorial):**
-- TourController created in `fetch-boy/src/components/Layout/`
+- TourController created in `src/components/Layout/`
 - tourStore uses Zustand with persist middleware
 - App.tsx integrates tour after splash with callback pattern
 - Data-tour attributes added to key UI areas
@@ -383,12 +383,12 @@ expect(sampleCollections.length).toBe(1);
 ### Project Structure Notes
 
 **New Files:**
-- `fetch-boy/src/lib/seedSampleData.ts` (new)
-- `fetch-boy/src/lib/seedSampleData.test.ts` (new)
+- `src/lib/seedSampleData.ts` (new)
+- `src/lib/seedSampleData.test.ts` (new)
 
 **Modified Files:**
-- `fetch-boy/src/stores/uiSettingsStore.ts` (add hasSeededSampleData flag)
-- `fetch-boy/src/App.tsx` (call seeding after tour completes)
+- `src/stores/uiSettingsStore.ts` (add hasSeededSampleData flag)
+- `src/App.tsx` (call seeding after tour completes)
 
 **No New Dependencies:**
 - Uses existing Zustand, SQLite, and collection store
@@ -431,10 +431,10 @@ claude-sonnet-4-6
 
 ### File List
 
-- `fetch-boy/src/lib/seedSampleData.ts` (new)
-- `fetch-boy/src/lib/seedSampleData.test.ts` (new)
-- `fetch-boy/src/stores/uiSettingsStore.ts` (modified - add hasSeededSampleData)
-- `fetch-boy/src/App.tsx` (modified - integrate seeding after tour)
+- `src/lib/seedSampleData.ts` (new)
+- `src/lib/seedSampleData.test.ts` (new)
+- `src/stores/uiSettingsStore.ts` (modified - add hasSeededSampleData)
+- `src/App.tsx` (modified - integrate seeding after tour)
 - `_bmad-output/implementation-artifacts/7-3-sample-collection.md` (new)
 
 ## Change Log

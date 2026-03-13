@@ -20,7 +20,7 @@ So that the app feels intentional and guides me toward the next action.
 ## Tasks / Subtasks
 
 - [x] Task 1 - Create reusable EmptyState component (AC: 1, 2, 3, 4)
-  - [x] Create `fetch-boy/src/components/ui/EmptyState.tsx`
+  - [x] Create `src/components/ui/EmptyState.tsx`
   - [x] Accept props: icon, label, optional action (button/link), actionLabel
   - [x] Support theme-aware styling (light/dark mode)
   - [x] Include test file
@@ -44,8 +44,8 @@ So that the app feels intentional and guides me toward the next action.
   - [x] Ensure theme-aware styling throughout
 
 - [x] Task 5 - Final Task - Commit story changes
-  - [x] Run `npx tsc --noEmit` from `fetch-boy/` to verify TypeScript compilation
-  - [x] Run `npx vitest run` from `fetch-boy/` to verify all tests pass
+  - [x] Run `npx tsc --noEmit` from `` to verify TypeScript compilation
+  - [x] Run `npx vitest run` from `` to verify all tests pass
   - [x] Commit all code and documentation changes for this story with a message that includes Story 7.4
 
 ## Dev Notes
@@ -54,7 +54,7 @@ So that the app feels intentional and guides me toward the next action.
 
 **Reusable EmptyState Component:**
 
-Create a new component at `fetch-boy/src/components/ui/EmptyState.tsx`:
+Create a new component at `src/components/ui/EmptyState.tsx`:
 
 ```typescript
 import { LucideIcon } from 'lucide-react';
@@ -190,11 +190,11 @@ Note: Import Send icon from lucide-react.
 
 ### Integration Points
 
-- **New file**: `fetch-boy/src/components/ui/EmptyState.tsx`
-- **New file**: `fetch-boy/src/components/ui/EmptyState.test.tsx`
-- **Modified**: `fetch-boy/src/components/CollectionTree/CollectionTree.tsx` - replace empty state
-- **Modified**: `fetch-boy/src/components/HistoryPanel/HistoryPanel.tsx` - replace empty state
-- **Modified**: `fetch-boy/src/components/ResponseViewer/ResponseViewer.tsx` - add empty state
+- **New file**: `src/components/ui/EmptyState.tsx`
+- **New file**: `src/components/ui/EmptyState.test.tsx`
+- **Modified**: `src/components/CollectionTree/CollectionTree.tsx` - replace empty state
+- **Modified**: `src/components/HistoryPanel/HistoryPanel.tsx` - replace empty state
+- **Modified**: `src/components/ResponseViewer/ResponseViewer.tsx` - add empty state
 
 ### Critical Implementation Guardrails
 
@@ -265,13 +265,13 @@ expect(screen.getByText('No items').closest('div')).toHaveClass('custom-class');
 ### Project Structure Notes
 
 **New Files:**
-- `fetch-boy/src/components/ui/EmptyState.tsx` (new)
-- `fetch-boy/src/components/ui/EmptyState.test.tsx` (new)
+- `src/components/ui/EmptyState.tsx` (new)
+- `src/components/ui/EmptyState.test.tsx` (new)
 
 **Modified Files:**
-- `fetch-boy/src/components/CollectionTree/CollectionTree.tsx` (replace empty state)
-- `fetch-boy/src/components/HistoryPanel/HistoryPanel.tsx` (replace empty state)
-- `fetch-boy/src/components/ResponseViewer/ResponseViewer.tsx` (add empty state)
+- `src/components/CollectionTree/CollectionTree.tsx` (replace empty state)
+- `src/components/HistoryPanel/HistoryPanel.tsx` (replace empty state)
+- `src/components/ResponseViewer/ResponseViewer.tsx` (add empty state)
 
 **No New Dependencies:**
 - Uses existing Lucide React icons
@@ -321,13 +321,13 @@ claude-sonnet-4-20250514
 
 ### File List
 
-- `fetch-boy/src/components/ui/EmptyState.tsx` (new)
-- `fetch-boy/src/components/ui/EmptyState.test.tsx` (new)
-- `fetch-boy/src/components/CollectionTree/CollectionTree.tsx` (modified)
-- `fetch-boy/src/components/HistoryPanel/HistoryPanel.tsx` (modified)
-- `fetch-boy/src/components/ResponseViewer/ResponseViewer.tsx` (modified)
-- `fetch-boy/src/components/ResponseViewer/ResponseViewer.test.tsx` (modified - updated 2 tests for new empty state behavior)
-- `fetch-boy/src/components/HistoryPanel/HistoryPanel.test.tsx` (modified - updated 1 test for new empty state text)
+- `src/components/ui/EmptyState.tsx` (new)
+- `src/components/ui/EmptyState.test.tsx` (new)
+- `src/components/CollectionTree/CollectionTree.tsx` (modified)
+- `src/components/HistoryPanel/HistoryPanel.tsx` (modified)
+- `src/components/ResponseViewer/ResponseViewer.tsx` (modified)
+- `src/components/ResponseViewer/ResponseViewer.test.tsx` (modified - updated 2 tests for new empty state behavior)
+- `src/components/HistoryPanel/HistoryPanel.test.tsx` (modified - updated 1 test for new empty state text)
 - `_bmad-output/implementation-artifacts/7-4-empty-state-polish.md` (this file)
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified - status updated)
 

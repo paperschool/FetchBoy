@@ -30,7 +30,7 @@ So that I can quickly configure the app without navigating to a separate setting
 ## Tasks / Subtasks
 
 - [x] Task 1 - Add Settings accordion to Sidebar component (AC: 1, 2, 3)
-  - [x] Create SettingsAccordion component in `fetch-boy/src/components/Sidebar/`
+  - [x] Create SettingsAccordion component in `src/components/Sidebar/`
   - [x] Add accordion section beneath Collection/History tabs
   - [x] Integrate existing settings from SettingsPanel (Story 4.3)
   - [x] Implement smooth collapse/expand with chevron indicator
@@ -64,8 +64,8 @@ So that I can quickly configure the app without navigating to a separate setting
   - [x] Test state persistence
 
 - [x] Task 7 - Verify and commit story changes
-  - [x] Run `npx tsc --noEmit` from `fetch-boy/` to verify TypeScript compilation
-  - [x] Run `npx vitest run` from `fetch-boy/` to verify all tests pass
+  - [x] Run `npx tsc --noEmit` from `` to verify TypeScript compilation
+  - [x] Run `npx vitest run` from `` to verify all tests pass
   - [ ] Manual test: Expand settings accordion, change theme, verify change applies
   - [ ] Manual test: Collapse sidebar, click Settings icon, verify behavior
   - [ ] Manual test: Verify settings button is removed from TopBar
@@ -184,8 +184,8 @@ const { theme, setTheme } = useSettingsStore();
 - Tauri/Rust backend for persistence
 
 **Component/File Conventions:**
-- Accordion components in `fetch-boy/src/components/Sidebar/`
-- Settings reusable components in `fetch-boy/src/components/Settings/`
+- Accordion components in `src/components/Sidebar/`
+- Settings reusable components in `src/components/Settings/`
 - Tests co-located: `ComponentName.test.tsx` alongside source
 
 **State Management Rules:**
@@ -268,16 +268,16 @@ expect(fn).toHaveBeenCalled();
 ### Project Structure Notes
 
 **New Files:**
-- `fetch-boy/src/components/Sidebar/SettingsAccordion.tsx` - New accordion component
-- `fetch-boy/src/components/Sidebar/SettingsAccordion.test.tsx` - Test file
+- `src/components/Sidebar/SettingsAccordion.tsx` - New accordion component
+- `src/components/Sidebar/SettingsAccordion.test.tsx` - Test file
 
 **Modified Files:**
-- `fetch-boy/src/components/Sidebar/Sidebar.tsx` - Add accordion and collapsed icon
-- `fetch-boy/src/components/TopBar/TopBar.tsx` - REMOVE Settings button and SettingsPanel
-- `fetch-boy/src/components/TopBar/TopBar.test.tsx` - Update or remove settings-related tests
-- `fetch-boy/src/components/Settings/SettingsPanel.tsx` - Reuse in sidebar accordion
-- `fetch-boy/src/stores/settingsStore.ts` - Add sidebar state
-- `fetch-boy/src/stores/uiSettingsStore.ts` - Remove settingsPanelOpen state
+- `src/components/Sidebar/Sidebar.tsx` - Add accordion and collapsed icon
+- `src/components/TopBar/TopBar.tsx` - REMOVE Settings button and SettingsPanel
+- `src/components/TopBar/TopBar.test.tsx` - Update or remove settings-related tests
+- `src/components/Settings/SettingsPanel.tsx` - Reuse in sidebar accordion
+- `src/stores/settingsStore.ts` - Add sidebar state
+- `src/stores/uiSettingsStore.ts` - Remove settingsPanelOpen state
 
 **Potential Refactoring:**
 - Extract settings control components (ThemeSelector, TimeoutSetting) from SettingsPanel for reuse
@@ -286,8 +286,8 @@ expect(fn).toHaveBeenCalled();
 ### References
 
 - **Primary Source**: `_bmad-output/planning-artifacts/epic-6.md` (Story 6.5 acceptance criteria)
-- **Sidebar**: `fetch-boy/src/components/Sidebar/Sidebar.tsx` (existing sidebar structure)
-- **SettingsPanel**: `fetch-boy/src/components/Settings/SettingsPanel.tsx` (Story 4.3 - existing settings)
+- **Sidebar**: `src/components/Sidebar/Sidebar.tsx` (existing sidebar structure)
+- **SettingsPanel**: `src/components/Settings/SettingsPanel.tsx` (Story 4.3 - existing settings)
 - **Story 6.1**: Foldable side panel for collapsed state handling
 - **Story 4.3**: Settings panel for reusable settings components
 - **Story 6.4**: Timeout setting that needs to be included in sidebar
@@ -317,17 +317,17 @@ claude-sonnet-4-6
 
 ### File List
 
-- `fetch-boy/src/components/Sidebar/SettingsAccordion.tsx` (new)
-- `fetch-boy/src/components/Sidebar/SettingsAccordion.test.tsx` (new)
-- `fetch-boy/src/components/Sidebar/Sidebar.tsx` (modified)
-- `fetch-boy/src/components/Sidebar/Sidebar.test.tsx` (modified)
-- `fetch-boy/src/components/TopBar/TopBar.tsx` (modified)
-- `fetch-boy/src/components/TopBar/TopBar.test.tsx` (modified)
-- `fetch-boy/src/stores/uiSettingsStore.ts` (modified)
-- `fetch-boy/src/lib/db.ts` (modified)
-- `fetch-boy/src/lib/settings.ts` (modified)
-- `fetch-boy/src/lib/settings.test.ts` (modified)
-- `fetch-boy/src/components/Layout/AppShell.tsx` (modified)
+- `src/components/Sidebar/SettingsAccordion.tsx` (new)
+- `src/components/Sidebar/SettingsAccordion.test.tsx` (new)
+- `src/components/Sidebar/Sidebar.tsx` (modified)
+- `src/components/Sidebar/Sidebar.test.tsx` (modified)
+- `src/components/TopBar/TopBar.tsx` (modified)
+- `src/components/TopBar/TopBar.test.tsx` (modified)
+- `src/stores/uiSettingsStore.ts` (modified)
+- `src/lib/db.ts` (modified)
+- `src/lib/settings.ts` (modified)
+- `src/lib/settings.test.ts` (modified)
+- `src/components/Layout/AppShell.tsx` (modified)
 
 ## Change Log
 

@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="./fetch-boy/src-tauri/icons/fetch-boi-logo.svg" alt="Fetch Boy Logo" width="512" height="512" scale="2" />
+  <img src="./src-tauri/icons/fetch-boi-logo.svg" alt="Fetch Boy Logo" width="150px" height="150px" style="scale: 1.5;" />
 </p>
 
-<h1 align="left">Fetch Boy</h1>
+<h1 align="center">Fetch Boy</h1>
 
 <table>
   <tr>
@@ -66,7 +66,7 @@ Runs entirely offline. No account required. All data stored locally.
 | Code editor      | Monaco Editor                 |
 | Testing          | Vitest + Testing Library      |
 
-The frontend lives in `fetch-boy/` (a Vite project). Tauri wraps it, exposing Rust commands (e.g. `send_request`) via the IPC bridge. All persistence is SQLite in the platform data directory.
+The frontend lives in `./` (a Vite project). Tauri wraps it, exposing Rust commands (e.g. `send_request`) via the IPC bridge. All persistence is SQLite in the platform data directory.
 
 ---
 
@@ -92,7 +92,7 @@ xcode-select --install
 # Clone and install
 git clone <repo-url>
 
-cd FetchBoyApp/fetch-boy
+cd FetchBoyApp
 
 yarn install
 
@@ -121,7 +121,7 @@ Then open the app from Applications as usual.
 
 ```
 FetchBoyApp/
-├── fetch-boy/              # Vite + React frontend + Tauri config
+├── ./              # Vite + React frontend + Tauri config
 │   ├── src/                # React components, stores, hooks
 │   ├── src-tauri/          # Rust source, tauri.conf.json, icons
 │   └── package.json

@@ -455,17 +455,17 @@ None — implementation compiled and all tests passed on first full run after AP
 
 ### File List
 
-- `fetch-boy/src-tauri/src/cert.rs` (new)
-- `fetch-boy/src-tauri/src/proxy.rs` (new)
-- `fetch-boy/src-tauri/src/lib.rs` (modified)
-- `fetch-boy/src-tauri/Cargo.toml` (modified)
-- `fetch-boy/src-tauri/Cargo.lock` (modified)
-- `fetch-boy/src/components/Settings/SettingsPanel.tsx` (modified)
-- `fetch-boy/src/components/Layout/AppShell.tsx` (modified)
-- `fetch-boy/src/stores/uiSettingsStore.ts` (modified)
-- `fetch-boy/src/lib/db.ts` (modified)
-- `fetch-boy/src/lib/settings.ts` (modified)
-- `fetch-boy/src/lib/settings.test.ts` (modified)
+- `src-tauri/src/cert.rs` (new)
+- `src-tauri/src/proxy.rs` (new)
+- `src-tauri/src/lib.rs` (modified)
+- `src-tauri/Cargo.toml` (modified)
+- `src-tauri/Cargo.lock` (modified)
+- `src/components/Settings/SettingsPanel.tsx` (modified)
+- `src/components/Layout/AppShell.tsx` (modified)
+- `src/stores/uiSettingsStore.ts` (modified)
+- `src/lib/db.ts` (modified)
+- `src/lib/settings.ts` (modified)
+- `src/lib/settings.test.ts` (modified)
 - `_bmad-output/implementation-artifacts/9-3-mitm-proxy-backend.md` (modified)
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified)
 

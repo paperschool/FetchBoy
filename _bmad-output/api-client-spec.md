@@ -185,7 +185,7 @@ enabled: boolean
 ## Project Structure
 
 ```
-fetch-boy/
+
 ├── src/                        # React frontend
 │   ├── components/
 │   │   ├── RequestBuilder/     # URL bar, method selector, tabs

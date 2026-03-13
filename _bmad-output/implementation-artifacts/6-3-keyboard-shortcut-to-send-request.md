@@ -21,7 +21,7 @@ so that I never have to reach for the mouse mid-workflow when iterating quickly.
 ## Tasks / Subtasks
 
 - [x] Task 1 - Create keyboard shortcut hook for sending requests (AC: 1, 4, 5)
-  - [x] Create `useSendRequestKeyboardShortcut.ts` hook in `fetch-boy/src/hooks/`
+  - [x] Create `useSendRequestKeyboardShortcut.ts` hook in `src/hooks/`
   - [x] Add event listener for `keydown` that detects `Cmd/Ctrl + Enter` combination
   - [x] Check `isSending` state before triggering send (reject if already sending)
   - [x] Check that no modal/dropdown is open before triggering send
@@ -29,7 +29,7 @@ so that I never have to reach for the mouse mid-workflow when iterating quickly.
   - [x] Call the send request function when shortcut is triggered
 
 - [x] Task 2 - Integrate hook into App component (AC: 1)
-  - [x] Import and call `useSendRequestKeyboardShortcut()` in `fetch-boy/src/App.tsx` or MainPanel
+  - [x] Import and call `useSendRequestKeyboardShortcut()` in `src/App.tsx` or MainPanel
   - [x] Ensure the hook has access to the send request functionality
 
 - [x] Task 3 - Handle Monaco editor special case (AC: 5)
@@ -56,8 +56,8 @@ so that I never have to reach for the mouse mid-workflow when iterating quickly.
   - [x] Test that regular Enter inside Monaco editor does NOT send (only inserts newline)
 
 - [x] Task 7 - Verify and commit story changes
-  - [x] Run `npx tsc --noEmit` from `fetch-boy/` to verify TypeScript compilation
-  - [x] Run `npx vitest run` from `fetch-boy/` to verify all tests pass
+  - [x] Run `npx tsc --noEmit` from `` to verify TypeScript compilation
+  - [x] Run `npx vitest run` from `` to verify all tests pass
   - [ ] Manual test: Focus URL bar, press Cmd+Enter, verify request sends
   - [ ] Manual test: Focus body editor, press Enter (should insert newline)
   - [ ] Manual test: Focus body editor, press Cmd+Enter (should send)
@@ -176,7 +176,7 @@ function isAnyOverlayOpen(): boolean {
 
 ### Integration Points
 
-- **MainPanel send function**: `handleSendRequest` in `fetch-boy/src/components/MainPanel/MainPanel.tsx`
+- **MainPanel send function**: `handleSendRequest` in `src/components/MainPanel/MainPanel.tsx`
 - **`isSending` state**: Available via `useActiveResponseState()` which returns `res.isSending`
 - **tabStore**: Access active tab's response state via `useTabStore.getState()`
 - **Monaco editor**: Check focus via `document.activeElement?.closest('.monaco-editor')`
@@ -187,7 +187,7 @@ function isAnyOverlayOpen(): boolean {
 
 According to the acceptance criteria, Story 5.4 introduced a keyboard shortcut overlay. If this overlay exists, we need to add the new shortcut to it. If it doesn't exist yet, this story should still implement the shortcut functionality, and the documentation can be added later or as part of this story.
 
-Check for: `fetch-boy/src/components/KeyboardShortcutsOverlay.tsx` or similar
+Check for: `src/components/KeyboardShortcutsOverlay.tsx` or similar
 
 ### Critical Implementation Guardrails
 
@@ -264,21 +264,21 @@ expect(sendFn).toHaveBeenCalledTimes(2); // Still 2, not 3
 ### Project Structure Notes
 
 **New Files:**
-- `fetch-boy/src/hooks/useSendRequestKeyboardShortcut.ts` - New hook for send shortcut
+- `src/hooks/useSendRequestKeyboardShortcut.ts` - New hook for send shortcut
 
 **Modified Files:**
-- `fetch-boy/src/components/MainPanel/MainPanel.tsx` - Add hook integration, useCallback for handleSendRequest
-- `fetch-boy/src/hooks/useSendRequestKeyboardShortcut.test.ts` - New test file
+- `src/components/MainPanel/MainPanel.tsx` - Add hook integration, useCallback for handleSendRequest
+- `src/hooks/useSendRequestKeyboardShortcut.test.ts` - New test file
 - Keyboard shortcuts overlay (if exists): Add Cmd+Enter entry
 
 ### References
 
 - **Primary Source**: `_bmad-output/planning-artifacts/epic-6.md` (Story 6.3 acceptance criteria)
-- **MainPanel**: `fetch-boy/src/components/MainPanel/MainPanel.tsx` (handleSendRequest function)
-- **tabStore**: `fetch-boy/src/stores/tabStore.ts` (isSending state in ResponseSnapshot)
+- **MainPanel**: `src/components/MainPanel/MainPanel.tsx` (handleSendRequest function)
+- **tabStore**: `src/stores/tabStore.ts` (isSending state in ResponseSnapshot)
 - **Keyboard shortcut hooks**: 
-  - `fetch-boy/src/hooks/useTabKeyboardShortcuts.ts` (pattern reference)
-  - `fetch-boy/src/hooks/useSidebarKeyboardShortcut.ts` (pattern reference)
+  - `src/hooks/useTabKeyboardShortcuts.ts` (pattern reference)
+  - `src/hooks/useSidebarKeyboardShortcut.ts` (pattern reference)
 - **Previous Story**: `_bmad-output/implementation-artifacts/6-2-request-cancellation.md` (isSending state, integration)
 - **Monaco Editor**: Check via `document.activeElement?.closest('.monaco-editor')`
 
@@ -322,10 +322,10 @@ claude-sonnet-4-6
 
 ### File List
 
-- fetch-boy/src/hooks/useSendRequestKeyboardShortcut.ts (new)
-- fetch-boy/src/hooks/useSendRequestKeyboardShortcut.test.ts (new)
-- fetch-boy/src/components/MainPanel/MainPanel.tsx (modified — added useCallback import, hook import, wrapped handleSendRequest, registered hook)
-- fetch-boy/src/components/Settings/SettingsPanel.tsx (modified — added keyboard shortcuts section)
+- src/hooks/useSendRequestKeyboardShortcut.ts (new)
+- src/hooks/useSendRequestKeyboardShortcut.test.ts (new)
+- src/components/MainPanel/MainPanel.tsx (modified — added useCallback import, hook import, wrapped handleSendRequest, registered hook)
+- src/components/Settings/SettingsPanel.tsx (modified — added keyboard shortcuts section)
 - _bmad-output/implementation-artifacts/6-3-keyboard-shortcut-to-send-request.md (story file)
 - _bmad-output/implementation-artifacts/sprint-status.yaml (status updated)
 

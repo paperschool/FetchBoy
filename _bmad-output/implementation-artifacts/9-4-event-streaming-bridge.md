@@ -307,9 +307,9 @@ Add this mock at the top of `AppTabs.test.tsx` before the existing mocks.
 - Story 9.3 (backend): `_bmad-output/implementation-artifacts/9-3-mitm-proxy-backend.md`
 - Story 9.2 (store + UI): `_bmad-output/implementation-artifacts/9-2-intercept-table-view-ui.md`
 - Epic 9 overview: `_bmad-output/planning-artifacts/epic-9.md`
-- AppTabs component: `fetch-boy/src/components/AppTabs/AppTabs.tsx`
-- AppTabs tests: `fetch-boy/src/components/AppTabs/AppTabs.test.tsx`
-- interceptStore: `fetch-boy/src/stores/interceptStore.ts`
+- AppTabs component: `src/components/AppTabs/AppTabs.tsx`
+- AppTabs tests: `src/components/AppTabs/AppTabs.test.tsx`
+- interceptStore: `src/stores/interceptStore.ts`
 - Tauri v2 event docs: https://v2.tauri.app/reference/javascript/event/
 
 ## Dev Agent Record
@@ -330,12 +330,12 @@ claude-sonnet-4-6
 
 ### File List
 
-- `fetch-boy/src/types/intercept.ts` (created)
-- `fetch-boy/src/hooks/useInterceptEvents.ts` (created)
-- `fetch-boy/src/hooks/useInterceptEvents.test.tsx` (created)
-- `fetch-boy/src/components/AppTabs/AppTabs.tsx` (modified)
-- `fetch-boy/src/components/AppTabs/AppTabs.test.tsx` (modified)
-- `fetch-boy/src-tauri/src/proxy.rs` (modified)
+- `src/types/intercept.ts` (created)
+- `src/hooks/useInterceptEvents.ts` (created)
+- `src/hooks/useInterceptEvents.test.tsx` (created)
+- `src/components/AppTabs/AppTabs.tsx` (modified)
+- `src/components/AppTabs/AppTabs.test.tsx` (modified)
+- `src-tauri/src/proxy.rs` (modified)
 - `_bmad-output/implementation-artifacts/9-4-event-streaming-bridge.md` (modified)
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified)
 

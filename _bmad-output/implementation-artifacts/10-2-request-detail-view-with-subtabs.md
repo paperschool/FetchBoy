@@ -26,7 +26,7 @@ so that I can inspect the full content of intercepted HTTP traffic including bod
 ## Tasks / Subtasks
 
 - [x] Task 1 — Create RequestDetailView component skeleton (AC: #1, #8)
-  - [x] Create `fetch-boy/src/components/Intercept view/RequestDetailView.tsx`
+  - [x] Create `src/components/Intercept view/RequestDetailView.tsx`
   - [x] Add empty state: centered text "Select a request to view details" (same as 10.1 placeholder)
   - [x] Accept `selectedRequest: InterceptRequest | null` prop
 
@@ -70,7 +70,7 @@ so that I can inspect the full content of intercepted HTTP traffic including bod
   - [x] Add `is_text_content_type` helper to determine whether to capture body
 
 - [x] Task 7 — Update frontend types to match new payload (AC: #6, #7)
-  - [x] Add `responseBody?`, `requestHeaders?`, `responseHeaders?` to `InterceptEventPayload` in `fetch-boy/src/types/intercept.ts`
+  - [x] Add `responseBody?`, `requestHeaders?`, `responseHeaders?` to `InterceptEventPayload` in `src/types/intercept.ts`
   - [x] Verify `useInterceptEvents.ts` correctly passes new fields through to the store
 
 - [x] Task 8 — Update proxy tests
@@ -89,10 +89,10 @@ This story modifies 2 existing files and adds 2 new files:
 
 | File | Action |
 |------|--------|
-| `fetch-boy/src/components/Intercept view/InterceptView.tsx` | Replace placeholder with RequestDetailView |
-| `fetch-boy/src/stores/interceptStore.ts` | Ensure `selectedRequest` selector exists (may already have from 10.1) |
-| `fetch-boy/src/components/Intercept view/RequestDetailView.tsx` | NEW — detail panel component |
-| `fetch-boy/src/components/Intercept view/RequestDetailView.test.tsx` | NEW — component tests |
+| `src/components/Intercept view/InterceptView.tsx` | Replace placeholder with RequestDetailView |
+| `src/stores/interceptStore.ts` | Ensure `selectedRequest` selector exists (may already have from 10.1) |
+| `src/components/Intercept view/RequestDetailView.tsx` | NEW — detail panel component |
+| `src/components/Intercept view/RequestDetailView.test.tsx` | NEW — component tests |
 
 ### Key Existing Patterns to Follow
 
@@ -117,8 +117,8 @@ const selectedRequest = useInterceptStore((state) =>
 **Syntax Highlighting from ResponseViewer:**
 ```ts
 // Reuse existing highlight utilities from fetch page
-// Check: fetch-boy/src/components/Response view/ResponseViewer.tsx
-// or: fetch-boy/src/lib/response-utils.ts
+// Check: src/components/Response view/ResponseViewer.tsx
+// or: src/lib/response-utils.ts
 
 // For JSON: use JSON.stringify(JSON.parse(body), null, 2) for pretty-print
 // For highlighting: existing highlightText() or similar utility
@@ -151,7 +151,7 @@ const statusColors = (code: number): string => {
 ### RequestDetailView Component Design
 
 ```tsx
-// fetch-boy/src/components/Intercept view/RequestDetailView.tsx
+// src/components/Intercept view/RequestDetailView.tsx
 
 interface RequestDetailViewProps {
   selectedRequest: InterceptRequest | null
@@ -353,7 +353,7 @@ interface InterceptRequest {
 }
 ```
 
-If any fields missing, extend the type in `fetch-boy/src/types/`.
+If any fields missing, extend the type in `src/types/`.
 
 ### Format Utilities
 
@@ -381,7 +381,7 @@ function formatTimestamp(ts: string | Date): string {
 
 ### Testing Approach
 
-**File:** `fetch-boy/src/components/Intercept view/RequestDetailView.test.tsx`
+**File:** `src/components/Intercept view/RequestDetailView.test.tsx`
 
 ```tsx
 import { render, screen } from '@testing-library/react'
@@ -429,7 +429,7 @@ describe('RequestDetailView', () => {
 
 ### Project Structure Notes
 
-- **Folder name has a space**: `fetch-boy/src/components/Intercept view/` — continue using existing convention
+- **Folder name has a space**: `src/components/Intercept view/` — continue using existing convention
 - **No shadcn/ui** — raw Tailwind only, consistent with Story 10.1 and existing Intercept components
 - **Reuse ResponseViewer patterns** — check existing code for syntax highlighting approach
 - **Component size limit**: ≤200 lines — extract helpers (BodyContent, HeadersContent, format utilities) to keep main component under limit
@@ -438,11 +438,11 @@ describe('RequestDetailView', () => {
 
 - Story 10.1 (split view): [Source: _bmad-output/implementation-artifacts/10-1-intercept-split-view-with-request-table.md]
 - Epic 10 full spec: [Source: _bmad-output/planning-artifacts/epic-10.md#Story-10.2]
-- Existing InterceptView: [Source: fetch-boy/src/components/Intercept view/InterceptView.tsx]
-- Existing InterceptTable: [Source: fetch-boy/src/components/Intercept view/InterceptTable.tsx]
-- Intercept store: [Source: fetch-boy/src/stores/interceptStore.ts]
-- ResponseViewer for patterns: [Source: fetch-boy/src/components/Response view/ResponseViewer.tsx]
-- InterceptRequest type: [Source: fetch-boy/src/types/]
+- Existing InterceptView: [Source: src/components/Intercept view/InterceptView.tsx]
+- Existing InterceptTable: [Source: src/components/Intercept view/InterceptTable.tsx]
+- Intercept store: [Source: src/stores/interceptStore.ts]
+- ResponseViewer for patterns: [Source: src/components/Response view/ResponseViewer.tsx]
+- InterceptRequest type: [Source: src/types/]
 
 ## Dev Agent Record
 
@@ -472,10 +472,10 @@ None.
 
 ### File List
 
-- `fetch-boy/src/components/Intercept view/RequestDetailView.tsx` (new)
-- `fetch-boy/src/components/Intercept view/RequestDetailView.test.tsx` (new)
-- `fetch-boy/src/components/Intercept view/InterceptView.tsx` (modified)
-- `fetch-boy/src/stores/interceptStore.ts` (modified — added responseBody, requestHeaders, responseHeaders fields)
-- `fetch-boy/src/types/intercept.ts` (modified — added responseBody, requestHeaders, responseHeaders to payload type)
-- `fetch-boy/src-tauri/src/proxy.rs` (modified — capture request headers, buffer and emit response body + headers)
-- `fetch-boy/src-tauri/Cargo.toml` (modified — added bytes, http-body-util direct dependencies)
+- `src/components/Intercept view/RequestDetailView.tsx` (new)
+- `src/components/Intercept view/RequestDetailView.test.tsx` (new)
+- `src/components/Intercept view/InterceptView.tsx` (modified)
+- `src/stores/interceptStore.ts` (modified — added responseBody, requestHeaders, responseHeaders fields)
+- `src/types/intercept.ts` (modified — added responseBody, requestHeaders, responseHeaders to payload type)
+- `src-tauri/src/proxy.rs` (modified — capture request headers, buffer and emit response body + headers)
+- `src-tauri/Cargo.toml` (modified — added bytes, http-body-util direct dependencies)

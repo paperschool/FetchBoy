@@ -52,7 +52,7 @@ so that I can easily browse and search through captured traffic while the bottom
   - [x] Keep component ≤200 lines
 
 - [x] Task 4 — Implement split-pane layout in `InterceptView.tsx` (AC: #1, #12)
-  - [x] Create `useSplitPane` hook in `fetch-boy/src/hooks/useSplitPane.ts` with mouse drag logic
+  - [x] Create `useSplitPane` hook in `src/hooks/useSplitPane.ts` with mouse drag logic
   - [x] `InterceptView` replaces `<InterceptTable />` with a flex-column split container
   - [x] Top: `<InterceptTable />` with `flex-shrink-0` and dynamic `height` from split state
   - [x] Divider: a `4px` horizontal drag handle (`cursor-row-resize`, `bg-app-subtle hover:bg-blue-500/40`)
@@ -75,11 +75,11 @@ This story modifies 3 existing files and adds 2 new files:
 
 | File | Action |
 |------|--------|
-| `fetch-boy/src/stores/interceptStore.ts` | Extend with filter state + `selectedRequestId` |
-| `fetch-boy/src/components/Intercept view/InterceptTable.utils.tsx` | Add filter logic + constants |
-| `fetch-boy/src/components/Intercept view/InterceptTable.tsx` | Add filter bar, row selection, filtered rendering |
-| `fetch-boy/src/components/Intercept view/InterceptView.tsx` | Replace flat table with split-pane layout |
-| `fetch-boy/src/hooks/useSplitPane.ts` | NEW — mouse-drag resizable pane hook |
+| `src/stores/interceptStore.ts` | Extend with filter state + `selectedRequestId` |
+| `src/components/Intercept view/InterceptTable.utils.tsx` | Add filter logic + constants |
+| `src/components/Intercept view/InterceptTable.tsx` | Add filter bar, row selection, filtered rendering |
+| `src/components/Intercept view/InterceptView.tsx` | Replace flat table with split-pane layout |
+| `src/hooks/useSplitPane.ts` | NEW — mouse-drag resizable pane hook |
 
 ### Key Existing Patterns to Follow
 
@@ -128,7 +128,7 @@ The split pane replaces the inner `<InterceptTable />`. The outer `div` keeps `h
 No drag-resize library exists in the project. Implement a lightweight custom hook:
 
 ```ts
-// fetch-boy/src/hooks/useSplitPane.ts
+// src/hooks/useSplitPane.ts
 import { useRef, useState, useCallback } from 'react'
 
 export function useSplitPane(defaultTopPercent = 60, minPx = 120) {
@@ -283,7 +283,7 @@ export function filterRequests(
 
 ### `interceptStore` Extension
 
-Extend the store at `fetch-boy/src/stores/interceptStore.ts`:
+Extend the store at `src/stores/interceptStore.ts`:
 
 ```ts
 interface InterceptStore {
@@ -323,7 +323,7 @@ The `border-l-2 border-l-blue-500` left accent is used for selected state — co
 
 ### Testing Approach
 
-**File:** `fetch-boy/src/components/Intercept view/InterceptTable.test.tsx`
+**File:** `src/components/Intercept view/InterceptTable.test.tsx`
 
 Add new describe blocks:
 - `describe('Filter bar')` — renders search input, regex toggle, verb/status dropdowns
@@ -340,7 +340,7 @@ Add new describe blocks:
 
 ### Project Structure Notes
 
-- **Folder name has a space**: `fetch-boy/src/components/Intercept view/` — this is the existing convention, continue using it. Imports use `@/components/Intercept view/...` alias.
+- **Folder name has a space**: `src/components/Intercept view/` — this is the existing convention, continue using it. Imports use `@/components/Intercept view/...` alias.
 - **No shadcn/ui** in intercept components — the epic-10.md AC says "shadcn/ui Table patterns" but looking at the existing `InterceptTable.tsx` it uses raw Tailwind divs, not shadcn Table. **Follow the existing raw Tailwind pattern** — do NOT introduce shadcn Table.
 - **`@tanstack/react-virtual` v3.13.22** is already installed — do not add new dependencies for the virtualized table.
 - **No resizable pane library needed** — implement custom `useSplitPane` hook as described above. Adding `react-resizable-panels` would be overkill.
@@ -348,14 +348,14 @@ Add new describe blocks:
 
 ### References
 
-- Existing intercept table: [Source: fetch-boy/src/components/Intercept view/InterceptTable.tsx]
-- Existing intercept store: [Source: fetch-boy/src/stores/interceptStore.ts]
-- Existing format utilities: [Source: fetch-boy/src/components/Intercept view/InterceptTable.utils.tsx]
-- Tab layout pattern: [Source: fetch-boy/src/components/Layout/TabLayout.tsx]
-- InterceptView entry point: [Source: fetch-boy/src/components/Intercept view/InterceptView.tsx]
-- Existing tests to update: [Source: fetch-boy/src/components/Intercept view/InterceptTable.test.tsx]
+- Existing intercept table: [Source: src/components/Intercept view/InterceptTable.tsx]
+- Existing intercept store: [Source: src/stores/interceptStore.ts]
+- Existing format utilities: [Source: src/components/Intercept view/InterceptTable.utils.tsx]
+- Tab layout pattern: [Source: src/components/Layout/TabLayout.tsx]
+- InterceptView entry point: [Source: src/components/Intercept view/InterceptView.tsx]
+- Existing tests to update: [Source: src/components/Intercept view/InterceptTable.test.tsx]
 - Epic 10 full spec: [Source: _bmad-output/planning-artifacts/epic-10.md#Story-10.1]
-- Package deps: [Source: fetch-boy/package.json]
+- Package deps: [Source: package.json]
 
 ## Dev Agent Record
 
@@ -377,9 +377,9 @@ None.
 
 ### File List
 
-- `fetch-boy/src/stores/interceptStore.ts` (modified)
-- `fetch-boy/src/components/Intercept view/InterceptTable.utils.tsx` (modified)
-- `fetch-boy/src/components/Intercept view/InterceptTable.tsx` (modified)
-- `fetch-boy/src/components/Intercept view/InterceptView.tsx` (modified)
-- `fetch-boy/src/components/Intercept view/InterceptTable.test.tsx` (modified)
-- `fetch-boy/src/hooks/useSplitPane.ts` (new)
+- `src/stores/interceptStore.ts` (modified)
+- `src/components/Intercept view/InterceptTable.utils.tsx` (modified)
+- `src/components/Intercept view/InterceptTable.tsx` (modified)
+- `src/components/Intercept view/InterceptView.tsx` (modified)
+- `src/components/Intercept view/InterceptTable.test.tsx` (modified)
+- `src/hooks/useSplitPane.ts` (new)

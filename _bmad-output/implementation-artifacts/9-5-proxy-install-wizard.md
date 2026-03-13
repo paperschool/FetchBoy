@@ -84,8 +84,8 @@ None.
 
 ### File List
 
-- fetch-boy/src-tauri/src/lib.rs
-- fetch-boy/src/components/Intercept view/InterceptSidebar.tsx
+- src-tauri/src/lib.rs
+- src/components/Intercept view/InterceptSidebar.tsx
 - _bmad-output/implementation-artifacts/sprint-status.yaml
 - _bmad-output/implementation-artifacts/9-5-proxy-install-wizard.md
 

@@ -64,14 +64,14 @@ This story modifies/adds the following files:
 
 | File | Action |
 |------|--------|
-| `fetch-boy/src/lib/db.ts` | MODIFIED — add blockRequest to Breakpoint type |
-| `fetch-boy/src/lib/breakpoints.ts` | MODIFIED — add blockRequest to create/update/deserialize |
-| `fetch-boy/src/stores/breakpointsStore.ts` | MODIFIED — add blockRequest state and actions |
-| `fetch-boy/src/components/Breakpoints/BreakpointEditor.tsx` | MODIFIED — add Blocking section |
-| `fetch-boy/src/components/Breakpoints/BreakpointRow.tsx` | MODIFIED — add visual indicator |
-| `fetch-boy/src-tauri/src/proxy.rs` | MODIFIED — implement request blocking logic |
-| `fetch-boy/src-tauri/src/db.rs` | MODIFIED — add block_request columns |
-| `fetch-boy/src-tauri/migrations/` | MODIFIED — add migration for new columns |
+| `src/lib/db.ts` | MODIFIED — add blockRequest to Breakpoint type |
+| `src/lib/breakpoints.ts` | MODIFIED — add blockRequest to create/update/deserialize |
+| `src/stores/breakpointsStore.ts` | MODIFIED — add blockRequest state and actions |
+| `src/components/Breakpoints/BreakpointEditor.tsx` | MODIFIED — add Blocking section |
+| `src/components/Breakpoints/BreakpointRow.tsx` | MODIFIED — add visual indicator |
+| `src-tauri/src/proxy.rs` | MODIFIED — implement request blocking logic |
+| `src-tauri/src/db.rs` | MODIFIED — add block_request columns |
+| `src-tauri/migrations/` | MODIFIED — add migration for new columns |
 
 ### Data Structures
 
@@ -206,7 +206,7 @@ import { RequestBlockerEditor } from './RequestBlockerEditor'
 ### RequestBlockerEditor Component
 
 ```tsx
-// fetch-boy/src/components/Breakpoints/RequestBlockerEditor.tsx
+// src/components/Breakpoints/RequestBlockerEditor.tsx
 
 interface Props {
   blockRequest?: {
@@ -325,7 +325,7 @@ pub struct InterceptEvent {
 ### Testing Approach
 
 ```tsx
-// fetch-boy/src/components/Breakpoints/RequestBlockerEditor.test.tsx
+// src/components/Breakpoints/RequestBlockerEditor.test.tsx
 
 describe('RequestBlockerEditor', () => {
   it('shows block toggle unchecked by default', () => {
@@ -401,10 +401,10 @@ describe('RequestBlockerEditor', () => {
 - Story 10.5 (response mapping): [Source: _bmad-output/implementation-artifacts/10-5-extended-breakpoint-actions-response-mapping.md]
 - Story 10.4 (breakpoint editor): [Source: _bmad-output/implementation-artifacts/10-4-breakpoint-editor-with-fuzzy-url-matching.md]
 - Story 10.3 (breakpoints tab): [Source: _bmad-output/implementation-artifacts/10-3-breakpoints-tab-interface.md]
-- Existing BreakpointsStore: [Source: fetch-boy/src/stores/breakpointsStore.ts]
-- Existing BreakpointEditor: [Source: fetch-boy/src/components/Breakpoints/BreakpointEditor.tsx]
-- Rust proxy: [Source: fetch-boy/src-tauri/src/proxy.rs]
-- SQLite migrations: [Source: fetch-boy/src-tauri/migrations/]
+- Existing BreakpointsStore: [Source: src/stores/breakpointsStore.ts]
+- Existing BreakpointEditor: [Source: src/components/Breakpoints/BreakpointEditor.tsx]
+- Rust proxy: [Source: src-tauri/src/proxy.rs]
+- SQLite migrations: [Source: src-tauri/migrations/]
 
 ## Dev Agent Record
 
@@ -429,13 +429,13 @@ claude-sonnet-4-6
 
 ### File List
 
-- `fetch-boy/src/lib/db.ts` (modified)
-- `fetch-boy/src/lib/breakpoints.ts` (modified)
-- `fetch-boy/src/stores/breakpointsStore.ts` (modified)
-- `fetch-boy/src/components/Breakpoints/BreakpointEditor.tsx` (modified)
-- `fetch-boy/src/components/Breakpoints/BreakpointRow.tsx` (modified)
-- `fetch-boy/src/components/Breakpoints/RequestBlockerEditor.tsx` (new)
-- `fetch-boy/src/components/Breakpoints/RequestBlockerEditor.test.tsx` (new)
-- `fetch-boy/src-tauri/src/proxy.rs` (modified)
-- `fetch-boy/src-tauri/src/db.rs` (modified)
-- `fetch-boy/src-tauri/migrations/005_block_request.sql` (new)
+- `src/lib/db.ts` (modified)
+- `src/lib/breakpoints.ts` (modified)
+- `src/stores/breakpointsStore.ts` (modified)
+- `src/components/Breakpoints/BreakpointEditor.tsx` (modified)
+- `src/components/Breakpoints/BreakpointRow.tsx` (modified)
+- `src/components/Breakpoints/RequestBlockerEditor.tsx` (new)
+- `src/components/Breakpoints/RequestBlockerEditor.test.tsx` (new)
+- `src-tauri/src/proxy.rs` (modified)
+- `src-tauri/src/db.rs` (modified)
+- `src-tauri/migrations/005_block_request.sql` (new)

@@ -25,13 +25,13 @@ so that the codebase remains maintainable and follows project conventions.
 ### SettingsPanel Refactoring
 
 - [ ] Task 1 - Extract SettingsSection sub-components (AC: 1, 3)
-  - [ ] Create `fetch-boy/src/components/Settings/components/ThemeSettings.tsx` - Theme selection
-  - [ ] Create `fetch-boy/src/components/Settings/components/RequestSettings.tsx` - Timeout, SSL verify
-  - [ ] Create `fetch-boy/src/components/Settings/components/EditorSettings.tsx` - Font size controls
-  - [ ] Create `fetch-boy/src/components/Settings/components/TutorialSettings.tsx` - Restart tutorial
+  - [ ] Create `src/components/Settings/components/ThemeSettings.tsx` - Theme selection
+  - [ ] Create `src/components/Settings/components/RequestSettings.tsx` - Timeout, SSL verify
+  - [ ] Create `src/components/Settings/components/EditorSettings.tsx` - Font size controls
+  - [ ] Create `src/components/Settings/components/TutorialSettings.tsx` - Restart tutorial
 
 - [ ] Task 2 - Extract KeyboardShortcuts component (AC: 3)
-  - [ ] Create `fetch-boy/src/components/Settings/components/KeyboardShortcuts.tsx` - Shortcuts display
+  - [ ] Create `src/components/Settings/components/KeyboardShortcuts.tsx` - Shortcuts display
 
 - [ ] Task 3 - Refactor SettingsPanel.tsx to compose children (AC: 1, 3)
   - [ ] Import and render all settings sections
@@ -40,9 +40,9 @@ so that the codebase remains maintainable and follows project conventions.
 ### AuthPanel Refactoring
 
 - [ ] Task 4 - Extract auth type specific components (AC: 2, 4)
-  - [ ] Create `fetch-boy/src/components/AuthPanel/components/BearerAuth.tsx` - Bearer token input
-  - [ ] Create `fetch-boy/src/components/AuthPanel/components/BasicAuth.tsx` - Username/password
-  - [ ] Create `fetch-boy/src/components/AuthPanel/components/ApiKeyAuth.tsx` - API key inputs
+  - [ ] Create `src/components/AuthPanel/components/BearerAuth.tsx` - Bearer token input
+  - [ ] Create `src/components/AuthPanel/components/BasicAuth.tsx` - Username/password
+  - [ ] Create `src/components/AuthPanel/components/ApiKeyAuth.tsx` - API key inputs
 
 - [ ] Task 5 - Refactor AuthPanel.tsx to compose children (AC: 2)
   - [ ] Import and render auth type components based on selection
@@ -51,9 +51,9 @@ so that the codebase remains maintainable and follows project conventions.
 ### Final
 
 - [ ] Task 6 - Final Task - Commit story changes
-  - [ ] Run `npx tsc --noEmit` from `fetch-boy/` to verify TypeScript compilation
-  - [ ] Run `cargo check` from `fetch-boy/src-tauri/` to verify Rust compilation
-  - [ ] Run `npx vitest run` from `fetch-boy/` to verify all tests pass
+  - [ ] Run `npx tsc --noEmit` from `` to verify TypeScript compilation
+  - [ ] Run `cargo check` from `src-tauri/` to verify Rust compilation
+  - [ ] Run `npx vitest run` from `` to verify all tests pass
   - [ ] Commit all code and documentation changes for this story with a message that includes Story 8.3
 
 ## Dev Notes
@@ -74,7 +74,7 @@ so that the codebase remains maintainable and follows project conventions.
 
 **SettingsPanel:**
 ```
-fetch-boy/src/components/Settings/
+src/components/Settings/
 ├── SettingsPanel.tsx              # Main component (~120 lines)
 ├── index.ts                       # Barrel export
 └── components/
@@ -87,7 +87,7 @@ fetch-boy/src/components/Settings/
 
 **AuthPanel:**
 ```
-fetch-boy/src/components/AuthPanel/
+src/components/AuthPanel/
 ├── AuthPanel.tsx                 # Main component (~60 lines)
 ├── index.ts                      # Barrel export
 └── components/
@@ -196,27 +196,27 @@ export function BearerAuth({ token, onChange }: BearerAuthProps) {
 - Vitest + React Testing Library for tests
 
 **Component Pattern:**
-- Follow existing component patterns in `fetch-boy/src/components/`
+- Follow existing component patterns in `src/components/`
 - Use barrel exports in `index.ts`
 - Keep props interfaces with components
 
 ### Integration Points
 
 **New Files (Settings):**
-- `fetch-boy/src/components/Settings/components/ThemeSettings.tsx`
-- `fetch-boy/src/components/Settings/components/RequestSettings.tsx`
-- `fetch-boy/src/components/Settings/components/EditorSettings.tsx`
-- `fetch-boy/src/components/Settings/components/TutorialSettings.tsx`
-- `fetch-boy/src/components/Settings/components/KeyboardShortcuts.tsx`
+- `src/components/Settings/components/ThemeSettings.tsx`
+- `src/components/Settings/components/RequestSettings.tsx`
+- `src/components/Settings/components/EditorSettings.tsx`
+- `src/components/Settings/components/TutorialSettings.tsx`
+- `src/components/Settings/components/KeyboardShortcuts.tsx`
 
 **New Files (Auth):**
-- `fetch-boy/src/components/AuthPanel/components/BearerAuth.tsx`
-- `fetch-boy/src/components/AuthPanel/components/BasicAuth.tsx`
-- `fetch-boy/src/components/AuthPanel/components/ApiKeyAuth.tsx`
+- `src/components/AuthPanel/components/BearerAuth.tsx`
+- `src/components/AuthPanel/components/BasicAuth.tsx`
+- `src/components/AuthPanel/components/ApiKeyAuth.tsx`
 
 **Modified Files:**
-- `fetch-boy/src/components/Settings/SettingsPanel.tsx` - Refactored
-- `fetch-boy/src/components/AuthPanel/AuthPanel.tsx` - Refactored
+- `src/components/Settings/SettingsPanel.tsx` - Refactored
+- `src/components/AuthPanel/AuthPanel.tsx` - Refactored
 
 ### Critical Implementation Guardrails
 
@@ -269,16 +269,16 @@ claude-sonnet-4-20250514
 
 ### File List
 
-- fetch-boy/src/components/Settings/components/ThemeSettings.tsx (new)
-- fetch-boy/src/components/Settings/components/RequestSettings.tsx (new)
-- fetch-boy/src/components/Settings/components/EditorSettings.tsx (new)
-- fetch-boy/src/components/Settings/components/TutorialSettings.tsx (new)
-- fetch-boy/src/components/Settings/components/KeyboardShortcuts.tsx (new)
-- fetch-boy/src/components/Settings/SettingsPanel.tsx (modified)
-- fetch-boy/src/components/AuthPanel/components/BearerAuth.tsx (new)
-- fetch-boy/src/components/AuthPanel/components/BasicAuth.tsx (new)
-- fetch-boy/src/components/AuthPanel/components/ApiKeyAuth.tsx (new)
-- fetch-boy/src/components/AuthPanel/AuthPanel.tsx (modified)
+- src/components/Settings/components/ThemeSettings.tsx (new)
+- src/components/Settings/components/RequestSettings.tsx (new)
+- src/components/Settings/components/EditorSettings.tsx (new)
+- src/components/Settings/components/TutorialSettings.tsx (new)
+- src/components/Settings/components/KeyboardShortcuts.tsx (new)
+- src/components/Settings/SettingsPanel.tsx (modified)
+- src/components/AuthPanel/components/BearerAuth.tsx (new)
+- src/components/AuthPanel/components/BasicAuth.tsx (new)
+- src/components/AuthPanel/components/ApiKeyAuth.tsx (new)
+- src/components/AuthPanel/AuthPanel.tsx (modified)
 
 ## Change Log
 

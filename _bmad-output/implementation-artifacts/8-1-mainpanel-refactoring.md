@@ -37,12 +37,12 @@ so that the codebase remains maintainable and follows project conventions.
   - [ ] Connect to request flow via existing store pattern
 
 - [ ] Task 3 - Create RequestControls sub-component (AC: 4)
-  - [ ] Create `fetch-boy/src/components/MainPanel/components/RequestControls.tsx`
+  - [ ] Create `src/components/MainPanel/components/RequestControls.tsx`
   - [ ] Move Send/Cancel buttons and Save button to this component
   - [ ] Accept props: isSending, onSend, onCancel, onSave
 
 - [ ] Task 4 - Create RequestDetails sub-component (AC: 4)
-  - [ ] Create `fetch-boy/src/components/MainPanel/components/RequestDetails.tsx`
+  - [ ] Create `src/components/MainPanel/components/RequestDetails.tsx`
   - [ ] Move tabbed request details (headers, query, body, auth, options) to this component
   - [ ] Accept props for all the state and setters
 
@@ -52,16 +52,16 @@ so that the codebase remains maintainable and follows project conventions.
   - [ ] Ensure total lines ≤150
 
 - [ ] Task 6 - Final Task - Commit story changes
-  - [ ] Run `npx tsc --noEmit` from `fetch-boy/` to verify TypeScript compilation
-  - [ ] Run `cargo check` from `fetch-boy/src-tauri/` to verify Rust compilation
-  - [ ] Run `npx vitest run` from `fetch-boy/` to verify all tests pass
+  - [ ] Run `npx tsc --noEmit` from `` to verify TypeScript compilation
+  - [ ] Run `cargo check` from `src-tauri/` to verify Rust compilation
+  - [ ] Run `npx vitest run` from `` to verify all tests pass
   - [ ] Commit all code and documentation changes for this story with a message that includes Story 8.1
 
 ## Dev Notes
 
 ### Current MainPanel.tsx Analysis
 
-**File:** `fetch-boy/src/components/MainPanel/MainPanel.tsx`
+**File:** `src/components/MainPanel/MainPanel.tsx`
 **Current Lines:** 1015
 **Target:** ≤150 lines
 
@@ -93,7 +93,7 @@ const stopProgress = () => { ... };
 ### Proposed File Structure After Refactoring
 
 ```
-fetch-boy/src/components/MainPanel/
+src/components/MainPanel/
 ├── MainPanel.tsx              # Main component (~120 lines) - composes children
 ├── MainPanel.types.ts         # Type definitions
 ├── MainPanel.utils.ts         # URL utility functions (extracted)
@@ -322,7 +322,7 @@ This will be larger - wraps the tabbed interface. Accept props for all state and
 - Vitest + React Testing Library for tests
 
 **Component Pattern:**
-- Follow existing component patterns in `fetch-boy/src/components/`
+- Follow existing component patterns in `src/components/`
 - Use barrel exports in `index.ts`
 - Keep types in separate `.types.ts` file
 - Keep utilities in separate `.utils.ts` file
@@ -334,14 +334,14 @@ This will be larger - wraps the tabbed interface. Accept props for all state and
 ### Integration Points
 
 **New Files:**
-- `fetch-boy/src/components/MainPanel/MainPanel.types.ts` - Type definitions
-- `fetch-boy/src/components/MainPanel/MainPanel.utils.ts` - URL utilities
-- `fetch-boy/src/components/MainPanel/components/RequestControls.tsx` - Controls sub-component
-- `fetch-boy/src/components/MainPanel/components/RequestDetails.tsx` - Details sub-component
+- `src/components/MainPanel/MainPanel.types.ts` - Type definitions
+- `src/components/MainPanel/MainPanel.utils.ts` - URL utilities
+- `src/components/MainPanel/components/RequestControls.tsx` - Controls sub-component
+- `src/components/MainPanel/components/RequestDetails.tsx` - Details sub-component
 
 **Modified Files:**
-- `fetch-boy/src/components/MainPanel/MainPanel.tsx` - Refactored to ≤150 lines
-- `fetch-boy/src/components/MainPanel/index.ts` - Update barrel exports
+- `src/components/MainPanel/MainPanel.tsx` - Refactored to ≤150 lines
+- `src/components/MainPanel/index.ts` - Update barrel exports
 
 **Remove Inline Code:**
 - Delete `extractErrorReason`, `buildRequestedUrlForDisplay`, `parseUrlWithFallback`, `stripQueryFromUrl`, `buildUrlFromQueryParams`, `areQueryParamsEqual` functions from MainPanel.tsx
@@ -415,8 +415,8 @@ export function MainPanel() {
 
 - **Code Styling Standards**: `_bmad/_memory/tech-writer-sidecar/code-styling-standards.md` (Component Size Limits section)
 - **Component Refactoring Pattern**: Same file (Component Design Principles > Breaking Down Large Components)
-- **Existing useRequestProgress Hook**: `fetch-boy/src/hooks/useRequestProgress.ts`
-- **ProgressBar Component**: `fetch-boy/src/components/ProgressBar/ProgressBar.tsx`
+- **Existing useRequestProgress Hook**: `src/hooks/useRequestProgress.ts`
+- **ProgressBar Component**: `src/components/ProgressBar/ProgressBar.tsx`
 
 ## Dev Agent Record
 
@@ -437,12 +437,12 @@ claude-sonnet-4-20250514
 
 ### File List
 
-- fetch-boy/src/components/MainPanel/MainPanel.types.ts (new)
-- fetch-boy/src/components/MainPanel/MainPanel.utils.ts (new)
-- fetch-boy/src/components/MainPanel/components/RequestControls.tsx (new)
-- fetch-boy/src/components/MainPanel/components/RequestDetails.tsx (new)
-- fetch-boy/src/components/MainPanel/MainPanel.tsx (modified - refactored)
-- fetch-boy/src/components/MainPanel/index.ts (modified - updated exports)
+- src/components/MainPanel/MainPanel.types.ts (new)
+- src/components/MainPanel/MainPanel.utils.ts (new)
+- src/components/MainPanel/components/RequestControls.tsx (new)
+- src/components/MainPanel/components/RequestDetails.tsx (new)
+- src/components/MainPanel/MainPanel.tsx (modified - refactored)
+- src/components/MainPanel/index.ts (modified - updated exports)
 
 ## Change Log
 

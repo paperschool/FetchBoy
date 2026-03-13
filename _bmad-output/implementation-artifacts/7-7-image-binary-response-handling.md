@@ -52,9 +52,9 @@ So that I can verify image endpoints and download files directly from the app.
   - [x] Test JSON/text responses still work correctly
 
 - [x] Task 6 - Final Task - Commit story changes
-  - [x] Run `npx tsc --noEmit` from `fetch-boy/` to verify TypeScript compilation
-  - [x] Run `cargo check` from `fetch-boy/src-tauri/` to verify Rust compilation
-  - [x] Run `npx vitest run` from `fetch-boy/` to verify all tests pass
+  - [x] Run `npx tsc --noEmit` from `` to verify TypeScript compilation
+  - [x] Run `cargo check` from `src-tauri/` to verify Rust compilation
+  - [x] Run `npx vitest run` from `` to verify all tests pass
   - [ ] Commit all code and documentation changes for this story with a message that includes Story 7.7
 
 
@@ -277,11 +277,11 @@ function isBinaryContentType(contentType?: string): boolean {
 ### Integration Points
 
 **Rust Backend:**
-- **Modified**: `fetch-boy/src-tauri/src/http.rs` - Add contentType field, binary detection, bytes reading
-- **Modified**: `fetch-boy/src-tauri/Cargo.toml` - Add base64 dependency
+- **Modified**: `src-tauri/src/http.rs` - Add contentType field, binary detection, bytes reading
+- **Modified**: `src-tauri/Cargo.toml` - Add base64 dependency
 
 **TypeScript Frontend:**
-- **Modified**: `fetch-boy/src/components/ResponseViewer/ResponseViewer.tsx` - Add contentType to interface, render binary appropriately
+- **Modified**: `src/components/ResponseViewer/ResponseViewer.tsx` - Add contentType to interface, render binary appropriately
 
 **Testing:**
 - Test image endpoints: https://httpbin.org/image/png, https://httpbin.org/image/jpeg
@@ -387,9 +387,9 @@ assert!(!is_binary_content_type("text/plain"));
 ### Project Structure Notes
 
 **Modified Files:**
-- `fetch-boy/src-tauri/src/http.rs` - Add binary detection and contentType field
-- `fetch-boy/src-tauri/Cargo.toml` - Add base64 dependency
-- `fetch-boy/src/components/ResponseViewer/ResponseViewer.tsx` - Update interface and add binary rendering
+- `src-tauri/src/http.rs` - Add binary detection and contentType field
+- `src-tauri/Cargo.toml` - Add base64 dependency
+- `src/components/ResponseViewer/ResponseViewer.tsx` - Update interface and add binary rendering
 
 **No New Files Required:**
 - Helper functions can be added within ResponseViewer.tsx
@@ -404,8 +404,8 @@ assert!(!is_binary_content_type("text/plain"));
 ### References
 
 - **Primary Source**: `_bmad-output/planning-artifacts/epic-7.md` (Story 7.7 acceptance criteria)
-- **Backend Pattern**: Current implementation in `fetch-boy/src-tauri/src/http.rs` uses `.text()` for all responses
-- **Frontend Pattern**: Current ResponseViewer in `fetch-boy/src/components/ResponseViewer/ResponseViewer.tsx`
+- **Backend Pattern**: Current implementation in `src-tauri/src/http.rs` uses `.text()` for all responses
+- **Frontend Pattern**: Current ResponseViewer in `src/components/ResponseViewer/ResponseViewer.tsx`
 - **Theme System**: Story 4.1 - light/dark theme implementation
 - **Base64 Encoding**: Standard base64 crate in Rust
 - **Testing**: Vitest + React Testing Library (consistent with project)
@@ -442,10 +442,10 @@ claude-sonnet-4-20250514
 
 ### File List
 
-- fetch-boy/src-tauri/src/http.rs (modified)
-- fetch-boy/src-tauri/Cargo.toml (modified)
-- fetch-boy/src/components/ResponseViewer/ResponseViewer.tsx (modified)
-- fetch-boy/src/components/ResponseViewer/ResponseViewer.test.tsx (modified - add tests)
+- src-tauri/src/http.rs (modified)
+- src-tauri/Cargo.toml (modified)
+- src/components/ResponseViewer/ResponseViewer.tsx (modified)
+- src/components/ResponseViewer/ResponseViewer.test.tsx (modified - add tests)
 
 ## Change Log
 

@@ -65,13 +65,13 @@ This story modifies/adds the following files:
 
 | File | Action |
 |------|--------|
-| `fetch-boy/src/types/index.ts` | MODIFIED — add statusCode and headers to Breakpoint type |
-| `fetch-boy/src/stores/breakpointsStore.ts` | MODIFIED — add statusCode and headers state and actions |
-| `fetch-boy/src/components/Breakpoints/BreakpointEditor.tsx` | MODIFIED — add Status Code & Headers sections |
-| `fetch-boy/src/components/Breakpoints/BreakpointRow.tsx` | MODIFIED — add visual indicator |
-| `fetch-boy/src-tauri/src/proxy.rs` | MODIFIED — implement status/header modification |
-| `fetch-boy/src-tauri/src/db.rs` | MODIFIED — add status_code, headers columns to breakpoints table |
-| `fetch-boy/src-tauri/migrations/` | MODIFIED — add migration for new columns |
+| `src/types/index.ts` | MODIFIED — add statusCode and headers to Breakpoint type |
+| `src/stores/breakpointsStore.ts` | MODIFIED — add statusCode and headers state and actions |
+| `src/components/Breakpoints/BreakpointEditor.tsx` | MODIFIED — add Status Code & Headers sections |
+| `src/components/Breakpoints/BreakpointRow.tsx` | MODIFIED — add visual indicator |
+| `src-tauri/src/proxy.rs` | MODIFIED — implement status/header modification |
+| `src-tauri/src/db.rs` | MODIFIED — add status_code, headers columns to breakpoints table |
+| `src-tauri/migrations/` | MODIFIED — add migration for new columns |
 
 ### Data Structures
 
@@ -240,7 +240,7 @@ import { HeadersEditor } from './HeadersEditor'
 ### StatusCodeEditor Component
 
 ```tsx
-// fetch-boy/src/components/Breakpoints/StatusCodeEditor.tsx
+// src/components/Breakpoints/StatusCodeEditor.tsx
 
 interface Props {
   statusCode?: { code: number; enabled: boolean }
@@ -327,7 +327,7 @@ export function StatusCodeEditor({ statusCode, onChange }: Props) {
 ### HeadersEditor Component
 
 ```tsx
-// fetch-boy/src/components/Breakpoints/HeadersEditor.tsx
+// src/components/Breakpoints/HeadersEditor.tsx
 
 interface Props {
   headers?: Array<{ key: string; value: string; enabled: boolean }>
@@ -431,7 +431,7 @@ export function HeadersEditor({ headers = [], onChange }: Props) {
 ### Testing Approach
 
 ```tsx
-// fetch-boy/src/components/Breakpoints/StatusCodeEditor.test.tsx
+// src/components/Breakpoints/StatusCodeEditor.test.tsx
 
 describe('StatusCodeEditor', () => {
   it('shows validation error for invalid status codes', () => {
@@ -450,7 +450,7 @@ describe('StatusCodeEditor', () => {
   })
 })
 
-// fetch-boy/src/components/Breakpoints/HeadersEditor.test.tsx
+// src/components/Breakpoints/HeadersEditor.test.tsx
 
 describe('HeadersEditor', () => {
   it('adds new header on button click', () => {
@@ -496,9 +496,9 @@ describe('HeadersEditor', () => {
 - Story 10.3 (breakpoints tab): [Source: _bmad-output/implementation-artifacts/10-3-breakpoints-tab-interface.md]
 - Story 10.2 (detail view): [Source: _bmad-output/implementation-artifacts/10-2-request-detail-view-with-subtabs.md]
 - Story 9.3 (MITM proxy): [Source: _bmad-output/implementation-artifacts/9-3-mitm-proxy-backend.md]
-- Existing BreakpointsStore: [Source: fetch-boy/src/stores/breakpointsStore.ts]
-- Existing BreakpointEditor: [Source: fetch-boy/src/components/Breakpoints/BreakpointEditor.tsx]
-- SQLite migrations: [Source: fetch-boy/src-tauri/migrations/]
+- Existing BreakpointsStore: [Source: src/stores/breakpointsStore.ts]
+- Existing BreakpointEditor: [Source: src/components/Breakpoints/BreakpointEditor.tsx]
+- SQLite migrations: [Source: src-tauri/migrations/]
 
 ## Dev Agent Record
 
@@ -520,17 +520,17 @@ claude-sonnet-4-6
 
 ### File List
 
-- `fetch-boy/src/lib/db.ts` (modified — added BreakpointHeader, extended Breakpoint interface)
-- `fetch-boy/src/lib/breakpoints.ts` (modified — RawBreakpoint, deserialization, CRUD, sync)
-- `fetch-boy/src/stores/breakpointsStore.ts` (modified — EditForm, defaultEditForm, startEditing, saveBreakpoint)
-- `fetch-boy/src/components/Breakpoints/BreakpointEditor.tsx` (modified — StatusCodeEditor, HeadersEditor integration)
-- `fetch-boy/src/components/Breakpoints/BreakpointRow.tsx` (modified — Gauge + ListPlus indicators)
-- `fetch-boy/src/components/Breakpoints/StatusCodeEditor.tsx` (new)
-- `fetch-boy/src/components/Breakpoints/HeadersEditor.tsx` (new)
-- `fetch-boy/src/components/Breakpoints/StatusCodeEditor.test.tsx` (new)
-- `fetch-boy/src/components/Breakpoints/HeadersEditor.test.tsx` (new)
-- `fetch-boy/src/components/Breakpoints/BreakpointEditor.test.tsx` (modified — updated EditForm fixtures)
-- `fetch-boy/src/components/Breakpoints/BreakpointsTree.test.tsx` (modified — updated Breakpoint fixtures)
-- `fetch-boy/src-tauri/src/proxy.rs` (modified — BreakpointHeader/BreakpointRule structs, status/header apply logic)
-- `fetch-boy/src-tauri/src/db.rs` (modified — migration v4)
-- `fetch-boy/src-tauri/migrations/004_status_headers.sql` (new)
+- `src/lib/db.ts` (modified — added BreakpointHeader, extended Breakpoint interface)
+- `src/lib/breakpoints.ts` (modified — RawBreakpoint, deserialization, CRUD, sync)
+- `src/stores/breakpointsStore.ts` (modified — EditForm, defaultEditForm, startEditing, saveBreakpoint)
+- `src/components/Breakpoints/BreakpointEditor.tsx` (modified — StatusCodeEditor, HeadersEditor integration)
+- `src/components/Breakpoints/BreakpointRow.tsx` (modified — Gauge + ListPlus indicators)
+- `src/components/Breakpoints/StatusCodeEditor.tsx` (new)
+- `src/components/Breakpoints/HeadersEditor.tsx` (new)
+- `src/components/Breakpoints/StatusCodeEditor.test.tsx` (new)
+- `src/components/Breakpoints/HeadersEditor.test.tsx` (new)
+- `src/components/Breakpoints/BreakpointEditor.test.tsx` (modified — updated EditForm fixtures)
+- `src/components/Breakpoints/BreakpointsTree.test.tsx` (modified — updated Breakpoint fixtures)
+- `src-tauri/src/proxy.rs` (modified — BreakpointHeader/BreakpointRule structs, status/header apply logic)
+- `src-tauri/src/db.rs` (modified — migration v4)
+- `src-tauri/migrations/004_status_headers.sql` (new)

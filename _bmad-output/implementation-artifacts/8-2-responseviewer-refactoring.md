@@ -28,21 +28,21 @@ so that the codebase remains maintainable and follows project conventions.
   - [ ] Move helper functions (`isImageContentType`, `isPdfContentType`, `isBinaryContentType`) to types/utils
 
 - [ ] Task 2 - Extract ImageViewer to own component file (AC: 4)
-  - [ ] Create `fetch-boy/src/components/ResponseViewer/components/ImageViewer.tsx`
+  - [ ] Create `src/components/ResponseViewer/components/ImageViewer.tsx`
   - [ ] Move ImageViewer component with all its state/handlers
   - [ ] Create barrel export in ResponseViewer/index.ts
 
 - [ ] Task 3 - Create ResponseHeaders sub-component (AC: 3)
-  - [ ] Create `fetch-boy/src/components/ResponseViewer/components/ResponseHeaders.tsx`
+  - [ ] Create `src/components/ResponseViewer/components/ResponseHeaders.tsx`
   - [ ] Move headers rendering logic to this component
 
 - [ ] Task 4 - Create ResponseBody sub-component (AC: 3)
-  - [ ] Create `fetch-boy/src/components/ResponseViewer/components/ResponseBody.tsx`
+  - [ ] Create `src/components/ResponseViewer/components/ResponseBody.tsx`
   - [ ] Move body rendering logic (Monaco editor, image viewer, PDF, binary)
   - [ ] Accept response and language state as props
 
 - [ ] Task 5 - Create ResponseMetadata sub-component (AC: 3)
-  - [ ] Create `fetch-boy/src/components/ResponseViewer/components/ResponseMetadata.tsx`
+  - [ ] Create `src/components/ResponseViewer/components/ResponseMetadata.tsx`
   - [ ] Move status, time, size, URL display to this component
 
 - [ ] Task 6 - Refactor ResponseViewer.tsx to compose children (AC: 1, 3)
@@ -51,16 +51,16 @@ so that the codebase remains maintainable and follows project conventions.
   - [ ] Ensure total lines ≤150
 
 - [ ] Task 7 - Final Task - Commit story changes
-  - [ ] Run `npx tsc --noEmit` from `fetch-boy/` to verify TypeScript compilation
-  - [ ] Run `cargo check` from `fetch-boy/src-tauri/` to verify Rust compilation
-  - [ ] Run `npx vitest run` from `fetch-boy/` to verify all tests pass
+  - [ ] Run `npx tsc --noEmit` from `` to verify TypeScript compilation
+  - [ ] Run `cargo check` from `src-tauri/` to verify Rust compilation
+  - [ ] Run `npx vitest run` from `` to verify all tests pass
   - [ ] Commit all code and documentation changes for this story with a message that includes Story 8.2
 
 ## Dev Notes
 
 ### Current ResponseViewer.tsx Analysis
 
-**File:** `fetch-boy/src/components/ResponseViewer/ResponseViewer.tsx`
+**File:** `src/components/ResponseViewer/ResponseViewer.tsx`
 **Current Lines:** 413
 **Target:** ≤150 lines
 
@@ -87,7 +87,7 @@ so that the codebase remains maintainable and follows project conventions.
 ### Proposed File Structure After Refactoring
 
 ```
-fetch-boy/src/components/ResponseViewer/
+src/components/ResponseViewer/
 ├── ResponseViewer.tsx              # Main component (~130 lines) - composes children
 ├── ResponseViewer.types.ts         # Type definitions
 ├── ResponseViewer.utils.ts         # Helper functions
@@ -196,7 +196,7 @@ export function ImageViewer({ contentType, body }: ImageViewerProps) {
 - Vitest + React Testing Library for tests
 
 **Component Pattern:**
-- Follow existing component patterns in `fetch-boy/src/components/`
+- Follow existing component patterns in `src/components/`
 - Use barrel exports in `index.ts`
 - Keep types in separate `.types.ts` file
 - Keep utilities in separate `.utils.ts` file
@@ -204,16 +204,16 @@ export function ImageViewer({ contentType, body }: ImageViewerProps) {
 ### Integration Points
 
 **New Files:**
-- `fetch-boy/src/components/ResponseViewer/ResponseViewer.types.ts` - Type definitions
-- `fetch-boy/src/components/ResponseViewer/ResponseViewer.utils.ts` - Helper functions
-- `fetch-boy/src/components/ResponseViewer/components/ImageViewer.tsx` - Image preview component
-- `fetch-boy/src/components/ResponseViewer/components/ResponseHeaders.tsx` - Headers display
-- `fetch-boy/src/components/ResponseViewer/components/ResponseBody.tsx` - Body content
-- `fetch-boy/src/components/ResponseViewer/components/ResponseMetadata.tsx` - Status metadata
+- `src/components/ResponseViewer/ResponseViewer.types.ts` - Type definitions
+- `src/components/ResponseViewer/ResponseViewer.utils.ts` - Helper functions
+- `src/components/ResponseViewer/components/ImageViewer.tsx` - Image preview component
+- `src/components/ResponseViewer/components/ResponseHeaders.tsx` - Headers display
+- `src/components/ResponseViewer/components/ResponseBody.tsx` - Body content
+- `src/components/ResponseViewer/components/ResponseMetadata.tsx` - Status metadata
 
 **Modified Files:**
-- `fetch-boy/src/components/ResponseViewer/ResponseViewer.tsx` - Refactored to ≤150 lines
-- `fetch-boy/src/components/ResponseViewer/index.ts` - Update barrel exports
+- `src/components/ResponseViewer/ResponseViewer.tsx` - Refactored to ≤150 lines
+- `src/components/ResponseViewer/index.ts` - Update barrel exports
 
 ### Critical Implementation Guardrails
 
@@ -263,14 +263,14 @@ claude-sonnet-4-20250514
 
 ### File List
 
-- fetch-boy/src/components/ResponseViewer/ResponseViewer.types.ts (new)
-- fetch-boy/src/components/ResponseViewer/ResponseViewer.utils.ts (new)
-- fetch-boy/src/components/ResponseViewer/components/ImageViewer.tsx (new)
-- fetch-boy/src/components/ResponseViewer/components/ResponseHeaders.tsx (new)
-- fetch-boy/src/components/ResponseViewer/components/ResponseBody.tsx (new)
-- fetch-boy/src/components/ResponseViewer/components/ResponseMetadata.tsx (new)
-- fetch-boy/src/components/ResponseViewer/ResponseViewer.tsx (modified - refactored)
-- fetch-boy/src/components/ResponseViewer/index.ts (modified - updated exports)
+- src/components/ResponseViewer/ResponseViewer.types.ts (new)
+- src/components/ResponseViewer/ResponseViewer.utils.ts (new)
+- src/components/ResponseViewer/components/ImageViewer.tsx (new)
+- src/components/ResponseViewer/components/ResponseHeaders.tsx (new)
+- src/components/ResponseViewer/components/ResponseBody.tsx (new)
+- src/components/ResponseViewer/components/ResponseMetadata.tsx (new)
+- src/components/ResponseViewer/ResponseViewer.tsx (modified - refactored)
+- src/components/ResponseViewer/index.ts (modified - updated exports)
 
 ## Change Log
 

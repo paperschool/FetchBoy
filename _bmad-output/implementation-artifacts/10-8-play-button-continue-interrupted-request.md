@@ -85,16 +85,16 @@ This story modifies/adds the following files:
 
 | File | Action |
 |------|--------|
-| `fetch-boy/src/stores/interceptStore.ts` | MODIFIED — add pause state and actions |
-| `fetch-boy/src/stores/breakpointsStore.ts` | MODIFIED — add pause/resume actions |
-| `fetch-boy/src/components/Breakpoints/BreakpointActionPanel.tsx` | NEW — sidebar play button UI |
-| `fetch-boy/src/components/Intercept view/InterceptView.tsx` | MODIFIED — show pause UI in detail |
-| `fetch-boy/src/components/Intercept view/PausedRequestDetail.tsx` | NEW — paused request viewer |
-| `fetch-boy/src/components/Breakpoints/RequestEditDialog.tsx` | NEW — Edit & Continue dialog |
-| `fetch-boy/src/components/Breakpoints/TimeoutConfig.tsx` | NEW — timeout settings |
-| `fetch-boy/src-tauri/src/proxy.rs` | MODIFIED — implement pause/resume |
-| `fetch-boy/src-tauri/src/lib.rs` | MODIFIED — add pause Tauri commands |
-| `fetch-boy/src-tauri/src/db.rs` | MODIFIED — add pause state table |
+| `src/stores/interceptStore.ts` | MODIFIED — add pause state and actions |
+| `src/stores/breakpointsStore.ts` | MODIFIED — add pause/resume actions |
+| `src/components/Breakpoints/BreakpointActionPanel.tsx` | NEW — sidebar play button UI |
+| `src/components/Intercept view/InterceptView.tsx` | MODIFIED — show pause UI in detail |
+| `src/components/Intercept view/PausedRequestDetail.tsx` | NEW — paused request viewer |
+| `src/components/Breakpoints/RequestEditDialog.tsx` | NEW — Edit & Continue dialog |
+| `src/components/Breakpoints/TimeoutConfig.tsx` | NEW — timeout settings |
+| `src-tauri/src/proxy.rs` | MODIFIED — implement pause/resume |
+| `src-tauri/src/lib.rs` | MODIFIED — add pause Tauri commands |
+| `src-tauri/src/db.rs` | MODIFIED — add pause state table |
 
 ### Data Structures
 
@@ -236,7 +236,7 @@ pub async fn drop_request(request_id: String) -> Result<(), String> {
 ### BreakpointActionPanel Component
 
 ```tsx
-// fetch-boy/src/components/Breakpoints/BreakpointActionPanel.tsx
+// src/components/Breakpoints/BreakpointActionPanel.tsx
 
 import { Play, Square, Pencil, Clock } from 'lucide-react'
 import { useInterceptStore } from '@/stores/interceptStore'
@@ -297,7 +297,7 @@ export function BreakpointActionPanel({ breakpoint, pausedRequest }: Props) {
 ### PausedRequestDetail Component
 
 ```tsx
-// fetch-boy/src/components/Intercept view/PausedRequestDetail.tsx
+// src/components/Intercept view/PausedRequestDetail.tsx
 
 import { useInterceptStore } from '@/stores/interceptStore'
 import { BreakpointActionPanel } from '@/components/Breakpoints/BreakpointActionPanel'
@@ -364,7 +364,7 @@ export function PausedRequestDetail() {
 ### Timeout Configuration
 
 ```tsx
-// fetch-boy/src/components/Breakpoints/TimeoutConfig.tsx
+// src/components/Breakpoints/TimeoutConfig.tsx
 
 interface Props {
   timeout: number // seconds
@@ -417,7 +417,7 @@ export function TimeoutConfig({ timeout, onChange }: Props) {
 ### Testing Approach
 
 ```tsx
-// fetch-boy/src/components/Breakpoints/BreakpointActionPanel.test.tsx
+// src/components/Breakpoints/BreakpointActionPanel.test.tsx
 
 describe('BreakpointActionPanel', () => {
   it('shows paused state when request is paused', () => {
@@ -443,7 +443,7 @@ describe('BreakpointActionPanel', () => {
   })
 })
 
-// fetch-boy/src/components/Intercept view/PausedRequestDetail.test.tsx
+// src/components/Intercept view/PausedRequestDetail.test.tsx
 
 describe('PausedRequestDetail', () => {
   it('shows countdown timer', () => {
@@ -492,10 +492,10 @@ describe('PausedRequestDetail', () => {
 - Story 10.2: [Source: _bmad-output/implementation-artifacts/10-2-request-detail-view-with-subtabs.md]
 - Story 10.1: [Source: _bmad-output/implementation-artifacts/10-1-intercept-split-view-with-request-table.md]
 - Story 9.3 (MITM proxy): [Source: _bmad-output/implementation-artifacts/9-3-mitm-proxy-backend.md]
-- Existing InterceptStore: [Source: fetch-boy/src/stores/interceptStore.ts]
-- Existing BreakpointsStore: [Source: fetch-boy/src/stores/breakpointsStore.ts]
-- Existing BreakpointEditor: [Source: fetch-boy/src/components/Breakpoints/BreakpointEditor.tsx]
-- Rust proxy: [Source: fetch-boy/src-tauri/src/proxy.rs]
+- Existing InterceptStore: [Source: src/stores/interceptStore.ts]
+- Existing BreakpointsStore: [Source: src/stores/breakpointsStore.ts]
+- Existing BreakpointEditor: [Source: src/components/Breakpoints/BreakpointEditor.tsx]
+- Rust proxy: [Source: src-tauri/src/proxy.rs]
 
 ## Dev Agent Record
 
@@ -522,21 +522,21 @@ None.
 
 ### File List
 
-fetch-boy/src/stores/interceptStore.ts
-fetch-boy/src/hooks/useInterceptEvents.ts
-fetch-boy/src/types/intercept.ts
-fetch-boy/src/components/Breakpoints/BreakpointActionPanel.tsx
-fetch-boy/src/components/Breakpoints/BreakpointActionPanel.test.tsx
-fetch-boy/src/components/Breakpoints/RequestEditDialog.tsx
-fetch-boy/src/components/Breakpoints/TimeoutConfig.tsx
-fetch-boy/src/components/Breakpoints/BreakpointRow.tsx
-fetch-boy/src/components/Intercept view/PausedRequestDetail.tsx
-fetch-boy/src/components/Intercept view/PausedRequestDetail.test.tsx
-fetch-boy/src/components/Intercept view/InterceptView.tsx
-fetch-boy/src/components/Intercept view/InterceptSidebar.tsx
-fetch-boy/src-tauri/src/proxy.rs
-fetch-boy/src-tauri/src/lib.rs
-fetch-boy/src-tauri/src/db.rs
-fetch-boy/src-tauri/Cargo.toml
-fetch-boy/src-tauri/migrations/006_paused_requests.sql
+src/stores/interceptStore.ts
+src/hooks/useInterceptEvents.ts
+src/types/intercept.ts
+src/components/Breakpoints/BreakpointActionPanel.tsx
+src/components/Breakpoints/BreakpointActionPanel.test.tsx
+src/components/Breakpoints/RequestEditDialog.tsx
+src/components/Breakpoints/TimeoutConfig.tsx
+src/components/Breakpoints/BreakpointRow.tsx
+src/components/Intercept view/PausedRequestDetail.tsx
+src/components/Intercept view/PausedRequestDetail.test.tsx
+src/components/Intercept view/InterceptView.tsx
+src/components/Intercept view/InterceptSidebar.tsx
+src-tauri/src/proxy.rs
+src-tauri/src/lib.rs
+src-tauri/src/db.rs
+src-tauri/Cargo.toml
+src-tauri/migrations/006_paused_requests.sql
 

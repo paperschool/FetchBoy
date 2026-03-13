@@ -19,12 +19,12 @@ So that I can discover and learn the app's power features without reading docs.
 ## Tasks / Subtasks
 
 - [x] Task 1 - Create keyboard shortcuts constants file (AC: 3)
-  - [x] Create `fetch-boy/src/lib/keyboardShortcuts.ts`
+  - [x] Create `src/lib/keyboardShortcuts.ts`
   - [x] Define all shortcuts with: key, displayName, category, macKeys, windowsKeys
   - [x] Export typed constants for use across the app
 
 - [x] Task 2 - Create KeyboardShortcutsModal component (AC: 1, 2)
-  - [x] Create `fetch-boy/src/components/ui/KeyboardShortcutsModal.tsx`
+  - [x] Create `src/components/ui/KeyboardShortcutsModal.tsx`
   - [x] Accept `open: boolean` and `onClose: () => void` props
   - [x] Group shortcuts by category (General, Request, Tabs)
   - [x] Support theme-aware styling (light/dark mode)
@@ -46,8 +46,8 @@ So that I can discover and learn the app's power features without reading docs.
   - [x] Replace hardcoded shortcut display with constants
 
 - [x] Task 6 - Final Task - Commit story changes
-  - [x] Run `npx tsc --noEmit` from `fetch-boy/` to verify TypeScript compilation
-  - [x] Run `npx vitest run` from `fetch-boy/` to verify all tests pass
+  - [x] Run `npx tsc --noEmit` from `` to verify TypeScript compilation
+  - [x] Run `npx vitest run` from `` to verify all tests pass
   - [x] Commit all code and documentation changes for this story with a message that includes Story 7.5
 
 ## Dev Notes
@@ -56,7 +56,7 @@ So that I can discover and learn the app's power features without reading docs.
 
 **Keyboard Shortcuts Constants File:**
 
-Create a new file at `fetch-boy/src/lib/keyboardShortcuts.ts`:
+Create a new file at `src/lib/keyboardShortcuts.ts`:
 
 ```typescript
 export interface KeyboardShortcut {
@@ -112,7 +112,7 @@ export function getShortcutDisplay(isMac: boolean, shortcut: KeyboardShortcut): 
 
 **KeyboardShortcutsModal Component:**
 
-Create at `fetch-boy/src/components/ui/KeyboardShortcutsModal.tsx`:
+Create at `src/components/ui/KeyboardShortcutsModal.tsx`:
 
 ```typescript
 import { X } from 'lucide-react';
@@ -208,7 +208,7 @@ export function KeyboardShortcutsModal({ open, onClose }: KeyboardShortcutsModal
 
 **Global `?` Keyboard Listener in App.tsx:**
 
-In `fetch-boy/src/App.tsx`, add state for modal visibility and keyboard listener:
+In `src/App.tsx`, add state for modal visibility and keyboard listener:
 
 ```typescript
 // Add to imports
@@ -244,7 +244,7 @@ useEffect(() => {
 **Update SettingsPanel to use constants:**
 
 ```typescript
-// In fetch-boy/src/components/Settings/SettingsPanel.tsx
+// In src/components/Settings/SettingsPanel.tsx
 import { KEYBOARD_SHORTCUTS, getShortcutDisplay } from '@/lib/keyboardShortcuts';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 
@@ -267,7 +267,7 @@ const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase
 
 **Update SettingsAccordion to use constants:**
 
-Similarly update `fetch-boy/src/components/Sidebar/SettingsAccordion.tsx` to import from the constants file.
+Similarly update `src/components/Sidebar/SettingsAccordion.tsx` to import from the constants file.
 
 ### Architecture Compliance
 
@@ -290,12 +290,12 @@ Similarly update `fetch-boy/src/components/Sidebar/SettingsAccordion.tsx` to imp
 
 ### Integration Points
 
-- **New file**: `fetch-boy/src/lib/keyboardShortcuts.ts` - Constants file
-- **New file**: `fetch-boy/src/components/ui/KeyboardShortcutsModal.tsx` - Modal component
-- **New file**: `fetch-boy/src/components/ui/KeyboardShortcutsModal.test.tsx` - Tests
-- **Modified**: `fetch-boy/src/App.tsx` - Add global keyboard listener + modal
-- **Modified**: `fetch-boy/src/components/Settings/SettingsPanel.tsx` - Use constants
-- **Modified**: `fetch-boy/src/components/Sidebar/SettingsAccordion.tsx` - Use constants
+- **New file**: `src/lib/keyboardShortcuts.ts` - Constants file
+- **New file**: `src/components/ui/KeyboardShortcutsModal.tsx` - Modal component
+- **New file**: `src/components/ui/KeyboardShortcutsModal.test.tsx` - Tests
+- **Modified**: `src/App.tsx` - Add global keyboard listener + modal
+- **Modified**: `src/components/Settings/SettingsPanel.tsx` - Use constants
+- **Modified**: `src/components/Sidebar/SettingsAccordion.tsx` - Use constants
 
 ### Critical Implementation Guardrails
 
@@ -401,14 +401,14 @@ expect(getShortcutDisplay(false, sendRequest)).toBe('Ctrl+Enter');
 ### Project Structure Notes
 
 **New Files:**
-- `fetch-boy/src/lib/keyboardShortcuts.ts` (new - single source of truth for all shortcuts)
-- `fetch-boy/src/components/ui/KeyboardShortcutsModal.tsx` (new)
-- `fetch-boy/src/components/ui/KeyboardShortcutsModal.test.tsx` (new)
+- `src/lib/keyboardShortcuts.ts` (new - single source of truth for all shortcuts)
+- `src/components/ui/KeyboardShortcutsModal.tsx` (new)
+- `src/components/ui/KeyboardShortcutsModal.test.tsx` (new)
 
 **Modified Files:**
-- `fetch-boy/src/App.tsx` (add keyboard listener + modal)
-- `fetch-boy/src/components/Settings/SettingsPanel.tsx` (use constants)
-- `fetch-boy/src/components/Sidebar/SettingsAccordion.tsx` (use constants)
+- `src/App.tsx` (add keyboard listener + modal)
+- `src/components/Settings/SettingsPanel.tsx` (use constants)
+- `src/components/Sidebar/SettingsAccordion.tsx` (use constants)
 
 **No New Dependencies:**
 - Uses existing Lucide React icons
@@ -459,12 +459,12 @@ claude-sonnet-4-20250514
 
 ### File List
 
-- fetch-boy/src/lib/keyboardShortcuts.ts (new)
-- fetch-boy/src/components/ui/KeyboardShortcutsModal.tsx (new)
-- fetch-boy/src/components/ui/KeyboardShortcutsModal.test.tsx (new)
-- fetch-boy/src/App.tsx (modified)
-- fetch-boy/src/components/Settings/SettingsPanel.tsx (modified)
-- fetch-boy/src/components/Sidebar/SettingsAccordion.tsx (modified)
+- src/lib/keyboardShortcuts.ts (new)
+- src/components/ui/KeyboardShortcutsModal.tsx (new)
+- src/components/ui/KeyboardShortcutsModal.test.tsx (new)
+- src/App.tsx (modified)
+- src/components/Settings/SettingsPanel.tsx (modified)
+- src/components/Sidebar/SettingsAccordion.tsx (modified)
 
 ## Change Log
 

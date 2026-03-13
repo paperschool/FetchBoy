@@ -33,7 +33,7 @@ so that I can create breakpoints that intercept HTTP requests based on flexible 
   - [x] Add URL validation utilities (exact, partial, wildcard, regex)
 
 - [x] Task 2 — Create BreakpointEditor component (AC: #2-4, #7, #8)
-  - [x] Create `fetch-boy/src/components/Breakpoints/BreakpointEditor.tsx`
+  - [x] Create `src/components/Breakpoints/BreakpointEditor.tsx`
   - [x] URL input field with matchType selector (dropdown or toggle buttons)
   - [x] Toggle between exact/partial/wildcard/regex modes
   - [x] Live preview of match test (show if URL would match)
@@ -76,14 +76,14 @@ This story modifies/adds the following files:
 
 | File | Action |
 |------|--------|
-| `fetch-boy/src/stores/breakpointsStore.ts` | MODIFIED — add editor state and actions |
-| `fetch-boy/src/components/Breakpoints/BreakpointEditor.tsx` | NEW — main editor component |
-| `fetch-boy/src/components/Breakpoints/BreakpointEditor.test.tsx` | NEW — component tests |
-| `fetch-boy/src/components/Breakpoints/BreakpointRow.tsx` | MODIFIED — add edit action |
-| `fetch-boy/src/components/Breakpoints/BreakpointsTree.tsx` | MODIFIED — add new breakpoint button |
-| `fetch-boy/src/components/Intercept view/InterceptDetail.tsx` | MODIFIED — integrate editor |
-| `fetch-boy/src-tauri/src/proxy.rs` | MODIFIED — add URL matching function |
-| `fetch-boy/src-tauri/src/lib.rs` | MODIFIED — expose URL match command |
+| `src/stores/breakpointsStore.ts` | MODIFIED — add editor state and actions |
+| `src/components/Breakpoints/BreakpointEditor.tsx` | NEW — main editor component |
+| `src/components/Breakpoints/BreakpointEditor.test.tsx` | NEW — component tests |
+| `src/components/Breakpoints/BreakpointRow.tsx` | MODIFIED — add edit action |
+| `src/components/Breakpoints/BreakpointsTree.tsx` | MODIFIED — add new breakpoint button |
+| `src/components/Intercept view/InterceptDetail.tsx` | MODIFIED — integrate editor |
+| `src-tauri/src/proxy.rs` | MODIFIED — add URL matching function |
+| `src-tauri/src/lib.rs` | MODIFIED — expose URL match command |
 
 ### BreakpointsStore Updates
 
@@ -124,7 +124,7 @@ type MatchType = 'exact' | 'partial' | 'wildcard' | 'regex'
 ### BreakpointEditor Component (≤150 lines)
 
 ```tsx
-// fetch-boy/src/components/Breakpoints/BreakpointEditor.tsx
+// src/components/Breakpoints/BreakpointEditor.tsx
 
 import { useState, useEffect } from 'react'
 import { useBreakpointsStore } from '@/stores/breakpointsStore'
@@ -342,7 +342,7 @@ export function InterceptDetail() {
 
 ### Testing Approach
 
-**File:** `fetch-boy/src/components/Breakpoints/BreakpointEditor.test.tsx`
+**File:** `src/components/Breakpoints/BreakpointEditor.test.tsx`
 
 ```tsx
 import { render, screen, fireEvent } from '@testing-library/react'
@@ -380,7 +380,7 @@ describe('BreakpointEditor', () => {
 
 ### Project Structure Notes
 
-- **New folder**: `fetch-boy/src/components/Breakpoints/` — already exists from Story 10.3
+- **New folder**: `src/components/Breakpoints/` — already exists from Story 10.3
 - **No shadcn/ui** — raw Tailwind only
 - **Component size limit**: ≤150 lines for BreakpointEditor
 - **Validation**: Regex patterns validated client-side before save
@@ -416,9 +416,9 @@ for breakpoint in get_breakpoints()? {
 - Story 10.2 (detail view): [Source: _bmad-output/implementation-artifacts/10-2-request-detail-view-with-subtabs.md]
 - Story 10.1 (split view): [Source: _bmad-output/implementation-artifacts/10-1-intercept-split-view-with-request-table.md]
 - Epic 10 full spec: [Source: _bmad-output/planning-artifacts/epic-10.md#Story-10.4]
-- Existing BreakpointsTree: [Source: fetch-boy/src/components/Breakpoints/BreakpointsTree.tsx]
-- Existing breakpointsStore: [Source: fetch-boy/src/stores/breakpointsStore.ts]
-- Existing EmptyState: [Source: fetch-boy/src/components/ui/EmptyState.tsx]
+- Existing BreakpointsTree: [Source: src/components/Breakpoints/BreakpointsTree.tsx]
+- Existing breakpointsStore: [Source: src/stores/breakpointsStore.ts]
+- Existing EmptyState: [Source: src/components/ui/EmptyState.tsx]
 - MITM proxy (Story 9.3): [Source: _bmad-output/implementation-artifacts/9-3-mitm-proxy-backend.md]
 
 ## Dev Agent Record
@@ -445,16 +445,16 @@ claude-sonnet-4-6
 
 ### File List
 
-- `fetch-boy/src/stores/breakpointsStore.ts` (modified)
-- `fetch-boy/src/components/Breakpoints/BreakpointEditor.tsx` (new)
-- `fetch-boy/src/components/Breakpoints/BreakpointEditor.test.tsx` (new)
-- `fetch-boy/src/components/Breakpoints/BreakpointRow.tsx` (modified)
-- `fetch-boy/src/components/Breakpoints/BreakpointsTree.tsx` (modified)
-- `fetch-boy/src/components/Breakpoints/FolderRow.tsx` (modified)
-- `fetch-boy/src/components/Intercept view/InterceptView.tsx` (modified)
-- `fetch-boy/src-tauri/src/proxy.rs` (modified)
-- `fetch-boy/src-tauri/src/lib.rs` (modified)
-- `fetch-boy/src-tauri/Cargo.toml` (modified — added regex = "1")
+- `src/stores/breakpointsStore.ts` (modified)
+- `src/components/Breakpoints/BreakpointEditor.tsx` (new)
+- `src/components/Breakpoints/BreakpointEditor.test.tsx` (new)
+- `src/components/Breakpoints/BreakpointRow.tsx` (modified)
+- `src/components/Breakpoints/BreakpointsTree.tsx` (modified)
+- `src/components/Breakpoints/FolderRow.tsx` (modified)
+- `src/components/Intercept view/InterceptView.tsx` (modified)
+- `src-tauri/src/proxy.rs` (modified)
+- `src-tauri/src/lib.rs` (modified)
+- `src-tauri/Cargo.toml` (modified — added regex = "1")
 - `_bmad-output/implementation-artifacts/10-4-breakpoint-editor-with-fuzzy-url-matching.md` (modified)
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified)
 

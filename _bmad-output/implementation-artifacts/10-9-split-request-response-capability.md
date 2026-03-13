@@ -94,15 +94,15 @@ let bytes: Bytes = body.collect().await.unwrap_or_default().to_bytes();
 
 ### Project Structure Notes
 
-- Rust backend: `fetch-boy/src-tauri/src/`
+- Rust backend: `src-tauri/src/`
 - Main files to modify: `proxy.rs`, possibly `lib.rs` for new commands
 - Tests location: Inline in source files with `#[cfg(test)]` module
 - No new dependencies expected (uses existing `hudsucker`, `hyper`, `http_body_util`)
 
 ### References
 
-- [Source: fetch-boy/src-tauri/src/proxy.rs] - MITM proxy implementation
-- [Source: fetch-boy/src-tauri/src/http.rs] - HTTP request/response handling
+- [Source: src-tauri/src/proxy.rs] - MITM proxy implementation
+- [Source: src-tauri/src/http.rs] - HTTP request/response handling
 - [Epic 10: Intercept Control Features — Breakpoints & Request Editing](_bmad-output/planning-artifacts/epic-10.md)
 - [Story 10.1: Intercept Split View with Request Table](_bmad-output/implementation-artifacts/10-1-intercept-split-view-with-request-table.md)
 - [Story 10.2: Request Detail View with Subtabs](_bmad-output/implementation-artifacts/10-2-request-detail-view-with-subtabs.md)
@@ -117,6 +117,6 @@ let bytes: Bytes = body.collect().await.unwrap_or_default().to_bytes();
 
 ### File List
 
-- fetch-boy/src-tauri/src/proxy.rs (modify)
-- fetch-boy/src-tauri/src/http.rs (reference)
-- fetch-boy/src-tauri/src/lib.rs (possibly modify for new commands)
+- src-tauri/src/proxy.rs (modify)
+- src-tauri/src/http.rs (reference)
+- src-tauri/src/lib.rs (possibly modify for new commands)

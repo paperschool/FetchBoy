@@ -206,13 +206,13 @@ Adjust token names to match what `index.css` actually defines — check for the 
 
 ### References
 
-- App.tsx current structure: `fetch-boy/src/App.tsx` (95 lines)
-- Store pattern reference: `fetch-boy/src/stores/uiSettingsStore.ts` (simple create, no immer)
-- Immer store pattern reference: `fetch-boy/src/stores/tabStore.ts` (complex state — not needed here)
-- Existing TabBar (do NOT reuse): `fetch-boy/src/components/TabBar/TabBar.tsx` (310 lines, dnd-kit)
-- AppShell layout: `fetch-boy/src/components/Layout/AppShell.tsx` (61 lines)
-- EmptyState component: `fetch-boy/src/components/ui/EmptyState.tsx`
-- CSS tokens: `fetch-boy/src/index.css` (3317 lines — search for `--app-` custom properties)
+- App.tsx current structure: `src/App.tsx` (95 lines)
+- Store pattern reference: `src/stores/uiSettingsStore.ts` (simple create, no immer)
+- Immer store pattern reference: `src/stores/tabStore.ts` (complex state — not needed here)
+- Existing TabBar (do NOT reuse): `src/components/TabBar/TabBar.tsx` (310 lines, dnd-kit)
+- AppShell layout: `src/components/Layout/AppShell.tsx` (61 lines)
+- EmptyState component: `src/components/ui/EmptyState.tsx`
+- CSS tokens: `src/index.css` (3317 lines — search for `--app-` custom properties)
 
 ## Dev Agent Record
 
@@ -235,12 +235,12 @@ None — clean implementation, no blockers.
 
 ### File List
 
-- `fetch-boy/src/stores/appTabStore.ts` (new)
-- `fetch-boy/src/components/Intercept/InterceptView.tsx` (new)
-- `fetch-boy/src/components/AppTabs/AppTabs.tsx` (new)
-- `fetch-boy/src/components/AppTabs/AppTabs.test.tsx` (new)
-- `fetch-boy/src/App.tsx` (modified)
-- `fetch-boy/src/components/Layout/AppShell.tsx` (modified — h-screen → h-full)
+- `src/stores/appTabStore.ts` (new)
+- `src/components/Intercept/InterceptView.tsx` (new)
+- `src/components/AppTabs/AppTabs.tsx` (new)
+- `src/components/AppTabs/AppTabs.test.tsx` (new)
+- `src/App.tsx` (modified)
+- `src/components/Layout/AppShell.tsx` (modified — h-screen → h-full)
 - `_bmad-output/implementation-artifacts/9-1-top-level-tab-shell.md` (story file)
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` (status updated)
 
