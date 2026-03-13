@@ -10,7 +10,8 @@ import { useTourStore } from '@/stores/tourStore';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import { seedSampleDataIfNeeded } from '@/lib/seedSampleData';
 import { getCurrentVersion, isNewVersion } from '@/lib/appVersion';
-import changelogData from '@/data/changelog.json';
+import { parseChangelog } from '@/lib/parseChangelog';
+import changelogRaw from '../../CHANGELOG.md?raw';
 
 async function persistLastSeenVersion(version: string): Promise<void> {
   try {
@@ -87,7 +88,7 @@ function App() {
       {showWhatsNew && (
         <WhatsNewModal
           version={getCurrentVersion()}
-          changelog={changelogData.changelog}
+          changelog={parseChangelog(changelogRaw)}
           onDismiss={() => setShowWhatsNew(false)}
         />
       )}
