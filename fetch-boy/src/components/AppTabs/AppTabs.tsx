@@ -33,6 +33,7 @@ export function AppTabs({ children }: AppTabsProps) {
             role="tab"
             aria-selected={activeTab === tab}
             onClick={() => setActiveTab(tab)}
+            data-tour={tab === "intercept" ? "intercept-tab" : undefined}
             className={`group flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
               activeTab === tab
                 ? "-mb-px border-b-2 border-blue-500 text-app-primary"
