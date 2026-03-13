@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import type { Breakpoint, BreakpointFolder } from '@/lib/db';
+import type { Breakpoint, BreakpointFolder, BreakpointHeader } from '@/lib/db';
 import {
     createBreakpoint as dbCreateBreakpoint,
     updateBreakpoint as dbUpdateBreakpoint,
@@ -18,6 +18,9 @@ export interface EditForm {
     responseMappingEnabled: boolean;
     responseMappingBody: string;
     responseMappingContentType: string;
+    statusCodeEnabled: boolean;
+    statusCodeValue: number;
+    customHeaders: BreakpointHeader[];
 }
 
 const defaultEditForm: EditForm = {
@@ -30,6 +33,9 @@ const defaultEditForm: EditForm = {
     responseMappingEnabled: false,
     responseMappingBody: '',
     responseMappingContentType: 'application/json',
+    statusCodeEnabled: false,
+    statusCodeValue: 200,
+    customHeaders: [],
 };
 
 // ─── URL Validation Utilities ─────────────────────────────────────────────────
@@ -143,6 +149,9 @@ export const useBreakpointsStore = create<BreakpointsState>()(
                         responseMappingEnabled: breakpoint.response_mapping_enabled,
                         responseMappingBody: breakpoint.response_mapping_body,
                         responseMappingContentType: breakpoint.response_mapping_content_type,
+                        statusCodeEnabled: breakpoint.status_code_enabled,
+                        statusCodeValue: breakpoint.status_code_value,
+                        customHeaders: breakpoint.custom_headers,
                     };
                 } else {
                     state.selectedBreakpointId = null;
@@ -171,6 +180,9 @@ export const useBreakpointsStore = create<BreakpointsState>()(
                     response_mapping_enabled: form.responseMappingEnabled,
                     response_mapping_body: form.responseMappingBody,
                     response_mapping_content_type: form.responseMappingContentType,
+                    status_code_enabled: form.statusCodeEnabled,
+                    status_code_value: form.statusCodeValue,
+                    custom_headers: form.customHeaders,
                 });
                 set((state) => {
                     state.breakpoints.push({
@@ -178,6 +190,9 @@ export const useBreakpointsStore = create<BreakpointsState>()(
                         response_mapping_enabled: form.responseMappingEnabled,
                         response_mapping_body: form.responseMappingBody,
                         response_mapping_content_type: form.responseMappingContentType,
+                        status_code_enabled: form.statusCodeEnabled,
+                        status_code_value: form.statusCodeValue,
+                        custom_headers: form.customHeaders,
                     });
                     state.isEditing = false;
                     state.editForm = { ...defaultEditForm };
@@ -191,6 +206,9 @@ export const useBreakpointsStore = create<BreakpointsState>()(
                     response_mapping_enabled: form.responseMappingEnabled,
                     response_mapping_body: form.responseMappingBody,
                     response_mapping_content_type: form.responseMappingContentType,
+                    status_code_enabled: form.statusCodeEnabled,
+                    status_code_value: form.statusCodeValue,
+                    custom_headers: form.customHeaders,
                 });
                 set((state) => {
                     const bp = state.breakpoints.find((b) => b.id === form.id);
@@ -202,6 +220,9 @@ export const useBreakpointsStore = create<BreakpointsState>()(
                         bp.response_mapping_enabled = form.responseMappingEnabled;
                         bp.response_mapping_body = form.responseMappingBody;
                         bp.response_mapping_content_type = form.responseMappingContentType;
+                        bp.status_code_enabled = form.statusCodeEnabled;
+                        bp.status_code_value = form.statusCodeValue;
+                        bp.custom_headers = form.customHeaders;
                     }
                     state.isEditing = false;
                     state.editForm = { ...defaultEditForm };

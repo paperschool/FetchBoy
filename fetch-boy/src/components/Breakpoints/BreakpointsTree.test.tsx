@@ -43,6 +43,9 @@ const mockBreakpoint: Breakpoint = {
     response_mapping_enabled: false,
     response_mapping_body: '',
     response_mapping_content_type: 'application/json',
+    status_code_enabled: false,
+    status_code_value: 200,
+    custom_headers: [],
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
 };

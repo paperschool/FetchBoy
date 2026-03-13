@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { getDb } from '@/lib/db';
-import type { Breakpoint, BreakpointFolder } from '@/lib/db';
+import type { Breakpoint, BreakpointFolder, BreakpointHeader } from '@/lib/db';
 
 const now = () => new Date().toISOString();
 
@@ -14,8 +14,19 @@ interface RawBreakpoint {
     response_mapping_enabled: number;
     response_mapping_body: string;
     response_mapping_content_type: string;
+    status_code_enabled: number;
+    status_code_value: number;
+    custom_headers: string;
     created_at: string;
     updated_at: string;
+}
+
+function parseHeaders(raw: string): BreakpointHeader[] {
+    try {
+        return JSON.parse(raw) as BreakpointHeader[];
+    } catch {
+        return [];
+    }
 }
 
 function deserializeBreakpoint(raw: RawBreakpoint): Breakpoint {
@@ -26,6 +37,9 @@ function deserializeBreakpoint(raw: RawBreakpoint): Breakpoint {
         response_mapping_enabled: raw.response_mapping_enabled === 1,
         response_mapping_body: raw.response_mapping_body ?? '',
         response_mapping_content_type: raw.response_mapping_content_type ?? 'application/json',
+        status_code_enabled: raw.status_code_enabled === 1,
+        status_code_value: raw.status_code_value ?? 200,
+        custom_headers: parseHeaders(raw.custom_headers ?? '[]'),
     };
 }
 
@@ -86,8 +100,9 @@ export async function createBreakpoint(
         `INSERT INTO breakpoints
          (id, folder_id, name, url_pattern, match_type, enabled,
           response_mapping_enabled, response_mapping_body, response_mapping_content_type,
+          status_code_enabled, status_code_value, custom_headers,
           created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, 0, '', 'application/json', ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, 0, '', 'application/json', 0, 200, '[]', ?, ?)`,
         [id, folderId, name, urlPattern, matchType, 1, ts, ts],
     );
     return {
@@ -96,6 +111,9 @@ export async function createBreakpoint(
         response_mapping_enabled: false,
         response_mapping_body: '',
         response_mapping_content_type: 'application/json',
+        status_code_enabled: false,
+        status_code_value: 200,
+        custom_headers: [],
         created_at: ts, updated_at: ts,
     };
 }
@@ -104,7 +122,8 @@ export async function updateBreakpoint(
     id: string,
     changes: Partial<Pick<Breakpoint,
         'name' | 'url_pattern' | 'match_type' | 'enabled' |
-        'response_mapping_enabled' | 'response_mapping_body' | 'response_mapping_content_type'>>,
+        'response_mapping_enabled' | 'response_mapping_body' | 'response_mapping_content_type' |
+        'status_code_enabled' | 'status_code_value'> & { custom_headers?: BreakpointHeader[] }>,
 ): Promise<void> {
     const db = await getDb();
     const parts: string[] = [];
@@ -124,6 +143,18 @@ export async function updateBreakpoint(
     if (changes.response_mapping_content_type !== undefined) {
         parts.push('response_mapping_content_type = ?');
         values.push(changes.response_mapping_content_type);
+    }
+    if (changes.status_code_enabled !== undefined) {
+        parts.push('status_code_enabled = ?');
+        values.push(changes.status_code_enabled ? 1 : 0);
+    }
+    if (changes.status_code_value !== undefined) {
+        parts.push('status_code_value = ?');
+        values.push(changes.status_code_value);
+    }
+    if (changes.custom_headers !== undefined) {
+        parts.push('custom_headers = ?');
+        values.push(JSON.stringify(changes.custom_headers));
     }
     if (parts.length === 0) return;
     parts.push('updated_at = ?');
@@ -149,6 +180,9 @@ export async function syncBreakpointsToProxy(breakpoints: Breakpoint[]): Promise
             response_mapping_enabled: bp.response_mapping_enabled,
             response_mapping_body: bp.response_mapping_body,
             response_mapping_content_type: bp.response_mapping_content_type,
+            status_code_enabled: bp.status_code_enabled,
+            status_code_value: bp.status_code_value,
+            custom_headers: bp.custom_headers,
         })),
     }).catch(() => {});
 }

@@ -32,6 +32,9 @@ const newBreakpointForm: EditForm = {
     responseMappingEnabled: false,
     responseMappingBody: '',
     responseMappingContentType: 'application/json',
+    statusCodeEnabled: false,
+    statusCodeValue: 200,
+    customHeaders: [],
 };
 
 const editBreakpointForm: EditForm = {
@@ -44,6 +47,9 @@ const editBreakpointForm: EditForm = {
     responseMappingEnabled: false,
     responseMappingBody: '',
     responseMappingContentType: 'application/json',
+    statusCodeEnabled: false,
+    statusCodeValue: 200,
+    customHeaders: [],
 };
 
 beforeEach(() => {
@@ -168,6 +174,9 @@ describe('BreakpointEditor', () => {
             response_mapping_enabled: false,
             response_mapping_body: '',
             response_mapping_content_type: 'application/json',
+            status_code_enabled: false,
+            status_code_value: 200,
+            custom_headers: [],
             created_at: '',
             updated_at: '',
         };

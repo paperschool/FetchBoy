@@ -72,6 +72,12 @@ export interface BreakpointFolder {
     updated_at: string;
 }
 
+export interface BreakpointHeader {
+    key: string;
+    value: string;
+    enabled: boolean;
+}
+
 export interface Breakpoint {
     id: string;
     folder_id: string | null;
@@ -82,6 +88,9 @@ export interface Breakpoint {
     response_mapping_enabled: boolean;
     response_mapping_body: string;
     response_mapping_content_type: string;
+    status_code_enabled: boolean;
+    status_code_value: number;
+    custom_headers: BreakpointHeader[];
     created_at: string;
     updated_at: string;
 }
