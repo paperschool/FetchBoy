@@ -16,6 +16,13 @@ Object.defineProperty(window, 'matchMedia', {
     })),
 });
 
+// jsdom does not implement ResizeObserver — provide a no-op stub for all tests
+global.ResizeObserver = class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+};
+
 // Mock localStorage for tests - zustand persist middleware uses storage
 const localStorageMock = {
     getItem: vi.fn(),

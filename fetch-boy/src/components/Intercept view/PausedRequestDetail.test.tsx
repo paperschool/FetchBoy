@@ -7,13 +7,6 @@ vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn().mockResolvedValue(undefined),
 }))
 
-// Monaco editor is not needed in tests
-vi.mock('@/components/Editor/MonacoEditorField', () => ({
-  MonacoEditorField: ({ value }: { value: string }) => (
-    <textarea data-testid="monaco-mock" defaultValue={value} />
-  ),
-}))
-
 const PAUSED_REQUEST = {
   id: 'req-pause-1',
   timestamp: Date.now(),
@@ -40,6 +33,8 @@ beforeEach(() => {
     pausedRequest: null,
     requests: [],
     selectedRequestId: null,
+    editMode: false,
+    pendingMods: {},
   })
 })
 
@@ -53,37 +48,41 @@ describe('PausedRequestDetail', () => {
     setupPausedState()
     render(<PausedRequestDetail />)
     expect(screen.getByTestId('paused-request-detail')).toBeInTheDocument()
-    expect(screen.getByText('Request Paused at Breakpoint')).toBeInTheDocument()
   })
 
-  it('shows the breakpoint name', () => {
+  it('opens in edit mode by default when breakpoint is hit', () => {
     setupPausedState()
     render(<PausedRequestDetail />)
-    expect(screen.getByText('Order Breakpoint')).toBeInTheDocument()
+    // In edit mode the slim bar is shown — no "Continue with Edits" button
+    expect(screen.queryByText('Continue with Edits')).toBeNull()
+    expect(screen.getByText('Continue')).toBeInTheDocument()
+    expect(screen.getByText('Drop')).toBeInTheDocument()
   })
 
   it('shows a countdown timer when timeoutAt is in the future', () => {
     setupPausedState()
     render(<PausedRequestDetail />)
-    expect(screen.getByTestId('countdown-timer')).toBeInTheDocument()
-    expect(screen.getByTestId('countdown-timer').textContent).toMatch(/\d+s remaining/)
+    // edit mode bar doesn't show timer — switch to non-edit mode to test timer
+    useInterceptStore.setState({ editMode: false })
+    const { unmount } = render(<PausedRequestDetail />)
+    expect(screen.getAllByTestId('countdown-timer')[0]).toBeInTheDocument()
+    unmount()
   })
 
-  it('shows Continue, Drop and Edit & Continue buttons', () => {
+  it('shows Continue with Edits in non-edit mode', () => {
     setupPausedState()
+    useInterceptStore.setState({ editMode: false })
     render(<PausedRequestDetail />)
-    expect(screen.getByText('Continue')).toBeInTheDocument()
-    expect(screen.getByText('Drop')).toBeInTheDocument()
-    expect(screen.getByText('Edit & Continue')).toBeInTheDocument()
+    expect(screen.getByText('Continue with Edits')).toBeInTheDocument()
   })
 
-  it('calls continueRequest when Continue clicked', () => {
-    const continueMock = vi.fn().mockResolvedValue(undefined)
-    useInterceptStore.setState({ continueRequest: continueMock } as Partial<ReturnType<typeof useInterceptStore.getState>>)
+  it('calls editAndResume when Continue clicked in edit mode', () => {
+    const editAndResumeMock = vi.fn().mockResolvedValue(undefined)
+    useInterceptStore.setState({ editAndResume: editAndResumeMock } as Partial<ReturnType<typeof useInterceptStore.getState>>)
     setupPausedState()
     render(<PausedRequestDetail />)
     fireEvent.click(screen.getByText('Continue'))
-    expect(continueMock).toHaveBeenCalledOnce()
+    expect(editAndResumeMock).toHaveBeenCalledOnce()
   })
 
   it('calls dropRequest when Drop clicked', () => {
@@ -95,17 +94,23 @@ describe('PausedRequestDetail', () => {
     expect(dropMock).toHaveBeenCalledOnce()
   })
 
-  it('opens RequestEditDialog when Edit & Continue clicked', () => {
+  it('calls continueRequest when Continue clicked in non-edit mode', () => {
+    const continueMock = vi.fn().mockResolvedValue(undefined)
+    useInterceptStore.setState({ continueRequest: continueMock } as Partial<ReturnType<typeof useInterceptStore.getState>>)
     setupPausedState()
+    useInterceptStore.setState({ editMode: false })
     render(<PausedRequestDetail />)
-    fireEvent.click(screen.getByText('Edit & Continue'))
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Continue'))
+    expect(continueMock).toHaveBeenCalledOnce()
   })
 
-  it('shows request method and host', () => {
+  it('calls enterEditMode when Continue with Edits clicked in non-edit mode', () => {
+    const enterEditModeMock = vi.fn()
+    useInterceptStore.setState({ enterEditMode: enterEditModeMock } as Partial<ReturnType<typeof useInterceptStore.getState>>)
     setupPausedState()
+    useInterceptStore.setState({ editMode: false })
     render(<PausedRequestDetail />)
-    expect(screen.getByText(/POST/)).toBeInTheDocument()
-    expect(screen.getByText(/api\.example\.com/)).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Continue with Edits'))
+    expect(enterEditModeMock).toHaveBeenCalledOnce()
   })
 })

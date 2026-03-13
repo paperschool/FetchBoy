@@ -1,4 +1,4 @@
-import { useRef, useMemo, useState, useCallback } from "react";
+import { useRef, useMemo, useState, useCallback, useEffect } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Trash2 } from "lucide-react";
 import { useInterceptStore } from "@/stores/interceptStore";
@@ -84,6 +84,19 @@ export function InterceptTable() {
     [requests, searchQuery, searchMode, verbFilter, statusFilter],
   );
 
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+  const [isNarrow, setIsNarrow] = useState(false);
+
+  useEffect(() => {
+    const el = tableContainerRef.current;
+    if (!el) return;
+    const obs = new ResizeObserver(([entry]) => {
+      setIsNarrow(entry.contentRect.width < 480);
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
   const parentRef = useRef<HTMLDivElement>(null);
 
   const rowVirtualizer = useVirtualizer({
@@ -96,6 +109,7 @@ export function InterceptTable() {
 
   return (
     <div
+      ref={tableContainerRef}
       className="h-full flex flex-col min-h-0"
       data-testid="intercept-table-container"
     >
@@ -180,14 +194,16 @@ export function InterceptTable() {
           {/* Header */}
           <div className="w-full flex-shrink-0">
             <div className="flex bg-app-main border-b border-app-subtle">
-              {columnDefs.map((col) => (
-                <div
-                  key={col.id}
-                  className={`px-2 py-1.5 text-left text-xs font-medium text-app-secondary uppercase ${col.className}`}
-                >
-                  {col.label}
-                </div>
-              ))}
+              {columnDefs
+                .filter((col) => !isNarrow || (col.id !== 'contentType' && col.id !== 'size'))
+                .map((col) => (
+                  <div
+                    key={col.id}
+                    className={`px-2 py-1.5 text-left text-xs font-medium text-app-secondary uppercase ${col.className}`}
+                  >
+                    {col.label}
+                  </div>
+                ))}
             </div>
           </div>
 
@@ -264,18 +280,22 @@ export function InterceptTable() {
                       {formatStatusCode(req.statusCode)}
                     </div>
                     {/* Content-Type */}
-                    <div className="px-2 w-[100px] shrink-0 text-xs text-app-muted overflow-hidden">
-                      <span
-                        className="truncate block"
-                        title={req.contentType || ""}
-                      >
-                        {formatContentType(req.contentType)}
-                      </span>
-                    </div>
+                    {!isNarrow && (
+                      <div className="px-2 w-[100px] shrink-0 text-xs text-app-muted overflow-hidden">
+                        <span
+                          className="truncate block"
+                          title={req.contentType || ""}
+                        >
+                          {formatContentType(req.contentType)}
+                        </span>
+                      </div>
+                    )}
                     {/* Size */}
-                    <div className="px-2 w-[70px] shrink-0 text-xs text-app-muted tabular-nums">
-                      {formatSize(req.size)}
-                    </div>
+                    {!isNarrow && (
+                      <div className="px-2 w-[70px] shrink-0 text-xs text-app-muted tabular-nums">
+                        {formatSize(req.size)}
+                      </div>
+                    )}
                   </div>
                 );
               })}

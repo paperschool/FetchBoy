@@ -7,7 +7,7 @@ use hudsucker::{
     hyper_util::client::legacy::Error as UpstreamError,
     Body, HttpContext, HttpHandler, RequestOrResponse,
 };
-use hudsucker::hyper::header::{HeaderValue, CONTENT_LENGTH, CONTENT_TYPE};
+use hudsucker::hyper::header::{HeaderValue, CONTENT_LENGTH, CONTENT_TYPE, TRANSFER_ENCODING};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -607,6 +607,13 @@ impl HttpHandler for InterceptHandler {
                 };
 
             // Rebuild response with potentially modified status code.
+            // Remove Transfer-Encoding and set Content-Length since we always send a
+            // fully-buffered body; leaving Transfer-Encoding: chunked in place would
+            // make the client misparse the response and cancel the request.
+            parts.headers.remove(TRANSFER_ENCODING);
+            if let Ok(val) = HeaderValue::from_str(&final_bytes.len().to_string()) {
+                parts.headers.insert(CONTENT_LENGTH, val);
+            }
             let new_status = hudsucker::hyper::StatusCode::from_u16(effective_status_code)
                 .unwrap_or(parts.status);
             parts.status = new_status;

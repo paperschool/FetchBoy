@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Check, AlertCircle } from 'lucide-react';
+import { Check, AlertCircle, Play, Pause } from 'lucide-react';
 import { useBreakpointsStore, validateUrlPattern } from '@/stores/breakpointsStore';
 import type { MatchType, EditForm } from '@/stores/breakpointsStore';
 import type { BreakpointHeader } from '@/lib/db';
@@ -31,13 +31,19 @@ const PLACEHOLDERS: Record<MatchType, string> = {
 
 export function BreakpointEditor({ onClose }: Props) {
     const { editForm, saveBreakpoint } = useBreakpointsStore();
+    const storeEnabled = useBreakpointsStore((s) =>
+        s.breakpoints.find((b) => b.id === editForm.id)?.enabled
+    );
+    const toggleBreakpointEnabled = useBreakpointsStore((s) => s.toggleBreakpointEnabled);
     const isNew = editForm.id === null;
 
     const [activeTab, setActiveTab] = useState<EditorTab>('match');
     const [name, setName] = useState(editForm.name);
     const [urlPattern, setUrlPattern] = useState(editForm.urlPattern);
     const [matchType, setMatchType] = useState<MatchType>(editForm.matchType);
-    const [enabled, setEnabled] = useState(editForm.enabled);
+    const [localEnabled, setLocalEnabled] = useState(editForm.enabled);
+    // For existing breakpoints, always reflect the live store value (sidebar may have toggled it)
+    const enabled = storeEnabled ?? localEnabled;
     const [responseMapping, setResponseMapping] = useState({
         enabled: editForm.responseMappingEnabled,
         body: editForm.responseMappingBody,
@@ -181,16 +187,22 @@ export function BreakpointEditor({ onClose }: Props) {
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-2">
-                                <input
-                                    type="checkbox"
-                                    id="bp-enabled"
-                                    checked={enabled}
-                                    onChange={(e) => setEnabled(e.target.checked)}
-                                    className="rounded"
-                                />
-                                <label htmlFor="bp-enabled" className="text-app-inverse text-sm">Enabled</label>
-                            </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (editForm.id) void toggleBreakpointEnabled(editForm.id);
+                                    else setLocalEnabled((e) => !e);
+                                }}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                                    enabled
+                                        ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
+                                        : 'bg-gray-500/20 text-app-muted hover:bg-gray-500/30'
+                                }`}
+                                title={enabled ? 'Click to disable this breakpoint' : 'Click to enable this breakpoint'}
+                            >
+                                {enabled ? <Pause size={13} /> : <Play size={13} />}
+                                {enabled ? 'Enabled' : 'Disabled'}
+                            </button>
                         </>
                     )}
 

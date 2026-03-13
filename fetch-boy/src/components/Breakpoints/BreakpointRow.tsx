@@ -1,6 +1,7 @@
-import { Bug, ArrowLeftRight, Pencil, Trash2, Gauge, ListPlus, Ban } from 'lucide-react';
+import { Bug, ArrowLeftRight, Pencil, Trash2, Gauge, ListPlus, Ban, Play, Pause } from 'lucide-react';
 import type { Breakpoint } from '@/lib/db';
 import { BreakpointActionPanel } from './BreakpointActionPanel';
+import { useBreakpointsStore } from '@/stores/breakpointsStore';
 
 interface BreakpointRowProps {
     breakpoint: Breakpoint;
@@ -9,12 +10,27 @@ interface BreakpointRowProps {
 }
 
 export function BreakpointRow({ breakpoint, onEdit, onDelete }: BreakpointRowProps) {
+    const toggleBreakpointEnabled = useBreakpointsStore((s) => s.toggleBreakpointEnabled);
+
     return (
         <div data-testid={`breakpoint-${breakpoint.id}`} className="mb-0.5">
         <div
             onClick={onEdit}
             className="flex items-center gap-1 py-0.5 px-1 rounded group hover:bg-gray-700 cursor-pointer"
         >
+            <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); void toggleBreakpointEnabled(breakpoint.id); }}
+                aria-label={breakpoint.enabled ? 'Disable breakpoint' : 'Enable breakpoint'}
+                title={breakpoint.enabled ? 'Disable' : 'Enable'}
+                className={`flex-shrink-0 p-1 rounded cursor-pointer transition-colors ${
+                    breakpoint.enabled
+                        ? 'text-blue-400 hover:text-blue-300 hover:bg-blue-500/10'
+                        : 'text-app-muted hover:text-app-secondary hover:bg-gray-600/40'
+                }`}
+            >
+                {breakpoint.enabled ? <Pause size={11} /> : <Play size={11} />}
+            </button>
             <Bug size={12} className={`flex-shrink-0 ${breakpoint.enabled ? 'text-blue-400' : 'text-app-muted'}`} />
             <span className="flex-1 text-app-secondary text-xs truncate">{breakpoint.name}</span>
             {breakpoint.response_mapping_enabled && (

@@ -33,6 +33,8 @@ beforeEach(() => {
     pausedRequest: null,
     requests: [],
     selectedRequestId: null,
+    editMode: false,
+    pendingMods: {},
   })
 })
 
@@ -54,11 +56,21 @@ describe('BreakpointActionPanel', () => {
     expect(screen.getByText('Paused')).toBeInTheDocument()
   })
 
-  it('renders Continue and Drop buttons when paused', () => {
+  it('renders Continue, Drop and Continue with Edits buttons when paused', () => {
     setupPausedState()
     render(<BreakpointActionPanel breakpointId={BREAKPOINT_ID} />)
     expect(screen.getByTitle('Continue')).toBeInTheDocument()
     expect(screen.getByTitle('Drop')).toBeInTheDocument()
+    expect(screen.getByTitle('Continue with Edits')).toBeInTheDocument()
+  })
+
+  it('calls enterEditMode when Continue with Edits button clicked', () => {
+    const enterEditModeMock = vi.fn()
+    useInterceptStore.setState({ enterEditMode: enterEditModeMock } as Partial<ReturnType<typeof useInterceptStore.getState>>)
+    setupPausedState()
+    render(<BreakpointActionPanel breakpointId={BREAKPOINT_ID} />)
+    fireEvent.click(screen.getByTitle('Continue with Edits'))
+    expect(enterEditModeMock).toHaveBeenCalledOnce()
   })
 
   it('calls continueRequest when Continue button clicked', async () => {
