@@ -124,9 +124,9 @@ development_status:
   epic-9-retrospective: optional
 
   # ─── Epic 10: Intercept Control Features — Breakpoints & Request Editing ──────────────
-  epic-10: backlog
-  10-1-intercept-split-view-with-request-table: backlog
-  10-2-request-detail-view-with-subtabs: backlog
+  epic-10: in-progress
+  10-1-intercept-split-view-with-request-table: in-progress
+  10-2-request-detail-view-with-subtabs: in-progress
   10-3-breakpoints-tab-interface: backlog
   10-4-breakpoint-editor-with-fuzzy-url-matching: backlog
   10-5-extended-breakpoint-actions-response-mapping: backlog
