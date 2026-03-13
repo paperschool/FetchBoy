@@ -11,7 +11,7 @@ import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import { seedSampleDataIfNeeded } from '@/lib/seedSampleData';
 import { getCurrentVersion, isNewVersion } from '@/lib/appVersion';
 import { parseChangelog } from '@/lib/parseChangelog';
-import changelogRaw from '../../CHANGELOG.md?raw';
+import changelogRaw from '../CHANGELOG.md?raw';
 
 async function persistLastSeenVersion(version: string): Promise<void> {
   try {
