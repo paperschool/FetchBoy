@@ -18,3 +18,13 @@ node_modules/
 # Editor
 .DS_Store
 *.swp
+
+# local agentic configuations
+_bmad
+_bmad-output
+.claude
+.clinerules
+.github/copilot-instructions.md
+.github/prompts/
+.github/agents/
+
