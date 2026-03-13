@@ -389,7 +389,7 @@ export function RequestDetailView({ selectedRequest, editMode = false, pendingMo
       open={breakDialogOpen}
       onClose={() => setBreakDialogOpen(false)}
       onSave={handleBreakSave}
-      defaultName={selectedRequest.path.split('/').filter(Boolean).at(-1) ?? selectedRequest.host}
+      defaultName={(() => { const s = selectedRequest.path.split('/').filter(Boolean); return s[s.length - 1] ?? selectedRequest.host; })()}
       defaultUrlPattern={formatHostPath(selectedRequest.host, selectedRequest.path)}
     />
     </>
