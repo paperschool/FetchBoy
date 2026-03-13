@@ -21,6 +21,9 @@ export interface EditForm {
     statusCodeEnabled: boolean;
     statusCodeValue: number;
     customHeaders: BreakpointHeader[];
+    blockRequestEnabled: boolean;
+    blockRequestStatusCode: number;
+    blockRequestBody: string;
 }
 
 const defaultEditForm: EditForm = {
@@ -36,6 +39,9 @@ const defaultEditForm: EditForm = {
     statusCodeEnabled: false,
     statusCodeValue: 200,
     customHeaders: [],
+    blockRequestEnabled: false,
+    blockRequestStatusCode: 501,
+    blockRequestBody: '',
 };
 
 // ─── URL Validation Utilities ─────────────────────────────────────────────────
@@ -152,6 +158,9 @@ export const useBreakpointsStore = create<BreakpointsState>()(
                         statusCodeEnabled: breakpoint.status_code_enabled,
                         statusCodeValue: breakpoint.status_code_value,
                         customHeaders: breakpoint.custom_headers,
+                        blockRequestEnabled: breakpoint.block_request_enabled,
+                        blockRequestStatusCode: breakpoint.block_request_status_code,
+                        blockRequestBody: breakpoint.block_request_body,
                     };
                 } else {
                     state.selectedBreakpointId = null;
@@ -183,6 +192,9 @@ export const useBreakpointsStore = create<BreakpointsState>()(
                     status_code_enabled: form.statusCodeEnabled,
                     status_code_value: form.statusCodeValue,
                     custom_headers: form.customHeaders,
+                    block_request_enabled: form.blockRequestEnabled,
+                    block_request_status_code: form.blockRequestStatusCode,
+                    block_request_body: form.blockRequestBody,
                 });
                 set((state) => {
                     state.breakpoints.push({
@@ -193,6 +205,9 @@ export const useBreakpointsStore = create<BreakpointsState>()(
                         status_code_enabled: form.statusCodeEnabled,
                         status_code_value: form.statusCodeValue,
                         custom_headers: form.customHeaders,
+                        block_request_enabled: form.blockRequestEnabled,
+                        block_request_status_code: form.blockRequestStatusCode,
+                        block_request_body: form.blockRequestBody,
                     });
                     state.isEditing = false;
                     state.editForm = { ...defaultEditForm };
@@ -209,6 +224,9 @@ export const useBreakpointsStore = create<BreakpointsState>()(
                     status_code_enabled: form.statusCodeEnabled,
                     status_code_value: form.statusCodeValue,
                     custom_headers: form.customHeaders,
+                    block_request_enabled: form.blockRequestEnabled,
+                    block_request_status_code: form.blockRequestStatusCode,
+                    block_request_body: form.blockRequestBody,
                 });
                 set((state) => {
                     const bp = state.breakpoints.find((b) => b.id === form.id);
@@ -223,6 +241,9 @@ export const useBreakpointsStore = create<BreakpointsState>()(
                         bp.status_code_enabled = form.statusCodeEnabled;
                         bp.status_code_value = form.statusCodeValue;
                         bp.custom_headers = form.customHeaders;
+                        bp.block_request_enabled = form.blockRequestEnabled;
+                        bp.block_request_status_code = form.blockRequestStatusCode;
+                        bp.block_request_body = form.blockRequestBody;
                     }
                     state.isEditing = false;
                     state.editForm = { ...defaultEditForm };

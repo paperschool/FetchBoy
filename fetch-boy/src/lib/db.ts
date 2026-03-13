@@ -91,6 +91,9 @@ export interface Breakpoint {
     status_code_enabled: boolean;
     status_code_value: number;
     custom_headers: BreakpointHeader[];
+    block_request_enabled: boolean;
+    block_request_status_code: number;
+    block_request_body: string;
     created_at: string;
     updated_at: string;
 }

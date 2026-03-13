@@ -1,4 +1,4 @@
-import { Bug, ArrowLeftRight, Pencil, Trash2, Gauge, ListPlus } from 'lucide-react';
+import { Bug, ArrowLeftRight, Pencil, Trash2, Gauge, ListPlus, Ban } from 'lucide-react';
 import type { Breakpoint } from '@/lib/db';
 
 interface BreakpointRowProps {
@@ -41,6 +41,15 @@ export function BreakpointRow({ breakpoint, onEdit, onDelete }: BreakpointRowPro
                     data-testid="headers-indicator"
                 >
                     <ListPlus size={10} />
+                </span>
+            )}
+            {breakpoint.block_request_enabled && (
+                <span
+                    title="Blocks requests"
+                    className="flex-shrink-0 text-red-400"
+                    data-testid="block-indicator"
+                >
+                    <Ban size={10} />
                 </span>
             )}
             <div className="hidden group-hover:flex items-center gap-0.5">
