@@ -359,7 +359,7 @@ fn is_ca_installed() -> bool {
     #[cfg(target_os = "windows")]
     {
         std::process::Command::new("certutil")
-            .args(["-store", "Root", "FetchBoy Proxy CA"])
+            .args(["-store", "-user", "Root", "FetchBoy Proxy CA"])
             .output()
             .map(|o| o.status.success())
             .unwrap_or(false)
@@ -424,14 +424,39 @@ fn configure_system_proxy(port: u16) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
         let proxy_str = format!("127.0.0.1:{}", port);
-        let output = std::process::Command::new("netsh")
-            .args(["winhttp", "set", "proxy", &proxy_str])
+        // Write to HKCU (no admin required); browsers read this via WinInet.
+        let set_server = std::process::Command::new("reg")
+            .args([
+                "add",
+                "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings",
+                "/v", "ProxyServer",
+                "/t", "REG_SZ",
+                "/d", &proxy_str,
+                "/f",
+            ])
             .output()
-            .map_err(|e| format!("Failed to configure proxy: {e}"))?;
-        if !output.status.success() {
+            .map_err(|e| format!("Failed to set proxy server: {e}"))?;
+        if !set_server.status.success() {
             return Err(format!(
-                "netsh failed: {}",
-                String::from_utf8_lossy(&output.stderr)
+                "reg add ProxyServer failed: {}",
+                String::from_utf8_lossy(&set_server.stderr)
+            ));
+        }
+        let set_enable = std::process::Command::new("reg")
+            .args([
+                "add",
+                "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings",
+                "/v", "ProxyEnable",
+                "/t", "REG_DWORD",
+                "/d", "1",
+                "/f",
+            ])
+            .output()
+            .map_err(|e| format!("Failed to enable proxy: {e}"))?;
+        if !set_enable.status.success() {
+            return Err(format!(
+                "reg add ProxyEnable failed: {}",
+                String::from_utf8_lossy(&set_enable.stderr)
             ));
         }
         Ok(())
@@ -476,15 +501,28 @@ fn is_system_proxy_configured(port: u16) -> bool {
     }
     #[cfg(target_os = "windows")]
     {
-        let out = std::process::Command::new("netsh")
-            .args(["winhttp", "show", "proxy"])
-            .output();
-        if let Ok(out) = out {
-            let text = String::from_utf8_lossy(&out.stdout);
-            text.contains(&format!("127.0.0.1:{}", port))
-        } else {
-            false
+        // Check HKCU WinInet settings — same place browsers (Chrome/Edge) read from.
+        let enabled = std::process::Command::new("reg")
+            .args([
+                "query",
+                "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings",
+                "/v", "ProxyEnable",
+            ])
+            .output()
+            .map(|o| String::from_utf8_lossy(&o.stdout).contains("0x1"))
+            .unwrap_or(false);
+        if !enabled {
+            return false;
         }
+        std::process::Command::new("reg")
+            .args([
+                "query",
+                "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings",
+                "/v", "ProxyServer",
+            ])
+            .output()
+            .map(|o| String::from_utf8_lossy(&o.stdout).contains(&format!("127.0.0.1:{}", port)))
+            .unwrap_or(false)
     }
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     {
@@ -529,8 +567,15 @@ fn disable_os_proxy_all_services() {
     }
     #[cfg(target_os = "windows")]
     {
-        let _ = std::process::Command::new("netsh")
-            .args(["winhttp", "reset", "proxy"])
+        let _ = std::process::Command::new("reg")
+            .args([
+                "add",
+                "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings",
+                "/v", "ProxyEnable",
+                "/t", "REG_DWORD",
+                "/d", "0",
+                "/f",
+            ])
             .output();
     }
 }
