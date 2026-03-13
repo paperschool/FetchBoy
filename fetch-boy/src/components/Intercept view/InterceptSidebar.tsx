@@ -10,8 +10,10 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { BreakpointsTree } from "@/components/Breakpoints/BreakpointsTree";
+import { TimeoutConfig } from "@/components/Breakpoints/TimeoutConfig";
 import { invoke } from "@tauri-apps/api/core";
 import { useUiSettingsStore } from "@/stores/uiSettingsStore";
+import { useInterceptStore } from "@/stores/interceptStore";
 import { saveSetting } from "@/lib/settings";
 
 interface CaCertificateInfo {
@@ -34,6 +36,8 @@ export function InterceptSidebar({
   const [activePanel, setActivePanel] = useState<InterceptPanel>("breakpoints");
   const proxyEnabled = useUiSettingsStore((s) => s.proxyEnabled);
   const proxyPort = useUiSettingsStore((s) => s.proxyPort);
+  const breakpointTimeout = useInterceptStore((s) => s.breakpointTimeout);
+  const setBreakpointTimeout = useInterceptStore((s) => s.setBreakpointTimeout);
   const setProxyPort = useUiSettingsStore((s) => s.setProxyPort);
   const sidebarSettingsExpanded = useUiSettingsStore(
     (s) => s.sidebarSettingsExpanded,
@@ -261,6 +265,12 @@ export function InterceptSidebar({
                     className="w-16 bg-transparent border border-gray-700 rounded px-2 py-1 text-app-muted text-xs disabled:opacity-50"
                   />
                 </div>
+              </div>
+
+              {/* Breakpoint pause timeout */}
+              <div className="space-y-2 pt-2 border-t border-gray-700">
+                <p className="text-app-muted text-xs font-medium">Breakpoints</p>
+                <TimeoutConfig timeout={breakpointTimeout} onChange={setBreakpointTimeout} />
               </div>
 
               {/* CA Certificate */}

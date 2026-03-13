@@ -15,4 +15,21 @@ export interface InterceptEventPayload {
   requestBody?: string                       // Request body as UTF-8 string (text content types ≤1 MB only)
   responseHeaders?: Record<string, string>   // All response headers
   responseBody?: string                      // Response body as UTF-8 string (text content types ≤1 MB only)
+  isBlocked?: boolean                        // True when request was blocked by a breakpoint
+}
+
+// Matches BreakpointPausedEvent struct in src-tauri/src/proxy.rs (Story 10.8)
+export interface BreakpointPausedPayload {
+  requestId: string
+  breakpointId: string
+  breakpointName: string
+  timeoutAt: number                          // Unix timestamp in seconds
+  method: string
+  host: string
+  path: string
+  statusCode?: number
+  responseBody?: string
+  responseHeaders: Record<string, string>
+  requestHeaders: Record<string, string>
+  requestBody?: string
 }

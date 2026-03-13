@@ -3,6 +3,7 @@ import { InterceptSidebar } from "./InterceptSidebar";
 import { InterceptTopBar } from "./InterceptTopBar";
 import { InterceptTable } from "./InterceptTable";
 import { RequestDetailView } from "./RequestDetailView";
+import { PausedRequestDetail } from "./PausedRequestDetail";
 import { BreakpointEditor } from "@/components/Breakpoints/BreakpointEditor";
 import { TabLayout } from "@/components/Layout/TabLayout";
 import { useUiSettingsStore } from "@/stores/uiSettingsStore";
@@ -19,6 +20,7 @@ export function InterceptView() {
   const selectedRequest = useInterceptStore((state) =>
     state.requests.find((r) => r.id === state.selectedRequestId) ?? null
   );
+  const pauseState = useInterceptStore((s) => s.pauseState);
 
   const { isEditing, cancelEditing } = useBreakpointsStore();
 
@@ -47,7 +49,8 @@ export function InterceptView() {
         {isEditing ? (
           <BreakpointEditor onClose={cancelEditing} />
         ) : (
-          <div className="flex-1 min-h-0 flex flex-col p-2">
+          <div className="flex-1 min-h-0 flex flex-col p-2 overflow-y-auto">
+            {pauseState !== 'idle' && <PausedRequestDetail />}
             <RequestDetailView selectedRequest={selectedRequest} />
           </div>
         )}

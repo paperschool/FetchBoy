@@ -8,6 +8,11 @@ vi.mock('@tauri-apps/api/event', () => ({
   listen: vi.fn(),
 }))
 
+// Mock the Tauri core module (used by interceptStore actions)
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: vi.fn().mockResolvedValue(undefined),
+}))
+
 import { listen } from '@tauri-apps/api/event'
 
 function TestHost() {
@@ -17,7 +22,7 @@ function TestHost() {
 
 describe('useInterceptEvents', () => {
   beforeEach(() => {
-    useInterceptStore.setState({ requests: [] })
+    useInterceptStore.setState({ requests: [], pauseState: 'idle', pausedRequest: null })
     vi.clearAllMocks()
   })
 
@@ -30,17 +35,26 @@ describe('useInterceptEvents', () => {
     expect(listen).toHaveBeenCalledWith('intercept:request', expect.any(Function))
   })
 
-  it('adds request to store when event is received', async () => {
+  it('also calls listen with breakpoint:paused on mount', async () => {
     const mockUnlisten = vi.fn()
-    let capturedHandler: ((event: { payload: unknown }) => void) | undefined
+    vi.mocked(listen).mockResolvedValue(mockUnlisten)
 
-    vi.mocked(listen).mockImplementation((_eventName, handler) => {
-      capturedHandler = handler as typeof capturedHandler
+    render(<TestHost />)
+
+    expect(listen).toHaveBeenCalledWith('breakpoint:paused', expect.any(Function))
+  })
+
+  it('adds request to store when intercept:request event is received', async () => {
+    const mockUnlisten = vi.fn()
+    const handlers: Record<string, ((event: { payload: unknown }) => void)> = {}
+
+    vi.mocked(listen).mockImplementation((eventName, handler) => {
+      handlers[eventName as string] = handler as (event: { payload: unknown }) => void
       return Promise.resolve(mockUnlisten)
     })
 
     render(<TestHost />)
-    await vi.waitFor(() => capturedHandler !== undefined)
+    await vi.waitFor(() => Object.keys(handlers).includes('intercept:request'))
 
     const payload = {
       id: 'test-1',
@@ -52,23 +66,24 @@ describe('useInterceptEvents', () => {
       contentType: 'application/json',
       size: 512,
     }
-    capturedHandler!({ payload })
+    handlers['intercept:request']({ payload })
 
     expect(useInterceptStore.getState().requests).toHaveLength(1)
     expect(useInterceptStore.getState().requests[0].id).toBe('test-1')
   })
 
-  it('calls unlisten on unmount', async () => {
+  it('calls unlisten for all listeners on unmount', async () => {
     const mockUnlisten = vi.fn()
     vi.mocked(listen).mockResolvedValue(mockUnlisten)
 
     const { unmount } = render(<TestHost />)
     await vi.waitFor(() => expect(listen).toHaveBeenCalled())
-    // Wait for promise to resolve so unlisten is stored
+    // Wait for promises to resolve so unlisten functions are stored
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     unmount()
 
-    expect(mockUnlisten).toHaveBeenCalledTimes(1)
+    // Two listeners registered (intercept:request + breakpoint:paused)
+    expect(mockUnlisten).toHaveBeenCalledTimes(2)
   })
 })

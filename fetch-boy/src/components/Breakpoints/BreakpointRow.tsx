@@ -1,5 +1,6 @@
 import { Bug, ArrowLeftRight, Pencil, Trash2, Gauge, ListPlus, Ban } from 'lucide-react';
 import type { Breakpoint } from '@/lib/db';
+import { BreakpointActionPanel } from './BreakpointActionPanel';
 
 interface BreakpointRowProps {
     breakpoint: Breakpoint;
@@ -9,8 +10,8 @@ interface BreakpointRowProps {
 
 export function BreakpointRow({ breakpoint, onEdit, onDelete }: BreakpointRowProps) {
     return (
+        <div data-testid={`breakpoint-${breakpoint.id}`} className="mb-0.5">
         <div
-            data-testid={`breakpoint-${breakpoint.id}`}
             onClick={onEdit}
             className="flex items-center gap-1 py-0.5 px-1 rounded group hover:bg-gray-700 cursor-pointer"
         >
@@ -70,6 +71,8 @@ export function BreakpointRow({ breakpoint, onEdit, onDelete }: BreakpointRowPro
                     <Trash2 size={12} />
                 </button>
             </div>
+        </div>
+        <BreakpointActionPanel breakpointId={breakpoint.id} />
         </div>
     );
 }

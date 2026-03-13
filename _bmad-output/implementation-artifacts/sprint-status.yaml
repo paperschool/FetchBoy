@@ -132,6 +132,6 @@ development_status:
   10-5-extended-breakpoint-actions-response-mapping: review
   10-6-extended-breakpoint-actions-status-header-editing: review
   10-7-extended-breakpoint-actions-request-blocking: review
-  10-8-play-button-continue-interrupted-request: ready-for-dev
+  10-8-play-button-continue-interrupted-request: review
   10-9-split-request-response-capability: ready-for-dev
   epic-10-retrospective: optional
