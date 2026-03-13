@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Bug, Plus, FolderPlus } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Bug, FolderPlus, Plus } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FolderRow } from './FolderRow';
 import { BreakpointRow } from './BreakpointRow';
@@ -24,6 +24,9 @@ export function BreakpointsTree() {
         startEditing,
     } = useBreakpointsStore();
     const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+    const [creatingFolder, setCreatingFolder] = useState(false);
+    const [newFolderName, setNewFolderName] = useState('');
+    const newFolderInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         loadAllBreakpoints()
@@ -31,6 +34,10 @@ export function BreakpointsTree() {
             .catch(() => {});
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    useEffect(() => {
+        if (creatingFolder) newFolderInputRef.current?.focus();
+    }, [creatingFolder]);
 
     const toggle = (id: string) => setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
 
@@ -40,10 +47,17 @@ export function BreakpointsTree() {
     }));
     const rootBreakpoints = breakpoints.filter((bp) => bp.folder_id === null);
 
-    async function handleAddFolder() {
-        const name = window.prompt('Folder name:');
-        if (!name?.trim()) return;
-        const folder = await createBreakpointFolder(name.trim(), folders.length).catch(() => null);
+    function handleStartCreateFolder() {
+        setNewFolderName('');
+        setCreatingFolder(true);
+    }
+
+    async function handleCommitNewFolder() {
+        const name = newFolderName.trim();
+        setCreatingFolder(false);
+        setNewFolderName('');
+        if (!name) return;
+        const folder = await createBreakpointFolder(name, folders.length).catch(() => null);
         if (folder) addFolder(folder);
     }
 
@@ -71,68 +85,71 @@ export function BreakpointsTree() {
         deleteBreakpoint(id);
     }
 
+    const header = (
+        <div className="flex items-center justify-between mb-2 px-1">
+            <span className="text-app-muted text-xs font-semibold uppercase tracking-widest">
+                Breakpoints
+            </span>
+            <div className="flex items-center gap-1">
+                <button
+                    onClick={() => handleAddBreakpoint(null)}
+                    aria-label="New Breakpoint"
+                    title="New Breakpoint"
+                    className="text-gray-300 hover:text-white p-1 rounded cursor-pointer"
+                >
+                    <Plus size={16} />
+                </button>
+                <button
+                    onClick={handleStartCreateFolder}
+                    aria-label="Add Folder"
+                    title="Add Folder"
+                    className="text-gray-300 hover:text-white p-1 rounded cursor-pointer"
+                >
+                    <FolderPlus size={16} />
+                </button>
+            </div>
+        </div>
+    );
+
+    const newFolderInput = creatingFolder && (
+        <input
+            ref={newFolderInputRef}
+            value={newFolderName}
+            onChange={(e) => setNewFolderName(e.target.value)}
+            onBlur={() => void handleCommitNewFolder()}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter') void handleCommitNewFolder();
+                if (e.key === 'Escape') { setCreatingFolder(false); setNewFolderName(''); }
+            }}
+            placeholder="Folder name…"
+            className="w-full bg-gray-700 text-app-inverse text-sm outline-none px-2 py-1 rounded mb-1"
+            aria-label="New folder name"
+        />
+    );
+
     if (folders.length === 0 && rootBreakpoints.length === 0) {
         return (
             <div data-testid="breakpoints-tree">
-                <div className="flex items-center justify-between mb-2 px-1">
-                    <span className="text-app-muted text-xs font-semibold uppercase tracking-widest">
-                        Breakpoints
-                    </span>
-                    <div className="flex items-center gap-1">
-                        <button
-                            onClick={() => handleAddBreakpoint(null)}
-                            aria-label="New Breakpoint"
-                            title="New Breakpoint"
-                            className="text-gray-300 hover:text-white p-1 rounded cursor-pointer"
-                        >
-                            <Bug size={16} />
-                        </button>
-                        <button
-                            onClick={() => void handleAddFolder()}
-                            aria-label="Add Folder"
-                            className="text-gray-300 hover:text-white p-1 rounded cursor-pointer"
-                        >
-                            <FolderPlus size={16} />
-                        </button>
+                {header}
+                {newFolderInput}
+                {!creatingFolder && (
+                    <div data-testid="empty-state">
+                        <EmptyState
+                            icon={Bug}
+                            label="No breakpoints yet"
+                            action={handleStartCreateFolder}
+                            actionLabel="Create Folder"
+                        />
                     </div>
-                </div>
-                <div data-testid="empty-state">
-                    <EmptyState
-                        icon={Bug}
-                        label="No breakpoints yet — create a folder to get started"
-                        action={() => void handleAddFolder()}
-                        actionLabel="Create Folder"
-                    />
-                </div>
+                )}
             </div>
         );
     }
 
     return (
         <div data-testid="breakpoints-tree" className="text-sm">
-            <div className="flex items-center justify-between mb-2 px-1">
-                <span className="text-app-muted text-xs font-semibold uppercase tracking-widest">
-                    Breakpoints
-                </span>
-                <div className="flex items-center gap-1">
-                    <button
-                        onClick={() => handleAddBreakpoint(null)}
-                        aria-label="New Breakpoint"
-                        title="New Breakpoint"
-                        className="text-gray-300 hover:text-white p-1 rounded cursor-pointer"
-                    >
-                        <Plus size={16} />
-                    </button>
-                    <button
-                        onClick={() => void handleAddFolder()}
-                        aria-label="Add Folder"
-                        title="Add Folder"
-                        className="text-gray-300 hover:text-white p-1 rounded cursor-pointer"
-                    >
-                        <FolderPlus size={16} />
-                    </button>
-                </div>
-            </div>
+            {header}
+            {newFolderInput}
 
             {rootBreakpoints.map((bp) => (
                 <BreakpointRow

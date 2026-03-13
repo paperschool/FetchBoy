@@ -1,13 +1,12 @@
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Folder, Clock, Settings as SettingsIcon, Bug } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Folder, Clock, Settings as SettingsIcon } from 'lucide-react';
 import { CollectionTree } from '@/components/CollectionTree/CollectionTree';
 import { HistoryPanel } from '@/components/HistoryPanel/HistoryPanel';
-import { BreakpointsTree } from '@/components/Breakpoints/BreakpointsTree';
 import { SettingsAccordion } from './SettingsAccordion';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import { saveSetting } from '@/lib/settings';
 
-type SidebarPanel = 'collections' | 'history' | 'breakpoints';
+type SidebarPanel = 'collections' | 'history';
 
 interface SidebarProps {
     collapsed: boolean;
@@ -63,18 +62,6 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     title="History"
                 >
                     <Clock size={20} className="text-app-muted" />
-                </button>
-                <button
-                    type="button"
-                    onClick={() => {
-                        setActivePanel('breakpoints');
-                        onToggle();
-                    }}
-                    className="p-2 hover:bg-gray-700 rounded transition-colors"
-                    aria-label="Breakpoints"
-                    title="Breakpoints"
-                >
-                    <Bug size={20} className="text-app-muted" />
                 </button>
                 <button
                     type="button"
@@ -135,24 +122,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 >
                     History
                 </button>
-                <button
-                    type="button"
-                    onClick={() => setActivePanel('breakpoints')}
-                    className={`flex-1 py-1.5 text-xs cursor-pointer ${
-                        activePanel === 'breakpoints'
-                            ? 'bg-gray-700 text-app-inverse font-medium'
-                            : 'text-app-muted hover:text-app-inverse'
-                    }`}
-                    aria-label="Breakpoints panel"
-                >
-                    Breakpoints
-                </button>
             </div>
 
             <div className="flex-1 min-h-0 overflow-y-auto" data-tour="collections-sidebar">
                 {activePanel === 'collections' && <CollectionTree />}
                 {activePanel === 'history' && <HistoryPanel />}
-                {activePanel === 'breakpoints' && <BreakpointsTree />}
             </div>
 
             <div data-tour="settings-env">
@@ -161,4 +135,3 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         </aside>
     );
 }
-
