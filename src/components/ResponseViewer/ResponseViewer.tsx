@@ -57,7 +57,7 @@ function getStatusColorClass(status: number): string {
 }
 
 // Image viewer component with zoom and scroll
-function ImageViewer({ contentType, body }: { contentType?: string; body: string }) {
+export function ImageViewer({ contentType, body }: { contentType?: string; body: string }) {
   const [zoom, setZoom] = useState(100);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);

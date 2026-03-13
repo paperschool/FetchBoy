@@ -7,6 +7,7 @@ import { createBreakpoint } from '@/lib/breakpoints'
 import { SaveBreakpointDialog } from '@/components/SaveBreakpointDialog/SaveBreakpointDialog'
 import { HeadersTable } from '@/components/ui/HeadersTable'
 import { ViewerShell } from '@/components/ui/ViewerShell'
+import { isImageContentType, ImageViewer } from '@/components/ResponseViewer/ResponseViewer'
 import {
   formatTimestamp,
   formatSize,
@@ -186,31 +187,37 @@ export function RequestDetailView({ selectedRequest, editMode = false, pendingMo
       testId="intercept-detail-viewer"
     >
       {activeTab === 'body' && (
-        <div className="relative min-h-[220px] flex-1">
-          <div className="absolute top-2 right-2 z-10">
-            <select
-              value={bodyLanguage}
-              onChange={(e) => setBodyLanguage(e.target.value as BodyLanguage)}
-              className="select-flat border-app-subtle bg-app-main text-app-primary h-8 rounded-md border pl-2 pr-7 text-xs"
-              aria-label="Body language"
-            >
-              <option value="json">JSON</option>
-              <option value="html">HTML</option>
-              <option value="xml">XML</option>
-              <option value="plaintext">Raw</option>
-            </select>
+        isImageContentType(selectedRequest.contentType) && !editMode ? (
+          <div className="flex-1 min-h-0 p-2">
+            <ImageViewer contentType={selectedRequest.contentType} body={selectedRequest.responseBody ?? ''} />
           </div>
-          <MonacoEditorField
-            testId="intercept-response-body-editor"
-            path="intercept-response-body"
-            language={bodyLanguage}
-            value={editMode ? (pendingMods.responseBody ?? selectedRequest.responseBody ?? '') : (formattedBody ?? selectedRequest.responseBody ?? '')}
-            fontSize={editorFontSize}
-            height="100%"
-            readOnly={!editMode}
-            onChange={editMode ? (val) => onModsChange?.({ responseBody: val }) : undefined}
-          />
-        </div>
+        ) : (
+          <div className="relative min-h-[220px] flex-1">
+            <div className="absolute top-2 right-2 z-10">
+              <select
+                value={bodyLanguage}
+                onChange={(e) => setBodyLanguage(e.target.value as BodyLanguage)}
+                className="select-flat border-app-subtle bg-app-main text-app-primary h-8 rounded-md border pl-2 pr-7 text-xs"
+                aria-label="Body language"
+              >
+                <option value="json">JSON</option>
+                <option value="html">HTML</option>
+                <option value="xml">XML</option>
+                <option value="plaintext">Raw</option>
+              </select>
+            </div>
+            <MonacoEditorField
+              testId="intercept-response-body-editor"
+              path="intercept-response-body"
+              language={bodyLanguage}
+              value={editMode ? (pendingMods.responseBody ?? selectedRequest.responseBody ?? '') : (formattedBody ?? selectedRequest.responseBody ?? '')}
+              fontSize={editorFontSize}
+              height="100%"
+              readOnly={!editMode}
+              onChange={editMode ? (val) => onModsChange?.({ responseBody: val }) : undefined}
+            />
+          </div>
+        )
       )}
 
       {activeTab === 'headers' && (

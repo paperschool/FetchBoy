@@ -20,6 +20,7 @@ pub struct KeyValueRow {
 // Request body payload currently supports raw mode for MVP story scope.
 #[derive(Debug, Deserialize)]
 pub struct RequestBody {
+    #[allow(dead_code)] // deserialized from frontend JSON but only `raw` is used in Rust
     pub mode: String,
     pub raw: String,
 }
@@ -38,16 +39,17 @@ pub struct RequestAuth {
 
 // Input payload received from invoke("send_request", { request: ... }).
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SendRequestPayload {
     pub method: String,
     pub url: String,
     pub headers: Vec<KeyValueRow>,
-    pub queryParams: Vec<KeyValueRow>,
+    pub query_params: Vec<KeyValueRow>,
     pub body: RequestBody,
     pub auth: RequestAuth,
     pub timeout_ms: u64,
     pub ssl_verify: bool,
-    pub requestId: Option<String>,
+    pub request_id: Option<String>,
 }
 
 // Read-only response header entry returned to the UI.
@@ -59,14 +61,15 @@ pub struct ResponseHeader {
 
 // Response payload returned to the frontend for summary + tabs rendering.
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SendResponsePayload {
     pub status: u16,
-    pub statusText: String,
-    pub responseTimeMs: u128,
-    pub responseSizeBytes: usize,
+    pub status_text: String,
+    pub response_time_ms: u128,
+    pub response_size_bytes: usize,
     pub body: String,           // base64 encoded for binary, text for text
     pub headers: Vec<ResponseHeader>,
-    pub contentType: Option<String>,  // Content-Type header value
+    pub content_type: Option<String>,  // Content-Type header value
 }
 
 // Check if the content type should be treated as binary (read as bytes and base64-encoded).
@@ -123,7 +126,7 @@ pub async fn send_request(
 ) -> Result<SendResponsePayload, String> {
     // Validate and normalize request parts before sending network traffic.
     let method = build_method(&request.method)?;
-    let mut url = build_url(&request.url, &request.queryParams)?;
+    let mut url = build_url(&request.url, &request.query_params)?;
     let headers = build_headers(&request.headers)?;
 
     // Inject API Key query param into URL BEFORE building the request builder.
@@ -187,8 +190,8 @@ pub async fn send_request(
     // Track elapsed time for response diagnostics in the UI.
     let started = Instant::now();
 
-    // If a requestId was provided, register a cancellation channel and race the request against it.
-    let response = if let Some(ref request_id) = request.requestId {
+    // If a request_id was provided, register a cancellation channel and race the request against it.
+    let response = if let Some(ref request_id) = request.request_id {
         let (tx, rx) = oneshot::channel::<()>();
         {
             let mut map = state.0.lock().map_err(|e| e.to_string())?;
@@ -271,12 +274,12 @@ pub async fn send_request(
 
     Ok(SendResponsePayload {
         status: status_code,
-        statusText: status_text,
-        responseTimeMs: started.elapsed().as_millis(),
-        responseSizeBytes: response_size,
+        status_text,
+        response_time_ms: started.elapsed().as_millis(),
+        response_size_bytes: response_size,
         body,
         headers,
-        contentType: content_type,
+        content_type,
     })
 }
 

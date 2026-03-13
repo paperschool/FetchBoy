@@ -1,6 +1,5 @@
 import { useCallback, useEffect } from "react";
 import { InterceptSidebar } from "./InterceptSidebar";
-import { InterceptTopBar } from "./InterceptTopBar";
 import { InterceptTable } from "./InterceptTable";
 import { RequestDetailView } from "./RequestDetailView";
 import { PausedRequestDetail } from "./PausedRequestDetail";
@@ -74,7 +73,6 @@ export function InterceptView() {
 
   return (
     <TabLayout
-      topBar={<InterceptTopBar />}
       sidebar={
         <InterceptSidebar
           collapsed={sidebarCollapsed}

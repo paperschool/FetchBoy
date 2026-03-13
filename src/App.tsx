@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { listen } from '@tauri-apps/api/event';
 import { AppTabs } from '@/components/AppTabs/AppTabs';
 import { FetchView } from '@/components/FetchView/FetchView';
 import { SplashScreen } from '@/components/Layout/SplashScreen';
@@ -54,6 +55,14 @@ function App() {
       }
     }
   }, [showSplash, hasCompletedTour]);
+
+  useEffect(() => {
+    const unlisten = listen('menu:restart-tutorial', () => {
+      useTourStore.getState().resetTour();
+      setShowTour(true);
+    });
+    return () => { void unlisten.then((fn) => fn()); };
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
