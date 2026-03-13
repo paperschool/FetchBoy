@@ -11,6 +11,7 @@ interface FolderRowProps {
     onRename: (id: string, name: string) => void;
     onDelete: () => void;
     onAddBreakpoint: () => void;
+    onEditBreakpoint: (id: string) => void;
     onDeleteBreakpoint: (id: string) => void;
 }
 
@@ -22,6 +23,7 @@ export function FolderRow({
     onRename,
     onDelete,
     onAddBreakpoint,
+    onEditBreakpoint,
     onDeleteBreakpoint,
 }: FolderRowProps) {
     const [isEditing, setIsEditing] = useState(false);
@@ -92,6 +94,7 @@ export function FolderRow({
                         <BreakpointRow
                             key={bp.id}
                             breakpoint={bp}
+                            onEdit={() => onEditBreakpoint(bp.id)}
                             onDelete={() => onDeleteBreakpoint(bp.id)}
                         />
                     ))}

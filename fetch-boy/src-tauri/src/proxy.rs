@@ -7,6 +7,7 @@ use hudsucker::{
     hyper_util::client::legacy::Error as UpstreamError,
     Body, HttpContext, HttpHandler, RequestOrResponse,
 };
+use regex::Regex;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -302,11 +303,120 @@ impl Drop for ProxyServer {
     }
 }
 
+// ─── URL Matching ─────────────────────────────────────────────────────────────
+
+#[derive(Serialize)]
+pub struct UrlMatchResult {
+    pub matches: bool,
+    pub matched_pattern: String,
+}
+
+/// Match a URL against a pattern using the specified match type.
+/// Returns a UrlMatchResult indicating whether the URL matches.
+pub fn match_url(url: &str, pattern: &str, match_type: &str) -> UrlMatchResult {
+    let matches = match match_type {
+        "exact" => url == pattern,
+        "partial" => url.contains(pattern),
+        "wildcard" => match_wildcard(url, pattern),
+        "regex" => match_regex(url, pattern).unwrap_or(false),
+        _ => false,
+    };
+    UrlMatchResult {
+        matches,
+        matched_pattern: pattern.to_string(),
+    }
+}
+
+fn match_wildcard(url: &str, pattern: &str) -> bool {
+    // Convert glob-style wildcards to a regex pattern.
+    // Escape dots and convert * to .*
+    let regex_pattern = pattern.replace('.', "\\.").replace('*', ".*");
+    match Regex::new(&format!("^{}$", regex_pattern)) {
+        Ok(re) => re.is_match(url),
+        Err(_) => false,
+    }
+}
+
+fn match_regex(url: &str, pattern: &str) -> Result<bool, regex::Error> {
+    let re = Regex::new(pattern)?;
+    Ok(re.is_match(url))
+}
+
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ─── URL matching tests ────────────────────────────────────────────────────
+
+    #[test]
+    fn match_url_exact_matches_identical_urls() {
+        let result = match_url("https://api.example.com/users/123", "https://api.example.com/users/123", "exact");
+        assert!(result.matches);
+    }
+
+    #[test]
+    fn match_url_exact_does_not_match_different_url() {
+        let result = match_url("https://api.example.com/users/123", "https://api.example.com/users", "exact");
+        assert!(!result.matches);
+    }
+
+    #[test]
+    fn match_url_partial_matches_substring() {
+        let result = match_url("https://example.com/api/users/123", "api/users", "partial");
+        assert!(result.matches);
+    }
+
+    #[test]
+    fn match_url_partial_does_not_match_absent_substring() {
+        let result = match_url("https://example.com/api/orders/456", "api/users", "partial");
+        assert!(!result.matches);
+    }
+
+    #[test]
+    fn match_url_wildcard_matches_glob_pattern() {
+        let result = match_url("/foo/api/users/123", "*/api/users/*", "wildcard");
+        assert!(result.matches);
+    }
+
+    #[test]
+    fn match_url_wildcard_does_not_match_mismatched_pattern() {
+        let result = match_url("/foo/api/orders/123", "*/api/users/*", "wildcard");
+        assert!(!result.matches);
+    }
+
+    #[test]
+    fn match_url_regex_matches_valid_pattern() {
+        let result = match_url("/api/users/123", r"^/api/users/\d+$", "regex");
+        assert!(result.matches);
+    }
+
+    #[test]
+    fn match_url_regex_does_not_match_non_digit_id() {
+        let result = match_url("/api/users/abc", r"^/api/users/\d+$", "regex");
+        assert!(!result.matches);
+    }
+
+    #[test]
+    fn match_url_regex_returns_false_for_invalid_pattern() {
+        let result = match_url("/api/users/123", "[invalid", "regex");
+        assert!(!result.matches);
+    }
+
+    #[test]
+    fn match_url_unknown_type_returns_false() {
+        let result = match_url("/api/users/123", "/api/users", "unknown");
+        assert!(!result.matches);
+    }
+
+    #[test]
+    fn match_url_result_contains_matched_pattern() {
+        let result = match_url("https://api.example.com/users", "api/users", "partial");
+        assert_eq!(result.matched_pattern, "api/users");
+    }
+
+    // ─── Proxy server tests ────────────────────────────────────────────────────
 
     #[test]
     fn proxy_server_new_stores_port() {
@@ -400,6 +510,6 @@ mod tests {
         });
 
         let handler = InterceptHandler::new(emit_fn);
-        assert!(handler.pending.lock().unwrap().is_none());
+        assert!(handler.pending.is_none());
     }
 }

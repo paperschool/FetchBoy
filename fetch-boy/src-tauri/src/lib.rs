@@ -505,6 +505,13 @@ fn disable_os_proxy_all_services() {
     }
 }
 
+// ─── URL Matching command ────────────────────────────────────────────────────
+
+#[tauri::command]
+fn match_breakpoint_url(url: String, pattern: String, match_type: String) -> proxy::UrlMatchResult {
+    proxy::match_url(&url, &pattern, &match_type)
+}
+
 // ─── App entry point ─────────────────────────────────────────────────────────
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -576,7 +583,8 @@ pub fn run() {
             is_ca_installed,
             configure_system_proxy,
             unconfigure_system_proxy,
-            is_system_proxy_configured
+            is_system_proxy_configured,
+            match_breakpoint_url
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
