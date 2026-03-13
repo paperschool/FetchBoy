@@ -21,21 +21,22 @@ export function useProxyExitCleanup(): void {
       .onCloseRequested(async (event) => {
         event.preventDefault()
 
-        try {
-          const port = useUiSettingsStore.getState().proxyPort
+        // Persist disabled state so the next launch doesn't re-enable it unexpectedly.
+        await saveSetting('proxy_enabled', false).catch(() => {})
 
-          // Stop the proxy backend and clear OS proxy settings.
-          await invoke('set_proxy_config', { enabled: false, port }).catch(() => {})
+        // Reset in-memory store.
+        useUiSettingsStore.getState().setProxyEnabled(false)
 
-          // Persist disabled state so the next launch doesn't re-enable it unexpectedly.
-          await saveSetting('proxy_enabled', false).catch(() => {})
+        // Stop the proxy and exit the process from Rust — this guarantees the
+        // window actually closes regardless of JS window API quirks.
+        // Race against a hard timeout so a hung DB write can never trap the user.
+        await Promise.race([
+          invoke('exit_app'),
+          new Promise<void>((resolve) => setTimeout(resolve, 3000)),
+        ]).catch(() => {})
 
-          // Reset in-memory store.
-          useUiSettingsStore.getState().setProxyEnabled(false)
-        } finally {
-          // Always close — even if cleanup fails, the user must be able to exit.
-          await getCurrentWindow().destroy()
-        }
+        // Fallback: if exit_app didn't terminate us within the timeout, force it.
+        invoke('exit_app').catch(() => {})
       })
       .then((fn) => {
         unlisten = fn
