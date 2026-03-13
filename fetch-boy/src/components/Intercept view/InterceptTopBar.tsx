@@ -1,6 +1,7 @@
 import { Radio } from "lucide-react";
 import { AppTopBar } from "@/components/Layout/AppTopBar";
 import { useUiSettingsStore } from "@/stores/uiSettingsStore";
+import { useInterceptStore } from "@/stores/interceptStore";
 import { saveSetting } from "@/lib/settings";
 import { invoke } from "@tauri-apps/api/core";
 
@@ -8,6 +9,7 @@ export function InterceptTopBar() {
   const proxyEnabled = useUiSettingsStore((s) => s.proxyEnabled);
   const setProxyEnabled = useUiSettingsStore((s) => s.setProxyEnabled);
   const proxyPort = useUiSettingsStore((s) => s.proxyPort);
+  const clearPauseState = useInterceptStore((s) => s.clearPauseState);
 
   async function handleToggleProxy() {
     if (proxyEnabled) {
@@ -15,6 +17,7 @@ export function InterceptTopBar() {
         await invoke("unconfigure_system_proxy");
         await invoke("set_proxy_config", { enabled: false, port: proxyPort });
         setProxyEnabled(false);
+        clearPauseState();
         void saveSetting("proxy_enabled", false);
       } catch (err) {
         console.error("Failed to stop proxy:", err);

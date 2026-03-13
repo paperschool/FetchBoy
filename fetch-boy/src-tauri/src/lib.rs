@@ -82,6 +82,16 @@ fn set_proxy_config(
         *opt = None;
     }
 
+    // If disabling, drop any requests paused at breakpoints so their async handlers
+    // complete immediately and the proxy can actually shut down. Without this, paused
+    // handlers block indefinitely (especially with timeout = 0), keeping the proxy alive.
+    if !enabled {
+        let mut registry = pause_registry.0.lock().unwrap();
+        for (_, tx) in registry.drain() {
+            let _ = tx.send(proxy::PauseDecision::Drop);
+        }
+    }
+
     // Restart on the new port if enabled.
     if enabled {
         let ca = cert::CertificateAuthority::load_or_create(restart_info.app_data_dir.clone())

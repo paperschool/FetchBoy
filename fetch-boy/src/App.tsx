@@ -28,7 +28,7 @@ async function persistLastSeenVersion(version: string): Promise<void> {
 }
 
 function App() {
-  useProxyExitCleanup();
+  const { shuttingDown } = useProxyExitCleanup();
 
   const method = useRequestStore((s) => s.method);
   const hasCompletedTour = useTourStore((s) => s.hasCompletedTour);
@@ -94,6 +94,15 @@ function App() {
           changelog={parseChangelog(changelogRaw)}
           onDismiss={() => setShowWhatsNew(false)}
         />
+      )}
+      {shuttingDown && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-app-sidebar border border-app-subtle rounded-xl px-8 py-6 flex flex-col items-center gap-3 shadow-2xl">
+            <div className="w-5 h-5 border-2 border-app-muted border-t-blue-400 rounded-full animate-spin" />
+            <p className="text-app-inverse text-sm font-medium">Shutting down proxy…</p>
+            <p className="text-app-muted text-xs">Saving state and closing connections</p>
+          </div>
+        </div>
       )}
     </div>
   );
