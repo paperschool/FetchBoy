@@ -69,8 +69,8 @@ so that I can organize and manage HTTP request breakpoints for intercepting and 
   - [x] Test: breakpoint CRUD operations
   - [x] Test: accordion expand/collapse
 
-- [ ] Final Task — Commit story changes
-  - [ ] Commit all code and documentation changes for this story with a message that includes Story 10.3
+- [x] Final Task — Commit story changes
+  - [x] Commit all code and documentation changes for this story with a message that includes Story 10.3
 
 ## Dev Notes
 
