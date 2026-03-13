@@ -15,6 +15,12 @@ All notable changes to this project will be documented in this file.
 - feat: Intercept table view with search, regex filter, method and status dropdowns, and virtualised row rendering
 - feat: MITM HTTPS proxy with hudsucker and a self-signed CA, plus a certificate and system proxy installation wizard
 
+## [0.0.1] - 2026-03-11
+
+- feat: Project scaffolded with Tauri v2 + React + Vite + TypeScript, Tailwind v4 for styling, and Zustand for state management
+- feat: SQLite persistence layer via tauri-plugin-sql with a migrations system; Monaco editor integrated for request/response body editing
+- feat: GitHub Actions CI pipeline for macOS, Windows and Linux builds with bundle size checks and automated release asset uploads
+
 ## [0.1.0] - 2026-03-12
 
 - feat: Core request builder with Monaco editor, collections sidebar (CRUD, drag-and-drop, SQLite persistence), request history, environment manager with variable interpolation, and auth support (Bearer, Basic, API Key)
