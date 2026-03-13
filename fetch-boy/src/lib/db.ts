@@ -64,6 +64,25 @@ export interface HistoryEntry {
     sent_at: string;
 }
 
+export interface BreakpointFolder {
+    id: string;
+    name: string;
+    sort_order: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface Breakpoint {
+    id: string;
+    folder_id: string | null;
+    name: string;
+    url_pattern: string;
+    match_type: 'exact' | 'partial' | 'wildcard' | 'regex';
+    enabled: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
 export interface AppSettings {
     theme: 'light' | 'dark' | 'system';
     request_timeout_ms: number;
