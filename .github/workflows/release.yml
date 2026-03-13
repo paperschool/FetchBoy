@@ -4,15 +4,15 @@ on:
   workflow_dispatch:
     inputs:
       run_id:
-        description: 'Build run ID to release (leave blank to use the latest successful build)'
+        description: "Build run ID to release (leave blank to use the latest successful build)"
         required: false
         type: string
       version:
-        description: 'Version tag (e.g. v1.2.3) — leave blank to use package.json version'
+        description: "Version tag (e.g. v1.2.3) — leave blank to use package.json version"
         required: false
         type: string
       prerelease:
-        description: 'Mark as pre-release'
+        description: "Mark as pre-release"
         required: false
         type: boolean
         default: false
@@ -55,7 +55,7 @@ jobs:
             TAG="${{ inputs.version }}"
             [[ "$TAG" == v* ]] || TAG="v$TAG"
           else
-            TAG="v$(node -p "require('./fetch-boy/package.json').version")"
+            TAG="v$(node -p "require('./package.json').version")"
           fi
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "Resolved release tag: $TAG"

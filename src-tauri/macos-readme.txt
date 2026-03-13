@@ -29,4 +29,4 @@ If you would like to help fund signing, please visit the project on GitHub.
 QUESTIONS OR ISSUES
 -------------------
 
-https://github.com/dominicjomaa/fetch-boy/issues
+https://github.com/dominicjomaa/issues

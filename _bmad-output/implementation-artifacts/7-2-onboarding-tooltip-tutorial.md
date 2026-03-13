@@ -68,8 +68,8 @@ So that I can quickly understand how to use the app without reading documentatio
   - [x] Test restart functionality
 
 - [x] Task 7 - Final Task - Commit story changes
-  - [x] Run `npx tsc --noEmit` from `fetch-boy/` to verify TypeScript compilation
-  - [x] Run `npx vitest run` from `fetch-boy/` to verify all tests pass
+  - [x] Run `npx tsc --noEmit` from `` to verify TypeScript compilation
+  - [x] Run `npx vitest run` from `` to verify all tests pass
   - [x] Commit all code and documentation changes for this story with a message that includes Story 7.2
 
 ## Dev Notes
@@ -246,8 +246,8 @@ Add data-tour attributes to existing components:
 - Vitest + React Testing Library for tests
 
 **Component Conventions:**
-- TourController in `fetch-boy/src/components/Layout/`
-- TourStore in `fetch-boy/src/stores/`
+- TourController in `src/components/Layout/`
+- TourStore in `src/stores/`
 - Tests co-located with source files
 - Use existing Zustand patterns from other stores
 
@@ -286,7 +286,7 @@ Add data-tour attributes to existing components:
 ### Previous Story Intelligence
 
 **From Story 7.1 (Startup Animation):**
-- SplashScreen component created in `fetch-boy/src/components/Layout/`
+- SplashScreen component created in `src/components/Layout/`
 - App.tsx updated with splash screen logic and onComplete callback pattern
 - useTheme hook available for theme detection
 - Animation timing: minDuration (1500ms), maxDuration (3000ms)
@@ -364,20 +364,20 @@ render(<TourController />);
 ### Project Structure Notes
 
 **New Files (create):**
-- `fetch-boy/src/components/Layout/TourController.tsx` (new)
-- `fetch-boy/src/components/Layout/TourController.test.tsx` (new)
-- `fetch-boy/src/stores/tourStore.ts` (new)
-- `fetch-boy/src/stores/tourStore.test.ts` (new)
+- `src/components/Layout/TourController.tsx` (new)
+- `src/components/Layout/TourController.test.tsx` (new)
+- `src/stores/tourStore.ts` (new)
+- `src/stores/tourStore.test.ts` (new)
 
 **Modified Files:**
-- `fetch-boy/src/App.tsx` (add TourController after splash)
+- `src/App.tsx` (add TourController after splash)
 - Various components to add data-tour attributes:
   - CollectionTree/CollectionSidebar component
   - RequestBuilder component
   - Send button component
   - ResponseViewer component
   - Settings/Environment panel
-- `fetch-boy/src/components/Settings/Settings.tsx` (add restart button)
+- `src/components/Settings/Settings.tsx` (add restart button)
 
 **Dependencies to Add:**
 - Selected tooltip library (e.g., `react-joyride`)
@@ -415,9 +415,9 @@ claude-sonnet-4-20250514
 - Set up testing requirements consistent with project standards
 - Provided guardrails for library selection, persistence, skip/restart functionality
 - **Implementation (dev-story):** Selected react-joyride@2.9.3 as tooltip library (React 18 compatible, TypeScript, active maintenance)
-- Created `fetch-boy/src/stores/tourStore.ts` with Zustand + persist middleware for localStorage persistence
-- Created `fetch-boy/src/components/Layout/TourController.tsx` with 5 tour steps covering all AC #2 areas
-- Modified `fetch-boy/src/App.tsx` to integrate TourController after splash screen with 500ms settle delay
+- Created `src/stores/tourStore.ts` with Zustand + persist middleware for localStorage persistence
+- Created `src/components/Layout/TourController.tsx` with 5 tour steps covering all AC #2 areas
+- Modified `src/App.tsx` to integrate TourController after splash screen with 500ms settle delay
 - Added `data-tour` attributes to Sidebar (collections-sidebar, settings-env) and MainPanel (request-builder, send-button, response-panel)
 - Added "Restart Tutorial" button in SettingsPanel.tsx, wired to tourStore.resetTour()
 - Wrote 5 unit tests for tourStore and 12 component tests for TourController (17 new tests total)
@@ -425,16 +425,16 @@ claude-sonnet-4-20250514
 
 ## File List
 
-- `fetch-boy/src/stores/tourStore.ts` (new)
-- `fetch-boy/src/stores/tourStore.test.ts` (new)
-- `fetch-boy/src/components/Layout/TourController.tsx` (new)
-- `fetch-boy/src/components/Layout/TourController.test.tsx` (new)
-- `fetch-boy/src/App.tsx` (modified - added TourController integration)
-- `fetch-boy/src/components/Sidebar/Sidebar.tsx` (modified - added data-tour attributes)
-- `fetch-boy/src/components/MainPanel/MainPanel.tsx` (modified - added data-tour attributes)
-- `fetch-boy/src/components/Settings/SettingsPanel.tsx` (modified - added Restart Tutorial button)
-- `fetch-boy/package.json` (modified - added react-joyride dependency)
-- `fetch-boy/package-lock.json` (modified - dependency lockfile update)
+- `src/stores/tourStore.ts` (new)
+- `src/stores/tourStore.test.ts` (new)
+- `src/components/Layout/TourController.tsx` (new)
+- `src/components/Layout/TourController.test.tsx` (new)
+- `src/App.tsx` (modified - added TourController integration)
+- `src/components/Sidebar/Sidebar.tsx` (modified - added data-tour attributes)
+- `src/components/MainPanel/MainPanel.tsx` (modified - added data-tour attributes)
+- `src/components/Settings/SettingsPanel.tsx` (modified - added Restart Tutorial button)
+- `package.json` (modified - added react-joyride dependency)
+- `package-lock.json` (modified - dependency lockfile update)
 
 ## Change Log
 

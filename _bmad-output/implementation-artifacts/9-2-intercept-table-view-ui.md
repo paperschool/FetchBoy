@@ -299,10 +299,10 @@ src/components/Intercept/
 
 ### References
 
-- Store pattern reference: `fetch-boy/src/stores/appTabStore.ts` (simple create, no immer)
-- Store pattern reference: `fetch-boy/src/stores/uiSettingsStore.ts` (simple create, no immer)
-- EmptyState component: `fetch-boy/src/components/ui/EmptyState.tsx`
-- CSS tokens: `fetch-boy/src/index.css` (search for `--app-` custom properties)
+- Store pattern reference: `src/stores/appTabStore.ts` (simple create, no immer)
+- Store pattern reference: `src/stores/uiSettingsStore.ts` (simple create, no immer)
+- EmptyState component: `src/components/ui/EmptyState.tsx`
+- CSS tokens: `src/index.css` (search for `--app-` custom properties)
 - Story 9.1 (parent): `_bmad-output/implementation-artifacts/9-1-top-level-tab-shell.md`
 - Epic 9 overview: `_bmad-output/planning-artifacts/epic-9.md`
 

@@ -61,13 +61,13 @@ This story modifies/adds the following files:
 
 | File | Action |
 |------|--------|
-| `fetch-boy/src/types/index.ts` | MODIFIED — add responseMapping to Breakpoint type |
-| `fetch-boy/src/stores/breakpointsStore.ts` | MODIFIED — add responseMapping state and actions |
-| `fetch-boy/src/components/Breakpoints/BreakpointEditor.tsx` | MODIFIED — add Response Mapping section |
-| `fetch-boy/src/components/Breakpoints/BreakpointRow.tsx` | MODIFIED — add visual indicator |
-| `fetch-boy/src-tauri/src/proxy.rs` | MODIFIED — implement response replacement |
-| `fetch-boy/src-tauri/src/db.rs` | MODIFIED — add response_mapping column to breakpoints table |
-| `fetch-boy/src-tauri/migrations/` | MODIFIED — add migration for response_mapping |
+| `src/types/index.ts` | MODIFIED — add responseMapping to Breakpoint type |
+| `src/stores/breakpointsStore.ts` | MODIFIED — add responseMapping state and actions |
+| `src/components/Breakpoints/BreakpointEditor.tsx` | MODIFIED — add Response Mapping section |
+| `src/components/Breakpoints/BreakpointRow.tsx` | MODIFIED — add visual indicator |
+| `src-tauri/src/proxy.rs` | MODIFIED — implement response replacement |
+| `src-tauri/src/db.rs` | MODIFIED — add response_mapping column to breakpoints table |
+| `src-tauri/migrations/` | MODIFIED — add migration for response_mapping |
 
 ### Data Structures
 
@@ -167,7 +167,7 @@ import { ResponseMappingEditor } from './ResponseMappingEditor'
 ### ResponseMappingEditor Component
 
 ```tsx
-// fetch-boy/src/components/Breakpoints/ResponseMappingEditor.tsx
+// src/components/Breakpoints/ResponseMappingEditor.tsx
 
 interface Props {
   mapping: ResponseMapping
@@ -255,7 +255,7 @@ export function ResponseMappingEditor({ mapping, onChange }: Props) {
 ### Testing Approach
 
 ```tsx
-// fetch-boy/src/components/Breakpoints/ResponseMappingEditor.test.tsx
+// src/components/Breakpoints/ResponseMappingEditor.test.tsx
 
 describe('ResponseMappingEditor', () => {
   it('validates JSON for application/json content type', () => {
@@ -296,9 +296,9 @@ describe('ResponseMappingEditor', () => {
 - Story 10.3 (breakpoints tab): [Source: _bmad-output/implementation-artifacts/10-3-breakpoints-tab-interface.md]
 - Story 10.2 (detail view): [Source: _bmad-output/implementation-artifacts/10-2-request-detail-view-with-subtabs.md]
 - Story 9.3 (MITM proxy): [Source: _bmad-output/implementation-artifacts/9-3-mitm-proxy-backend.md]
-- Existing BreakpointsStore: [Source: fetch-boy/src/stores/breakpointsStore.ts]
-- Existing BreakpointEditor: [Source: fetch-boy/src/components/Breakpoints/BreakpointEditor.tsx]
-- SQLite migrations: [Source: fetch-boy/src-tauri/migrations/]
+- Existing BreakpointsStore: [Source: src/stores/breakpointsStore.ts]
+- Existing BreakpointEditor: [Source: src/components/Breakpoints/BreakpointEditor.tsx]
+- SQLite migrations: [Source: src-tauri/migrations/]
 
 ## Dev Agent Record
 
@@ -312,12 +312,12 @@ describe('ResponseMappingEditor', () => {
 
 ### File List
 
-- `fetch-boy/src/types/index.ts` (modified)
-- `fetch-boy/src/stores/breakpointsStore.ts` (modified)
-- `fetch-boy/src/components/Breakpoints/BreakpointEditor.tsx` (modified)
-- `fetch-boy/src/components/Breakpoints/BreakpointRow.tsx` (modified)
-- `fetch-boy/src/components/Breakpoints/ResponseMappingEditor.tsx` (new)
-- `fetch-boy/src/components/Breakpoints/ResponseMappingEditor.test.tsx` (new)
-- `fetch-boy/src-tauri/src/proxy.rs` (modified)
-- `fetch-boy/src-tauri/src/db.rs` (modified)
-- `fetch-boy/src-tauri/migrations/` (new migration file)
+- `src/types/index.ts` (modified)
+- `src/stores/breakpointsStore.ts` (modified)
+- `src/components/Breakpoints/BreakpointEditor.tsx` (modified)
+- `src/components/Breakpoints/BreakpointRow.tsx` (modified)
+- `src/components/Breakpoints/ResponseMappingEditor.tsx` (new)
+- `src/components/Breakpoints/ResponseMappingEditor.test.tsx` (new)
+- `src-tauri/src/proxy.rs` (modified)
+- `src-tauri/src/db.rs` (modified)
+- `src-tauri/migrations/` (new migration file)

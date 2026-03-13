@@ -23,7 +23,7 @@ so that I can auto-populate query rows from the request URL instead of entering 
 ## Tasks / Subtasks
 
 - [x] Task 1 - Add query param extraction utility (AC: 2, 3, 4, 5, 6, 7)
-  - [x] Create `fetch-boy/src/lib/extractQueryParamsFromUrl.ts`
+  - [x] Create `src/lib/extractQueryParamsFromUrl.ts`
   - [x] Export `extractQueryParamsFromUrl(rawUrl: string): { ok: true; params: Array<{ key: string; value: string; enabled: true }> } | { ok: false; error: string }`
   - [x] Parse with `URL` + `URLSearchParams`; if no protocol, retry using `https://` prefix before failing
   - [x] Preserve URL query order and duplicate keys
@@ -31,28 +31,28 @@ so that I can auto-populate query rows from the request URL instead of entering 
   - [x] Return empty param array for URLs with no query string
 
 - [x] Task 2 - Extend Query Params toolbar actions (AC: 1)
-  - [x] Update `fetch-boy/src/components/RequestBuilder/KeyValueRows.tsx` to support optional right-side toolbar actions
+  - [x] Update `src/components/RequestBuilder/KeyValueRows.tsx` to support optional right-side toolbar actions
   - [x] Keep existing usage for Headers unchanged
   - [x] In Query Params usage, add secondary button label `Match Query Params` rendered on the same row as `Add Query Param`, right aligned
 
 - [x] Task 3 - Integrate matching behavior in MainPanel (AC: 2, 3, 4, 5, 6, 7, 8)
-  - [x] Update `fetch-boy/src/components/MainPanel/MainPanel.tsx`
+  - [x] Update `src/components/MainPanel/MainPanel.tsx`
   - [x] Add handler `handleMatchQueryParams` that reads active request URL from tab request state
   - [x] Use extraction utility; on success call `updateReq({ queryParams: parsedParams, isDirty: true })`
   - [x] On extraction failure, do not mutate `queryParams`; set local inline error state shown next to the button
   - [x] Clear inline error when URL changes or when matching succeeds
 
 - [x] Task 4 - Add tests for utility and UI behavior (AC: 9)
-  - [x] Create `fetch-boy/src/lib/extractQueryParamsFromUrl.test.ts`
+  - [x] Create `src/lib/extractQueryParamsFromUrl.test.ts`
   - [x] Add cases: valid URL, no query, repeated keys, key without value, URL with protocol missing, invalid URL
-  - [x] Update `fetch-boy/src/components/MainPanel/MainPanel.test.tsx`:
+  - [x] Update `src/components/MainPanel/MainPanel.test.tsx`:
   - [x] Verify Query Params tab shows `Add Query Param` and `Match Query Params` controls on the same toolbar row
   - [x] Verify clicking `Match Query Params` populates query rows from URL
   - [x] Verify empty query clears rows
   - [x] Verify invalid URL keeps prior rows and shows inline error text
 
 - [x] Task 5 - Verify and commit story changes
-  - [x] Run `npx tsc --noEmit` from `fetch-boy/`
+  - [x] Run `npx tsc --noEmit` from ``
   - [x] Run targeted tests for MainPanel and query extraction utility
   - [x] Commit all implementation and doc changes with a message including `Story 5.6`
 
@@ -60,8 +60,8 @@ so that I can auto-populate query rows from the request URL instead of entering 
 
 ### Existing integration points
 
-- Query param controls are rendered in `fetch-boy/src/components/MainPanel/MainPanel.tsx` through `KeyValueRows` with `addLabel="Add Query Param"`.
-- Shared key/value rows UI is implemented in `fetch-boy/src/components/RequestBuilder/KeyValueRows.tsx`.
+- Query param controls are rendered in `src/components/MainPanel/MainPanel.tsx` through `KeyValueRows` with `addLabel="Add Query Param"`.
+- Shared key/value rows UI is implemented in `src/components/RequestBuilder/KeyValueRows.tsx`.
 - Query param state lives per active tab in `tabStore` request snapshots and is updated via `updateReq(...)` in MainPanel.
 
 ### Guardrails
@@ -80,18 +80,18 @@ so that I can auto-populate query rows from the request URL instead of entering 
 
 ### Project Structure Notes
 
-- New utility: `fetch-boy/src/lib/extractQueryParamsFromUrl.ts`
-- Utility tests: `fetch-boy/src/lib/extractQueryParamsFromUrl.test.ts`
-- Main integration: `fetch-boy/src/components/MainPanel/MainPanel.tsx`
-- Shared row UI update: `fetch-boy/src/components/RequestBuilder/KeyValueRows.tsx`
-- Existing component tests to extend: `fetch-boy/src/components/MainPanel/MainPanel.test.tsx`
+- New utility: `src/lib/extractQueryParamsFromUrl.ts`
+- Utility tests: `src/lib/extractQueryParamsFromUrl.test.ts`
+- Main integration: `src/components/MainPanel/MainPanel.tsx`
+- Shared row UI update: `src/components/RequestBuilder/KeyValueRows.tsx`
+- Existing component tests to extend: `src/components/MainPanel/MainPanel.test.tsx`
 
 ### References
 
 - Source: `_bmad-output/planning-artifacts/epic-5.md` (Story 5.6)
-- Source: `fetch-boy/src/components/MainPanel/MainPanel.tsx` (Query Params rendering and request updates)
-- Source: `fetch-boy/src/components/RequestBuilder/KeyValueRows.tsx` (toolbar row controls)
-- Source: `fetch-boy/src/stores/tabStore.ts` (per-tab request state)
+- Source: `src/components/MainPanel/MainPanel.tsx` (Query Params rendering and request updates)
+- Source: `src/components/RequestBuilder/KeyValueRows.tsx` (toolbar row controls)
+- Source: `src/stores/tabStore.ts` (per-tab request state)
 
 ## Dev Agent Record
 
@@ -126,13 +126,13 @@ GPT-5.3-Codex
 
 - _bmad-output/implementation-artifacts/sprint-status.yaml (modified)
 - _bmad-output/implementation-artifacts/5-6-match-query-params-from-url.md (modified)
-- fetch-boy/src/lib/extractQueryParamsFromUrl.ts (new)
-- fetch-boy/src/lib/extractQueryParamsFromUrl.test.ts (new)
-- fetch-boy/src/components/RequestBuilder/KeyValueRows.tsx (modified)
-- fetch-boy/src/components/MainPanel/MainPanel.tsx (modified)
-- fetch-boy/src/components/MainPanel/MainPanel.test.tsx (modified)
-- fetch-boy/src/components/TabBar/TabBar.tsx (modified)
-- fetch-boy/src/components/TabBar/TabBar.test.tsx (modified)
+- src/lib/extractQueryParamsFromUrl.ts (new)
+- src/lib/extractQueryParamsFromUrl.test.ts (new)
+- src/components/RequestBuilder/KeyValueRows.tsx (modified)
+- src/components/MainPanel/MainPanel.tsx (modified)
+- src/components/MainPanel/MainPanel.test.tsx (modified)
+- src/components/TabBar/TabBar.tsx (modified)
+- src/components/TabBar/TabBar.test.tsx (modified)
 
 ## Change Log
 

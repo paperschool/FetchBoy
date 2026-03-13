@@ -24,31 +24,31 @@ so that I can organize and manage HTTP request breakpoints for intercepting and 
 ## Tasks / Subtasks
 
 - [x] Task 1 — Create BreakpointsStore for state management (AC: #1-8)
-  - [x] Create `fetch-boy/src/stores/breakpointsStore.ts`
+  - [x] Create `src/stores/breakpointsStore.ts`
   - [x] Define `BreakpointFolder` and `Breakpoint` interfaces
   - [x] Implement Zustand store with folders[], breakpoints[], CRUD operations
   - [x] Add SQLite persistence (create new migration)
 
 - [x] Task 2 — Create BreakpointsTree component (AC: #2-5, #8)
-  - [x] Create `fetch-boy/src/components/Breakpoints/BreakpointsTree.tsx`
+  - [x] Create `src/components/Breakpoints/BreakpointsTree.tsx`
   - [x] Follow CollectionTree accordion patterns
   - [x] Implement folder create/rename/delete
   - [x] Implement breakpoint create/edit/delete
   - [x] Keep component ≤150 lines (extract helpers)
 
 - [x] Task 3 — Integrate Breakpoints tab into Sidebar (AC: #1, #6, #7)
-  - [x] Modify `fetch-boy/src/components/Sidebar/Sidebar.tsx` to add "Breakpoints" tab button
+  - [x] Modify `src/components/Sidebar/Sidebar.tsx` to add "Breakpoints" tab button
   - [x] Add "Breakpoints" tab in the tab bar (Collections | History | Breakpoints)
   - [x] Render `<BreakpointsTree />` when Breakpoints tab active
   - [x] Verify accessible from Client view (FetchView)
 
 - [x] Task 4 — Integrate Breakpoints tab into InterceptSidebar (AC: #7)
-  - [x] Modify `fetch-boy/src/components/Intercept view/InterceptSidebar.tsx` to add "Breakpoints" tab
+  - [x] Modify `src/components/Intercept view/InterceptSidebar.tsx` to add "Breakpoints" tab
   - [x] Ensure consistent UI between FetchView and InterceptView sidebars
   - [x] Share BreakpointsTree component between both sidebars
 
 - [x] Task 5 — Create migration for breakpoints persistence (AC: #3-4)
-  - [x] Create `fetch-boy/src-tauri/migrations/002_breakpoints.sql`
+  - [x] Create `src-tauri/migrations/002_breakpoints.sql`
   - [x] Tables: `breakpoint_folders`, `breakpoints`
   - [x] Follow existing folder/collection table patterns
 
@@ -80,16 +80,16 @@ This story modifies/adds the following files:
 
 | File | Action |
 |------|--------|
-| `fetch-boy/src/stores/breakpointsStore.ts` | NEW — Zustand store for breakpoints |
-| `fetch-boy/src/components/Breakpoints/BreakpointsTree.tsx` | NEW — main breakpoints tree component |
-| `fetch-boy/src/components/Breakpoints/FolderRow.tsx` | NEW — folder row component (reusable pattern) |
-| `fetch-boy/src/components/Breakpoints/BreakpointRow.tsx` | NEW — breakpoint row component |
-| `fetch-boy/src/components/Breakpoints/BreakpointsTree.test.tsx` | NEW — component tests |
-| `fetch-boy/src/components/Sidebar/Sidebar.tsx` | MODIFIED — add Breakpoints tab |
-| `fetch-boy/src/components/Intercept view/InterceptSidebar.tsx` | MODIFIED — add Breakpoints tab |
-| `fetch-boy/src-tauri/migrations/002_breakpoints.sql` | NEW — SQLite migration |
-| `fetch-boy/src-tauri/src/db.rs` | MODIFIED — add breakpoint SQL functions |
-| `fetch-boy/src-tauri/src/lib.rs` | MODIFIED — add breakpoint Tauri commands |
+| `src/stores/breakpointsStore.ts` | NEW — Zustand store for breakpoints |
+| `src/components/Breakpoints/BreakpointsTree.tsx` | NEW — main breakpoints tree component |
+| `src/components/Breakpoints/FolderRow.tsx` | NEW — folder row component (reusable pattern) |
+| `src/components/Breakpoints/BreakpointRow.tsx` | NEW — breakpoint row component |
+| `src/components/Breakpoints/BreakpointsTree.test.tsx` | NEW — component tests |
+| `src/components/Sidebar/Sidebar.tsx` | MODIFIED — add Breakpoints tab |
+| `src/components/Intercept view/InterceptSidebar.tsx` | MODIFIED — add Breakpoints tab |
+| `src-tauri/migrations/002_breakpoints.sql` | NEW — SQLite migration |
+| `src-tauri/src/db.rs` | MODIFIED — add breakpoint SQL functions |
+| `src-tauri/src/lib.rs` | MODIFIED — add breakpoint Tauri commands |
 
 ### Key Existing Patterns to Follow
 
@@ -274,7 +274,7 @@ interface BreakpointFolder {
 
 **BreakpointsTree (≤150 lines):**
 ```tsx
-// fetch-boy/src/components/Breakpoints/BreakpointsTree.tsx
+// src/components/Breakpoints/BreakpointsTree.tsx
 
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
@@ -406,7 +406,7 @@ function FolderRow({
 
 ### Testing Approach
 
-**File:** `fetch-boy/src/components/Breakpoints/BreakpointsTree.test.tsx`
+**File:** `src/components/Breakpoints/BreakpointsTree.test.tsx`
 
 ```tsx
 import { render, screen } from '@testing-library/react'
@@ -447,7 +447,7 @@ describe('BreakpointsTree', () => {
 
 ### Project Structure Notes
 
-- **New folder**: `fetch-boy/src/components/Breakpoints/` — create this directory
+- **New folder**: `src/components/Breakpoints/` — create this directory
 - **No shadcn/ui** — raw Tailwind only, consistent with existing components
 - **Reuse EmptyState** from `@/components/ui/EmptyState`
 - **Follow CollectionTree patterns** — but simplify (no drag-drop for this story)
@@ -490,12 +490,12 @@ fn delete_breakpoint(id: String) -> Result<(), String> { ... }
 - Story 10.2 (detail view): [Source: _bmad-output/implementation-artifacts/10-2-request-detail-view-with-subtabs.md]
 - Story 10.1 (split view): [Source: _bmad-output/implementation-artifacts/10-1-intercept-split-view-with-request-table.md]
 - Epic 10 full spec: [Source: _bmad-output/planning-artifacts/epic-10.md#Story-10.3]
-- Existing Sidebar: [Source: fetch-boy/src/components/Sidebar/Sidebar.tsx]
-- Existing InterceptSidebar: [Source: fetch-boy/src/components/Intercept view/InterceptSidebar.tsx]
-- Existing CollectionTree: [Source: fetch-boy/src/components/CollectionTree/CollectionTree.tsx]
-- Existing FolderRow: [Source: fetch-boy/src/components/CollectionTree/FolderRow.tsx]
+- Existing Sidebar: [Source: src/components/Sidebar/Sidebar.tsx]
+- Existing InterceptSidebar: [Source: src/components/Intercept view/InterceptSidebar.tsx]
+- Existing CollectionTree: [Source: src/components/CollectionTree/CollectionTree.tsx]
+- Existing FolderRow: [Source: src/components/CollectionTree/FolderRow.tsx]
 - Existing breakpointsStore: NEW (follow collectionStore pattern)
-- Existing EmptyState: [Source: fetch-boy/src/components/ui/EmptyState.tsx]
+- Existing EmptyState: [Source: src/components/ui/EmptyState.tsx]
 
 ## Dev Agent Record
 
@@ -521,17 +521,17 @@ None — clean implementation.
 
 ### File List
 
-- `fetch-boy/src/lib/db.ts` (modified — added BreakpointFolder and Breakpoint interfaces)
-- `fetch-boy/src/lib/breakpoints.ts` (new — DB CRUD functions)
-- `fetch-boy/src/stores/breakpointsStore.ts` (new)
-- `fetch-boy/src/components/Breakpoints/BreakpointsTree.tsx` (new)
-- `fetch-boy/src/components/Breakpoints/FolderRow.tsx` (new)
-- `fetch-boy/src/components/Breakpoints/BreakpointRow.tsx` (new)
-- `fetch-boy/src/components/Breakpoints/BreakpointsTree.test.tsx` (new)
-- `fetch-boy/src/components/Sidebar/Sidebar.tsx` (modified)
-- `fetch-boy/src/components/Intercept view/InterceptSidebar.tsx` (modified)
-- `fetch-boy/src-tauri/migrations/002_breakpoints.sql` (new)
-- `fetch-boy/src-tauri/src/db.rs` (modified)
+- `src/lib/db.ts` (modified — added BreakpointFolder and Breakpoint interfaces)
+- `src/lib/breakpoints.ts` (new — DB CRUD functions)
+- `src/stores/breakpointsStore.ts` (new)
+- `src/components/Breakpoints/BreakpointsTree.tsx` (new)
+- `src/components/Breakpoints/FolderRow.tsx` (new)
+- `src/components/Breakpoints/BreakpointRow.tsx` (new)
+- `src/components/Breakpoints/BreakpointsTree.test.tsx` (new)
+- `src/components/Sidebar/Sidebar.tsx` (modified)
+- `src/components/Intercept view/InterceptSidebar.tsx` (modified)
+- `src-tauri/migrations/002_breakpoints.sql` (new)
+- `src-tauri/src/db.rs` (modified)
 
 ### Change Log
 

@@ -20,12 +20,12 @@ So that I notice new features without reading release notes.
 ## Tasks / Subtasks
 
 - [x] Task 1 - Create changelog JSON file and version storage (AC: 4)
-  - [x] Create `fetch-boy/src/data/changelog.json` with version entries
+  - [x] Create `src/data/changelog.json` with version entries
   - [x] Add `lastSeenVersion` field to uiSettingsStore
   - [x] Create `getCurrentVersion()` utility to read from package.json
 
 - [x] Task 2 - Create WhatsNewModal component (AC: 2, 3)
-  - [x] Create `fetch-boy/src/components/ui/WhatsNewModal.tsx`
+  - [x] Create `src/components/ui/WhatsNewModal.tsx`
   - [x] Accept `version: string` and `changelog: ChangelogEntry[]` props
   - [x] Support theme-aware styling (light/dark mode)
   - [x] Single "Got it" button to dismiss
@@ -38,8 +38,8 @@ So that I notice new features without reading release notes.
   - [x] Update lastSeenVersion after modal dismissed
 
 - [x] Task 4 - Final Task - Commit story changes
-  - [x] Run `npx tsc --noEmit` from `fetch-boy/` to verify TypeScript compilation
-  - [x] Run `npx vitest run` from `fetch-boy/` to verify all tests pass
+  - [x] Run `npx tsc --noEmit` from `` to verify TypeScript compilation
+  - [x] Run `npx vitest run` from `` to verify all tests pass
   - [x] Commit all code and documentation changes for this story with a message that includes Story 7.6
 
 ## Dev Notes
@@ -48,7 +48,7 @@ So that I notice new features without reading release notes.
 
 **Changelog Data Structure:**
 
-Create `fetch-boy/src/data/changelog.json`:
+Create `src/data/changelog.json`:
 
 ```json
 {
@@ -70,7 +70,7 @@ Create `fetch-boy/src/data/changelog.json`:
 
 **Updated UiSettingsStore:**
 
-Add `lastSeenVersion` to `fetch-boy/src/stores/uiSettingsStore.ts`:
+Add `lastSeenVersion` to `src/stores/uiSettingsStore.ts`:
 
 ```typescript
 interface UiSettingsState {
@@ -86,7 +86,7 @@ setLastSeenVersion: (version) => set({ lastSeenVersion: version }),
 
 **Version Utility:**
 
-Create `fetch-boy/src/lib/appVersion.ts`:
+Create `src/lib/appVersion.ts`:
 
 ```typescript
 import packageJson from '../../package.json';
@@ -103,7 +103,7 @@ export function isNewVersion(lastSeen: string | null): boolean {
 
 **WhatsNewModal Component:**
 
-Create at `fetch-boy/src/components/ui/WhatsNewModal.tsx`:
+Create at `src/components/ui/WhatsNewModal.tsx`:
 
 ```typescript
 import { X, Sparkles } from 'lucide-react';
@@ -243,12 +243,12 @@ useEffect(() => {
 
 ### Integration Points
 
-- **New file**: `fetch-boy/src/data/changelog.json` - Changelog data
-- **New file**: `fetch-boy/src/lib/appVersion.ts` - Version utilities
-- **New file**: `fetch-boy/src/components/ui/WhatsNewModal.tsx` - Modal component
-- **New file**: `fetch-boy/src/components/ui/WhatsNewModal.test.tsx` - Tests
-- **Modified**: `fetch-boy/src/stores/uiSettingsStore.ts` - Add lastSeenVersion
-- **Modified**: `fetch-boy/src/App.tsx` - Version check logic + modal
+- **New file**: `src/data/changelog.json` - Changelog data
+- **New file**: `src/lib/appVersion.ts` - Version utilities
+- **New file**: `src/components/ui/WhatsNewModal.tsx` - Modal component
+- **New file**: `src/components/ui/WhatsNewModal.test.tsx` - Tests
+- **Modified**: `src/stores/uiSettingsStore.ts` - Add lastSeenVersion
+- **Modified**: `src/App.tsx` - Version check logic + modal
 
 ### Critical Implementation Guardrails
 
@@ -341,14 +341,14 @@ expect(isNewVersion('0.0.9')).toBe(true);
 ### Project Structure Notes
 
 **New Files:**
-- `fetch-boy/src/data/changelog.json` (new - changelog entries)
-- `fetch-boy/src/lib/appVersion.ts` (new - version utilities)
-- `fetch-boy/src/components/ui/WhatsNewModal.tsx` (new)
-- `fetch-boy/src/components/ui/WhatsNewModal.test.tsx` (new)
+- `src/data/changelog.json` (new - changelog entries)
+- `src/lib/appVersion.ts` (new - version utilities)
+- `src/components/ui/WhatsNewModal.tsx` (new)
+- `src/components/ui/WhatsNewModal.test.tsx` (new)
 
 **Modified Files:**
-- `fetch-boy/src/stores/uiSettingsStore.ts` (add lastSeenVersion)
-- `fetch-boy/src/App.tsx` (version check + modal integration)
+- `src/stores/uiSettingsStore.ts` (add lastSeenVersion)
+- `src/App.tsx` (version check + modal integration)
 
 **No New Dependencies:**
 - Uses existing Lucide React icons
@@ -387,11 +387,11 @@ claude-sonnet-4-20250514
 
 ### Completion Notes List
 
-- [Done] Created `fetch-boy/src/data/changelog.json` with v0.1.0 changelog entries
+- [Done] Created `src/data/changelog.json` with v0.1.0 changelog entries
 - [Done] Added `lastSeenVersion` + `setLastSeenVersion` to `uiSettingsStore`
 - [Done] Added `last_seen_version` to `AppSettings` in `db.ts` and `settings.ts`
 - [Done] Updated `AppShell.tsx` to load `lastSeenVersion` from DB settings on startup
-- [Done] Created `fetch-boy/src/lib/appVersion.ts` with `getCurrentVersion()` and `isNewVersion()`
+- [Done] Created `src/lib/appVersion.ts` with `getCurrentVersion()` and `isNewVersion()`
 - [Done] Created `WhatsNewModal.tsx` component with theme-aware styling, Escape key support, and "Got it" dismiss button
 - [Done] Created `WhatsNewModal.test.tsx` with 10 tests (all passing)
 - [Done] Created `appVersion.test.ts` with 6 tests (all passing)
@@ -402,18 +402,18 @@ claude-sonnet-4-20250514
 
 ### File List
 
-- fetch-boy/src/data/changelog.json (new)
-- fetch-boy/src/lib/appVersion.ts (new)
-- fetch-boy/src/lib/appVersion.test.ts (new)
-- fetch-boy/src/components/ui/WhatsNewModal.tsx (new)
-- fetch-boy/src/components/ui/WhatsNewModal.test.tsx (new)
-- fetch-boy/src/stores/uiSettingsStore.ts (modified)
-- fetch-boy/src/App.tsx (modified)
-- fetch-boy/src/lib/db.ts (modified)
-- fetch-boy/src/lib/settings.ts (modified)
-- fetch-boy/src/lib/settings.test.ts (modified)
-- fetch-boy/src/components/Layout/AppShell.tsx (modified)
-- fetch-boy/tsconfig.app.json (modified)
+- src/data/changelog.json (new)
+- src/lib/appVersion.ts (new)
+- src/lib/appVersion.test.ts (new)
+- src/components/ui/WhatsNewModal.tsx (new)
+- src/components/ui/WhatsNewModal.test.tsx (new)
+- src/stores/uiSettingsStore.ts (modified)
+- src/App.tsx (modified)
+- src/lib/db.ts (modified)
+- src/lib/settings.ts (modified)
+- src/lib/settings.test.ts (modified)
+- src/components/Layout/AppShell.tsx (modified)
+- tsconfig.app.json (modified)
 
 ## Change Log
 

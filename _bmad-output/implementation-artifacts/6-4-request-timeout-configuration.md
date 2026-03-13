@@ -29,7 +29,7 @@ so that runaway or unresponsive calls fail fast with a clear message rather than
   - [x] Ensure timeout persists in tab state for session lifetime
 
 - [x] Task 2 - Create TimeoutInput component (AC: 1)
-  - [x] Create `TimeoutInput.tsx` component in `fetch-boy/src/components/RequestBuilder/`
+  - [x] Create `TimeoutInput.tsx` component in `src/components/RequestBuilder/`
   - [x] Add input field with "ms" suffix label
   - [x] Position in Options tab of Request Details accordion (user preference)
   - [x] Validate input: only positive integers allowed
@@ -63,8 +63,8 @@ so that runaway or unresponsive calls fail fast with a clear message rather than
   - [x] 4 new tests in ResponseViewer for wasTimedOut neutral display
 
 - [x] Task 8 - Verify and commit story changes
-  - [x] Run `npx tsc --noEmit` from `fetch-boy/` — no errors
-  - [x] Run `npx vitest run` from `fetch-boy/` — 441 tests pass
+  - [x] Run `npx tsc --noEmit` from `` — no errors
+  - [x] Run `npx vitest run` from `` — 441 tests pass
   - [x] Commit: 4bc5c34 "Story 6.4: Implement request timeout configuration"
 
 ## Dev Notes
@@ -185,7 +185,7 @@ const handleResponse = (response: Response | string) => {
 - lucide-react for icons
 
 **Component/File Conventions:**
-- Input components in `fetch-boy/src/components/RequestBuilder/`
+- Input components in `src/components/RequestBuilder/`
 - Tests co-located: `ComponentName.test.tsx` alongside source
 - Use consistent styling with other toolbar inputs (Send button, method selector)
 
@@ -279,20 +279,20 @@ expect(onChange).toHaveBeenCalledWith(0);
 ### Project Structure Notes
 
 **New Files:**
-- `fetch-boy/src/components/RequestBuilder/TimeoutInput.tsx` - New timeout input component
+- `src/components/RequestBuilder/TimeoutInput.tsx` - New timeout input component
 
 **Modified Files:**
-- `fetch-boy/src/stores/tabStore.ts` - Add timeout field to Tab type
-- `fetch-boy/src/components/MainPanel/MainPanel.tsx` - Add TimeoutInput to toolbar
-- `fetch-boy/src/components/RequestBuilder/TimeoutInput.test.tsx` - New test file
-- `fetch-boy/src-tauri/src/main.rs` - Add timeout parameter to HTTP command
+- `src/stores/tabStore.ts` - Add timeout field to Tab type
+- `src/components/MainPanel/MainPanel.tsx` - Add TimeoutInput to toolbar
+- `src/components/RequestBuilder/TimeoutInput.test.tsx` - New test file
+- `src-tauri/src/main.rs` - Add timeout parameter to HTTP command
 - Settings panel (if needed): Add global default timeout setting
 
 ### References
 
 - **Primary Source**: `_bmad-output/planning-artifacts/epic-6.md` (Story 6.4 acceptance criteria)
-- **tabStore**: `fetch-boy/src/stores/tabStore.ts` (Tab type definition)
-- **MainPanel**: `fetch-boy/src/components/MainPanel/MainPanel.tsx` (toolbar structure)
+- **tabStore**: `src/stores/tabStore.ts` (Tab type definition)
+- **MainPanel**: `src/components/MainPanel/MainPanel.tsx` (toolbar structure)
 - **Settings**: Story 4.3 settings panel for global default integration
 - **Story 6.2**: Request cancellation for AbortController pattern
 - **Story 6.3**: Keyboard shortcut - parallel work, no integration needed
@@ -322,14 +322,14 @@ claude-sonnet-4-6
 
 ### File List
 
-- `fetch-boy/src/stores/tabStore.ts` — added `timeout` to RequestSnapshot, `wasTimedOut`/`timedOutAfterSec` to ResponseSnapshot
-- `fetch-boy/src/stores/requestStore.ts` — added `'options'` to RequestTab union
-- `fetch-boy/src/components/RequestBuilder/TimeoutInput.tsx` — new component
-- `fetch-boy/src/components/RequestBuilder/TimeoutInput.test.tsx` — 12 unit tests
-- `fetch-boy/src/components/MainPanel/MainPanel.tsx` — Options tab + TimeoutInput, __TIMEOUT__ handling, per-tab timeout
-- `fetch-boy/src/components/ResponseViewer/ResponseViewer.tsx` — wasTimedOut neutral display
-- `fetch-boy/src/components/ResponseViewer/ResponseViewer.test.tsx` — 4 new timeout tests
-- `fetch-boy/src-tauri/src/http.rs` — timeout=0 no-op, __TIMEOUT__ sentinel on reqwest timeout
+- `src/stores/tabStore.ts` — added `timeout` to RequestSnapshot, `wasTimedOut`/`timedOutAfterSec` to ResponseSnapshot
+- `src/stores/requestStore.ts` — added `'options'` to RequestTab union
+- `src/components/RequestBuilder/TimeoutInput.tsx` — new component
+- `src/components/RequestBuilder/TimeoutInput.test.tsx` — 12 unit tests
+- `src/components/MainPanel/MainPanel.tsx` — Options tab + TimeoutInput, __TIMEOUT__ handling, per-tab timeout
+- `src/components/ResponseViewer/ResponseViewer.tsx` — wasTimedOut neutral display
+- `src/components/ResponseViewer/ResponseViewer.test.tsx` — 4 new timeout tests
+- `src-tauri/src/http.rs` — timeout=0 no-op, __TIMEOUT__ sentinel on reqwest timeout
 
 ## Change Log
 

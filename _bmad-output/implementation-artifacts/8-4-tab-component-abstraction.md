@@ -25,41 +25,41 @@ so that the codebase follows DRY/SRP principles and has full test coverage.
 ### Phase 1: Test Fixes
 
 - [x] Task 1 - Fix tourStore tests (AC: 4)
-  - [x] Examine `fetch-boy/src/stores/tourStore.ts` for localStorage usage
+  - [x] Examine `src/stores/tourStore.ts` for localStorage usage
   - [x] Update test setup to mock localStorage properly
   - [x] Run tests to verify fixes
 
 - [x] Task 2 - Fix TourController tests (AC: 4)
-  - [x] Examine `fetch-boy/src/components/Layout/TourController.tsx`
+  - [x] Examine `src/components/Layout/TourController.tsx`
   - [x] Update test mocks to handle localStorage
   - [x] Run tests to verify fixes
 
 ### Phase 2: Component Abstraction
 
 - [x] Task 3 - Create Abstract TopBar Component (AC: 1, 2)
-  - [x] Create `fetch-boy/src/components/Layout/AppTopBar.tsx`
+  - [x] Create `src/components/Layout/AppTopBar.tsx`
   - [x] Extract common props: title, logo/icon, actions
   - [x] Refactor `TopBar.tsx` to use AppTopBar
   - [x] Refactor `InterceptTopBar.tsx` to use AppTopBar
 
 - [x] Task 4 - Create Abstract Sidebar Component (AC: 2)
-  - [x] Create `fetch-boy/src/components/Layout/AppSidebar.tsx`
+  - [x] Create `src/components/Layout/AppSidebar.tsx`
   - [x] Extract common props: collapsed, onToggle, collapseButton
   - [x] Handle panel-specific content via children render prop
   - [x] Refactor `Sidebar.tsx` to use AppSidebar
   - [x] Refactor `InterceptSidebar.tsx` to use AppSidebar
 
 - [x] Task 5 - Create TabLayout Component (AC: 3)
-  - [x] Create `fetch-boy/src/components/Layout/TabLayout.tsx`
+  - [x] Create `src/components/Layout/TabLayout.tsx`
   - [x] Extract common grid layout pattern from FetchView and InterceptView
   - [x] Props: topBar, sidebar, mainContent, sidebarCollapsed, onToggleSidebar
   - [x] Refactor `FetchView.tsx` to use TabLayout
   - [x] Refactor `InterceptView.tsx` to use TabLayout
 
 - [x] Task 6 - Final Task - Commit story changes
-  - [x] Run `npx tsc --noEmit` from `fetch-boy/` to verify TypeScript compilation
-  - [x] Run `cargo check` from `fetch-boy/src-tauri/` to verify Rust compilation
-  - [x] Run `npx vitest run` from `fetch-boy/` to verify all tests pass
+  - [x] Run `npx tsc --noEmit` from `` to verify TypeScript compilation
+  - [x] Run `cargo check` from `src-tauri/` to verify Rust compilation
+  - [x] Run `npx vitest run` from `` to verify all tests pass
   - [x] Commit all code and documentation changes for this story with a message that includes Story 8.4
 
 ## Dev Notes
@@ -270,7 +270,7 @@ beforeEach(() => {
 
 **Component Pattern:**
 
-- Follow existing component patterns in `fetch-boy/src/components/Layout/`
+- Follow existing component patterns in `src/components/Layout/`
 - Use barrel exports
 - Props interfaces with component files
 
@@ -283,23 +283,23 @@ beforeEach(() => {
 
 **New Files:**
 
-- `fetch-boy/src/components/Layout/AppTopBar.tsx` - Abstract top bar
-- `fetch-boy/src/components/Layout/AppSidebar.tsx` - Abstract sidebar
-- `fetch-boy/src/components/Layout/TabLayout.tsx` - Abstract tab layout
+- `src/components/Layout/AppTopBar.tsx` - Abstract top bar
+- `src/components/Layout/AppSidebar.tsx` - Abstract sidebar
+- `src/components/Layout/TabLayout.tsx` - Abstract tab layout
 
 **Modified Files:**
 
-- `fetch-boy/src/components/TopBar/TopBar.tsx` - Use AppTopBar
-- `fetch-boy/src/components/Intercept/InterceptTopBar.tsx` - Use AppTopBar
-- `fetch-boy/src/components/Sidebar/Sidebar.tsx` - Use AppSidebar
-- `fetch-boy/src/components/Intercept/InterceptSidebar.tsx` - Use AppSidebar
-- `fetch-boy/src/components/FetchView/FetchView.tsx` - Use TabLayout
-- `fetch-boy/src/components/Intercept/InterceptView.tsx` - Use TabLayout
+- `src/components/TopBar/TopBar.tsx` - Use AppTopBar
+- `src/components/Intercept/InterceptTopBar.tsx` - Use AppTopBar
+- `src/components/Sidebar/Sidebar.tsx` - Use AppSidebar
+- `src/components/Intercept/InterceptSidebar.tsx` - Use AppSidebar
+- `src/components/FetchView/FetchView.tsx` - Use TabLayout
+- `src/components/Intercept/InterceptView.tsx` - Use TabLayout
 
 **Test Files:**
 
-- `fetch-boy/src/stores/tourStore.test.ts` - Fix localStorage mock
-- `fetch-boy/src/components/Layout/TourController.test.tsx` - Fix localStorage mock
+- `src/stores/tourStore.test.ts` - Fix localStorage mock
+- `src/components/Layout/TourController.test.tsx` - Fix localStorage mock
 
 ### Critical Implementation Guardrails
 
@@ -352,17 +352,17 @@ claude-sonnet-4-20250514
 
 ### File List
 
-- fetch-boy/src/components/Layout/AppTopBar.tsx (new)
-- fetch-boy/src/components/Layout/AppSidebar.tsx (new)
-- fetch-boy/src/components/Layout/TabLayout.tsx (new)
-- fetch-boy/src/components/TopBar/TopBar.tsx (modified - use AppTopBar)
-- fetch-boy/src/components/Intercept/InterceptTopBar.tsx (modified - use AppTopBar)
-- fetch-boy/src/components/Sidebar/Sidebar.tsx (modified - use AppSidebar)
-- fetch-boy/src/components/Intercept/InterceptSidebar.tsx (modified - use AppSidebar)
-- fetch-boy/src/components/FetchView/FetchView.tsx (modified - use TabLayout)
-- fetch-boy/src/components/Intercept/InterceptView.tsx (modified - use TabLayout)
-- fetch-boy/src/stores/tourStore.test.ts (modified - fix localStorage mock)
-- fetch-boy/src/components/Layout/TourController.test.tsx (modified - fix localStorage mock)
+- src/components/Layout/AppTopBar.tsx (new)
+- src/components/Layout/AppSidebar.tsx (new)
+- src/components/Layout/TabLayout.tsx (new)
+- src/components/TopBar/TopBar.tsx (modified - use AppTopBar)
+- src/components/Intercept/InterceptTopBar.tsx (modified - use AppTopBar)
+- src/components/Sidebar/Sidebar.tsx (modified - use AppSidebar)
+- src/components/Intercept/InterceptSidebar.tsx (modified - use AppSidebar)
+- src/components/FetchView/FetchView.tsx (modified - use TabLayout)
+- src/components/Intercept/InterceptView.tsx (modified - use TabLayout)
+- src/stores/tourStore.test.ts (modified - fix localStorage mock)
+- src/components/Layout/TourController.test.tsx (modified - fix localStorage mock)
 
 ## Change Log
 

@@ -22,7 +22,7 @@ so that switching between tabs never corrupts or overwrites work in another tab.
 ## Tasks / Subtasks
 
 - [x] Task 1 — Extend `TabEntry` and `tabStore` with per-tab state slices (AC: 1, 2, 4, 7, 8)
-  - [x] Open `fetch-boy/src/stores/tabStore.ts`
+  - [x] Open `src/stores/tabStore.ts`
   - [x] Define `RequestSnapshot` interface (data-only mirror of `RequestState` in `requestStore.ts`, no action methods): `method: HttpMethod`, `url: string`, `headers: KeyValueRow[]`, `queryParams: KeyValueRow[]`, `body: { mode: BodyMode; raw: string }`, `auth: AuthState`, `activeTab: RequestTab`, `isDirty: boolean`
   - [x] Define `ResponseSnapshot` interface: `responseData: ResponseData | null`, `requestError: string | null`, `sentUrl: string | null`, `verboseLogs: string[]`, `requestBodyLanguage: 'json' | 'html' | 'xml'`
   - [x] Add `requestState: RequestSnapshot` and `responseState: ResponseSnapshot` to `TabEntry`
@@ -35,13 +35,13 @@ so that switching between tabs never corrupts or overwrites work in another tab.
   - [x] Export types `RequestSnapshot` and `ResponseSnapshot`
 
 - [x] Task 2 — Create `useActiveTabState` selector hooks (AC: 3, 8)
-  - [x] Create `fetch-boy/src/hooks/useActiveTabState.ts`
+  - [x] Create `src/hooks/useActiveTabState.ts`
   - [x] Export `useActiveRequestState()` — returns `{ state: RequestSnapshot; update: (patch: Partial<RequestSnapshot>) => void }` scoped to the active tab
   - [x] Export `useActiveResponseState()` — returns `{ state: ResponseSnapshot; update: (patch: Partial<ResponseSnapshot>) => void }` scoped to the active tab
   - [x] Both hooks subscribe to `useTabStore` and derive from `tabs.find(t => t.id === activeTabId)` to minimise re-renders
 
 - [x] Task 3 — Migrate `MainPanel.tsx` to use per-tab state (AC: 2, 3, 5, 6)
-  - [x] Open `fetch-boy/src/components/MainPanel/MainPanel.tsx`
+  - [x] Open `src/components/MainPanel/MainPanel.tsx`
   - [x] Replace `useRequestStore()` reads/writes with `useActiveRequestState()`
   - [x] Replace local `useState` for `responseData`, `requestError`, `sentUrl`, `verboseLogs`, `requestBodyLanguage` with `useActiveResponseState()`
   - [x] Keep `isSending` and `saveDialogOpen` as local `useState` (UI-ephemeral, not worth persisting per-tab)
@@ -49,15 +49,15 @@ so that switching between tabs never corrupts or overwrites work in another tab.
   - [x] Verify: switching tabs in dev mode shows each tab's independent request and response
 
 - [x] Task 4 — Update non-MainPanel consumers of `requestStore` (AC: 6)
-  - [x] Create `fetch-boy/src/lib/requestSnapshotUtils.ts` exporting:
+  - [x] Create `src/lib/requestSnapshotUtils.ts` exporting:
     - `buildSnapshotFromSaved(request: Request): RequestSnapshot` — converts a DB `Request` object to a `RequestSnapshot` (reuse the field-mapping logic from `requestStore.loadFromSaved`)
     - `buildSnapshotFromHistory(entry: HistoryEntry): RequestSnapshot` — same but from a `HistoryEntry.request_snapshot`
-  - [x] `fetch-boy/src/components/CollectionTree/CollectionTree.tsx`: in `handleLoadRequest`, replace `requestStore.loadFromSaved(request)` with `useTabStore.getState().updateTabRequestState(activeTabId, buildSnapshotFromSaved(request))`; keep `collectionStore.setActiveRequest(id)` unchanged
-  - [x] `fetch-boy/src/components/HistoryPanel/HistoryPanel.tsx`: in `handleRowClick`, replace `requestStore.loadFromSaved(entry.request_snapshot)` with `useTabStore.getState().updateTabRequestState(activeTabId, buildSnapshotFromSaved(entry.request_snapshot))`
-  - [x] `fetch-boy/src/components/TabBar/TabBar.tsx`: update `syncLabelFromRequest` subscription to read `method` and `url` from `useActiveRequestState().state` instead of `useRequestStore`
+  - [x] `src/components/CollectionTree/CollectionTree.tsx`: in `handleLoadRequest`, replace `requestStore.loadFromSaved(request)` with `useTabStore.getState().updateTabRequestState(activeTabId, buildSnapshotFromSaved(request))`; keep `collectionStore.setActiveRequest(id)` unchanged
+  - [x] `src/components/HistoryPanel/HistoryPanel.tsx`: in `handleRowClick`, replace `requestStore.loadFromSaved(entry.request_snapshot)` with `useTabStore.getState().updateTabRequestState(activeTabId, buildSnapshotFromSaved(entry.request_snapshot))`
+  - [x] `src/components/TabBar/TabBar.tsx`: update `syncLabelFromRequest` subscription to read `method` and `url` from `useActiveRequestState().state` instead of `useRequestStore`
 
 - [x] Task 5 — Write unit tests (AC: 1–5, 7, 8)
-  - [x] Update `fetch-boy/src/stores/tabStore.test.ts`
+  - [x] Update `src/stores/tabStore.test.ts`
   - [x] Test: `addTab()` creates tab with default request state (method GET, empty url, isDirty false)
   - [x] Test: `updateTabRequestState(id, { url: 'https://example.com' })` modifies only the target tab; other tabs are unchanged
   - [x] Test: `updateTabResponseState(id, { requestError: 'timeout' })` modifies only the target tab
@@ -65,8 +65,8 @@ so that switching between tabs never corrupts or overwrites work in another tab.
   - [x] Test: `useActiveRequestState()` hook's `update()` fn targets only the active tab
 
 - [x] Task 6 — Final: commit story changes
-  - [x] Run `npx tsc --noEmit` from `fetch-boy/` — zero TypeScript errors
-  - [x] Run `npx vitest run` from `fetch-boy/` — all tests pass including new ones (1 pre-existing unrelated failure in EnvironmentPanel excluded)
+  - [x] Run `npx tsc --noEmit` from `` — zero TypeScript errors
+  - [x] Run `npx vitest run` from `` — all tests pass including new ones (1 pre-existing unrelated failure in EnvironmentPanel excluded)
   - [x] Commit all code and documentation changes for this story with a message that includes `Story 5.2`
 
 ## Dev Notes
@@ -98,28 +98,28 @@ updateTabRequestState: (id, patch) =>
 ```
 
 ### Type imports
-- `ResponseData` — import from `fetch-boy/src/components/ResponseViewer/ResponseViewer.tsx`
-- `HttpMethod`, `RequestTab`, `AuthState`, `BodyMode`, `KeyValueRow` — import from `fetch-boy/src/stores/requestStore.ts`
+- `ResponseData` — import from `src/components/ResponseViewer/ResponseViewer.tsx`
+- `HttpMethod`, `RequestTab`, `AuthState`, `BodyMode`, `KeyValueRow` — import from `src/stores/requestStore.ts`
 
 ### No SQLite persistence
 All tab state is session-only. No DB calls are introduced in this story.
 
 ### File Locations
-- `fetch-boy/src/stores/tabStore.ts` — extend with new types + actions
-- `fetch-boy/src/hooks/useActiveTabState.ts` — new selector hooks (new file)
-- `fetch-boy/src/lib/requestSnapshotUtils.ts` — new shared helper (new file)
-- `fetch-boy/src/components/MainPanel/MainPanel.tsx` — migrate state reads/writes
-- `fetch-boy/src/components/CollectionTree/CollectionTree.tsx` — update `handleLoadRequest`
-- `fetch-boy/src/components/HistoryPanel/HistoryPanel.tsx` — update `handleRowClick`
-- `fetch-boy/src/components/TabBar/TabBar.tsx` — update label sync source
+- `src/stores/tabStore.ts` — extend with new types + actions
+- `src/hooks/useActiveTabState.ts` — new selector hooks (new file)
+- `src/lib/requestSnapshotUtils.ts` — new shared helper (new file)
+- `src/components/MainPanel/MainPanel.tsx` — migrate state reads/writes
+- `src/components/CollectionTree/CollectionTree.tsx` — update `handleLoadRequest`
+- `src/components/HistoryPanel/HistoryPanel.tsx` — update `handleRowClick`
+- `src/components/TabBar/TabBar.tsx` — update label sync source
 
 ### References
-- [Source: fetch-boy/src/stores/tabStore.ts] — TabEntry, existing action patterns
-- [Source: fetch-boy/src/stores/requestStore.ts] — RequestState field definitions, loadFromSaved auth mapping helper
-- [Source: fetch-boy/src/components/MainPanel/MainPanel.tsx] — current useState response fields (lines ~20–30)
-- [Source: fetch-boy/src/components/CollectionTree/CollectionTree.tsx#handleLoadRequest]
-- [Source: fetch-boy/src/components/HistoryPanel/HistoryPanel.tsx#handleRowClick]
-- [Source: fetch-boy/src/components/TabBar/TabBar.tsx] — syncLabelFromRequest usage
+- [Source: src/stores/tabStore.ts] — TabEntry, existing action patterns
+- [Source: src/stores/requestStore.ts] — RequestState field definitions, loadFromSaved auth mapping helper
+- [Source: src/components/MainPanel/MainPanel.tsx] — current useState response fields (lines ~20–30)
+- [Source: src/components/CollectionTree/CollectionTree.tsx#handleLoadRequest]
+- [Source: src/components/HistoryPanel/HistoryPanel.tsx#handleRowClick]
+- [Source: src/components/TabBar/TabBar.tsx] — syncLabelFromRequest usage
 
 ## Dev Agent Record
 
@@ -140,15 +140,15 @@ _None — implementation proceeded without blocking issues._
 
 ### File List
 
-- `fetch-boy/src/stores/tabStore.ts` — extended with `RequestSnapshot`, `ResponseSnapshot`, `updateTabRequestState`, `updateTabResponseState`, factory helpers
-- `fetch-boy/src/stores/tabStore.test.ts` — new per-tab isolation tests added
-- `fetch-boy/src/hooks/useActiveTabState.ts` — new file: `useActiveRequestState`, `useActiveResponseState` hooks
-- `fetch-boy/src/lib/requestSnapshotUtils.ts` — new file: `buildSnapshotFromSaved`, `buildSnapshotFromHistory` helpers
-- `fetch-boy/src/components/MainPanel/MainPanel.tsx` — migrated to per-tab state hooks
-- `fetch-boy/src/components/MainPanel/MainPanel.test.tsx` — tests updated
-- `fetch-boy/src/components/CollectionTree/CollectionTree.tsx` — `handleLoadRequest` uses `updateTabRequestState`
-- `fetch-boy/src/components/CollectionTree/CollectionTree.test.tsx` — tests updated
-- `fetch-boy/src/components/HistoryPanel/HistoryPanel.tsx` — `handleRowClick` uses `updateTabRequestState`
-- `fetch-boy/src/components/HistoryPanel/HistoryPanel.test.tsx` — tests updated
-- `fetch-boy/src/components/TabBar/TabBar.tsx` — `syncLabelFromRequest` reads from `useActiveRequestState`
-- `fetch-boy/src/components/TabBar/TabBar.test.tsx` — tests updated
+- `src/stores/tabStore.ts` — extended with `RequestSnapshot`, `ResponseSnapshot`, `updateTabRequestState`, `updateTabResponseState`, factory helpers
+- `src/stores/tabStore.test.ts` — new per-tab isolation tests added
+- `src/hooks/useActiveTabState.ts` — new file: `useActiveRequestState`, `useActiveResponseState` hooks
+- `src/lib/requestSnapshotUtils.ts` — new file: `buildSnapshotFromSaved`, `buildSnapshotFromHistory` helpers
+- `src/components/MainPanel/MainPanel.tsx` — migrated to per-tab state hooks
+- `src/components/MainPanel/MainPanel.test.tsx` — tests updated
+- `src/components/CollectionTree/CollectionTree.tsx` — `handleLoadRequest` uses `updateTabRequestState`
+- `src/components/CollectionTree/CollectionTree.test.tsx` — tests updated
+- `src/components/HistoryPanel/HistoryPanel.tsx` — `handleRowClick` uses `updateTabRequestState`
+- `src/components/HistoryPanel/HistoryPanel.test.tsx` — tests updated
+- `src/components/TabBar/TabBar.tsx` — `syncLabelFromRequest` reads from `useActiveRequestState`
+- `src/components/TabBar/TabBar.test.tsx` — tests updated

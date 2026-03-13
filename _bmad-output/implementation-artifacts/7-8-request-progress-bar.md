@@ -19,7 +19,7 @@ So that I know the app is working even when looking away from the loading spinne
 ## Tasks / Subtasks
 
 - [x] Task 1 - Create ProgressBar component (AC: 1, 3)
-  - [x] Create `fetch-boy/src/components/ProgressBar/ProgressBar.tsx`
+  - [x] Create `src/components/ProgressBar/ProgressBar.tsx`
   - [x] Implement CSS animation from 0% → 80% while request in flight
   - [x] Add 80% → 100% completion animation on response
   - [x] Style with theme-aware colors
@@ -35,9 +35,9 @@ So that I know the app is working even when looking away from the loading spinne
   - [x] Ensure progress bar visible in both light and dark modes
 
 - [x] Task 4 - Final Task - Commit story changes
-  - [x] Run `npx tsc --noEmit` from `fetch-boy/` to verify TypeScript compilation
-  - [x] Run `cargo check` from `fetch-boy/src-tauri/` to verify Rust compilation
-  - [x] Run `npx vitest run` from `fetch-boy/` to verify all tests pass
+  - [x] Run `npx tsc --noEmit` from `` to verify TypeScript compilation
+  - [x] Run `cargo check` from `src-tauri/` to verify Rust compilation
+  - [x] Run `npx vitest run` from `` to verify all tests pass
   - [ ] Commit all code and documentation changes for this story with a message that includes Story 7.8
 
 ## Dev Notes
@@ -206,19 +206,19 @@ const sendRequest = async () => {
 - Use theme-aware classes - check `isDark` using the pattern from existing components
 
 **Component Pattern:**
-- Create new component in `fetch-boy/src/components/ProgressBar/ProgressBar.tsx`
-- Export index from `fetch-boy/src/components/ProgressBar/index.ts`
+- Create new component in `src/components/ProgressBar/ProgressBar.tsx`
+- Export index from `src/components/ProgressBar/index.ts`
 - Follow existing component patterns in the project
 
 ### Integration Points
 
 **New Files:**
-- `fetch-boy/src/components/ProgressBar/ProgressBar.tsx` - Main progress bar component
-- `fetch-boy/src/components/ProgressBar/index.ts` - Barrel export
-- `fetch-boy/src/hooks/useRequestProgress.ts` - Request progress state management (or integrate into existing store)
+- `src/components/ProgressBar/ProgressBar.tsx` - Main progress bar component
+- `src/components/ProgressBar/index.ts` - Barrel export
+- `src/hooks/useRequestProgress.ts` - Request progress state management (or integrate into existing store)
 
 **Modified Files:**
-- `fetch-boy/src/App.tsx` or `fetch-boy/src/components/Layout/*` - Add ProgressBar to layout
+- `src/App.tsx` or `src/components/Layout/*` - Add ProgressBar to layout
 - Existing request handling code - Connect to progress store
 
 **No New Dependencies:**
@@ -340,14 +340,14 @@ test('cancel action resets progress', async () => {
 ### Project Structure Notes
 
 **New Files:**
-- `fetch-boy/src/components/ProgressBar/ProgressBar.tsx`
-- `fetch-boy/src/components/ProgressBar/index.ts`
-- `fetch-boy/src/components/ProgressBar/ProgressBar.test.tsx`
-- `fetch-boy/src/hooks/useRequestProgress.ts` (or integrate into existing hook)
+- `src/components/ProgressBar/ProgressBar.tsx`
+- `src/components/ProgressBar/index.ts`
+- `src/components/ProgressBar/ProgressBar.test.tsx`
+- `src/hooks/useRequestProgress.ts` (or integrate into existing hook)
 
 **Modified Files:**
-- `fetch-boy/src/App.tsx` - Add ProgressBar component
-- Or `fetch-boy/src/components/Layout/MainLayout.tsx` - Add ProgressBar
+- `src/App.tsx` - Add ProgressBar component
+- Or `src/components/Layout/MainLayout.tsx` - Add ProgressBar
 
 **No New Dependencies:**
 - Pure CSS/Tailwind for styling
@@ -359,7 +359,7 @@ test('cancel action resets progress', async () => {
 - **Primary Source**: `_bmad-output/planning-artifacts/epic-7.md` (Story 7.8 acceptance criteria)
 - **Theme Pattern**: Story 4.1 - light/dark theme implementation
 - **State Management**: Story 7.6/7.7 - Zustand store patterns
-- **Component Patterns**: Existing components in `fetch-boy/src/components/`
+- **Component Patterns**: Existing components in `src/components/`
 - **Testing**: Vitest + React Testing Library (consistent with project)
 
 ## Dev Agent Record
@@ -387,13 +387,13 @@ claude-sonnet-4-20250514
 
 - **Implementation Summary:** Created a Request In-Flight Progress Bar feature that shows at the top of the window during HTTP requests
 - **Components Created:**
-  - `fetch-boy/src/components/ProgressBar/ProgressBar.tsx` - Theme-aware progress bar component with CSS animations
-  - `fetch-boy/src/components/ProgressBar/index.ts` - Barrel export
-  - `fetch-boy/src/components/ProgressBar/ProgressBar.test.tsx` - Unit tests (7 tests)
-  - `fetch-boy/src/hooks/useRequestProgress.ts` - Zustand store for progress state management
+  - `src/components/ProgressBar/ProgressBar.tsx` - Theme-aware progress bar component with CSS animations
+  - `src/components/ProgressBar/index.ts` - Barrel export
+  - `src/components/ProgressBar/ProgressBar.test.tsx` - Unit tests (7 tests)
+  - `src/hooks/useRequestProgress.ts` - Zustand store for progress state management
 
 - **Files Modified:**
-  - `fetch-boy/src/components/MainPanel/MainPanel.tsx` - Integrated ProgressBar with request flow
+  - `src/components/MainPanel/MainPanel.tsx` - Integrated ProgressBar with request flow
 
 - **Features Implemented:**
   - Fixed-position progress bar at top of window (z-index: 50)
@@ -410,11 +410,11 @@ claude-sonnet-4-20250514
 
 ### File List
 
-- fetch-boy/src/components/ProgressBar/ProgressBar.tsx (new)
-- fetch-boy/src/components/ProgressBar/index.ts (new)
-- fetch-boy/src/components/ProgressBar/ProgressBar.test.tsx (new)
-- fetch-boy/src/hooks/useRequestProgress.ts (new)
-- fetch-boy/src/App.tsx (modified - add ProgressBar)
+- src/components/ProgressBar/ProgressBar.tsx (new)
+- src/components/ProgressBar/index.ts (new)
+- src/components/ProgressBar/ProgressBar.test.tsx (new)
+- src/hooks/useRequestProgress.ts (new)
+- src/App.tsx (modified - add ProgressBar)
 
 ## Change Log
 

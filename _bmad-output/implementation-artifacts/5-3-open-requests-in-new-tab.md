@@ -22,14 +22,14 @@ so that I can compare or run variations without overwriting my current tab.
 ## Tasks / Subtasks
 
 - [x] Task 1 — Add `openRequestInNewTab` action to `tabStore` (AC: 4, 5, 8)
-  - [x] Open `fetch-boy/src/stores/tabStore.ts`
+  - [x] Open `src/stores/tabStore.ts`
   - [x] Add `openRequestInNewTab(snapshot: RequestSnapshot, label: string): void` action
   - [x] Action: create new `TabEntry` with the provided `requestState: snapshot`, `label`, `isCustomLabel: true`, and a fresh `createDefaultResponseSnapshot()` for `responseState`
   - [x] New tab is appended to `tabs` and becomes `activeTabId` immediately
   - [x] Export the action as part of `TabStore` interface
 
 - [x] Task 2 — Add context menu + middle-click to `CollectionTree` request rows (AC: 1, 3, 6, 7, 8)
-  - [x] Open `fetch-boy/src/components/CollectionTree/CollectionTree.tsx`
+  - [x] Open `src/components/CollectionTree/CollectionTree.tsx`
   - [x] Add local state: `const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; requestId: string } | null>(null)`
   - [x] Add `onContextMenu` handler to each request row `<li>` (or its clickable button)
   - [x] Render context menu with "Open in New Tab" menu item
@@ -39,7 +39,7 @@ so that I can compare or run variations without overwriting my current tab.
   - [x] Left-click (`onClick`) continues to call existing `handleLoadRequest(id)` — **no change**
 
 - [x] Task 3 — Add context menu + middle-click to `HistoryPanel` entries (AC: 2, 3, 5, 8)
-  - [x] Open `fetch-boy/src/components/HistoryPanel/HistoryPanel.tsx`
+  - [x] Open `src/components/HistoryPanel/HistoryPanel.tsx`
   - [x] Add local state: `const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; entryId: string } | null>(null)`
   - [x] Add `onContextMenu` handler to each history row
   - [x] Menu item calls `handleOpenInNewTab(entry)` with correct label
@@ -47,23 +47,23 @@ so that I can compare or run variations without overwriting my current tab.
   - [x] Left-click (`onClick`) continues to call existing `handleRowClick(entry)` — **no change**
 
 - [x] Task 4 — Write unit tests (AC: 1–8)
-  - [x] Update `fetch-boy/src/stores/tabStore.test.ts`
+  - [x] Update `src/stores/tabStore.test.ts`
   - [x] Test: `openRequestInNewTab(snapshot, 'My Request')` creates a new tab with `isCustomLabel: true`, label, `requestState` matching snapshot, fresh `responseState`
   - [x] Test: after `openRequestInNewTab`, `activeTabId` points to the new tab
   - [x] Test: the original tab's `requestState` is unchanged after `openRequestInNewTab`
-  - [x] Update `fetch-boy/src/components/CollectionTree/CollectionTree.test.tsx`
+  - [x] Update `src/components/CollectionTree/CollectionTree.test.tsx`
   - [x] Test: right-clicking a request row renders context menu with "Open in New Tab"
   - [x] Test: clicking "Open in New Tab" opens request in new tab
   - [x] Test: left-clicking does NOT open a new tab (no regression)
   - [x] Test: middle-click (button=1) opens request in a new tab
-  - [x] Update `fetch-boy/src/components/HistoryPanel/HistoryPanel.test.tsx`
+  - [x] Update `src/components/HistoryPanel/HistoryPanel.test.tsx`
   - [x] Test: right-clicking a history row shows "Open in New Tab" menu item
   - [x] Test: clicking "Open in New Tab" opens entry in new tab
   - [x] Test: left-clicking still calls the original handler (no regression)
 
 - [x] Task 5 — Final: commit story changes
-  - [x] Run `npx tsc --noEmit` from `fetch-boy/` — zero TypeScript errors
-  - [x] Run `npx vitest run` from `fetch-boy/` — 302 tests pass (11 new), 1 pre-existing unrelated failure
+  - [x] Run `npx tsc --noEmit` from `` — zero TypeScript errors
+  - [x] Run `npx vitest run` from `` — 302 tests pass (11 new), 1 pre-existing unrelated failure
   - [ ] Commit all code and documentation changes for this story with a message that includes `Story 5.3`
 
 ## Dev Notes
@@ -118,16 +118,16 @@ Use `request.name` directly. `isCustomLabel: true` is set so tab renaming logic 
 The `isDirty` check only applies when **replacing** the current tab's state. `openRequestInNewTab` always creates a NEW tab, so no confirmation is needed.
 
 ### File Locations
-- `fetch-boy/src/stores/tabStore.ts` — add `openRequestInNewTab` action + update interface
-- `fetch-boy/src/lib/requestSnapshotUtils.ts` — `buildSnapshotFromSaved` (created in Story 5.2)
-- `fetch-boy/src/components/CollectionTree/CollectionTree.tsx` — add context menu + middle-click
-- `fetch-boy/src/components/HistoryPanel/HistoryPanel.tsx` — add context menu + middle-click
+- `src/stores/tabStore.ts` — add `openRequestInNewTab` action + update interface
+- `src/lib/requestSnapshotUtils.ts` — `buildSnapshotFromSaved` (created in Story 5.2)
+- `src/components/CollectionTree/CollectionTree.tsx` — add context menu + middle-click
+- `src/components/HistoryPanel/HistoryPanel.tsx` — add context menu + middle-click
 
 ### References
-- [Source: fetch-boy/src/components/Layout/AppShell.tsx] — existing context menu pattern (Tailwind classes, positioning, click-dismiss)
-- [Source: fetch-boy/src/components/CollectionTree/CollectionTree.tsx#handleLoadRequest] — existing left-click load logic
-- [Source: fetch-boy/src/components/HistoryPanel/HistoryPanel.tsx#handleRowClick] — existing row click handler
-- [Source: fetch-boy/src/stores/tabStore.ts] — addTab action as the model for openRequestInNewTab
+- [Source: src/components/Layout/AppShell.tsx] — existing context menu pattern (Tailwind classes, positioning, click-dismiss)
+- [Source: src/components/CollectionTree/CollectionTree.tsx#handleLoadRequest] — existing left-click load logic
+- [Source: src/components/HistoryPanel/HistoryPanel.tsx#handleRowClick] — existing row click handler
+- [Source: src/stores/tabStore.ts] — addTab action as the model for openRequestInNewTab
 - [Source: _bmad-output/planning-artifacts/epic-5.md#Story 5.3]
 
 ## Dev Agent Record

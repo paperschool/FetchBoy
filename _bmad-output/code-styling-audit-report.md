@@ -41,11 +41,11 @@ This report identifies files that violate the code styling standards defined in 
 
 | File | Lines | Severity |
 |------|-------|----------|
-| `fetch-boy/src/components/MainPanel/MainPanel.tsx` | ~650 | **CRITICAL** |
-| `fetch-boy/src/components/Sidebar/Sidebar.tsx` | ~350 | HIGH |
-| `fetch-boy/src/components/ResponseViewer/ResponseViewer.tsx` | ~300 | HIGH |
-| `fetch-boy/src/components/Settings/SettingsPanel.tsx` | ~250 | MEDIUM |
-| `fetch-boy/src/components/AuthPanel/AuthPanel.tsx` | ~200 | MEDIUM |
+| `src/components/MainPanel/MainPanel.tsx` | ~650 | **CRITICAL** |
+| `src/components/Sidebar/Sidebar.tsx` | ~350 | HIGH |
+| `src/components/ResponseViewer/ResponseViewer.tsx` | ~300 | HIGH |
+| `src/components/Settings/SettingsPanel.tsx` | ~250 | MEDIUM |
+| `src/components/AuthPanel/AuthPanel.tsx` | ~200 | MEDIUM |
 
 #### Recommended Actions for MainPanel.tsx (CRITICAL)
 
@@ -103,27 +103,27 @@ components/MainPanel/
 
 ### Priority 1 - Critical (Component Size)
 
-1. **`fetch-boy/src/components/MainPanel/MainPanel.tsx`**
+1. **`src/components/MainPanel/MainPanel.tsx`**
    - Extract URL handling utilities to separate file
    - Extract progress management to custom hook
    - Break into sub-components
 
 ### Priority 2 - High (Component Size)
 
-2. **`fetch-boy/src/components/Sidebar/Sidebar.tsx`**
+2. **`src/components/Sidebar/Sidebar.tsx`**
    - Extract sidebar toggle logic to hook
    - Consider breaking into SidebarHeader, SidebarContent components
 
-3. **`fetch-boy/src/components/ResponseViewer/ResponseViewer.tsx`**
+3. **`src/components/ResponseViewer/ResponseViewer.tsx`**
    - Extract response parsing logic
    - Consider breaking into ResponseHeaders, ResponseBody components
 
 ### Priority 3 - Medium (Component Size)
 
-4. **`fetch-boy/src/components/Settings/SettingsPanel.tsx`**
+4. **`src/components/Settings/SettingsPanel.tsx`**
    - Break into sub-components by settings category
 
-5. **`fetch-boy/src/components/AuthPanel/AuthPanel.tsx`**
+5. **`src/components/AuthPanel/AuthPanel.tsx`**
    - Break into auth type specific components
 
 ---
@@ -134,11 +134,11 @@ The following files demonstrate **excellent compliance** with standards:
 
 | File | Commendations |
 |------|---------------|
-| `fetch-boy/src/stores/requestStore.ts` | Perfect SRP - types, constants, implementation cleanly separated |
-| `fetch-boy/src/App.tsx` | Clean component, logic extracted to stores/hooks |
-| `fetch-boy/src/components/Layout/AppShell.tsx` | Excellent hook composition pattern |
-| `fetch-boy/src-tauri/src/lib.rs` | Proper Rust conventions, good organization |
-| `fetch-boy/src/index.css` | Excellent CSS custom property organization, proper BEM-like utilities |
+| `src/stores/requestStore.ts` | Perfect SRP - types, constants, implementation cleanly separated |
+| `src/App.tsx` | Clean component, logic extracted to stores/hooks |
+| `src/components/Layout/AppShell.tsx` | Excellent hook composition pattern |
+| `src-tauri/src/lib.rs` | Proper Rust conventions, good organization |
+| `src/index.css` | Excellent CSS custom property organization, proper BEM-like utilities |
 
 ---
 

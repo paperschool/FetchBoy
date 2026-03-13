@@ -22,14 +22,14 @@ So that I can maximise the request/response workspace when I don't need the coll
 ## Tasks / Subtasks
 
 - [x] Task 1 - Add sidebar collapse state management (AC: 2, 6)
-  - [x] Update `fetch-boy/src/stores/uiSettingsStore.ts` to add `sidebarCollapsed: boolean` state and `setSidebarCollapsed` setter
-  - [x] Update `fetch-boy/src/lib/db.ts` AppSettings type to include `sidebar_collapsed?: boolean` field
-  - [x] Update `fetch-boy/src/lib/settings.ts` loadAllSettings to load `sidebar_collapsed` (default: false)
-  - [x] Update `fetch-boy/src/components/Layout/AppShell.tsx` to load and apply sidebar collapsed state on mount
+  - [x] Update `src/stores/uiSettingsStore.ts` to add `sidebarCollapsed: boolean` state and `setSidebarCollapsed` setter
+  - [x] Update `src/lib/db.ts` AppSettings type to include `sidebar_collapsed?: boolean` field
+  - [x] Update `src/lib/settings.ts` loadAllSettings to load `sidebar_collapsed` (default: false)
+  - [x] Update `src/components/Layout/AppShell.tsx` to load and apply sidebar collapsed state on mount
   - [x] Add save function to persist sidebar state changes via `saveSetting('sidebar_collapsed', value)`
 
 - [x] Task 2 - Implement keyboard shortcut handler (AC: 2)
-  - [x] Create `fetch-boy/src/hooks/useSidebarKeyboardShortcut.ts` hook
+  - [x] Create `src/hooks/useSidebarKeyboardShortcut.ts` hook
   - [x] Listen for `Cmd/Ctrl + B` keydown event (keyCode 'B' with metaKey or ctrlKey)
   - [x] Toggle `sidebarCollapsed` state in uiSettingsStore
   - [x] Persist change to database via settings.ts
@@ -37,14 +37,14 @@ So that I can maximise the request/response workspace when I don't need the coll
   - [x] Import and invoke hook in AppShell.tsx
 
 - [x] Task 3 - Update AppShell layout for dynamic sidebar width (AC: 3, 4, 5)
-  - [x] Modify `fetch-boy/src/components/Layout/AppShell.tsx` grid-cols to use dynamic value
+  - [x] Modify `src/components/Layout/AppShell.tsx` grid-cols to use dynamic value
   - [x] When collapsed: grid-cols should be `[3.5rem_1fr]` (narrow icon strip)
   - [x] When expanded: grid-cols should be `[16rem_1fr]` (current width)
   - [x] Add CSS transition: `transition-[grid-template-columns] duration-200 ease-in-out`
   - [x] Pass `collapsed` prop to Sidebar component
 
 - [x] Task 4 - Update Sidebar UI for collapsed/expanded states (AC: 1, 3, 4, 7)
-  - [x] Update `fetch-boy/src/components/Sidebar/Sidebar.tsx` to accept `collapsed: boolean` and `onToggle: () => void` props
+  - [x] Update `src/components/Sidebar/Sidebar.tsx` to accept `collapsed: boolean` and `onToggle: () => void` props
   - [x] Add toggle button at top of sidebar with ChevronLeft/ChevronRight icon from lucide-react
   - [x] When collapsed: show only icon strip with Collections/History icons (no text labels, vertical icon stack)
   - [x] When expanded: show full panel with tabs and content (current behavior)
@@ -54,25 +54,25 @@ So that I can maximise the request/response workspace when I don't need the coll
   - [x] Icons should be clickable to expand panel and switch to that view
 
 - [x] Task 5 - Add tests for sidebar collapse behavior (AC: 1, 2, 3, 4, 5, 6, 7, 8)
-  - [x] Update `fetch-boy/src/stores/uiSettingsStore.test.ts` to verify sidebarCollapsed state and setter
-  - [x] Create `fetch-boy/src/hooks/useSidebarKeyboardShortcut.test.ts`:
+  - [x] Update `src/stores/uiSettingsStore.test.ts` to verify sidebarCollapsed state and setter
+  - [x] Create `src/hooks/useSidebarKeyboardShortcut.test.ts`:
     - [x] Verify Cmd+B toggles sidebar collapsed state
     - [x] Verify Ctrl+B toggles sidebar collapsed state
     - [x] Verify state persists to database
-  - [x] Update `fetch-boy/src/components/Sidebar/Sidebar.test.tsx`:
+  - [x] Update `src/components/Sidebar/Sidebar.test.tsx`:
     - [x] Verify toggle button renders
     - [x] Verify clicking toggle calls onToggle handler
     - [x] Verify keyboard activation (Enter/Space) of toggle
     - [x] Verify collapsed state shows icon-only strip
     - [x] Verify expanded state shows full panel
     - [x] Verify collections and history both function in collapsed/expanded states
-  - [x] Update `fetch-boy/src/components/Layout/AppShell.test.tsx`:
+  - [x] Update `src/components/Layout/AppShell.test.tsx`:
     - [x] Verify AppShell applies correct grid-cols class when collapsed
     - [x] Verify AppShell applies correct grid-cols class when expanded
     - [x] Verify sidebar state loads from settings on mount
 
 - [x] Task 6 - Verify and commit story changes
-  - [x] Run `npx tsc --noEmit` from `fetch-boy/` to verify TypeScript compilation
+  - [x] Run `npx tsc --noEmit` from `` to verify TypeScript compilation
   - [x] Run `npx vitest run` to verify all tests pass
   - [x] Manually test Cmd/Ctrl + B keyboard shortcut functionality
   - [x] Manually test toggle button click and keyboard activation
@@ -83,11 +83,11 @@ So that I can maximise the request/response workspace when I don't need the coll
 
 ### Existing Integration Points
 
-- **Layout System**: `fetch-boy/src/components/Layout/AppShell.tsx` uses CSS Grid with `grid-cols-[16rem_1fr]` for sidebar layout
-- **Sidebar Component**: `fetch-boy/src/components/Sidebar/Sidebar.tsx` manages panel switching between Collections and History
-- **UI Settings Store**: `fetch-boy/src/stores/uiSettingsStore.ts` manages UI state (theme, font size, etc.) - already has Zustand state management pattern
-- **Settings Persistence**: `fetch-boy/src/lib/settings.ts` provides `loadAllSettings()` and `saveSetting()` for SQLite database persistence
-- **Keyboard Shortcut Pattern**: `fetch-boy/src/hooks/useTabKeyboardShortcuts.ts` demonstrates existing keyboard shortcut implementation pattern
+- **Layout System**: `src/components/Layout/AppShell.tsx` uses CSS Grid with `grid-cols-[16rem_1fr]` for sidebar layout
+- **Sidebar Component**: `src/components/Sidebar/Sidebar.tsx` manages panel switching between Collections and History
+- **UI Settings Store**: `src/stores/uiSettingsStore.ts` manages UI state (theme, font size, etc.) - already has Zustand state management pattern
+- **Settings Persistence**: `src/lib/settings.ts` provides `loadAllSettings()` and `saveSetting()` for SQLite database persistence
+- **Keyboard Shortcut Pattern**: `src/hooks/useTabKeyboardShortcuts.ts` demonstrates existing keyboard shortcut implementation pattern
 - **Icons**: Project uses `lucide-react` for icons (already imported in various components)
 
 ### Architecture Compliance
@@ -101,11 +101,11 @@ So that I can maximise the request/response workspace when I don't need the coll
 - SQLite (via Tauri) for data persistence
 
 **Component Structure:**
-- Components in `fetch-boy/src/components/[ComponentName]/ComponentName.tsx`
+- Components in `src/components/[ComponentName]/ComponentName.tsx`
 - Co-located tests: `ComponentName.test.tsx`
-- Stores in `fetch-boy/src/stores/`
-- Hooks in `fetch-boy/src/hooks/`
-- Utilities in `fetch-boy/src/lib/`
+- Stores in `src/stores/`
+- Hooks in `src/hooks/`
+- Utilities in `src/lib/`
 
 **State Management Pattern:**
 - Use Zustand create() for store creation
@@ -192,18 +192,18 @@ From **Story 5.6 (Match Query Params from URL)**:
 ### Project Structure Notes
 
 **New Files:**
-- `fetch-boy/src/hooks/useSidebarKeyboardShortcut.ts` - Keyboard shortcut handler
-- `fetch-boy/src/hooks/useSidebarKeyboardShortcut.test.ts` - Keyboard shortcut tests
+- `src/hooks/useSidebarKeyboardShortcut.ts` - Keyboard shortcut handler
+- `src/hooks/useSidebarKeyboardShortcut.test.ts` - Keyboard shortcut tests
 
 **Modified Files:**
-- `fetch-boy/src/stores/uiSettingsStore.ts` - Add sidebar collapsed state
-- `fetch-boy/src/stores/uiSettingsStore.test.ts` - Test new state
-- `fetch-boy/src/lib/db.ts` - Add sidebar_collapsed to AppSettings type
-- `fetch-boy/src/lib/settings.ts` - Load/save sidebar_collapsed setting
-- `fetch-boy/src/components/Layout/AppShell.tsx` - Dynamic grid layout, load state, integrate shortcut hook
-- `fetch-boy/src/components/Layout/AppShell.test.tsx` - Test layout changes
-- `fetch-boy/src/components/Sidebar/Sidebar.tsx` - Add toggle button, collapsed/expanded UI
-- `fetch-boy/src/components/Sidebar/Sidebar.test.tsx` - Test sidebar states
+- `src/stores/uiSettingsStore.ts` - Add sidebar collapsed state
+- `src/stores/uiSettingsStore.test.ts` - Test new state
+- `src/lib/db.ts` - Add sidebar_collapsed to AppSettings type
+- `src/lib/settings.ts` - Load/save sidebar_collapsed setting
+- `src/components/Layout/AppShell.tsx` - Dynamic grid layout, load state, integrate shortcut hook
+- `src/components/Layout/AppShell.test.tsx` - Test layout changes
+- `src/components/Sidebar/Sidebar.tsx` - Add toggle button, collapsed/expanded UI
+- `src/components/Sidebar/Sidebar.test.tsx` - Test sidebar states
 
 **File Organization:**
 - Hooks follow pattern: `use[Name].ts` in `src/hooks/`
@@ -214,11 +214,11 @@ From **Story 5.6 (Match Query Params from URL)**:
 ### References
 
 - **Primary Source**: `_bmad-output/planning-artifacts/epic-6.md` (Story 6.1 acceptance criteria)
-- **Layout Component**: `fetch-boy/src/components/Layout/AppShell.tsx` (grid layout implementation)
-- **Sidebar Component**: `fetch-boy/src/components/Sidebar/Sidebar.tsx` (panel structure)
-- **Settings Store**: `fetch-boy/src/stores/uiSettingsStore.ts` (state management pattern)
-- **Settings Persistence**: `fetch-boy/src/lib/settings.ts` (database persistence)
-- **Keyboard Shortcut Pattern**: `fetch-boy/src/hooks/useTabKeyboardShortcuts.ts` (reference implementation)
+- **Layout Component**: `src/components/Layout/AppShell.tsx` (grid layout implementation)
+- **Sidebar Component**: `src/components/Sidebar/Sidebar.tsx` (panel structure)
+- **Settings Store**: `src/stores/uiSettingsStore.ts` (state management pattern)
+- **Settings Persistence**: `src/lib/settings.ts` (database persistence)
+- **Keyboard Shortcut Pattern**: `src/hooks/useTabKeyboardShortcuts.ts` (reference implementation)
 - **Previous Story**: `_bmad-output/implementation-artifacts/5-6-match-query-params-from-url.md` (testing patterns, component updates)
 
 ### Latest Technical Information
@@ -278,19 +278,19 @@ Claude 3.7 Sonnet (via Cline CLI)
 ### File List
 
 **New Files:**
-- `fetch-boy/src/hooks/useSidebarKeyboardShortcut.ts` - Keyboard shortcut hook for Cmd/Ctrl+B
-- `fetch-boy/src/hooks/useSidebarKeyboardShortcut.test.ts` - Tests for keyboard shortcut
+- `src/hooks/useSidebarKeyboardShortcut.ts` - Keyboard shortcut hook for Cmd/Ctrl+B
+- `src/hooks/useSidebarKeyboardShortcut.test.ts` - Tests for keyboard shortcut
 
 **Modified Files:**
-- `fetch-boy/src/stores/uiSettingsStore.ts` - Added sidebarCollapsed state and setter
-- `fetch-boy/src/stores/uiSettingsStore.test.ts` - Added tests for sidebar state
-- `fetch-boy/src/lib/db.ts` - Added sidebar_collapsed field to AppSettings type
-- `fetch-boy/src/lib/settings.ts` - Added sidebar_collapsed loading with default false
-- `fetch-boy/src/lib/settings.test.ts` - Updated tests to include sidebar_collapsed field
-- `fetch-boy/src/components/Layout/AppShell.tsx` - Dynamic grid layout, state loading, keyboard shortcut integration, toggle handler
-- `fetch-boy/src/components/Layout/AppShell.test.tsx` - Added tests for grid layout states
-- `fetch-boy/src/components/Sidebar/Sidebar.tsx` - Added collapsed/expanded UI states with toggle button
-- `fetch-boy/src/components/Sidebar/Sidebar.test.tsx` - Added comprehensive tests for both states
+- `src/stores/uiSettingsStore.ts` - Added sidebarCollapsed state and setter
+- `src/stores/uiSettingsStore.test.ts` - Added tests for sidebar state
+- `src/lib/db.ts` - Added sidebar_collapsed field to AppSettings type
+- `src/lib/settings.ts` - Added sidebar_collapsed loading with default false
+- `src/lib/settings.test.ts` - Updated tests to include sidebar_collapsed field
+- `src/components/Layout/AppShell.tsx` - Dynamic grid layout, state loading, keyboard shortcut integration, toggle handler
+- `src/components/Layout/AppShell.test.tsx` - Added tests for grid layout states
+- `src/components/Sidebar/Sidebar.tsx` - Added collapsed/expanded UI states with toggle button
+- `src/components/Sidebar/Sidebar.test.tsx` - Added comprehensive tests for both states
 
 ## Change Log
 

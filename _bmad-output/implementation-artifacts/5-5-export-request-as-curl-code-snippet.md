@@ -23,7 +23,7 @@ so that I can quickly reproduce or share the call without manually constructing 
 ## Tasks / Subtasks
 
 - [x] Task 1 — Create `generateSnippet` utility (AC: 3, 4, 5, 7, 8, 9)
-  - [x] Create `fetch-boy/src/lib/generateSnippet.ts`
+  - [x] Create `src/lib/generateSnippet.ts`
   - [x] Define exported types: `SnippetFormat = 'curl' | 'python' | 'javascript' | 'nodejs'` and `ResolvedRequest` interface (method, url, headers, queryParams, body, auth — see Dev Notes for full shape)
   - [x] Implement `buildResolvedHeaders(req: ResolvedRequest): Array<{key: string; value: string}>` — filters to enabled headers, then injects auth:
     - `bearer`: prepend `{ key: 'Authorization', value: 'Bearer {token}' }`
@@ -40,7 +40,7 @@ so that I can quickly reproduce or share the call without manually constructing 
   - [x] Export `generateSnippet`, `SnippetFormat`, `ResolvedRequest` as named exports
 
 - [x] Task 2 — Write `generateSnippet` unit tests (AC: 8, 9)
-  - [x] Create `fetch-boy/src/lib/generateSnippet.test.ts`
+  - [x] Create `src/lib/generateSnippet.test.ts`
   - [x] Define a base fixture: `POST https://api.example.com/users` with one enabled header `Content-Type: application/json`, one enabled query param `page=1`, JSON body `{"name":"Alice"}`, auth `none`
   - [x] Test cURL fixture: verify output starts with `curl -X POST`, contains the URL with `?page=1`, contains `-H 'Content-Type: application/json'`, contains `-d '{"name":"Alice"}'`
   - [x] Test Python fixture: verify output contains `import requests`, `requests.post(`, `'Content-Type': 'application/json'`, `'page': '1'`
@@ -55,7 +55,7 @@ so that I can quickly reproduce or share the call without manually constructing 
   - [x] Test **no trailing whitespace**: every line of every format output must satisfy `line === line.trimEnd()`
 
 - [x] Task 3 — Create `CopyAsButton` component (AC: 1, 2, 6)
-  - [x] Create `fetch-boy/src/components/MainPanel/CopyAsButton.tsx`
+  - [x] Create `src/components/MainPanel/CopyAsButton.tsx`
   - [x] Props: `interface CopyAsButtonProps { resolvedRequest: ResolvedRequest }`
   - [x] Local state: `const [open, setOpen] = useState(false)` (dropdown visibility) and `const [copied, setCopied] = useState(false)` (toast trigger)
   - [x] Render a button with label `</>` (or `Copy as…`) and `data-testid="copy-as-button"`. Clicking toggles `open`
@@ -75,7 +75,7 @@ so that I can quickly reproduce or share the call without manually constructing 
   - [x] `data-testid="copy-as-dropdown"` on the `<ul>` for easy test targeting
 
 - [x] Task 4 — Integrate `CopyAsButton` into `MainPanel` (AC: 1, 2, 3, 5)
-  - [x] Open `fetch-boy/src/components/MainPanel/MainPanel.tsx`
+  - [x] Open `src/components/MainPanel/MainPanel.tsx`
   - [x] Import `CopyAsButton` and `type ResolvedRequest` from their respective modules
   - [x] Build `resolvedRequest` object just before the `return (...)`:
     ```typescript
@@ -92,7 +92,7 @@ so that I can quickly reproduce or share the call without manually constructing 
   - [x] In the `Controls` column flex container (the `<div className="flex items-start gap-2">` wrapping Save and Send), insert `<CopyAsButton resolvedRequest={resolvedRequest} />` **between Save and Send**
 
 - [x] Task 5 — Write `CopyAsButton` unit tests (AC: 1, 2, 6)
-  - [x] Create `fetch-boy/src/components/MainPanel/CopyAsButton.test.tsx`
+  - [x] Create `src/components/MainPanel/CopyAsButton.test.tsx`
   - [x] Mock `navigator.clipboard.writeText` in `beforeEach`: `Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } })`
   - [x] Test: `CopyAsButton` renders a button element
   - [x] Test: clicking the button opens the dropdown (dropdown `ul` becomes visible)
@@ -102,8 +102,8 @@ so that I can quickly reproduce or share the call without manually constructing 
   - [x] Test: pressing `Escape` or clicking outside closes the dropdown (test the `setOpen(false)` path via mousedown outside)
 
 - [x] Task 6 — Final: verify and commit
-  - [x] Run `npx tsc --noEmit` from `fetch-boy/` — zero TypeScript errors
-  - [x] Run `npx vitest run` from `fetch-boy/` — all tests pass including the new `generateSnippet.test.ts` and `CopyAsButton.test.tsx`
+  - [x] Run `npx tsc --noEmit` from `` — zero TypeScript errors
+  - [x] Run `npx vitest run` from `` — all tests pass including the new `generateSnippet.test.ts` and `CopyAsButton.test.tsx`
   - [x] Commit all code and documentation changes for this story with a message that includes `Story 5.5`
 
 ## Dev Notes
@@ -300,7 +300,7 @@ The AC explicitly states generation is purely client-side. Do NOT add a Rust com
 ### Project Structure Notes
 
 ```
-fetch-boy/src/
+src/
   lib/
     generateSnippet.ts        ← NEW utility (pure functions, no React)
     generateSnippet.test.ts   ← NEW unit tests
@@ -313,11 +313,11 @@ fetch-boy/src/
 
 ### References
 
-- [Source: fetch-boy/src/components/MainPanel/MainPanel.tsx] — toolbar structure, `handleSendRequest`, `applyEnv` usage, auth types
-- [Source: fetch-boy/src/stores/requestStore.ts] — `AuthState`, `HttpMethod`, `BodyMode`, `KeyValueRow` types
-- [Source: fetch-boy/src/stores/tabStore.ts] — `RequestSnapshot`, `useTabStore`
-- [Source: fetch-boy/src/hooks/useEnvironment.ts] — `interpolate` from `useEnvironment()`
-- [Source: fetch-boy/src/lib/interpolate.ts] — `interpolate()` function
+- [Source: src/components/MainPanel/MainPanel.tsx] — toolbar structure, `handleSendRequest`, `applyEnv` usage, auth types
+- [Source: src/stores/requestStore.ts] — `AuthState`, `HttpMethod`, `BodyMode`, `KeyValueRow` types
+- [Source: src/stores/tabStore.ts] — `RequestSnapshot`, `useTabStore`
+- [Source: src/hooks/useEnvironment.ts] — `interpolate` from `useEnvironment()`
+- [Source: src/lib/interpolate.ts] — `interpolate()` function
 - [Source: _bmad-output/planning-artifacts/epic-5.md#Story 5.5]
 - [Source: _bmad-output/implementation-artifacts/5-4-tab-keyboard-shortcuts-and-reordering.md] — context menu Tailwind class pattern, hook mount pattern
 
@@ -343,10 +343,10 @@ Claude Sonnet 4.6
 
 ### File List
 
-- fetch-boy/src/lib/generateSnippet.ts (NEW)
-- fetch-boy/src/lib/generateSnippet.test.ts (NEW)
-- fetch-boy/src/components/MainPanel/CopyAsButton.tsx (NEW)
-- fetch-boy/src/components/MainPanel/CopyAsButton.test.tsx (NEW)
-- fetch-boy/src/components/MainPanel/MainPanel.tsx (MODIFIED)
+- src/lib/generateSnippet.ts (NEW)
+- src/lib/generateSnippet.test.ts (NEW)
+- src/components/MainPanel/CopyAsButton.tsx (NEW)
+- src/components/MainPanel/CopyAsButton.test.tsx (NEW)
+- src/components/MainPanel/MainPanel.tsx (MODIFIED)
 - _bmad-output/implementation-artifacts/5-5-export-request-as-curl-code-snippet.md (MODIFIED)
 - _bmad-output/implementation-artifacts/sprint-status.yaml (MODIFIED)

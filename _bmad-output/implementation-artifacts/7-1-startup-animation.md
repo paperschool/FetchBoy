@@ -23,7 +23,7 @@ so that the app feels polished and professional during startup.
 ## Tasks / Subtasks
 
 - [x] Task 1 - Create SplashScreen component (AC: 1, 2)
-  - [x] Create SplashScreen.tsx component in `fetch-boy/src/components/Layout/`
+  - [x] Create SplashScreen.tsx component in `src/components/Layout/`
   - [x] Add FetchBoy logo/icon with CSS animation (fade-in, scale)
   - [x] Style for light/dark theme compatibility
 
@@ -49,8 +49,8 @@ so that the app feels polished and professional during startup.
   - [x] Test theme integration
 
 - [x] Task 6 - Commit story changes
-  - [x] Run `npx tsc --noEmit` from `fetch-boy/` to verify TypeScript compilation
-  - [x] Run `npx vitest run` from `fetch-boy/` to verify all tests pass
+  - [x] Run `npx tsc --noEmit` from `` to verify TypeScript compilation
+  - [x] Run `npx vitest run` from `` to verify all tests pass
   - [x] Commit all code and documentation changes for this story with a message that includes Story 7.1
 
 ## Dev Notes
@@ -72,10 +72,10 @@ interface SplashScreenProps {
   maxDuration?: number;  // default: 3000ms
 }
 
-export function SplashScreen({ 
-  onComplete, 
-  minDuration = 1500, 
-  maxDuration = 3000 
+export function SplashScreen({
+  onComplete,
+  minDuration = 1500,
+  maxDuration = 3000
 }: SplashScreenProps) {
   const { theme } = useTheme();
   const [isVisible, setIsVisible] = useState(true);
@@ -107,12 +107,12 @@ export function SplashScreen({
   };
 
   return (
-    <div 
+    <div
       className={`splash-screen theme-${theme}`}
       onClick={handleSkip}
     >
       <div className="logo-container animate-fade-in">
-        <img src="/fetch-boy/src-tauri/icons/fetch-boi-logo.svg" alt="FetchBoy" />
+        <img src="/src-tauri/icons/fetch-boi-logo.svg" alt="FetchBoy" />
       </div>
     </div>
   );
@@ -139,7 +139,7 @@ export function App() {
       await connectDatabase();
       setIsInitialized(true);
     };
-    
+
     initApp();
   }, []);
 
@@ -211,6 +211,7 @@ export function App() {
 ### Architecture Compliance
 
 **Tech Stack:**
+
 - React 18+ with TypeScript
 - Zustand for state management
 - Tailwind CSS v4 utility classes
@@ -218,11 +219,13 @@ export function App() {
 - Tauri v2 for desktop app shell
 
 **Component/File Conventions:**
-- SplashScreen component in `fetch-boy/src/components/Layout/`
+
+- SplashScreen component in `src/components/Layout/`
 - Tests co-located: `SplashScreen.test.tsx` alongside source
 - Use existing theme hook: `useTheme` from stores or hooks
 
 **Animation Guidelines:**
+
 - Use CSS animations for performance (avoid JS animations)
 - Run concurrently with app initialization
 - Minimum 1.5s, maximum 3s duration
@@ -248,7 +251,7 @@ export function App() {
 
 5. **Smooth transition**: Main UI should fade in smoothly after splash, not appear abruptly
 
-6. **Logo location**: Logo is at `fetch-boy/src-tauri/icons/fetch-boi-logo.svg` (from README.md)
+6. **Logo location**: Logo is at `src-tauri/icons/fetch-boi-logo.svg` (from README.md)
 
 7. **No regressions**: All existing functionality must work after splash completes
 
@@ -257,18 +260,21 @@ export function App() {
 ### Previous Story Intelligence
 
 **From Story 6.5 (Settings in Sidebar Accordion):**
+
 - App uses Zustand stores for state management
 - Components use Tailwind CSS with theme-aware classes
 - Tests use Vitest + React Testing Library
 
 **From Story 4.1 (Light/Dark Theme):**
+
 - Theme system exists with light/dark/system modes
 - Use `useTheme` hook to detect current theme
 - Theme is persisted across app restarts
 
 **From Story 1.1 (Project Scaffold):**
+
 - App entry point is App.tsx
-- Layout components in `fetch-boy/src/components/Layout/`
+- Layout components in `src/components/Layout/`
 
 ### Testing Requirements
 
@@ -304,23 +310,26 @@ expect(container.firstChild).toHaveClass('theme-light');
 ### Project Structure Notes
 
 **New Files:**
-- `fetch-boy/src/components/Layout/SplashScreen.tsx` (new)
-- `fetch-boy/src/components/Layout/SplashScreen.test.tsx` (new)
+
+- `src/components/Layout/SplashScreen.tsx` (new)
+- `src/components/Layout/SplashScreen.test.tsx` (new)
 
 **Modified Files:**
-- `fetch-boy/src/App.tsx` (add splash screen logic)
-- `fetch-boy/src/index.css` (add splash screen styles)
+
+- `src/App.tsx` (add splash screen logic)
+- `src/index.css` (add splash screen styles)
 
 **Optional Files:**
-- `fetch-boy/src/hooks/useTheme.ts` (create if not exists, or use existing)
+
+- `src/hooks/useTheme.ts` (create if not exists, or use existing)
 
 ### References
 
 - **Primary Source**: `_bmad-output/planning-artifacts/epic-7.md` (Story 7.1 acceptance criteria)
-- **Logo**: `fetch-boy/src-tauri/icons/fetch-boi-logo.svg` (FetchBoy logo)
+- **Logo**: `src-tauri/icons/fetch-boi-logo.svg` (FetchBoy logo)
 - **Theme System**: Story 4.1 (Light/Dark Theme) - use existing `useTheme` hook
-- **App Entry**: `fetch-boy/src/App.tsx` (main app component)
-- **Layout Components**: `fetch-boy/src/components/Layout/` (existing layout structure)
+- **App Entry**: `src/App.tsx` (main app component)
+- **Layout Components**: `src/components/Layout/` (existing layout structure)
 - **Testing**: Vitest + React Testing Library (consistent with project)
 
 ## Dev Agent Record
@@ -348,11 +357,11 @@ claude-sonnet-4-6
 
 ### File List
 
-- `fetch-boy/src/vite-env.d.ts` (new)
-- `fetch-boy/src/components/Layout/SplashScreen.tsx` (new)
-- `fetch-boy/src/components/Layout/SplashScreen.test.tsx` (new)
-- `fetch-boy/src/App.tsx` (modified)
-- `fetch-boy/src/index.css` (modified)
+- `src/vite-env.d.ts` (new)
+- `src/components/Layout/SplashScreen.tsx` (new)
+- `src/components/Layout/SplashScreen.test.tsx` (new)
+- `src/App.tsx` (modified)
+- `src/index.css` (modified)
 - `_bmad-output/implementation-artifacts/7-1-startup-animation.md` (modified)
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified)
 
@@ -360,4 +369,3 @@ claude-sonnet-4-6
 
 - 2026-03-11: Story 7.1 context created via automated create-story workflow — comprehensive developer guide with splash screen component, animation timing, theme integration, and concurrent initialization
 - 2026-03-11: Story 7.1 implemented — SplashScreen component with logo animation, theme-aware styling, min/max timing (1.5s–3s), click-to-skip, smooth app fade-in transition; 12 new tests added, all 475 tests pass
-
