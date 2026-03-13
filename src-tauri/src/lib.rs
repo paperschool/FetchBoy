@@ -5,6 +5,7 @@ mod proxy;
 
 use std::path::PathBuf;
 use std::sync::Arc;
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::{Emitter, Manager};
 
 // ─── App State ────────────────────────────────────────────────────────────────
@@ -122,8 +123,6 @@ fn install_ca_to_system(
 ) -> Result<(), String> {
     #[cfg(target_os = "macos")]
     {
-        use tauri::Manager;
-
         let _ = app; // icon resolved via system caution icon instead
 
         // Pre-confirmation dialog. AppleScript line breaks use `& return &`;
@@ -660,11 +659,66 @@ fn exit_app(
     app.exit(0);
 }
 
+// ─── Menu ─────────────────────────────────────────────────────────────────────
+
+fn build_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
+    let restart_tutorial = MenuItem::with_id(
+        app,
+        "restart-tutorial",
+        "Restart Tutorial",
+        true,
+        None::<&str>,
+    )?;
+    let help_menu = Submenu::with_items(app, "Help", true, &[&restart_tutorial])?;
+
+    let edit_menu = Submenu::with_items(
+        app,
+        "Edit",
+        true,
+        &[
+            &PredefinedMenuItem::undo(app, None)?,
+            &PredefinedMenuItem::redo(app, None)?,
+            &PredefinedMenuItem::separator(app)?,
+            &PredefinedMenuItem::cut(app, None)?,
+            &PredefinedMenuItem::copy(app, None)?,
+            &PredefinedMenuItem::paste(app, None)?,
+            &PredefinedMenuItem::select_all(app, None)?,
+        ],
+    )?;
+
+    #[cfg(target_os = "macos")]
+    {
+        let app_menu = Submenu::with_items(
+            app,
+            "Fetch Boy",
+            true,
+            &[
+                &PredefinedMenuItem::about(app, None, None)?,
+                &PredefinedMenuItem::separator(app)?,
+                &PredefinedMenuItem::hide(app, None)?,
+                &PredefinedMenuItem::hide_others(app, None)?,
+                &PredefinedMenuItem::separator(app)?,
+                &PredefinedMenuItem::quit(app, None)?,
+            ],
+        )?;
+        return Menu::with_items(app, &[&app_menu, &edit_menu, &help_menu]);
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    Menu::with_items(app, &[&edit_menu, &help_menu])
+}
+
 // ─── App entry point ─────────────────────────────────────────────────────────
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .menu(build_menu)
+        .on_menu_event(|app, event| {
+            if event.id() == "restart-tutorial" {
+                let _ = app.emit("menu:restart-tutorial", ());
+            }
+        })
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_http::init())

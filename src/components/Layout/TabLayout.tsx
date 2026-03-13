@@ -1,7 +1,6 @@
 import React from 'react';
 
 export interface TabLayoutProps {
-  topBar: React.ReactNode;
   sidebar: React.ReactNode;
   middleContent?: React.ReactNode;
   mainContent: React.ReactNode;
@@ -14,18 +13,15 @@ export interface TabLayoutProps {
  * pattern for both FetchView and InterceptView.
  */
 export function TabLayout({
-  topBar,
   sidebar,
   middleContent,
   mainContent,
   sidebarCollapsed,
   className,
 }: TabLayoutProps) {
-  // When there's no middleContent, use a simpler 2-row grid
-  const gridRows = middleContent ? 'grid-rows-[3rem_2.25rem_1fr]' : 'grid-rows-[3rem_1fr]';
-  const mainContentRow = middleContent ? 'row-start-3' : 'row-start-2';
-  // Sidebar spans from row 2 to end (not including topBar)
-  const sidebarRow = middleContent ? 'row-start-2 row-end-4' : 'row-start-2 row-end-3';
+  const gridRows = middleContent ? 'grid-rows-[2.25rem_1fr]' : 'grid-rows-[1fr]';
+  const mainContentRow = middleContent ? 'row-start-2' : 'row-start-1';
+  const sidebarRow = middleContent ? 'row-start-1 row-end-3' : 'row-start-1 row-end-2';
 
   return (
     <div
@@ -35,12 +31,11 @@ export function TabLayout({
         className ?? ''
       }`}
     >
-      {topBar}
       <aside className={`${sidebarRow} overflow-hidden`}>
         {sidebar}
       </aside>
       {middleContent && (
-        <div className="col-start-2 row-start-2 border-b border-app-subtle bg-app-sidebar overflow-hidden">
+        <div className="col-start-2 row-start-1 border-b border-app-subtle bg-app-sidebar overflow-hidden">
           {middleContent}
         </div>
       )}

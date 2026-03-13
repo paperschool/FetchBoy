@@ -24,6 +24,7 @@ _bmad
 _bmad-output
 .claude
 .clinerules
+CLAUDE.md
 .github/copilot-instructions.md
 .github/prompts/
 .github/agents/

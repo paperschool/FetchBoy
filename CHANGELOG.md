@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.1] - 2026-03-13
+
+- feat: Unified tab bar — top bar removed, tab labels carry icons, and per-tab actions (environments, proxy toggle) move to the right of the tab strip
+- feat: Native OS menu bar with Edit shortcuts and Help > Restart Tutorial wired to the tour system
+- feat: Image viewer (zoom/pan) now available in the intercept request detail panel
+- fix: Breakpoint wildcard URL patterns now prepend `*` automatically when no protocol is present; derived patterns always include `https://`
+- fix: Intercept table empty-row flicker and update jitter resolved via `useDeferredValue` and a stale-index guard
+- fix: Rust compiler warnings cleared — unused imports, dead code, and camelCase field names resolved
+
 ## [0.11.0] - 2026-03-13
 
 - feat: Breakpoint intercept viewer opens in inline edit mode by default when a breakpoint is hit

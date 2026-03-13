@@ -173,7 +173,15 @@ export function BreakpointEditor({ onClose }: Props) {
                                     {MATCH_TYPES.map((type) => (
                                         <button
                                             key={type}
-                                            onClick={() => setMatchType(type)}
+                                            onClick={() => {
+                                                if (type === 'wildcard') {
+                                                    const hasProtocol = /^https?:\/\//.test(urlPattern);
+                                                    if (!hasProtocol && urlPattern && !urlPattern.startsWith('*')) {
+                                                        setUrlPattern('*' + urlPattern);
+                                                    }
+                                                }
+                                                setMatchType(type);
+                                            }}
                                             className={`px-3 py-1 text-xs rounded ${
                                                 matchType === type
                                                     ? 'bg-app-accent text-white'

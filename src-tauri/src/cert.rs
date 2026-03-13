@@ -5,6 +5,8 @@ use std::path::PathBuf;
 
 pub struct CertificateAuthority {
     authority: RcgenAuthority,
+    // Used by install_to_system on non-macOS targets
+    #[allow(dead_code)]
     cert_path: PathBuf,
 }
 
@@ -61,6 +63,7 @@ impl CertificateAuthority {
 
     /// Add the CA certificate to the OS trust store.
     /// On macOS requires user approval; on Windows may require elevation.
+    #[allow(dead_code)]
     pub fn install_to_system(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         #[cfg(target_os = "macos")]
         {

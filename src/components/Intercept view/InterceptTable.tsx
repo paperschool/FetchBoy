@@ -1,4 +1,4 @@
-import { useRef, useMemo, useState, useCallback, useEffect } from "react";
+import { useRef, useMemo, useState, useCallback, useEffect, useDeferredValue } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Trash2 } from "lucide-react";
 import { useInterceptStore } from "@/stores/interceptStore";
@@ -31,22 +31,23 @@ function deriveBreakpointName(req: InterceptRequest): string {
 }
 
 export function InterceptTable() {
-  const requests = useInterceptStore((state) => state.requests);
-  const clearRequests = useInterceptStore((state) => state.clearRequests);
-  const selectedRequestId = useInterceptStore(
-    (state) => state.selectedRequestId,
-  );
-  const setSelectedRequestId = useInterceptStore(
-    (state) => state.setSelectedRequestId,
-  );
-  const searchQuery = useInterceptStore((state) => state.searchQuery);
-  const searchMode = useInterceptStore((state) => state.searchMode);
-  const verbFilter = useInterceptStore((state) => state.verbFilter);
-  const statusFilter = useInterceptStore((state) => state.statusFilter);
-  const setSearchQuery = useInterceptStore((state) => state.setSearchQuery);
-  const setSearchMode = useInterceptStore((state) => state.setSearchMode);
-  const setVerbFilter = useInterceptStore((state) => state.setVerbFilter);
-  const setStatusFilter = useInterceptStore((state) => state.setStatusFilter);
+  const {
+    requests: liveRequests,
+    clearRequests,
+    selectedRequestId,
+    setSelectedRequestId,
+    searchQuery,
+    searchMode,
+    verbFilter,
+    statusFilter,
+    setSearchQuery,
+    setSearchMode,
+    setVerbFilter,
+    setStatusFilter,
+  } = useInterceptStore();
+
+  // Defer request list updates so rapid traffic doesn't block user interactions
+  const requests = useDeferredValue(liveRequests);
 
   const { addBreakpoint, startEditing } = useBreakpointsStore();
   const [breakDialogReq, setBreakDialogReq] = useState<InterceptRequest | null>(
@@ -222,6 +223,8 @@ export function InterceptTable() {
             >
               {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                 const req = filteredRequests[virtualRow.index];
+                // Guard: virtualizer count can lag one frame behind the array during rapid updates
+                if (!req) return null;
                 const fullUrl = formatHostPath(req.host, req.path);
                 const isSelected = req.id === selectedRequestId;
                 return (

@@ -1,5 +1,4 @@
 import { useEffect, useCallback } from 'react';
-import { TopBar } from '@/components/TopBar/TopBar';
 import { Sidebar } from '@/components/Sidebar/Sidebar';
 import { MainPanel } from '@/components/MainPanel/MainPanel';
 import { TabBar } from '@/components/TabBar/TabBar';
@@ -48,7 +47,6 @@ export function FetchView() {
 
   return (
     <TabLayout
-      topBar={<TopBar />}
       sidebar={<Sidebar collapsed={sidebarCollapsed} onToggle={handleToggleSidebar} />}
       middleContent={<TabBar />}
       mainContent={<MainPanel />}
