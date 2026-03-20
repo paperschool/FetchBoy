@@ -103,6 +103,12 @@ yarn tauri dev
 
 ## Installation
 
+### windows
+
+After downloading bundle, windows defender may prompt you not to run the unsigned application, this is normal. In the "Don't Run" screen, click to see more details and then run it. 
+
+> ⚠️ **Disclaimer:** Fetch Boy is currently in **early development**. The app has not been signed or notarized by Windows App Store (or associated partners) yet, which means Windows Defender may show warnings when trying to run it. This can be bypassed as above by ignoring the warning when launching the application. Once the app reaches a more stable release, proper signing and notarization will be set up.
+
 ### macOS
 
 After downloading or building the `.app` bundle, you may need to remove the extended attribute quarantine flag to run the app:
@@ -115,7 +121,15 @@ Then open the app from Applications as usual.
 
 > ⚠️ **Disclaimer:** Fetch Boy is currently in **early development**. The app has not been signed or notarized by Apple yet, which means Gatekeeper may show warnings when trying to run it. Use the `xattr` command above to bypass these restrictions. Once the app reaches a more stable release, proper signing and notarization will be set up.
 
+### Linux
+
+Haven't tested the builds yet, if testing please raise any issues in the issues section!
+
 ---
+
+## Known Issues
+
+1. UI speed seems quite sluggish on Windows 11 - Not sure why.
 
 ## Project Structure
 
@@ -125,18 +139,13 @@ FetchBoyApp/
 │   ├── src/                # React components, stores, hooks
 │   ├── src-tauri/          # Rust source, tauri.conf.json, icons
 │   └── package.json
-├── _bmad-output/
-│   ├── api-client-spec.md          # Full product spec
-│   ├── planning-artifacts/         # Epics (epic-1 through epic-5)
-│   └── implementation-artifacts/  # Stories + sprint-status.yaml
-└── docs/
 ```
 
 ## Author
 
 <div align="center">
 
-**Connect with the developer:**
+**Connect with the me:**
 
 Dominic Jomaa • [LinkedIn](https://www.linkedin.com/in/dominicjomaa/) • [Instagram](https://www.instagram.com/ono.sendai.runner/)
 
