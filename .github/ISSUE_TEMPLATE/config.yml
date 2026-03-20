@@ -1,0 +1,7 @@
+contact_links:
+  - name: Documentation
+    url: https://github.com/paperschool/FetchBoy#readme
+    about: Please check the README for usage information
+  - name: Discussions
+    url: https://github.com/paperschool/FetchBoy/discussions
+    about: Ask questions and engage with the community
