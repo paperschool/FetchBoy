@@ -21,6 +21,10 @@ interface UiSettingsState {
     setProxyEnabled: (enabled: boolean) => void;
     proxyPort: number;
     setProxyPort: (port: number) => void;
+    caInstalled: boolean;
+    setCaInstalled: (installed: boolean) => void;
+    flashInstallCert: boolean;
+    setFlashInstallCert: (flash: boolean) => void;
 }
 
 export const useUiSettingsStore = create<UiSettingsState>((set) => ({
@@ -44,4 +48,8 @@ export const useUiSettingsStore = create<UiSettingsState>((set) => ({
     setProxyEnabled: (enabled) => set({ proxyEnabled: enabled }),
     proxyPort: 8080,
     setProxyPort: (port) => set({ proxyPort: port }),
+    caInstalled: false,
+    setCaInstalled: (installed) => set({ caInstalled: installed }),
+    flashInstallCert: false,
+    setFlashInstallCert: (flash) => set({ flashInstallCert: flash }),
 }));
