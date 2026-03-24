@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.13.0] - 2026-03-24
+
+- feat: Split request/response events — intercepted requests now appear in the table immediately with a pulsing "Pending" badge before the upstream response arrives
+- feat: Response data updates in-place when it arrives (status code, size, content-type fill in)
+- feat: Detail view shows request headers/body/params for pending requests; body tab shows "Awaiting response..." placeholder
+- feat: New Tauri events `intercept:request-split` and `intercept:response-split` emitted by the Rust proxy alongside the existing combined event
+- fix: Akamai and CDN/WAF errors caused by missing Accept-Encoding header — proxy now sets `Accept-Encoding: identity` instead of removing the header
+
 ## [0.12.0] - 2026-03-24
 
 - feat: Certificate uninstall now performs full cleanup — stops the proxy server, unconfigures OS proxy settings, and deletes CA files from disk
