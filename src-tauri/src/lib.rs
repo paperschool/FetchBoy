@@ -18,6 +18,8 @@ pub struct ProxyRestartInfo {
     pub app_data_dir: PathBuf,
     pub emit_fn: proxy::EmitFn,
     pub paused_emit_fn: proxy::PausedEmitFn,
+    pub request_emit_fn: proxy::RequestEmitFn,
+    pub response_emit_fn: proxy::ResponseEmitFn,
 }
 
 /// Current proxy configuration (port + enabled flag).
@@ -104,6 +106,8 @@ fn set_proxy_config(
             ca_authority,
             Arc::clone(&restart_info.emit_fn),
             Arc::clone(&restart_info.paused_emit_fn),
+            Arc::clone(&restart_info.request_emit_fn),
+            Arc::clone(&restart_info.response_emit_fn),
             Arc::clone(&breakpoints.0),
             Arc::clone(&pause_registry.0),
             Arc::clone(&pause_timeout.0),
@@ -766,11 +770,27 @@ pub fn run() {
                 }
             });
 
+            let app_handle3 = app.handle().clone();
+            let request_emit_fn: proxy::RequestEmitFn = Arc::new(move |event| {
+                if let Err(e) = app_handle3.emit("intercept:request-split", event) {
+                    log::warn!("Failed to emit split request event: {e}");
+                }
+            });
+
+            let app_handle4 = app.handle().clone();
+            let response_emit_fn: proxy::ResponseEmitFn = Arc::new(move |event| {
+                if let Err(e) = app_handle4.emit("intercept:response-split", event) {
+                    log::warn!("Failed to emit split response event: {e}");
+                }
+            });
+
             // Register restart info so the set_proxy_config command can recreate the proxy.
             app.manage(ProxyRestartInfo {
                 app_data_dir: app_data_dir.clone(),
                 emit_fn: Arc::clone(&emit_fn),
                 paused_emit_fn: Arc::clone(&paused_emit_fn),
+                request_emit_fn: Arc::clone(&request_emit_fn),
+                response_emit_fn: Arc::clone(&response_emit_fn),
             });
 
             // Default config: enabled on port 8080.
@@ -800,6 +820,8 @@ pub fn run() {
                         ca_authority,
                         emit_fn,
                         paused_emit_fn,
+                        request_emit_fn,
+                        response_emit_fn,
                         breakpoints_ref,
                         pause_registry_ref,
                         pause_timeout_ref,

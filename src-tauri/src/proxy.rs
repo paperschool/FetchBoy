@@ -41,6 +41,38 @@ pub struct InterceptEvent {
     pub is_blocked: Option<bool>,
 }
 
+// ─── Split event payloads ──────────────────────────────────────────────────────
+
+/// Request-only event emitted as soon as the proxy intercepts a request (before
+/// the upstream response arrives). Linked to the later response via `id`.
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InterceptRequestEvent {
+    pub id: String,
+    pub timestamp: i64,
+    pub method: String,
+    pub host: String,
+    pub path: String,
+    pub request_headers: HashMap<String, String>,
+    pub request_body: Option<String>,
+}
+
+/// Response-only event emitted when the upstream response arrives.
+/// `id` matches the earlier `InterceptRequestEvent` so the frontend can pair them.
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InterceptResponseEvent {
+    pub id: String,
+    pub status_code: u16,
+    pub status_text: String,
+    pub response_headers: HashMap<String, String>,
+    pub response_body: Option<String>,
+    pub content_type: Option<String>,
+    pub size: u64,
+    pub response_time_ms: i64,
+    pub is_blocked: Option<bool>,
+}
+
 // ─── Per-request state held between handle_request and handle_response ────────
 
 #[derive(Clone)]
@@ -55,6 +87,8 @@ struct PendingRequest {
     /// Uses Arc<Mutex> so the async future (which can't hold &mut self) can write it
     /// while handle_response reads it from self.pending after the future completes.
     request_body: Arc<Mutex<Option<String>>>,
+    /// Monotonic instant captured when the request starts, used to compute response time.
+    started: std::time::Instant,
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -153,11 +187,15 @@ pub struct BreakpointPausedEvent {
 
 pub type EmitFn = Arc<dyn Fn(&InterceptEvent) + Send + Sync + 'static>;
 pub type PausedEmitFn = Arc<dyn Fn(&BreakpointPausedEvent) + Send + Sync + 'static>;
+pub type RequestEmitFn = Arc<dyn Fn(&InterceptRequestEvent) + Send + Sync + 'static>;
+pub type ResponseEmitFn = Arc<dyn Fn(&InterceptResponseEvent) + Send + Sync + 'static>;
 
 #[derive(Clone)]
 pub struct InterceptHandler {
     emit_fn: EmitFn,
     paused_emit_fn: PausedEmitFn,
+    request_emit_fn: RequestEmitFn,
+    response_emit_fn: ResponseEmitFn,
     breakpoints: BreakpointsRef,
     pause_registry: PauseRegistryRef,
     pause_timeout: PauseTimeoutRef,
@@ -172,6 +210,8 @@ impl InterceptHandler {
     fn new(
         emit_fn: EmitFn,
         paused_emit_fn: PausedEmitFn,
+        request_emit_fn: RequestEmitFn,
+        response_emit_fn: ResponseEmitFn,
         breakpoints: BreakpointsRef,
         pause_registry: PauseRegistryRef,
         pause_timeout: PauseTimeoutRef,
@@ -179,6 +219,8 @@ impl InterceptHandler {
         Self {
             emit_fn,
             paused_emit_fn,
+            request_emit_fn,
+            response_emit_fn,
             breakpoints,
             pause_registry,
             pause_timeout,
@@ -246,9 +288,12 @@ impl HttpHandler for InterceptHandler {
             path: path.clone(),
             request_headers: request_headers.clone(),
             request_body: body_slot,
+            started: std::time::Instant::now(),
         });
 
         let emit_fn = Arc::clone(&self.emit_fn);
+        let request_emit_fn = Arc::clone(&self.request_emit_fn);
+        let response_emit_fn_for_block = Arc::clone(&self.response_emit_fn);
         let breakpoints = Arc::clone(&self.breakpoints);
 
         async move {
@@ -265,6 +310,17 @@ impl HttpHandler for InterceptHandler {
                 None
             };
             *slot_for_async.lock().unwrap() = captured_body.clone();
+
+            // Emit split request event so the frontend can show request data immediately.
+            request_emit_fn(&InterceptRequestEvent {
+                id: id.clone(),
+                timestamp,
+                method: method.clone(),
+                host: host.clone(),
+                path: path.clone(),
+                request_headers: request_headers.clone(),
+                request_body: captured_body.clone(),
+            });
 
             // Check for a blocking breakpoint BEFORE forwarding upstream.
             let full_url = format!("https://{}{}", host, path);
@@ -288,6 +344,25 @@ impl HttpHandler for InterceptHandler {
                 let block_status = bp.block_request_status_code;
                 let block_body = bp.block_request_body.clone();
                 let block_body_bytes = Bytes::from(block_body.clone().into_bytes());
+                let block_body_for_resp = if block_body.is_empty() { None } else { Some(block_body.clone()) };
+
+                // Emit split response event for blocked request.
+                let block_status_text = hudsucker::hyper::StatusCode::from_u16(block_status)
+                    .ok()
+                    .and_then(|s| s.canonical_reason())
+                    .unwrap_or("Unknown Status")
+                    .to_string();
+                response_emit_fn_for_block(&InterceptResponseEvent {
+                    id: id.clone(),
+                    status_code: block_status,
+                    status_text: block_status_text,
+                    response_headers: HashMap::new(),
+                    response_body: block_body_for_resp.clone(),
+                    content_type: Some("text/plain".to_string()),
+                    size: block_body_bytes.len() as u64,
+                    response_time_ms: 0,
+                    is_blocked: Some(true),
+                });
 
                 let event = InterceptEvent {
                     id,
@@ -301,7 +376,7 @@ impl HttpHandler for InterceptHandler {
                     request_headers,
                     request_body: captured_body,
                     response_headers: HashMap::new(),
-                    response_body: if block_body.is_empty() { None } else { Some(block_body) },
+                    response_body: block_body_for_resp,
                     is_blocked: Some(true),
                 };
                 emit_fn(&event);
@@ -329,11 +404,26 @@ impl HttpHandler for InterceptHandler {
         // Emit an event so failed requests still appear in the intercept table.
         let req_info = self.pending.take();
         let emit_fn = Arc::clone(&self.emit_fn);
+        let response_emit_fn = Arc::clone(&self.response_emit_fn);
         let err_str = err.to_string();
 
         async move {
             if let Some(req_info) = req_info {
+                let response_time_ms = req_info.started.elapsed().as_millis() as i64;
                 let request_body = req_info.request_body.lock().unwrap().clone();
+
+                response_emit_fn(&InterceptResponseEvent {
+                    id: req_info.id.clone(),
+                    status_code: 502,
+                    status_text: "Bad Gateway".to_string(),
+                    response_headers: HashMap::new(),
+                    response_body: Some(err_str.clone()),
+                    content_type: None,
+                    size: 0,
+                    response_time_ms,
+                    is_blocked: None,
+                });
+
                 let event = InterceptEvent {
                     id: req_info.id,
                     timestamp: req_info.timestamp,
@@ -376,6 +466,7 @@ impl HttpHandler for InterceptHandler {
         let req_info = self.pending.take();
         let emit_fn = Arc::clone(&self.emit_fn);
         let paused_emit_fn = Arc::clone(&self.paused_emit_fn);
+        let response_emit_fn = Arc::clone(&self.response_emit_fn);
         let breakpoints = Arc::clone(&self.breakpoints);
         let pause_registry = Arc::clone(&self.pause_registry);
         let pause_timeout_ref = Arc::clone(&self.pause_timeout);
@@ -486,7 +577,21 @@ impl HttpHandler for InterceptHandler {
             if matches!(user_decision, Some(PauseDecision::Drop)) {
                 // Emit a "dropped" event so the intercept table shows it.
                 if let Some(ref ri) = req_info {
+                    let response_time_ms = ri.started.elapsed().as_millis() as i64;
                     let request_body = ri.request_body.lock().unwrap().clone();
+
+                    response_emit_fn(&InterceptResponseEvent {
+                        id: ri.id.clone(),
+                        status_code: 0,
+                        status_text: "Dropped".to_string(),
+                        response_headers: HashMap::new(),
+                        response_body: Some("Request dropped by user".to_string()),
+                        content_type: None,
+                        size: 0,
+                        response_time_ms,
+                        is_blocked: Some(true),
+                    });
+
                     let event = InterceptEvent {
                         id: ri.id.clone(),
                         timestamp: ri.timestamp,
@@ -622,7 +727,28 @@ impl HttpHandler for InterceptHandler {
             let res = Response::from_parts(parts, new_body);
 
             if let Some(req_info) = req_info {
+                let response_time_ms = req_info.started.elapsed().as_millis() as i64;
                 let request_body = req_info.request_body.lock().unwrap().clone();
+
+                // Emit split response event.
+                let status_text = hudsucker::hyper::StatusCode::from_u16(effective_status_code)
+                    .ok()
+                    .and_then(|s| s.canonical_reason())
+                    .unwrap_or("Unknown Status")
+                    .to_string();
+                response_emit_fn(&InterceptResponseEvent {
+                    id: req_info.id.clone(),
+                    status_code: effective_status_code,
+                    status_text,
+                    response_headers: response_headers.clone(),
+                    response_body: response_body.clone(),
+                    content_type: final_content_type.clone(),
+                    size,
+                    response_time_ms,
+                    is_blocked: None,
+                });
+
+                // Emit combined event for backwards compatibility.
                 let event = InterceptEvent {
                     id: req_info.id,
                     timestamp: req_info.timestamp,
@@ -667,6 +793,8 @@ impl ProxyServer {
         ca: RcgenAuthority,
         emit_fn: EmitFn,
         paused_emit_fn: PausedEmitFn,
+        request_emit_fn: RequestEmitFn,
+        response_emit_fn: ResponseEmitFn,
         breakpoints: BreakpointsRef,
         pause_registry: PauseRegistryRef,
         pause_timeout: PauseTimeoutRef,
@@ -675,7 +803,7 @@ impl ProxyServer {
         self.shutdown_tx = Some(shutdown_tx);
 
         let port = self.port;
-        let handler = InterceptHandler::new(emit_fn, paused_emit_fn, breakpoints, pause_registry, pause_timeout);
+        let handler = InterceptHandler::new(emit_fn, paused_emit_fn, request_emit_fn, response_emit_fn, breakpoints, pause_registry, pause_timeout);
         let crypto_provider = rustls::crypto::ring::default_provider();
 
         tauri::async_runtime::spawn(async move {
@@ -927,10 +1055,12 @@ mod tests {
             called_clone.store(true, Ordering::SeqCst);
         });
         let paused_emit_fn: PausedEmitFn = Arc::new(|_| {});
+        let request_emit_fn: RequestEmitFn = Arc::new(|_| {});
+        let response_emit_fn: ResponseEmitFn = Arc::new(|_| {});
         let breakpoints: BreakpointsRef = Arc::new(Mutex::new(Vec::new()));
         let pause_registry: PauseRegistryRef = Arc::new(Mutex::new(HashMap::new()));
         let pause_timeout: PauseTimeoutRef = Arc::new(Mutex::new(30));
-        let handler = InterceptHandler::new(emit_fn, paused_emit_fn, breakpoints, pause_registry, pause_timeout);
+        let handler = InterceptHandler::new(emit_fn, paused_emit_fn, request_emit_fn, response_emit_fn, breakpoints, pause_registry, pause_timeout);
         assert!(handler.pending.is_none());
     }
 
@@ -1040,5 +1170,148 @@ mod tests {
         assert_eq!(header.key, "Authorization");
         assert_eq!(header.value, "Bearer test");
         assert!(!header.enabled);
+    }
+
+    // ─── Split event struct tests ─────────────────────────────────────────────
+
+    #[test]
+    fn intercept_request_event_serialises_camelcase_fields() {
+        let mut headers = HashMap::new();
+        headers.insert("content-type".to_string(), "application/json".to_string());
+
+        let event = InterceptRequestEvent {
+            id: "req-123".to_string(),
+            timestamp: 1700000000000,
+            method: "POST".to_string(),
+            host: "api.example.com".to_string(),
+            path: "/v1/users".to_string(),
+            request_headers: headers,
+            request_body: Some("{\"name\":\"test\"}".to_string()),
+        };
+
+        let json = serde_json::to_value(&event).unwrap();
+        assert_eq!(json["id"], "req-123");
+        assert_eq!(json["timestamp"], 1700000000000i64);
+        assert_eq!(json["method"], "POST");
+        assert_eq!(json["host"], "api.example.com");
+        assert_eq!(json["path"], "/v1/users");
+        assert_eq!(json["requestHeaders"]["content-type"], "application/json");
+        assert_eq!(json["requestBody"], "{\"name\":\"test\"}");
+    }
+
+    #[test]
+    fn intercept_request_event_optional_body_is_null_when_none() {
+        let event = InterceptRequestEvent {
+            id: "req-456".to_string(),
+            timestamp: 0,
+            method: "GET".to_string(),
+            host: "example.com".to_string(),
+            path: "/".to_string(),
+            request_headers: HashMap::new(),
+            request_body: None,
+        };
+
+        let json = serde_json::to_value(&event).unwrap();
+        assert!(json["requestBody"].is_null());
+    }
+
+    #[test]
+    fn intercept_response_event_serialises_camelcase_fields() {
+        let mut headers = HashMap::new();
+        headers.insert("x-request-id".to_string(), "abc123".to_string());
+
+        let event = InterceptResponseEvent {
+            id: "req-123".to_string(),
+            status_code: 200,
+            status_text: "OK".to_string(),
+            response_headers: headers,
+            response_body: Some("{\"ok\":true}".to_string()),
+            content_type: Some("application/json".to_string()),
+            size: 1024,
+            response_time_ms: 150,
+            is_blocked: None,
+        };
+
+        let json = serde_json::to_value(&event).unwrap();
+        assert_eq!(json["id"], "req-123");
+        assert_eq!(json["statusCode"], 200);
+        assert_eq!(json["statusText"], "OK");
+        assert_eq!(json["responseHeaders"]["x-request-id"], "abc123");
+        assert_eq!(json["responseBody"], "{\"ok\":true}");
+        assert_eq!(json["contentType"], "application/json");
+        assert_eq!(json["size"], 1024);
+        assert_eq!(json["responseTimeMs"], 150);
+        assert!(json["isBlocked"].is_null());
+    }
+
+    #[test]
+    fn intercept_response_event_blocked_fields() {
+        let event = InterceptResponseEvent {
+            id: "req-789".to_string(),
+            status_code: 403,
+            status_text: "Forbidden".to_string(),
+            response_headers: HashMap::new(),
+            response_body: Some("{\"error\":\"blocked\"}".to_string()),
+            content_type: Some("text/plain".to_string()),
+            size: 0,
+            response_time_ms: 0,
+            is_blocked: Some(true),
+        };
+
+        let json = serde_json::to_value(&event).unwrap();
+        assert_eq!(json["isBlocked"], true);
+        assert_eq!(json["statusCode"], 403);
+        assert_eq!(json["statusText"], "Forbidden");
+    }
+
+    #[test]
+    fn intercept_response_event_optional_fields_null_when_none() {
+        let event = InterceptResponseEvent {
+            id: "req-000".to_string(),
+            status_code: 502,
+            status_text: "Bad Gateway".to_string(),
+            response_headers: HashMap::new(),
+            response_body: None,
+            content_type: None,
+            size: 0,
+            response_time_ms: 5000,
+            is_blocked: None,
+        };
+
+        let json = serde_json::to_value(&event).unwrap();
+        assert!(json["responseBody"].is_null());
+        assert!(json["contentType"].is_null());
+        assert!(json["isBlocked"].is_null());
+    }
+
+    #[test]
+    fn request_and_response_events_linked_by_id() {
+        let shared_id = "link-test-id".to_string();
+
+        let req_event = InterceptRequestEvent {
+            id: shared_id.clone(),
+            timestamp: 1000,
+            method: "GET".to_string(),
+            host: "example.com".to_string(),
+            path: "/api/data".to_string(),
+            request_headers: HashMap::new(),
+            request_body: None,
+        };
+
+        let resp_event = InterceptResponseEvent {
+            id: shared_id.clone(),
+            status_code: 200,
+            status_text: "OK".to_string(),
+            response_headers: HashMap::new(),
+            response_body: Some("{\"data\":[]}".to_string()),
+            content_type: Some("application/json".to_string()),
+            size: 11,
+            response_time_ms: 42,
+            is_blocked: None,
+        };
+
+        let req_json = serde_json::to_value(&req_event).unwrap();
+        let resp_json = serde_json::to_value(&resp_event).unwrap();
+        assert_eq!(req_json["id"], resp_json["id"]);
     }
 }
