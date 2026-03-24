@@ -99,38 +99,50 @@ jobs:
               --jq '.body')
           fi
 
-          cat > release-notes.md <<EOF
-          $GENERATED
+          # Build downloads table from artifacts that actually exist
+          HAS_MAC=$(find artifacts -name "*.dmg" 2>/dev/null | head -1)
+          HAS_WIN=$(find artifacts \( -name "*.msi" -o -name "*.exe" \) 2>/dev/null | head -1)
+          HAS_LINUX=$(find artifacts \( -name "*.deb" -o -name "*.AppImage" \) 2>/dev/null | head -1)
 
-          ---
+          DOWNLOADS_TABLE="| Platform | File |\n|----------|------|"
+          [ -n "$HAS_MAC" ] && DOWNLOADS_TABLE="$DOWNLOADS_TABLE\n| macOS | \`.dmg\` |"
+          [ -n "$HAS_WIN" ] && DOWNLOADS_TABLE="$DOWNLOADS_TABLE\n| Windows | \`.msi\` or \`.exe\` |"
+          [ -n "$HAS_LINUX" ] && DOWNLOADS_TABLE="$DOWNLOADS_TABLE\n| Linux | \`.deb\` or \`.AppImage\` |"
 
-          ## Downloads
+          {
+            echo "$GENERATED"
+            echo ""
+            echo "---"
+            echo ""
+            echo "## Downloads"
+            echo ""
+            echo -e "$DOWNLOADS_TABLE"
+            echo ""
+            echo "---"
+            echo ""
+            echo "## Installation Notes"
 
-          | Platform | File |
-          |----------|------|
-          | macOS | \`.dmg\` |
-          | Windows | \`.msi\` or \`.exe\` |
-          | Linux | \`.deb\` or \`.AppImage\` |
+            if [ -n "$HAS_MAC" ]; then
+              echo ""
+              echo "### macOS"
+              echo 'Fetch Boy is not yet signed with an Apple Developer certificate. macOS will show a **"damaged and can'"'"'t be opened"** error. The app is not damaged — this is Gatekeeper blocking unsigned apps.'
+              echo ""
+              echo "**Run this in Terminal after dragging it to Applications:**"
+              echo '```bash'
+              echo 'xattr -cr /Applications/Fetch\ Boy.app'
+              echo '```'
+              echo "You only need to do this once."
+            fi
 
-          ---
-
-          ## Installation Notes
-
-          ### macOS
-          Fetch Boy is not yet signed with an Apple Developer certificate. macOS will show a **"damaged and can't be opened"** error. The app is not damaged — this is Gatekeeper blocking unsigned apps.
-
-          **Run this in Terminal after dragging it to Applications:**
-          \`\`\`bash
-          xattr -cr /Applications/Fetch\\ Boy.app
-          \`\`\`
-          You only need to do this once.
-
-          ### Linux (AppImage)
-          Make the file executable before running:
-          \`\`\`bash
-          chmod +x "Fetch Boy_${{ steps.version.outputs.tag }}_amd64.AppImage"
-          \`\`\`
-          EOF
+            if [ -n "$HAS_LINUX" ]; then
+              echo ""
+              echo "### Linux (AppImage)"
+              echo "Make the file executable before running:"
+              echo '```bash'
+              echo "chmod +x \"Fetch Boy_${{ steps.version.outputs.tag }}_amd64.AppImage\""
+              echo '```'
+            fi
+          } > release-notes.md
 
       - name: Create public GitHub release
         env:
