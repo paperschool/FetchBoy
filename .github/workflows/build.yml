@@ -1,26 +1,61 @@
 name: Build Installers
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
+    inputs:
+      build_macos:
+        description: 'Build macOS'
+        required: false
+        default: true
+        type: boolean
+      build_windows:
+        description: 'Build Windows'
+        required: false
+        default: true
+        type: boolean
+      build_linux:
+        description: 'Build Linux'
+        required: false
+        default: true
+        type: boolean
+      skip_bundle_size_check:
+        description: 'Skip bundle size checks'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          MATRIX="[]"
+          if [ "${{ inputs.build_linux }}" = "true" ]; then
+            MATRIX=$(echo "$MATRIX" | jq -c '. + [{"platform":"ubuntu-22.04","artifact-name":"linux"}]')
+          fi
+          if [ "${{ inputs.build_windows }}" = "true" ]; then
+            MATRIX=$(echo "$MATRIX" | jq -c '. + [{"platform":"windows-latest","artifact-name":"windows"}]')
+          fi
+          if [ "${{ inputs.build_macos }}" = "true" ]; then
+            MATRIX=$(echo "$MATRIX" | jq -c '. + [{"platform":"macos-latest","artifact-name":"macos"}]')
+          fi
+          if [ "$MATRIX" = "[]" ]; then
+            echo "::error::No platforms selected"
+            exit 1
+          fi
+          echo "matrix={\"include\":$MATRIX}" >> $GITHUB_OUTPUT
+
   build:
+    needs: prepare
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - platform: ubuntu-22.04
-            artifact-name: linux
-          - platform: windows-latest
-            artifact-name: windows
-          - platform: macos-latest
-            artifact-name: macos
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
 
     runs-on: ${{ matrix.platform }}
 
@@ -132,7 +167,7 @@ jobs:
           retention-days: 30
 
   release:
-    needs: build
+    needs: [prepare, build]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
