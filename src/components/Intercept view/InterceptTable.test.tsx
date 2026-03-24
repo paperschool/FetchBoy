@@ -348,5 +348,131 @@ describe('InterceptTable.utils', () => {
       const result = filterRequests(reqs, { searchQuery: '', searchMode: 'fuzzy', verbFilter: 'GET', statusFilter: '5xx' })
       expect(result).toHaveLength(0)
     })
+
+    it('pending requests pass through status filters', () => {
+      const withPending: InterceptRequest[] = [
+        { id: '1', timestamp: 0, method: 'GET', host: 'alpha.com', path: '/users', statusCode: 200 },
+        { id: '2', timestamp: 0, method: 'POST', host: 'beta.com', path: '/items', isPending: true },
+      ]
+      const result = filterRequests(withPending, { searchQuery: '', searchMode: 'fuzzy', verbFilter: null, statusFilter: '2xx' })
+      expect(result).toHaveLength(2) // both the 200 and the pending request
+    })
+
+    it('pending requests are filterable by verb', () => {
+      const withPending: InterceptRequest[] = [
+        { id: '1', timestamp: 0, method: 'GET', host: 'alpha.com', path: '/users', isPending: true },
+        { id: '2', timestamp: 0, method: 'POST', host: 'beta.com', path: '/items', isPending: true },
+      ]
+      const result = filterRequests(withPending, { searchQuery: '', searchMode: 'fuzzy', verbFilter: 'GET', statusFilter: null })
+      expect(result).toHaveLength(1)
+      expect(result[0].id).toBe('1')
+    })
+  })
+})
+
+describe('Split event store actions', () => {
+  it('addPendingRequest creates a pending entry', () => {
+    useInterceptStore.getState().addPendingRequest({
+      id: 'split-1',
+      timestamp: Date.now(),
+      method: 'GET',
+      host: 'example.com',
+      path: '/api',
+      requestHeaders: { 'accept': 'application/json' },
+    })
+    const requests = useInterceptStore.getState().requests
+    expect(requests).toHaveLength(1)
+    expect(requests[0].isPending).toBe(true)
+    expect(requests[0].method).toBe('GET')
+    expect(requests[0].statusCode).toBeUndefined()
+  })
+
+  it('addPendingRequest skips if ID already exists', () => {
+    useInterceptStore.setState({
+      requests: [{ id: 'dup-1', timestamp: 0, method: 'GET', host: 'x.com', path: '/' }],
+    })
+    useInterceptStore.getState().addPendingRequest({
+      id: 'dup-1',
+      timestamp: Date.now(),
+      method: 'POST',
+      host: 'y.com',
+      path: '/other',
+      requestHeaders: {},
+    })
+    const requests = useInterceptStore.getState().requests
+    expect(requests).toHaveLength(1)
+    expect(requests[0].method).toBe('GET') // unchanged
+  })
+
+  it('updateWithResponse merges response data and clears isPending', () => {
+    useInterceptStore.setState({
+      requests: [{ id: 'resp-1', timestamp: 0, method: 'GET', host: 'x.com', path: '/', isPending: true }],
+    })
+    useInterceptStore.getState().updateWithResponse({
+      id: 'resp-1',
+      statusCode: 200,
+      statusText: 'OK',
+      responseHeaders: { 'content-type': 'application/json' },
+      responseBody: '{"ok":true}',
+      contentType: 'application/json',
+      size: 11,
+      responseTimeMs: 42,
+    })
+    const req = useInterceptStore.getState().requests[0]
+    expect(req.isPending).toBe(false)
+    expect(req.statusCode).toBe(200)
+    expect(req.responseBody).toBe('{"ok":true}')
+    expect(req.contentType).toBe('application/json')
+    expect(req.size).toBe(11)
+  })
+
+  it('updateWithResponse is a no-op if ID not found', () => {
+    useInterceptStore.setState({ requests: [] })
+    useInterceptStore.getState().updateWithResponse({
+      id: 'missing',
+      statusCode: 200,
+      statusText: 'OK',
+      responseHeaders: {},
+      size: 0,
+      responseTimeMs: 0,
+    })
+    expect(useInterceptStore.getState().requests).toHaveLength(0)
+  })
+
+  it('addRequest merges into existing pending entry and clears isPending', () => {
+    useInterceptStore.setState({
+      requests: [{ id: 'merge-1', timestamp: 0, method: 'GET', host: 'x.com', path: '/', isPending: true }],
+    })
+    useInterceptStore.getState().addRequest({
+      id: 'merge-1',
+      timestamp: 0,
+      method: 'GET',
+      host: 'x.com',
+      path: '/',
+      statusCode: 200,
+      responseBody: 'data',
+    })
+    const req = useInterceptStore.getState().requests[0]
+    expect(req.isPending).toBe(false)
+    expect(req.statusCode).toBe(200)
+  })
+})
+
+describe('Pending row rendering', () => {
+  it('renders Pending badge for pending requests', () => {
+    useInterceptStore.setState({
+      requests: [{ id: 'p1', timestamp: Date.now(), method: 'GET', host: 'example.com', path: '/api', isPending: true }],
+    })
+    render(<InterceptTable />)
+    expect(screen.getByText('Pending')).toBeInTheDocument()
+  })
+
+  it('renders status code after response arrives (not Pending)', () => {
+    useInterceptStore.setState({
+      requests: [{ id: 'p2', timestamp: Date.now(), method: 'GET', host: 'example.com', path: '/api', statusCode: 200, isPending: false }],
+    })
+    render(<InterceptTable />)
+    expect(screen.queryByText('Pending')).not.toBeInTheDocument()
+    expect(screen.getByText('200')).toBeInTheDocument()
   })
 })

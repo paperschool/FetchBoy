@@ -18,6 +18,32 @@ export interface InterceptEventPayload {
   isBlocked?: boolean                        // True when request was blocked by a breakpoint
 }
 
+// Matches InterceptRequestEvent struct in src-tauri/src/proxy.rs (Story 10.9)
+// Emitted immediately when the proxy intercepts a request, before the response arrives.
+export interface InterceptRequestSplitPayload {
+  id: string
+  timestamp: number
+  method: string
+  host: string
+  path: string
+  requestHeaders: Record<string, string>
+  requestBody?: string
+}
+
+// Matches InterceptResponseEvent struct in src-tauri/src/proxy.rs (Story 10.9)
+// Emitted when the upstream response arrives. Linked to request via `id`.
+export interface InterceptResponseSplitPayload {
+  id: string
+  statusCode: number
+  statusText: string
+  responseHeaders: Record<string, string>
+  responseBody?: string
+  contentType?: string
+  size: number
+  responseTimeMs: number
+  isBlocked?: boolean
+}
+
 // Matches BreakpointPausedEvent struct in src-tauri/src/proxy.rs (Story 10.8)
 export interface BreakpointPausedPayload {
   requestId: string

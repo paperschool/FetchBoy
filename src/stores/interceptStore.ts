@@ -16,6 +16,7 @@ export interface InterceptRequest {
   responseHeaders?: Record<string, string>
   isPaused?: boolean
   isBlocked?: boolean
+  isPending?: boolean
 }
 
 export type PauseState = 'idle' | 'paused' | 'waiting-for-action' | 'resuming'
@@ -54,6 +55,8 @@ interface InterceptStore {
   pendingMods: BreakpointModifications
 
   addRequest: (request: InterceptRequest) => void
+  addPendingRequest: (payload: import('@/types/intercept').InterceptRequestSplitPayload) => void
+  updateWithResponse: (payload: import('@/types/intercept').InterceptResponseSplitPayload) => void
   clearRequests: () => void
   setSelectedRequestId: (id: string | null) => void
   setSearchQuery: (query: string) => void
@@ -97,14 +100,51 @@ export const useInterceptStore = create<InterceptStore>((set, get) => ({
   pendingMods: {},
 
   addRequest: (request) => set((state) => {
-    // Update existing paused request entry if it arrives with final data.
+    // Update existing entry (pending or paused) if it arrives with final data.
     const existing = state.requests.find((r) => r.id === request.id)
     if (existing) {
       return {
-        requests: state.requests.map((r) => r.id === request.id ? { ...r, ...request } : r),
+        requests: state.requests.map((r) => r.id === request.id ? { ...r, ...request, isPending: false } : r),
       }
     }
     return { requests: [...state.requests, request] }
+  }),
+
+  addPendingRequest: (payload) => set((state) => {
+    // Skip if a request with this ID already exists (e.g. from combined event race).
+    if (state.requests.some((r) => r.id === payload.id)) return state
+    const pending: InterceptRequest = {
+      id: payload.id,
+      timestamp: payload.timestamp,
+      method: payload.method,
+      host: payload.host,
+      path: payload.path,
+      requestHeaders: payload.requestHeaders,
+      requestBody: payload.requestBody,
+      isPending: true,
+    }
+    return { requests: [...state.requests, pending] }
+  }),
+
+  updateWithResponse: (payload) => set((state) => {
+    const existing = state.requests.find((r) => r.id === payload.id)
+    if (!existing) return state
+    return {
+      requests: state.requests.map((r) =>
+        r.id === payload.id
+          ? {
+              ...r,
+              statusCode: payload.statusCode,
+              responseHeaders: payload.responseHeaders,
+              responseBody: payload.responseBody,
+              contentType: payload.contentType,
+              size: payload.size,
+              isBlocked: payload.isBlocked,
+              isPending: false,
+            }
+          : r,
+      ),
+    }
   }),
 
   clearRequests: () => set({

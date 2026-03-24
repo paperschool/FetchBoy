@@ -52,7 +52,8 @@ export function formatHostPath(host: string, path: string): string {
   return hasProtocol ? `${host}${path}` : `https://${host}${path}`;
 }
 
-export function formatStatusCode(statusCode?: number): React.ReactElement {
+export function formatStatusCode(statusCode?: number, isPending?: boolean): React.ReactElement {
+  if (isPending) return <span className="text-yellow-400 animate-pulse text-xs">Pending</span>;
   if (!statusCode) return <span className="text-app-muted">—</span>;
   let colorClass = "text-app-muted";
   if (statusCode >= 200 && statusCode < 300) colorClass = "text-green-400";
@@ -131,8 +132,8 @@ export function filterRequests(
     // Verb filter
     if (verbFilter && req.method.toUpperCase() !== verbFilter) return false;
 
-    // Status filter
-    if (statusFilter) {
+    // Status filter — pending requests always pass (they have no status yet)
+    if (statusFilter && !req.isPending) {
       const code = req.statusCode ?? 0;
       if (statusFilter === "2xx" && !(code >= 200 && code < 300)) return false;
       if (statusFilter === "3xx" && !(code >= 300 && code < 400)) return false;

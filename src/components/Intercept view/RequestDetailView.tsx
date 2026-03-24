@@ -151,6 +151,10 @@ export function RequestDetailView({ selectedRequest, editMode = false, pendingMo
             max={599}
             aria-label="Status code"
           />
+        ) : selectedRequest.isPending ? (
+          <span className="px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400 animate-pulse">
+            Pending
+          </span>
         ) : (
           selectedRequest.statusCode !== undefined && (
             <span className={`px-2 py-0.5 rounded ${getStatusBadgeClass(selectedRequest.statusCode)}`}>
@@ -186,7 +190,13 @@ export function RequestDetailView({ selectedRequest, editMode = false, pendingMo
       header={header}
       testId="intercept-detail-viewer"
     >
-      {activeTab === 'body' && (
+      {activeTab === 'body' && selectedRequest.isPending && !editMode && (
+        <div className="flex-1 flex items-center justify-center text-yellow-400/70 text-sm">
+          <span className="animate-pulse">Awaiting response...</span>
+        </div>
+      )}
+
+      {activeTab === 'body' && !selectedRequest.isPending && (
         isImageContentType(selectedRequest.contentType) && !editMode ? (
           <div className="flex-1 min-h-0 p-2">
             <ImageViewer contentType={selectedRequest.contentType} body={selectedRequest.responseBody ?? ''} />

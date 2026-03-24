@@ -269,10 +269,11 @@ impl HttpHandler for InterceptHandler {
             .cloned()
             .unwrap_or_default();
 
-        // Strip Accept-Encoding so the server sends uncompressed responses.
-        // This makes response bodies directly readable without a decompression step.
-        // Standard practice for MITM inspection proxies (Burp Suite does the same).
-        req.headers_mut().remove("accept-encoding");
+        // Override Accept-Encoding to "identity" so the server sends uncompressed
+        // responses (readable without a decompression step). We set the header
+        // rather than removing it because some CDN/WAF systems (e.g. Akamai) flag
+        // requests that are missing Accept-Encoding entirely as bot traffic.
+        req.headers_mut().insert("accept-encoding", HeaderValue::from_static("identity"));
 
         // Shared slot: the async block writes the captured request body; handle_response reads it.
         let body_slot: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));

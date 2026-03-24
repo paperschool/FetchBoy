@@ -280,7 +280,7 @@ export function InterceptTable() {
                     </div>
                     {/* Status */}
                     <div className="px-2 w-[70px] shrink-0 text-xs tabular-nums">
-                      {formatStatusCode(req.statusCode)}
+                      {formatStatusCode(req.statusCode, req.isPending)}
                     </div>
                     {/* Content-Type */}
                     {!isNarrow && (
