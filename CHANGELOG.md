@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.12.0] - 2026-03-24
+
+- feat: Certificate uninstall now performs full cleanup — stops the proxy server, unconfigures OS proxy settings, and deletes CA files from disk
+- feat: Start Proxy button is greyed out when the CA certificate is not installed; clicking it opens the settings panel and shows a tutorial tooltip prompting certificate installation
+- feat: New `delete_ca_files` Tauri command for removing CA key material from the app data directory
+- feat: `caInstalled` state lifted to global Zustand store so proxy controls and sidebar stay in sync
+
 ## [0.11.1] - 2026-03-13
 
 - feat: Unified tab bar — top bar removed, tab labels carry icons, and per-tab actions (environments, proxy toggle) move to the right of the tab strip

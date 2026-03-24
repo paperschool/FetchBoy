@@ -45,8 +45,11 @@ export function InterceptSidebar({
   const setSidebarSettingsExpanded = useUiSettingsStore(
     (s) => s.setSidebarSettingsExpanded,
   );
+  const caInstalled = useUiSettingsStore((s) => s.caInstalled);
+  const setCaInstalled = useUiSettingsStore((s) => s.setCaInstalled);
+  const setProxyEnabled = useUiSettingsStore((s) => s.setProxyEnabled);
+  const clearPauseState = useInterceptStore((s) => s.clearPauseState);
   const [caCertInfo, setCaCertInfo] = useState<CaCertificateInfo | null>(null);
-  const [caInstalled, setCaInstalled] = useState(false);
   const [certStatus, setCertStatus] = useState<ActionStatus>("idle");
   const [certMessage, setCertMessage] = useState("");
 
@@ -55,9 +58,9 @@ export function InterceptSidebar({
       .then(setCaCertInfo)
       .catch(() => setCaCertInfo(null));
     invoke<boolean>("is_ca_installed")
-      .then(setCaInstalled)
+      .then((installed) => setCaInstalled(installed))
       .catch(() => setCaInstalled(false));
-  }, []);
+  }, [setCaInstalled]);
 
   function handleProxyPortChange(e: React.ChangeEvent<HTMLInputElement>) {
     const raw = parseInt(e.target.value, 10);
@@ -89,6 +92,24 @@ export function InterceptSidebar({
     setCertMessage("");
     try {
       await invoke("uninstall_ca_from_system");
+
+      // Stop the proxy and unconfigure system proxy
+      if (proxyEnabled) {
+        await invoke("unconfigure_system_proxy");
+        await invoke("set_proxy_config", { enabled: false, port: proxyPort });
+        setProxyEnabled(false);
+        clearPauseState();
+        void saveSetting("proxy_enabled", false);
+      }
+
+      // Delete CA files from disk
+      await invoke("delete_ca_files");
+
+      // Update cert info since files are gone
+      setCaCertInfo((prev) =>
+        prev ? { ...prev, certExists: false } : null,
+      );
+
       setCertStatus("idle");
       setCertMessage("");
       setCaInstalled(false);
@@ -319,6 +340,7 @@ export function InterceptSidebar({
                 ) : (
                   <button
                     type="button"
+                    data-tour="install-cert"
                     onClick={handleInstallCert}
                     disabled={certStatus === "loading"}
                     className="flex items-center gap-1 px-2 py-1 text-xs text-app-muted hover:text-app-inverse hover:bg-gray-700 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"

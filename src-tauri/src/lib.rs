@@ -320,6 +320,24 @@ fn uninstall_ca_from_system(app: tauri::AppHandle) -> Result<(), String> {
     }
 }
 
+#[tauri::command]
+fn delete_ca_files(restart_info: tauri::State<'_, ProxyRestartInfo>) -> Result<(), String> {
+    let ca_dir = restart_info.app_data_dir.join("ca");
+    let cert_path = ca_dir.join("ca.pem");
+    let key_path = ca_dir.join("ca-key.pem");
+
+    if cert_path.exists() {
+        std::fs::remove_file(&cert_path)
+            .map_err(|e| format!("Failed to delete ca.pem: {e}"))?;
+    }
+    if key_path.exists() {
+        std::fs::remove_file(&key_path)
+            .map_err(|e| format!("Failed to delete ca-key.pem: {e}"))?;
+    }
+
+    Ok(())
+}
+
 /// Helper function to uninstall certificate by common name as fallback
 #[cfg(target_os = "macos")]
 fn uninstall_by_common_name(keychain: &str) -> Result<(), String> {
@@ -809,6 +827,7 @@ pub fn run() {
             open_folder,
             install_ca_to_system,
             uninstall_ca_from_system,
+            delete_ca_files,
             is_ca_installed,
             configure_system_proxy,
             unconfigure_system_proxy,

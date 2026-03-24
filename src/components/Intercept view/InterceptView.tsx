@@ -3,6 +3,7 @@ import { InterceptSidebar } from "./InterceptSidebar";
 import { InterceptTable } from "./InterceptTable";
 import { RequestDetailView } from "./RequestDetailView";
 import { PausedRequestDetail } from "./PausedRequestDetail";
+import { CertInstallPrompt } from "./CertInstallPrompt";
 import { BreakpointEditor } from "@/components/Breakpoints/BreakpointEditor";
 import { TabLayout } from "@/components/Layout/TabLayout";
 import { useUiSettingsStore } from "@/stores/uiSettingsStore";
@@ -72,15 +73,18 @@ export function InterceptView() {
   );
 
   return (
-    <TabLayout
-      sidebar={
-        <InterceptSidebar
-          collapsed={sidebarCollapsed}
-          onToggle={handleToggleSidebar}
-        />
-      }
-      mainContent={mainContent}
-      sidebarCollapsed={sidebarCollapsed}
-    />
+    <>
+      <CertInstallPrompt />
+      <TabLayout
+        sidebar={
+          <InterceptSidebar
+            collapsed={sidebarCollapsed}
+            onToggle={handleToggleSidebar}
+          />
+        }
+        mainContent={mainContent}
+        sidebarCollapsed={sidebarCollapsed}
+      />
+    </>
   );
 }
