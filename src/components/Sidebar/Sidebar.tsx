@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Folder, Clock, Settings as SettingsIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Folder, Clock, Route, Settings as SettingsIcon } from 'lucide-react';
 import { CollectionTree } from '@/components/CollectionTree/CollectionTree';
 import { HistoryPanel } from '@/components/HistoryPanel/HistoryPanel';
+import { MappingsTree } from '@/components/Mappings/MappingsTree';
 import { SettingsAccordion } from './SettingsAccordion';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import { saveSetting } from '@/lib/settings';
 
-type SidebarPanel = 'collections' | 'history';
+type SidebarPanel = 'collections' | 'history' | 'mappings';
 
 interface SidebarProps {
     collapsed: boolean;
@@ -62,6 +63,18 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     title="History"
                 >
                     <Clock size={20} className="text-app-muted" />
+                </button>
+                <button
+                    type="button"
+                    onClick={() => {
+                        setActivePanel('mappings');
+                        onToggle();
+                    }}
+                    className="p-2 hover:bg-gray-700 rounded transition-colors"
+                    aria-label="Mappings"
+                    title="Mappings"
+                >
+                    <Route size={20} className="text-app-muted" />
                 </button>
                 <button
                     type="button"
@@ -122,11 +135,24 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 >
                     History
                 </button>
+                <button
+                    type="button"
+                    onClick={() => setActivePanel('mappings')}
+                    className={`flex-1 py-1.5 text-xs cursor-pointer ${
+                        activePanel === 'mappings'
+                            ? 'bg-gray-700 text-app-inverse font-medium'
+                            : 'text-app-muted hover:text-app-inverse'
+                    }`}
+                    aria-label="Mappings panel"
+                >
+                    Mappings
+                </button>
             </div>
 
             <div className="flex-1 min-h-0 overflow-y-auto" data-tour="collections-sidebar">
                 {activePanel === 'collections' && <CollectionTree />}
                 {activePanel === 'history' && <HistoryPanel />}
+                {activePanel === 'mappings' && <MappingsTree />}
             </div>
 
             <div data-tour="settings-env">

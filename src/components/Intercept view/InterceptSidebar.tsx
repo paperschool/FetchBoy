@@ -4,12 +4,14 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Route,
   Settings as SettingsIcon,
   FolderOpen,
   Copy,
   ShieldCheck,
 } from "lucide-react";
 import { BreakpointsTree } from "@/components/Breakpoints/BreakpointsTree";
+import { MappingsTree } from "@/components/Mappings/MappingsTree";
 import { TimeoutConfig } from "@/components/Breakpoints/TimeoutConfig";
 import { invoke } from "@tauri-apps/api/core";
 import { useUiSettingsStore } from "@/stores/uiSettingsStore";
@@ -22,7 +24,7 @@ interface CaCertificateInfo {
 }
 
 type ActionStatus = "idle" | "loading" | "success" | "error";
-type InterceptPanel = "breakpoints" | "settings";
+type InterceptPanel = "breakpoints" | "mappings" | "settings";
 
 interface InterceptSidebarProps {
   collapsed: boolean;
@@ -179,6 +181,18 @@ export function InterceptSidebar({
         <button
           type="button"
           onClick={() => {
+            setActivePanel("mappings");
+            onToggle();
+          }}
+          className="p-2 hover:bg-gray-700 rounded transition-colors"
+          aria-label="Mappings"
+          title="Mappings"
+        >
+          <Route size={20} className="text-app-muted" />
+        </button>
+        <button
+          type="button"
+          onClick={() => {
             setSidebarSettingsExpanded(true);
             void saveSetting("sidebar_settings_expanded", true);
             onToggle();
@@ -237,12 +251,29 @@ export function InterceptSidebar({
         >
           Breakpoints
         </button>
+        <button
+          type="button"
+          onClick={() => setActivePanel("mappings")}
+          className={`flex-1 py-1.5 text-xs cursor-pointer ${
+            activePanel === "mappings"
+              ? "bg-gray-700 text-app-inverse font-medium"
+              : "text-app-muted hover:text-app-inverse"
+          }`}
+          aria-label="Mappings panel"
+        >
+          Mappings
+        </button>
       </div>
 
       {/* Panel content */}
       {activePanel === "breakpoints" && (
         <div className="flex-1 min-h-0 overflow-y-auto">
           <BreakpointsTree />
+        </div>
+      )}
+      {activePanel === "mappings" && (
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <MappingsTree />
         </div>
       )}
 
