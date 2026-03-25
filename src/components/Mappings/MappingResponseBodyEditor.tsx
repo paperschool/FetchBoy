@@ -58,16 +58,7 @@ export function MappingResponseBodyEditor({
     const langEntry = CONTENT_TYPES.find((c) => c.value === contentType) ?? CONTENT_TYPES[3];
 
     const handleBrowse = async () => {
-        const selected = await openDialog({
-            multiple: false,
-            filters: [
-                { name: 'JSON', extensions: ['json'] },
-                { name: 'XML', extensions: ['xml'] },
-                { name: 'HTML', extensions: ['html', 'htm'] },
-                { name: 'Text', extensions: ['txt'] },
-                { name: 'All Files', extensions: ['*'] },
-            ],
-        });
+        const selected = await openDialog({ multiple: false });
         if (!selected) return;
         const path = typeof selected === 'string' ? selected : selected[0];
         onChangeFilePath(path);
