@@ -32,11 +32,15 @@ export function MappingRow({ mapping, onEdit, onDelete }: MappingRowProps) {
                 </button>
                 <Route size={12} className={`flex-shrink-0 ${mapping.enabled ? 'text-emerald-400' : 'text-app-muted'}`} />
                 <span className="flex-1 text-app-secondary text-xs truncate">{mapping.name}</span>
-                {(mapping.headers_add.some((h) => h.enabled) || mapping.headers_remove.some((h) => h.enabled)) && (
-                    <span title="Header modifications" className="flex-shrink-0 text-teal-400" data-testid="headers-indicator">
-                        <ListPlus size={10} />
-                    </span>
-                )}
+                {(() => {
+                    const count = mapping.headers_add.filter((h) => h.enabled).length + mapping.headers_remove.filter((h) => h.key.trim()).length;
+                    return count > 0 ? (
+                        <span title={`${count} header modification${count > 1 ? 's' : ''}`} className="flex-shrink-0 flex items-center gap-0.5 text-teal-400" data-testid="headers-indicator">
+                            <ListPlus size={10} />
+                            <span className="text-[9px]" data-testid="headers-count">{count}</span>
+                        </span>
+                    ) : null;
+                })()}
                 {mapping.cookies.length > 0 && (
                     <span title="Cookie overrides" className="flex-shrink-0 text-orange-400" data-testid="cookies-indicator">
                         <Cookie size={10} />

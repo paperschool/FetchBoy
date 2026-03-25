@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { Check, AlertCircle, Play, Pause } from 'lucide-react';
 import { useMappingsStore } from '@/stores/mappingsStore';
 import type { MatchType, MappingEditForm } from '@/stores/mappingsStore';
+import type { MappingHeader } from '@/lib/db';
 import { ViewerShell } from '@/components/ui/ViewerShell';
 import { validateUrlPattern, MATCH_TYPES, PLACEHOLDERS } from './MappingEditor.utils';
+import { MappingHeadersEditor } from './MappingHeadersEditor';
 
 interface Props {
     onClose: () => void;
@@ -32,6 +34,8 @@ export function MappingEditor({ onClose }: Props) {
     const [matchType, setMatchType] = useState<MatchType>(editForm.matchType);
     const [localEnabled, setLocalEnabled] = useState(editForm.enabled);
     const enabled = storeEnabled ?? localEnabled;
+    const [headersAdd, setHeadersAdd] = useState<MappingHeader[]>(editForm.headersAdd);
+    const [headersRemove, setHeadersRemove] = useState<MappingHeader[]>(editForm.headersRemove);
     const [urlError, setUrlError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
 
@@ -51,6 +55,8 @@ export function MappingEditor({ onClose }: Props) {
             urlPattern,
             matchType,
             enabled,
+            headersAdd,
+            headersRemove,
         };
         try {
             await saveMapping(form);
@@ -128,7 +134,15 @@ export function MappingEditor({ onClose }: Props) {
                             </button>
                         </>
                     )}
-                    {activeTab !== 'match' && (
+                    {activeTab === 'headers' && (
+                        <MappingHeadersEditor
+                            headersAdd={headersAdd}
+                            headersRemove={headersRemove}
+                            onChangeAdd={setHeadersAdd}
+                            onChangeRemove={setHeadersRemove}
+                        />
+                    )}
+                    {activeTab !== 'match' && activeTab !== 'headers' && (
                         <p className="text-app-muted text-sm">{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} configuration — coming in a later story.</p>
                     )}
                 </div>
