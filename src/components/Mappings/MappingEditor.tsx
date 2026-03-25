@@ -7,6 +7,7 @@ import { ViewerShell } from '@/components/ui/ViewerShell';
 import { validateUrlPattern, MATCH_TYPES, PLACEHOLDERS } from './MappingEditor.utils';
 import { MappingHeadersEditor } from './MappingHeadersEditor';
 import { MappingCookieEditor } from './MappingCookieEditor';
+import { MappingResponseBodyEditor } from './MappingResponseBodyEditor';
 
 interface Props {
     onClose: () => void;
@@ -38,6 +39,10 @@ export function MappingEditor({ onClose }: Props) {
     const [headersAdd, setHeadersAdd] = useState<MappingHeader[]>(editForm.headersAdd);
     const [headersRemove, setHeadersRemove] = useState<MappingHeader[]>(editForm.headersRemove);
     const [cookies, setCookies] = useState<MappingCookie[]>(editForm.cookies);
+    const [responseBodyEnabled, setResponseBodyEnabled] = useState(editForm.responseBodyEnabled);
+    const [responseBody, setResponseBody] = useState(editForm.responseBody);
+    const [responseBodyContentType, setResponseBodyContentType] = useState(editForm.responseBodyContentType);
+    const [responseBodyFilePath, setResponseBodyFilePath] = useState(editForm.responseBodyFilePath);
     const [urlError, setUrlError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
 
@@ -60,6 +65,10 @@ export function MappingEditor({ onClose }: Props) {
             headersAdd,
             headersRemove,
             cookies,
+            responseBodyEnabled,
+            responseBody,
+            responseBodyContentType,
+            responseBodyFilePath,
         };
         try {
             await saveMapping(form);
@@ -148,8 +157,17 @@ export function MappingEditor({ onClose }: Props) {
                     {activeTab === 'cookies' && (
                         <MappingCookieEditor cookies={cookies} onChange={setCookies} />
                     )}
-                    {activeTab !== 'match' && activeTab !== 'headers' && activeTab !== 'cookies' && (
-                        <p className="text-app-muted text-sm">{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} configuration — coming in a later story.</p>
+                    {activeTab === 'response' && (
+                        <MappingResponseBodyEditor
+                            enabled={responseBodyEnabled}
+                            body={responseBody}
+                            contentType={responseBodyContentType}
+                            filePath={responseBodyFilePath}
+                            onChangeEnabled={setResponseBodyEnabled}
+                            onChangeBody={setResponseBody}
+                            onChangeContentType={setResponseBodyContentType}
+                            onChangeFilePath={setResponseBodyFilePath}
+                        />
                     )}
                 </div>
                 <div className="flex gap-2 justify-end pt-3 border-t border-app-subtle">

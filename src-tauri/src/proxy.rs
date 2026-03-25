@@ -182,6 +182,24 @@ pub struct MappingRule {
 
 pub type MappingsRef = Arc<Mutex<Vec<MappingRule>>>;
 
+/// Read a mapping's response body, preferring file path over inline body.
+/// Falls back to inline body if file read fails, logging a warning.
+pub async fn read_mapping_response_body(rule: &MappingRule) -> (String, String) {
+    let ct = rule.response_body_content_type.clone();
+    if !rule.response_body_file_path.is_empty() {
+        match tokio::fs::read_to_string(&rule.response_body_file_path).await {
+            Ok(content) => return (content, ct),
+            Err(e) => {
+                log::warn!(
+                    "Mapping '{}': failed to read file '{}': {} — falling back to inline body",
+                    rule.id, rule.response_body_file_path, e,
+                );
+            }
+        }
+    }
+    (rule.response_body.clone(), ct)
+}
+
 // ─── Pause / resume types ──────────────────────────────────────────────────────
 
 /// User-supplied modifications when resuming via "Edit & Continue".
