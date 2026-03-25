@@ -65,7 +65,7 @@ export function InterceptView() {
                 ? 'text-app-inverse font-medium border-b-2 border-app-accent'
                 : 'text-app-muted hover:text-app-inverse'
             }`}>
-            {tab === 'requests' ? 'Requests' : 'Mapping Log'}
+            {tab === 'requests' ? 'Requests' : 'Overrides'}
           </button>
         ))}
       </div>

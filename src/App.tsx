@@ -43,6 +43,13 @@ function App() {
     setTimeout(() => setShowTour(true), 500);
   }
 
+  // Set window title with version
+  useEffect(() => {
+    import('@tauri-apps/api/webviewWindow').then(({ getCurrentWebviewWindow }) => {
+      getCurrentWebviewWindow().setTitle(`Fetch Boy - v${getCurrentVersion()}`).catch(() => {});
+    }).catch(() => {});
+  }, []);
+
   useEffect(() => {
     if (!showSplash && hasCompletedTour) {
       seedSampleDataIfNeeded().catch(() => {});

@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 
+export type OverrideSource = 'mapping' | 'breakpoint';
+
 export interface MappingLogEntry {
     id: string;
     timestamp: number;
@@ -11,6 +13,7 @@ export interface MappingLogEntry {
     overridesApplied: string[];
     originalUrl?: string;
     remappedUrl?: string;
+    source: OverrideSource;
 }
 
 const MAX_ENTRIES = 500;

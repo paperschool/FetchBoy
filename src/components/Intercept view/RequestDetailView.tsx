@@ -3,8 +3,11 @@ import type { InterceptRequest, BreakpointModifications } from '@/stores/interce
 import { MonacoEditorField } from '@/components/Editor/MonacoEditorField'
 import { useUiSettingsStore } from '@/stores/uiSettingsStore'
 import { useBreakpointsStore } from '@/stores/breakpointsStore'
+import { useMappingsStore } from '@/stores/mappingsStore'
 import { createBreakpoint } from '@/lib/breakpoints'
+import { createMapping } from '@/lib/mappings'
 import { SaveBreakpointDialog } from '@/components/SaveBreakpointDialog/SaveBreakpointDialog'
+import { SaveMappingDialog } from '@/components/SaveMappingDialog/SaveMappingDialog'
 import { HeadersTable } from '@/components/ui/HeadersTable'
 import { ViewerShell } from '@/components/ui/ViewerShell'
 import { isImageContentType, ImageViewer } from '@/components/ResponseViewer/ResponseViewer'
@@ -58,14 +61,24 @@ export function RequestDetailView({ selectedRequest, editMode = false, pendingMo
   const [newHeaderKey, setNewHeaderKey] = useState('')
   const [newHeaderValue, setNewHeaderValue] = useState('')
   const [breakDialogOpen, setBreakDialogOpen] = useState(false)
-  const { addBreakpoint, startEditing } = useBreakpointsStore()
+  const [mapDialogOpen, setMapDialogOpen] = useState(false)
+  const { addBreakpoint, startEditing: startBpEditing } = useBreakpointsStore()
+  const { startEditing: startMapEditing } = useMappingsStore()
 
   const handleBreakSave = useCallback(async (name: string, urlPattern: string, folderId: string | null) => {
     const bp = await createBreakpoint(folderId, name, urlPattern, 'partial')
     addBreakpoint(bp)
-    startEditing(bp, folderId)
+    startBpEditing(bp, folderId)
     setBreakDialogOpen(false)
-  }, [addBreakpoint, startEditing])
+  }, [addBreakpoint, startBpEditing])
+
+  const handleMapSave = useCallback(async (name: string, urlPattern: string, folderId: string | null) => {
+    const mapping = await createMapping(folderId, name, urlPattern, 'partial')
+    const store = useMappingsStore.getState()
+    store.loadAll(store.folders, [...store.mappings, mapping])
+    startMapEditing(mapping, folderId)
+    setMapDialogOpen(false)
+  }, [startMapEditing])
 
   const formattedBody = useMemo(() => {
     if (!selectedRequest?.responseBody) return null
@@ -126,6 +139,14 @@ export function RequestDetailView({ selectedRequest, editMode = false, pendingMo
           title="Open in Fetch tab"
         >
           Open in Fetch
+        </button>
+        <button
+          type="button"
+          onClick={() => setMapDialogOpen(true)}
+          className="shrink-0 rounded px-2 py-0.5 text-xs font-medium bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 transition-colors"
+          title="Add mapping for this URL"
+        >
+          Add Mapping
         </button>
         <button
           type="button"
@@ -406,6 +427,13 @@ export function RequestDetailView({ selectedRequest, editMode = false, pendingMo
       open={breakDialogOpen}
       onClose={() => setBreakDialogOpen(false)}
       onSave={handleBreakSave}
+      defaultName={(() => { const s = selectedRequest.path.split('/').filter(Boolean); return s[s.length - 1] ?? selectedRequest.host; })()}
+      defaultUrlPattern={formatHostPath(selectedRequest.host, selectedRequest.path)}
+    />
+    <SaveMappingDialog
+      open={mapDialogOpen}
+      onClose={() => setMapDialogOpen(false)}
+      onSave={handleMapSave}
       defaultName={(() => { const s = selectedRequest.path.split('/').filter(Boolean); return s[s.length - 1] ?? selectedRequest.host; })()}
       defaultUrlPattern={formatHostPath(selectedRequest.host, selectedRequest.path)}
     />

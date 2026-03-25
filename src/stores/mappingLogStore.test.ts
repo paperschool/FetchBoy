@@ -3,7 +3,7 @@ import { useMappingLogStore } from './mappingLogStore';
 import type { MappingLogEntry } from './mappingLogStore';
 
 function makeEntry(id: string, url = 'https://example.com'): MappingLogEntry {
-    return { id, timestamp: Date.now(), method: 'GET', url, mappingId: 'm1', mappingName: 'Test', overridesApplied: ['headers_add'] };
+    return { id, timestamp: Date.now(), method: 'GET', url, mappingId: 'm1', mappingName: 'Test', overridesApplied: ['headers_add'], source: 'mapping' };
 }
 
 describe('mappingLogStore', () => {

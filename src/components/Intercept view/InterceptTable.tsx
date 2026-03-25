@@ -3,8 +3,11 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { Trash2 } from "lucide-react";
 import { useInterceptStore } from "@/stores/interceptStore";
 import { useBreakpointsStore } from "@/stores/breakpointsStore";
+import { useMappingsStore } from "@/stores/mappingsStore";
 import { createBreakpoint } from "@/lib/breakpoints";
+import { createMapping } from "@/lib/mappings";
 import { SaveBreakpointDialog } from "@/components/SaveBreakpointDialog/SaveBreakpointDialog";
+import { SaveMappingDialog } from "@/components/SaveMappingDialog/SaveMappingDialog";
 import {
   columnDefs,
   formatTimestamp,
@@ -49,10 +52,10 @@ export function InterceptTable() {
   // Defer request list updates so rapid traffic doesn't block user interactions
   const requests = useDeferredValue(liveRequests);
 
-  const { addBreakpoint, startEditing } = useBreakpointsStore();
-  const [breakDialogReq, setBreakDialogReq] = useState<InterceptRequest | null>(
-    null,
-  );
+  const { addBreakpoint, startEditing: startBpEditing } = useBreakpointsStore();
+  const { startEditing: startMapEditing } = useMappingsStore();
+  const [breakDialogReq, setBreakDialogReq] = useState<InterceptRequest | null>(null);
+  const [mapDialogReq, setMapDialogReq] = useState<InterceptRequest | null>(null);
 
   const handleBreakClick = useCallback(
     (e: React.MouseEvent, req: InterceptRequest) => {
@@ -62,14 +65,35 @@ export function InterceptTable() {
     [],
   );
 
+  const handleMapClick = useCallback(
+    (e: React.MouseEvent, req: InterceptRequest) => {
+      e.stopPropagation();
+      setMapDialogReq(req);
+    },
+    [],
+  );
+
   const handleBreakSave = useCallback(
     async (name: string, urlPattern: string, folderId: string | null) => {
       const bp = await createBreakpoint(folderId, name, urlPattern, "partial");
       addBreakpoint(bp);
-      startEditing(bp, folderId);
+      startBpEditing(bp, folderId);
       setBreakDialogReq(null);
     },
-    [addBreakpoint, startEditing],
+    [addBreakpoint, startBpEditing],
+  );
+
+  const handleMapSave = useCallback(
+    async (name: string, urlPattern: string, folderId: string | null) => {
+      const mapping = await createMapping(folderId, name, urlPattern, "partial");
+      useMappingsStore.getState().loadAll(
+        useMappingsStore.getState().folders,
+        [...useMappingsStore.getState().mappings, mapping],
+      );
+      startMapEditing(mapping, folderId);
+      setMapDialogReq(null);
+    },
+    [startMapEditing],
   );
 
   const hasItems = Array.isArray(requests) && requests.length > 0;
@@ -259,7 +283,7 @@ export function InterceptTable() {
                       <CopyButton text={fullUrl} />
                     </div>
                     {/* Controls */}
-                    <div className="px-1 w-[100px] shrink-0 flex items-center justify-end gap-1">
+                    <div className="px-1 w-[130px] shrink-0 flex items-center justify-end gap-1">
                       <button
                         type="button"
                         onClick={(e) => {
@@ -270,6 +294,14 @@ export function InterceptTable() {
                         title="Open in Fetch tab"
                       >
                         Fetch
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => handleMapClick(e, req)}
+                        className="opacity-0 group-hover:opacity-100 rounded px-1.5 py-0.5 text-xs font-medium bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 transition-all cursor-pointer"
+                        title="Save as mapping"
+                      >
+                        Map
                       </button>
                       <button
                         type="button"
@@ -327,6 +359,17 @@ export function InterceptTable() {
         defaultUrlPattern={
           breakDialogReq
             ? formatHostPath(breakDialogReq.host, breakDialogReq.path)
+            : ""
+        }
+      />
+      <SaveMappingDialog
+        open={mapDialogReq !== null}
+        onClose={() => setMapDialogReq(null)}
+        onSave={handleMapSave}
+        defaultName={mapDialogReq ? deriveBreakpointName(mapDialogReq) : ""}
+        defaultUrlPattern={
+          mapDialogReq
+            ? formatHostPath(mapDialogReq.host, mapDialogReq.path)
             : ""
         }
       />

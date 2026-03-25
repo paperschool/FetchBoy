@@ -5,7 +5,7 @@ import { useMappingLogStore } from '@/stores/mappingLogStore';
 import type { MappingLogEntry } from '@/stores/mappingLogStore';
 
 function makeEntry(id: string, overrides: string[] = ['headers_add']): MappingLogEntry {
-    return { id, timestamp: Date.now(), method: 'GET', url: 'https://api.example.com/users', mappingId: 'm1', mappingName: 'API Mock', overridesApplied: overrides };
+    return { id, timestamp: Date.now(), method: 'GET', url: 'https://api.example.com/users', mappingId: 'm1', mappingName: 'API Mock', overridesApplied: overrides, source: 'mapping' };
 }
 
 describe('MappingLogTable', () => {
@@ -15,13 +15,13 @@ describe('MappingLogTable', () => {
 
     it('shows empty state when no entries', () => {
         render(<MappingLogTable />);
-        expect(screen.getByText('No mapping activity logged yet')).toBeInTheDocument();
+        expect(screen.getByText('No overrides logged yet')).toBeInTheDocument();
     });
 
     it('renders entries', () => {
         useMappingLogStore.setState({ entries: [makeEntry('1'), makeEntry('2')] });
         render(<MappingLogTable />);
-        expect(screen.getByText('2 of 2 log entries')).toBeInTheDocument();
+        expect(screen.getByText('2 of 2 overrides')).toBeInTheDocument();
     });
 
     it('filters by search query', () => {
@@ -33,7 +33,7 @@ describe('MappingLogTable', () => {
             searchQuery: 'api.example',
         });
         render(<MappingLogTable />);
-        expect(screen.getByText('1 of 2 log entries')).toBeInTheDocument();
+        expect(screen.getByText('1 of 2 overrides')).toBeInTheDocument();
     });
 
     it('clears the log', () => {
@@ -56,6 +56,19 @@ describe('MappingLogTable', () => {
         expect(screen.getByTitle('headers_add')).toBeInTheDocument();
         expect(screen.getByTitle('cookies')).toBeInTheDocument();
         expect(screen.getByTitle('response_body')).toBeInTheDocument();
+    });
+
+    it('shows source badge for mapping entries', () => {
+        useMappingLogStore.setState({ entries: [makeEntry('1')] });
+        render(<MappingLogTable />);
+        expect(screen.getByText('MAP')).toBeInTheDocument();
+    });
+
+    it('shows source badge for breakpoint entries', () => {
+        const bpEntry: MappingLogEntry = { ...makeEntry('1', ['paused']), source: 'breakpoint' };
+        useMappingLogStore.setState({ entries: [bpEntry] });
+        render(<MappingLogTable />);
+        expect(screen.getByText('BP')).toBeInTheDocument();
     });
 
     it('shows remap arrows when originalUrl and remappedUrl present', () => {

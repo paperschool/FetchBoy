@@ -17,8 +17,8 @@ export function MappingLogTable() {
             <div className="flex items-center justify-between px-3 py-2 bg-app-main border-b border-app-subtle shrink-0">
                 <span className="text-xs text-app-muted">
                     {entries.length > 0
-                        ? `${filtered.length} of ${entries.length} log entr${entries.length !== 1 ? 'ies' : 'y'}`
-                        : 'No mapping activity'}
+                        ? `${filtered.length} of ${entries.length} override${entries.length !== 1 ? 's' : ''}`
+                        : 'No overrides'}
                 </span>
                 {entries.length > 0 && (
                     <button onClick={clearLog}
@@ -43,7 +43,8 @@ export function MappingLogTable() {
                 <div className="flex bg-app-main border-b border-app-subtle shrink-0">
                     <div className="px-2 py-1.5 text-left text-xs font-medium text-app-secondary uppercase w-[90px] shrink-0">Time</div>
                     <div className="px-2 py-1.5 text-left text-xs font-medium text-app-secondary uppercase flex-1 min-w-0">URL / Request ID</div>
-                    <div className="px-2 py-1.5 text-left text-xs font-medium text-app-secondary uppercase w-[140px] shrink-0">Mapping</div>
+                    <div className="px-2 py-1.5 text-left text-xs font-medium text-app-secondary uppercase w-[60px] shrink-0">Source</div>
+                    <div className="px-2 py-1.5 text-left text-xs font-medium text-app-secondary uppercase w-[120px] shrink-0">Rule</div>
                     <div className="px-2 py-1.5 text-left text-xs font-medium text-app-secondary uppercase w-[100px] shrink-0">Overrides</div>
                 </div>
             )}
@@ -61,7 +62,12 @@ export function MappingLogTable() {
                                 <span>{entry.originalUrl} <span className="text-blue-400">→</span> {entry.remappedUrl}</span>
                             ) : entry.url}
                         </div>
-                        <div className="px-2 py-1.5 text-xs text-app-secondary w-[140px] shrink-0 truncate" title={entry.mappingName}>
+                        <div className="px-2 py-1.5 w-[60px] shrink-0">
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${entry.source === 'mapping' ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400'}`}>
+                                {entry.source === 'mapping' ? 'MAP' : 'BP'}
+                            </span>
+                        </div>
+                        <div className="px-2 py-1.5 text-xs text-app-secondary w-[120px] shrink-0 truncate" title={entry.mappingName}>
                             {entry.mappingName}
                         </div>
                         <div className="px-2 py-1.5 w-[100px] shrink-0 flex gap-1">
@@ -78,7 +84,7 @@ export function MappingLogTable() {
 
             {entries.length === 0 && (
                 <div className="flex-1 flex items-center justify-center text-app-muted text-sm">
-                    No mapping activity logged yet
+                    No overrides logged yet
                 </div>
             )}
         </div>

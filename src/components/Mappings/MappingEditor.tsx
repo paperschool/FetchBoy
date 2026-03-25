@@ -9,12 +9,14 @@ import { MappingHeadersEditor } from './MappingHeadersEditor';
 import { MappingCookieEditor } from './MappingCookieEditor';
 import { MappingResponseBodyEditor } from './MappingResponseBodyEditor';
 import { MappingUrlRemapEditor } from './MappingUrlRemapEditor';
+import { useMappingLogStore } from '@/stores/mappingLogStore';
+import { formatTimestamp, OVERRIDE_ICONS } from '@/components/Intercept view/MappingLogTable.utils';
 
 interface Props {
     onClose: () => void;
 }
 
-type EditorTab = 'match' | 'response' | 'headers' | 'cookies' | 'remap';
+type EditorTab = 'match' | 'response' | 'headers' | 'cookies' | 'remap' | 'log';
 
 const TABS = [
     { id: 'match', label: 'Match' },
@@ -22,7 +24,32 @@ const TABS = [
     { id: 'headers', label: 'Headers' },
     { id: 'cookies', label: 'Cookies' },
     { id: 'remap', label: 'Remap' },
+    { id: 'log', label: 'Log' },
 ];
+
+function MappingLogTab({ mappingId }: { mappingId: string | null }) {
+    const entries = useMappingLogStore((s) => s.entries);
+    const filtered = mappingId ? entries.filter((e) => e.mappingId === mappingId) : [];
+    if (filtered.length === 0) {
+        return <p className="text-app-muted text-sm">No activity logged for this mapping yet.</p>;
+    }
+    return (
+        <div className="space-y-1 text-xs">
+            {filtered.map((entry) => (
+                <div key={entry.id} className="flex items-center gap-2 py-1 border-b border-app-subtle">
+                    <span className="text-app-muted tabular-nums w-[70px] shrink-0">{formatTimestamp(entry.timestamp)}</span>
+                    <span className="text-app-primary flex-1 truncate">{entry.url}</span>
+                    <span className="flex gap-1">
+                        {entry.overridesApplied.map((o) => {
+                            const icon = OVERRIDE_ICONS[o];
+                            return icon ? <span key={o} className={`font-bold ${icon.color}`} title={o}>{icon.label}</span> : null;
+                        })}
+                    </span>
+                </div>
+            ))}
+        </div>
+    );
+}
 
 export function MappingEditor({ onClose }: Props) {
     const { editForm, saveMapping } = useMappingsStore();
@@ -183,6 +210,7 @@ export function MappingEditor({ onClose }: Props) {
                             onChangeFilePath={setResponseBodyFilePath}
                         />
                     )}
+                    {activeTab === 'log' && <MappingLogTab mappingId={editForm.id} />}
                 </div>
                 <div className="flex gap-2 justify-end pt-3 border-t border-app-subtle">
                     <button onClick={onClose} className="px-4 py-1.5 text-sm text-app-muted hover:text-app-inverse">Cancel</button>
