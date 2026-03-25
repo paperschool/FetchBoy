@@ -5,9 +5,6 @@ import {
     createMapping as dbCreateMapping,
     updateMapping as dbUpdateMapping,
     deleteMapping as dbDeleteMapping,
-    createMappingFolder as dbCreateMappingFolder,
-    renameMappingFolder as dbRenameMappingFolder,
-    deleteMappingFolder as dbDeleteMappingFolder,
     syncMappingsToProxy,
 } from '@/lib/mappings';
 
