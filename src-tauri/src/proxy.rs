@@ -182,12 +182,13 @@ pub struct MappingRule {
 
 pub type MappingsRef = Arc<Mutex<Vec<MappingRule>>>;
 
-/// Read a mapping's response body, preferring file path over inline body.
+/// Read a mapping's response body as raw bytes, preferring file path over inline body.
 /// Falls back to inline body if file read fails, logging a warning.
-pub async fn read_mapping_response_body(rule: &MappingRule) -> (String, String) {
+/// Returns raw bytes to support both text and binary files (images, etc.).
+pub async fn read_mapping_response_body(rule: &MappingRule) -> (Vec<u8>, String) {
     let ct = rule.response_body_content_type.clone();
     if !rule.response_body_file_path.is_empty() {
-        match tokio::fs::read_to_string(&rule.response_body_file_path).await {
+        match tokio::fs::read(&rule.response_body_file_path).await {
             Ok(content) => return (content, ct),
             Err(e) => {
                 log::warn!(
@@ -197,7 +198,7 @@ pub async fn read_mapping_response_body(rule: &MappingRule) -> (String, String) 
             }
         }
     }
-    (rule.response_body.clone(), ct)
+    (rule.response_body.clone().into_bytes(), ct)
 }
 
 // ─── Pause / resume types ──────────────────────────────────────────────────────
@@ -906,8 +907,8 @@ impl HttpHandler for InterceptHandler {
 
                     // Replace response body (only if breakpoint didn't already replace)
                     if mapping.response_body_enabled && !bp_replaced_body {
-                        let (body_content, ct) = read_mapping_response_body(mapping).await;
-                        final_bytes = Bytes::from(body_content.into_bytes());
+                        let (body_bytes, ct) = read_mapping_response_body(mapping).await;
+                        final_bytes = Bytes::from(body_bytes);
                         final_content_type = Some(ct.clone());
                         if let Ok(val) = HeaderValue::from_str(&ct) {
                             parts.headers.insert(CONTENT_TYPE, val);
