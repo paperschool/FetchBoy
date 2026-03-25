@@ -42,7 +42,7 @@ function MappingLogTab({ mappingId }: { mappingId: string | null }) {
                     <span className="flex gap-1">
                         {entry.overridesApplied.map((o) => {
                             const icon = OVERRIDE_ICONS[o];
-                            return icon ? <span key={o} className={`font-bold ${icon.color}`} title={o}>{icon.label}</span> : null;
+                            return icon ? <span key={o} className={`font-bold ${icon.color}`} title={icon.tooltip}>{icon.label}</span> : null;
                         })}
                     </span>
                 </div>

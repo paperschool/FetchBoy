@@ -53,9 +53,9 @@ describe('MappingLogTable', () => {
     it('shows override badges', () => {
         useMappingLogStore.setState({ entries: [makeEntry('1', ['headers_add', 'cookies', 'response_body'])] });
         render(<MappingLogTable />);
-        expect(screen.getByTitle('headers_add')).toBeInTheDocument();
-        expect(screen.getByTitle('cookies')).toBeInTheDocument();
-        expect(screen.getByTitle('response_body')).toBeInTheDocument();
+        expect(screen.getByTitle('Headers added')).toBeInTheDocument();
+        expect(screen.getByTitle('Cookies set')).toBeInTheDocument();
+        expect(screen.getByTitle('Response body overridden')).toBeInTheDocument();
     });
 
     it('shows source badge for mapping entries', () => {

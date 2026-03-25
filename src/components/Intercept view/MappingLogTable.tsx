@@ -74,7 +74,7 @@ export function MappingLogTable() {
                             {entry.overridesApplied.map((o) => {
                                 const icon = OVERRIDE_ICONS[o];
                                 return icon ? (
-                                    <span key={o} className={`text-[10px] font-bold ${icon.color}`} title={o}>{icon.label}</span>
+                                    <span key={o} className={`text-[10px] font-bold ${icon.color}`} title={icon.tooltip}>{icon.label}</span>
                                 ) : null;
                             })}
                         </div>

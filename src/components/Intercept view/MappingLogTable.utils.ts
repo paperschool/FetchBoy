@@ -19,13 +19,13 @@ export function filterLogEntries(
     );
 }
 
-export const OVERRIDE_ICONS: Record<string, { label: string; color: string }> = {
-    headers_add: { label: 'H+', color: 'text-teal-400' },
-    headers_remove: { label: 'H-', color: 'text-red-400' },
-    cookies: { label: 'C', color: 'text-orange-400' },
-    response_body: { label: 'B', color: 'text-purple-400' },
-    url_remap: { label: 'R', color: 'text-blue-400' },
-    paused: { label: 'P', color: 'text-amber-400' },
-    status_code: { label: 'S', color: 'text-yellow-400' },
-    blocked: { label: 'X', color: 'text-red-500' },
+export const OVERRIDE_ICONS: Record<string, { label: string; tooltip: string; color: string }> = {
+    headers_add: { label: 'H+', tooltip: 'Headers added', color: 'text-teal-400' },
+    headers_remove: { label: 'H-', tooltip: 'Headers removed', color: 'text-red-400' },
+    cookies: { label: 'C', tooltip: 'Cookies set', color: 'text-orange-400' },
+    response_body: { label: 'B', tooltip: 'Response body overridden', color: 'text-purple-400' },
+    url_remap: { label: 'R', tooltip: 'URL remapped', color: 'text-blue-400' },
+    paused: { label: 'P', tooltip: 'Request paused (breakpoint)', color: 'text-amber-400' },
+    status_code: { label: 'S', tooltip: 'Status code overridden', color: 'text-yellow-400' },
+    blocked: { label: 'X', tooltip: 'Request blocked', color: 'text-red-500' },
 };
