@@ -173,7 +173,7 @@ fn install_ca_to_system(
         let cert_str = cert_path.to_string_lossy();
 
         let script = format!(
-            "do shell script \"/usr/bin/security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain '{}'\" with administrator privileges",
+            "do shell script \"/usr/bin/security add-trusted-cert -r trustRoot -k /Library/Keychains/System.keychain '{}'\" with administrator privileges",
             cert_str.replace('\'', "'\\''")
         );
 
