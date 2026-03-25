@@ -11,6 +11,11 @@ const CONTENT_TYPES = [
     { value: 'text/xml', label: 'XML', lang: 'xml' as const },
     { value: 'text/html', label: 'HTML', lang: 'html' as const },
     { value: 'text/plain', label: 'Plain Text', lang: 'plaintext' as const },
+    { value: 'image/png', label: 'PNG', lang: 'plaintext' as const },
+    { value: 'image/jpeg', label: 'JPEG', lang: 'plaintext' as const },
+    { value: 'image/gif', label: 'GIF', lang: 'plaintext' as const },
+    { value: 'image/svg+xml', label: 'SVG', lang: 'xml' as const },
+    { value: 'image/webp', label: 'WebP', lang: 'plaintext' as const },
 ];
 
 const EXT_MAP: Record<string, string> = {
@@ -19,6 +24,12 @@ const EXT_MAP: Record<string, string> = {
     '.html': 'text/html',
     '.htm': 'text/html',
     '.txt': 'text/plain',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif',
+    '.svg': 'image/svg+xml',
+    '.webp': 'image/webp',
 };
 
 function detectContentType(filePath: string): string | null {
