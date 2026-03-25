@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.14.0] - 2026-03-25
+
+- feat: Request mapping system — URL-pattern rules with header add/remove, cookie editing, response body override (Monaco editor + file mode), and URL rewriting applied by the Rust proxy
+- feat: Mappings sidebar tab with folder structure, click-to-edit rows, and mapping editor with inline folder creation
+- feat: Mapping activity log sub-tab in intercept view showing which rules fired per request
+- feat: Map button, overrides tab, and window title now displays app version
+- feat: Image content types added to response body editor
+
 ## [0.13.0] - 2026-03-24
 
 - feat: Split request/response events — intercepted requests now appear in the table immediately with a pulsing "Pending" badge before the upstream response arrives
