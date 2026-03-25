@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { Check, AlertCircle, Play, Pause } from 'lucide-react';
 import { useMappingsStore } from '@/stores/mappingsStore';
 import type { MatchType, MappingEditForm } from '@/stores/mappingsStore';
-import type { MappingHeader } from '@/lib/db';
+import type { MappingHeader, MappingCookie } from '@/lib/db';
 import { ViewerShell } from '@/components/ui/ViewerShell';
 import { validateUrlPattern, MATCH_TYPES, PLACEHOLDERS } from './MappingEditor.utils';
 import { MappingHeadersEditor } from './MappingHeadersEditor';
+import { MappingCookieEditor } from './MappingCookieEditor';
 
 interface Props {
     onClose: () => void;
@@ -36,6 +37,7 @@ export function MappingEditor({ onClose }: Props) {
     const enabled = storeEnabled ?? localEnabled;
     const [headersAdd, setHeadersAdd] = useState<MappingHeader[]>(editForm.headersAdd);
     const [headersRemove, setHeadersRemove] = useState<MappingHeader[]>(editForm.headersRemove);
+    const [cookies, setCookies] = useState<MappingCookie[]>(editForm.cookies);
     const [urlError, setUrlError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
 
@@ -57,6 +59,7 @@ export function MappingEditor({ onClose }: Props) {
             enabled,
             headersAdd,
             headersRemove,
+            cookies,
         };
         try {
             await saveMapping(form);
@@ -142,7 +145,10 @@ export function MappingEditor({ onClose }: Props) {
                             onChangeRemove={setHeadersRemove}
                         />
                     )}
-                    {activeTab !== 'match' && activeTab !== 'headers' && (
+                    {activeTab === 'cookies' && (
+                        <MappingCookieEditor cookies={cookies} onChange={setCookies} />
+                    )}
+                    {activeTab !== 'match' && activeTab !== 'headers' && activeTab !== 'cookies' && (
                         <p className="text-app-muted text-sm">{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} configuration — coming in a later story.</p>
                     )}
                 </div>

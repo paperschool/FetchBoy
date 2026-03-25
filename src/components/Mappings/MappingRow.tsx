@@ -42,8 +42,9 @@ export function MappingRow({ mapping, onEdit, onDelete }: MappingRowProps) {
                     ) : null;
                 })()}
                 {mapping.cookies.length > 0 && (
-                    <span title="Cookie overrides" className="flex-shrink-0 text-orange-400" data-testid="cookies-indicator">
+                    <span title={`${mapping.cookies.length} cookie${mapping.cookies.length > 1 ? 's' : ''}`} className="flex-shrink-0 flex items-center gap-0.5 text-orange-400" data-testid="cookies-indicator">
                         <Cookie size={10} />
+                        <span className="text-[9px]" data-testid="cookies-count">{mapping.cookies.length}</span>
                     </span>
                 )}
                 {mapping.response_body_enabled && (
