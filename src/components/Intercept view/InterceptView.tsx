@@ -1,6 +1,7 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { InterceptSidebar } from "./InterceptSidebar";
 import { InterceptTable } from "./InterceptTable";
+import { MappingLogTable } from "./MappingLogTable";
 import { RequestDetailView } from "./RequestDetailView";
 import { PausedRequestDetail } from "./PausedRequestDetail";
 import { CertInstallPrompt } from "./CertInstallPrompt";
@@ -12,12 +13,16 @@ import { useInterceptStore } from "@/stores/interceptStore";
 import { useBreakpointsStore } from "@/stores/breakpointsStore";
 import { useMappingsStore } from "@/stores/mappingsStore";
 import { useInterceptEvents } from "@/hooks/useInterceptEvents";
+import { useMappingLogEvents } from "@/hooks/useMappingLogEvents";
 import { useSplitPane } from "@/hooks/useSplitPane";
 import { saveSetting } from "@/lib/settings";
 
 export function InterceptView() {
-  // Hook to listen for intercepted requests from the backend
+  // Hook to listen for intercepted requests and mapping events from the backend
   useInterceptEvents();
+  useMappingLogEvents();
+
+  const [topTab, setTopTab] = useState<'requests' | 'mapping-log'>('requests');
 
   const selectedRequest = useInterceptStore((state) =>
     state.requests.find((r) => r.id === state.selectedRequestId) ?? null
@@ -51,8 +56,21 @@ export function InterceptView() {
 
   const mainContent = (
     <div ref={containerRef} className="h-full bg-app-main flex flex-col min-h-0">
+      {/* Sub-tab switcher: Requests / Mapping Log */}
+      <div className="flex border-b border-app-subtle shrink-0 bg-app-main">
+        {(['requests', 'mapping-log'] as const).map((tab) => (
+          <button key={tab} type="button" onClick={() => setTopTab(tab)}
+            className={`px-4 py-1.5 text-xs transition-colors ${
+              topTab === tab
+                ? 'text-app-inverse font-medium border-b-2 border-app-accent'
+                : 'text-app-muted hover:text-app-inverse'
+            }`}>
+            {tab === 'requests' ? 'Requests' : 'Mapping Log'}
+          </button>
+        ))}
+      </div>
       <div style={{ height: `${topPercent}%` }} className="min-h-0 overflow-hidden shrink-0">
-        <InterceptTable />
+        {topTab === 'requests' ? <InterceptTable /> : <MappingLogTable />}
       </div>
       <div
         className="h-1 bg-app-subtle hover:bg-blue-500/40 cursor-row-resize shrink-0 transition-colors"
