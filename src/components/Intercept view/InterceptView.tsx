@@ -5,10 +5,12 @@ import { RequestDetailView } from "./RequestDetailView";
 import { PausedRequestDetail } from "./PausedRequestDetail";
 import { CertInstallPrompt } from "./CertInstallPrompt";
 import { BreakpointEditor } from "@/components/Breakpoints/BreakpointEditor";
+import { MappingEditor } from "@/components/Mappings/MappingEditor";
 import { TabLayout } from "@/components/Layout/TabLayout";
 import { useUiSettingsStore } from "@/stores/uiSettingsStore";
 import { useInterceptStore } from "@/stores/interceptStore";
 import { useBreakpointsStore } from "@/stores/breakpointsStore";
+import { useMappingsStore } from "@/stores/mappingsStore";
 import { useInterceptEvents } from "@/hooks/useInterceptEvents";
 import { useSplitPane } from "@/hooks/useSplitPane";
 import { saveSetting } from "@/lib/settings";
@@ -25,12 +27,16 @@ export function InterceptView() {
   const pendingMods = useInterceptStore((s) => s.pendingMods);
   const updatePendingMods = useInterceptStore((s) => s.updatePendingMods);
 
-  const { isEditing, cancelEditing } = useBreakpointsStore();
+  const { isEditing: isBpEditing, cancelEditing: cancelBpEditing } = useBreakpointsStore();
+  const { isEditing: isMappingEditing, cancelEditing: cancelMappingEditing } = useMappingsStore();
   const selectedRequestId = useInterceptStore((s) => s.selectedRequestId);
 
-  // Selecting a request dismisses the breakpoint editor
+  // Selecting a request dismisses editors
   useEffect(() => {
-    if (selectedRequestId !== null) cancelEditing();
+    if (selectedRequestId !== null) {
+      cancelBpEditing();
+      cancelMappingEditing();
+    }
   }, [selectedRequestId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const sidebarCollapsed = useUiSettingsStore((s) => s.sidebarCollapsed);
@@ -55,8 +61,10 @@ export function InterceptView() {
         aria-orientation="horizontal"
       />
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-        {isEditing ? (
-          <BreakpointEditor onClose={cancelEditing} />
+        {isBpEditing ? (
+          <BreakpointEditor onClose={cancelBpEditing} />
+        ) : isMappingEditing ? (
+          <MappingEditor onClose={cancelMappingEditing} />
         ) : (
           <div className={`flex-1 min-h-0 flex flex-col p-2 overflow-y-auto ${pauseState !== 'idle' ? 'ring-1 ring-amber-500/40 bg-amber-900/10 rounded-lg' : ''}`}>
             {pauseState !== 'idle' && <PausedRequestDetail />}
