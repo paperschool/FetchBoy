@@ -534,8 +534,8 @@ export function MainPanel() {
           queryParams: sendQueryParams,
           body: sendBody,
           auth,
-          timeout_ms: timeout,
-          ssl_verify: sslVerify,
+          timeoutMs: timeout,
+          sslVerify: sslVerify,
           requestId: activeTabId,
         },
       });
