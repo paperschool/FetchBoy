@@ -166,35 +166,17 @@ fn install_ca_to_system(
 
         let cert_path = restart_info.app_data_dir.join("ca").join("ca.pem");
 
-        // Two-step install into the user's login keychain (no admin required).
-        // Step 1: import the cert file into the login keychain.
-        // Step 2: mark it as a trusted root so macOS SecTrust honours it for SSL.
-        let home = std::env::var("HOME").unwrap_or_else(|_| "/Users/Shared".to_string());
-        let login_keychain = format!("{}/Library/Keychains/login.keychain-db", home);
+        // Install into the admin trust domain (-d) so Chrome's Certificate Verifier
+        // honours it. This triggers macOS's own auth dialog (Touch ID / password).
+        // The -d flag writes to the admin trust domain which Chrome requires.
         let cert_str = cert_path.to_string_lossy();
-
-        let import = std::process::Command::new("/usr/bin/security")
-            .args([
-                "import", &cert_str,
-                "-k", &login_keychain,
-                "-A",          // allow any app to access without prompting
-                "-T", "/usr/bin/security",
-            ])
-            .current_dir("/tmp")
-            .output()
-            .map_err(|e| format!("Failed to import certificate: {e}"))?;
-
-        // Exit code 1 with "already exists" is fine — cert was previously imported.
-        let import_err = String::from_utf8_lossy(&import.stderr);
-        if !import.status.success() && !import_err.contains("already exists") {
-            return Err(format!("Certificate import failed: {}", import_err));
-        }
 
         let trust = std::process::Command::new("/usr/bin/security")
             .args([
                 "add-trusted-cert",
+                "-d",              // admin trust domain (Chrome requires this)
                 "-r", "trustRoot",
-                "-k", &login_keychain,
+                "-k", "/Library/Keychains/System.keychain",
                 &cert_str,
             ])
             .current_dir("/tmp")
@@ -221,7 +203,10 @@ fn install_ca_to_system(
 }
 
 #[tauri::command]
-fn uninstall_ca_from_system(app: tauri::AppHandle) -> Result<(), String> {
+fn uninstall_ca_from_system(
+    app: tauri::AppHandle,
+    restart_info: tauri::State<'_, ProxyRestartInfo>,
+) -> Result<(), String> {
     #[cfg(target_os = "macos")]
     {
         let _ = app;
@@ -247,73 +232,27 @@ fn uninstall_ca_from_system(app: tauri::AppHandle) -> Result<(), String> {
             return Err("Removal cancelled.".to_string());
         }
 
+        // Remove from all keychains where the cert may exist.
+        // Try System keychain first (where install now puts it), then login keychain (legacy).
         let home = std::env::var("HOME").unwrap_or_else(|_| "/Users/Shared".to_string());
         let login_keychain = format!("{}/Library/Keychains/login.keychain-db", home);
 
-        // First, try to find the certificate by common name and get its SHA-1 hash
-        let find_result = std::process::Command::new("/usr/bin/security")
-            .args([
-                "find-certificate",
-                "-c", "FetchBoy Proxy CA",
-                "-p",  // Print certificate info in PEM format
-                &login_keychain,
-            ])
-            .current_dir("/tmp")
-            .output()
-            .map_err(|e| format!("Failed to find certificate: {}", e))?;
-
-        if !find_result.status.success() {
-            // Certificate not found - might already be removed
-            let stderr = String::from_utf8_lossy(&find_result.stderr);
-            if stderr.contains("unable to find") || stderr.contains("not found") {
-                return Ok(());
-            }
-            return Err(format!(
-                "Failed to find certificate: {}",
-                stderr
-            ));
+        for keychain in ["/Library/Keychains/System.keychain", login_keychain.as_str()] {
+            // Try to delete by common name — ignore errors (cert may not be in this keychain)
+            let _ = std::process::Command::new("/usr/bin/security")
+                .args(["delete-certificate", "-c", "FetchBoy Proxy CA", keychain])
+                .current_dir("/tmp")
+                .output();
         }
 
-        // Get the SHA-1 hash of the certificate using security command
-        let hash_result = std::process::Command::new("/usr/bin/security")
-            .args([
-                "find-certificate",
-                "-c", "FetchBoy Proxy CA",
-                "-Z",  // Print SHA-1 hash
-                &login_keychain,
-            ])
-            .current_dir("/tmp")
-            .output()
-            .map_err(|e| format!("Failed to get certificate hash: {}", e))?;
-
-        if !hash_result.status.success() {
-            // Fallback: try deleting by common name
-            return uninstall_by_common_name(&login_keychain);
-        }
-
-        let hash_output = String::from_utf8_lossy(&hash_result.stdout);
-        // Extract the SHA-1 hash from the output (format: "SHA-1 hash: XX:XX:XX:...")
-        let hash_part = hash_output
-            .lines()
-            .find(|l| l.contains("SHA-1 hash:"))
-            .and_then(|l| l.split("SHA-1 hash:").nth(1))
-            .map(|s| s.trim().replace(":", ""))
-            .unwrap_or_default();
-
-        if hash_part.is_empty() {
-            return uninstall_by_common_name(&login_keychain);
-        }
-
-        // Delete by hash
-        let delete_result = std::process::Command::new("/usr/bin/security")
-            .args(["delete-certificate", "-Z", &hash_part, &login_keychain])
-            .current_dir("/tmp")
-            .output()
-            .map_err(|e| format!("Failed to delete certificate by hash: {}", e))?;
-
-        if !delete_result.status.success() {
-            // Fallback to common name if hash deletion fails
-            return uninstall_by_common_name(&login_keychain);
+        // Also remove admin trust domain entries if cert file still exists
+        let app_data_dir = restart_info.app_data_dir.clone();
+        let cert_path = app_data_dir.join("ca").join("ca.pem");
+        if cert_path.exists() {
+            let _ = std::process::Command::new("/usr/bin/security")
+                .args(["remove-trusted-cert", "-d", &cert_path.to_string_lossy()])
+                .current_dir("/tmp")
+                .output();
         }
 
         return Ok(());
@@ -344,29 +283,7 @@ fn delete_ca_files(restart_info: tauri::State<'_, ProxyRestartInfo>) -> Result<(
     Ok(())
 }
 
-/// Helper function to uninstall certificate by common name as fallback
-#[cfg(target_os = "macos")]
-fn uninstall_by_common_name(keychain: &str) -> Result<(), String> {
-    let result = std::process::Command::new("/usr/bin/security")
-        .args(["delete-certificate", "-c", "FetchBoy Proxy CA", keychain])
-        .current_dir("/tmp")
-        .output()
-        .map_err(|e| format!("Failed to run security command: {}", e))?;
 
-    if !result.status.success() {
-        let stderr = String::from_utf8_lossy(&result.stderr);
-        // If cert not found, that's OK - it might have already been removed
-        if stderr.contains("unable to find") || stderr.contains("not found") {
-            return Ok(());
-        }
-        return Err(format!(
-            "Certificate removal failed: {}",
-            stderr
-        ));
-    }
-
-    Ok(())
-}
 
 #[tauri::command]
 fn is_ca_installed() -> bool {
