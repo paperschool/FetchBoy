@@ -194,7 +194,6 @@ fn install_ca_to_system(
             .args([
                 "add-trusted-cert",
                 "-r", "trustRoot",
-                "-p", "ssl",
                 "-k", &login_keychain,
                 &cert_str,
             ])
