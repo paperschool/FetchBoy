@@ -140,6 +140,48 @@ pub struct BreakpointRule {
 
 pub type BreakpointsRef = Arc<Mutex<Vec<BreakpointRule>>>;
 
+// ─── Mapping rules (synced from frontend) ─────────────────────────────────────
+
+#[derive(Deserialize, Clone)]
+pub struct MappingHeader {
+    pub key: String,
+    pub value: String,
+    pub enabled: bool,
+}
+
+#[derive(Deserialize, Clone)]
+pub struct MappingCookie {
+    pub name: String,
+    pub value: String,
+    pub domain: String,
+    pub path: String,
+    pub secure: bool,
+    #[serde(rename = "httpOnly")]
+    pub http_only: bool,
+    #[serde(rename = "sameSite")]
+    pub same_site: String,
+    pub expires: String,
+}
+
+#[derive(Deserialize, Clone)]
+pub struct MappingRule {
+    pub id: String,
+    pub url_pattern: String,
+    pub match_type: String,
+    pub enabled: bool,
+    pub headers_add: Vec<MappingHeader>,
+    pub headers_remove: Vec<MappingHeader>,
+    pub cookies: Vec<MappingCookie>,
+    pub response_body_enabled: bool,
+    pub response_body: String,
+    pub response_body_content_type: String,
+    pub response_body_file_path: String,
+    pub url_remap_enabled: bool,
+    pub url_remap_target: String,
+}
+
+pub type MappingsRef = Arc<Mutex<Vec<MappingRule>>>;
+
 // ─── Pause / resume types ──────────────────────────────────────────────────────
 
 /// User-supplied modifications when resuming via "Edit & Continue".

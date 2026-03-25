@@ -41,5 +41,11 @@ pub fn migrations() -> Vec<Migration> {
             sql: include_str!("../migrations/006_paused_requests.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 7,
+            description: "create_mappings_tables",
+            sql: include_str!("../migrations/007_mappings.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }

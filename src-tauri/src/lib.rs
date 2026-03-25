@@ -31,6 +31,9 @@ pub struct ProxyConfigState {
 /// Shared breakpoint rules — kept in sync via the sync_breakpoints command.
 pub struct BreakpointsState(pub proxy::BreakpointsRef);
 
+/// Shared mapping rules — kept in sync via the sync_mappings command.
+pub struct MappingsState(pub proxy::MappingsRef);
+
 /// Pause registry — maps request_id to a oneshot sender so Tauri commands can resume paused proxy handlers.
 pub struct PauseRegistryState(pub proxy::PauseRegistryRef);
 
@@ -619,6 +622,17 @@ fn sync_breakpoints(
     Ok(())
 }
 
+// ─── Mappings sync command ────────────────────────────────────────────────────
+
+#[tauri::command]
+fn sync_mappings(
+    mappings: Vec<proxy::MappingRule>,
+    state: tauri::State<'_, MappingsState>,
+) -> Result<(), String> {
+    *state.0.lock().unwrap() = mappings;
+    Ok(())
+}
+
 // ─── Pause / resume commands ──────────────────────────────────────────────────
 
 /// Resume a paused request. `action` is "continue", "drop", or "modify".
@@ -804,6 +818,11 @@ pub fn run() {
                 Arc::new(std::sync::Mutex::new(Vec::new()));
             app.manage(BreakpointsState(Arc::clone(&breakpoints_ref)));
 
+            // Shared mappings ref — populated at runtime via sync_mappings.
+            let mappings_ref: proxy::MappingsRef =
+                Arc::new(std::sync::Mutex::new(Vec::new()));
+            app.manage(MappingsState(Arc::clone(&mappings_ref)));
+
             // Pause registry and timeout state.
             let pause_registry_ref: proxy::PauseRegistryRef =
                 Arc::new(std::sync::Mutex::new(std::collections::HashMap::new()));
@@ -856,6 +875,7 @@ pub fn run() {
             is_system_proxy_configured,
             match_breakpoint_url,
             sync_breakpoints,
+            sync_mappings,
             resume_request,
             get_pause_timeout,
             set_pause_timeout,

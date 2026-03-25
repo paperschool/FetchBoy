@@ -98,6 +98,51 @@ export interface Breakpoint {
     updated_at: string;
 }
 
+export interface MappingFolder {
+    id: string;
+    name: string;
+    sort_order: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface MappingHeader {
+    key: string;
+    value: string;
+    enabled: boolean;
+}
+
+export interface MappingCookie {
+    name: string;
+    value: string;
+    domain: string;
+    path: string;
+    secure: boolean;
+    httpOnly: boolean;
+    sameSite: 'Lax' | 'Strict' | 'None';
+    expires: string;
+}
+
+export interface Mapping {
+    id: string;
+    folder_id: string | null;
+    name: string;
+    url_pattern: string;
+    match_type: 'exact' | 'partial' | 'wildcard' | 'regex';
+    enabled: boolean;
+    headers_add: MappingHeader[];
+    headers_remove: MappingHeader[];
+    cookies: MappingCookie[];
+    response_body_enabled: boolean;
+    response_body: string;
+    response_body_content_type: string;
+    response_body_file_path: string;
+    url_remap_enabled: boolean;
+    url_remap_target: string;
+    created_at: string;
+    updated_at: string;
+}
+
 export interface AppSettings {
     theme: 'light' | 'dark' | 'system';
     request_timeout_ms: number;
