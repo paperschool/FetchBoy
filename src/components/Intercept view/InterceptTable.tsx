@@ -104,9 +104,15 @@ export function InterceptTable() {
     count: filteredRequests.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => 40,
-    overscan: 5,
+    overscan: 10,
     getItemKey: (index) => filteredRequests[index]?.id ?? index,
   });
+
+  // Force virtualizer to re-measure when data or container changes —
+  // prevents blank render when deferred updates land before layout settles.
+  useEffect(() => {
+    rowVirtualizer.measure();
+  }, [filteredRequests.length, rowVirtualizer]);
 
   return (
     <div

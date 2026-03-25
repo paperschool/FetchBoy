@@ -245,10 +245,25 @@ pub struct BreakpointPausedEvent {
 
 // ─── HTTP handler ─────────────────────────────────────────────────────────────
 
+// ─── Mapping applied event ────────────────────────────────────────────────────
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MappingAppliedEvent {
+    pub mapping_id: String,
+    pub mapping_name: String,
+    pub request_id: String,
+    pub timestamp: i64,
+    pub overrides_applied: Vec<String>,
+    pub original_url: Option<String>,
+    pub remapped_url: Option<String>,
+}
+
 pub type EmitFn = Arc<dyn Fn(&InterceptEvent) + Send + Sync + 'static>;
 pub type PausedEmitFn = Arc<dyn Fn(&BreakpointPausedEvent) + Send + Sync + 'static>;
 pub type RequestEmitFn = Arc<dyn Fn(&InterceptRequestEvent) + Send + Sync + 'static>;
 pub type ResponseEmitFn = Arc<dyn Fn(&InterceptResponseEvent) + Send + Sync + 'static>;
+pub type MappingEmitFn = Arc<dyn Fn(&MappingAppliedEvent) + Send + Sync + 'static>;
 
 #[derive(Clone)]
 pub struct InterceptHandler {
@@ -256,7 +271,9 @@ pub struct InterceptHandler {
     paused_emit_fn: PausedEmitFn,
     request_emit_fn: RequestEmitFn,
     response_emit_fn: ResponseEmitFn,
+    mapping_emit_fn: MappingEmitFn,
     breakpoints: BreakpointsRef,
+    mappings: MappingsRef,
     pause_registry: PauseRegistryRef,
     pause_timeout: PauseTimeoutRef,
     /// Pending request captured in handle_request, consumed in handle_response.
@@ -272,7 +289,9 @@ impl InterceptHandler {
         paused_emit_fn: PausedEmitFn,
         request_emit_fn: RequestEmitFn,
         response_emit_fn: ResponseEmitFn,
+        mapping_emit_fn: MappingEmitFn,
         breakpoints: BreakpointsRef,
+        mappings: MappingsRef,
         pause_registry: PauseRegistryRef,
         pause_timeout: PauseTimeoutRef,
     ) -> Self {
@@ -281,7 +300,9 @@ impl InterceptHandler {
             paused_emit_fn,
             request_emit_fn,
             response_emit_fn,
+            mapping_emit_fn,
             breakpoints,
+            mappings,
             pause_registry,
             pause_timeout,
             pending: None,
@@ -528,7 +549,9 @@ impl HttpHandler for InterceptHandler {
         let emit_fn = Arc::clone(&self.emit_fn);
         let paused_emit_fn = Arc::clone(&self.paused_emit_fn);
         let response_emit_fn = Arc::clone(&self.response_emit_fn);
+        let mapping_emit_fn = Arc::clone(&self.mapping_emit_fn);
         let breakpoints = Arc::clone(&self.breakpoints);
+        let mappings = Arc::clone(&self.mappings);
         let pause_registry = Arc::clone(&self.pause_registry);
         let pause_timeout_ref = Arc::clone(&self.pause_timeout);
 
@@ -758,6 +781,107 @@ impl HttpHandler for InterceptHandler {
                 (bytes, ct)
             };
 
+            // ── Apply request mappings (AFTER breakpoint processing) ─────────
+            let (mut final_bytes, mut final_content_type) = (final_bytes, final_content_type);
+            let bp_replaced_body = matched_bp.as_ref().map_or(false, |bp| bp.response_mapping_enabled);
+            {
+                let matched_mapping = {
+                    let guard = mappings.lock().unwrap();
+                    guard
+                        .iter()
+                        .filter(|m| m.enabled)
+                        .find(|m| match_url(&url, &m.url_pattern, &m.match_type).matches)
+                        .cloned()
+                };
+
+                if let Some(ref mapping) = matched_mapping {
+                    let mut overrides: Vec<String> = Vec::new();
+                    let request_id = req_info.as_ref().map(|r| r.id.clone()).unwrap_or_default();
+
+                    // Add headers (skip if breakpoint already set them)
+                    for h in &mapping.headers_add {
+                        if h.enabled && !h.key.is_empty() {
+                            if let (Ok(name), Ok(val)) = (
+                                hudsucker::hyper::header::HeaderName::from_bytes(h.key.as_bytes()),
+                                HeaderValue::from_str(&h.value),
+                            ) {
+                                // Only add if breakpoint didn't already set this header
+                                if !parts.headers.contains_key(&name) || matched_bp.is_none() {
+                                    parts.headers.insert(name, val);
+                                }
+                            }
+                        }
+                    }
+                    if mapping.headers_add.iter().any(|h| h.enabled && !h.key.is_empty()) {
+                        overrides.push("headers_add".to_string());
+                    }
+
+                    // Remove headers
+                    for h in &mapping.headers_remove {
+                        if !h.key.is_empty() {
+                            if let Ok(name) = hudsucker::hyper::header::HeaderName::from_bytes(h.key.as_bytes()) {
+                                parts.headers.remove(&name);
+                            }
+                        }
+                    }
+                    if mapping.headers_remove.iter().any(|h| !h.key.is_empty()) {
+                        overrides.push("headers_remove".to_string());
+                    }
+
+                    // Set cookies via Set-Cookie headers
+                    for cookie in &mapping.cookies {
+                        let mut cookie_parts = vec![format!("{}={}", cookie.name, cookie.value)];
+                        if !cookie.domain.is_empty() { cookie_parts.push(format!("Domain={}", cookie.domain)); }
+                        if !cookie.path.is_empty() { cookie_parts.push(format!("Path={}", cookie.path)); }
+                        if cookie.secure { cookie_parts.push("Secure".to_string()); }
+                        if cookie.http_only { cookie_parts.push("HttpOnly".to_string()); }
+                        if !cookie.same_site.is_empty() { cookie_parts.push(format!("SameSite={}", cookie.same_site)); }
+                        if !cookie.expires.is_empty() { cookie_parts.push(format!("Expires={}", cookie.expires)); }
+                        let cookie_str = cookie_parts.join("; ");
+                        if let Ok(val) = HeaderValue::from_str(&cookie_str) {
+                            parts.headers.append(hudsucker::hyper::header::SET_COOKIE, val);
+                        }
+                    }
+                    if !mapping.cookies.is_empty() {
+                        overrides.push("cookies".to_string());
+                    }
+
+                    // Replace response body (only if breakpoint didn't already replace)
+                    if mapping.response_body_enabled && !bp_replaced_body {
+                        let (body_content, ct) = read_mapping_response_body(mapping).await;
+                        final_bytes = Bytes::from(body_content.into_bytes());
+                        final_content_type = Some(ct.clone());
+                        if let Ok(val) = HeaderValue::from_str(&ct) {
+                            parts.headers.insert(CONTENT_TYPE, val);
+                        }
+                        if let Ok(val) = HeaderValue::from_str(&final_bytes.len().to_string()) {
+                            parts.headers.insert(CONTENT_LENGTH, val);
+                        }
+                        overrides.push("response_body".to_string());
+                    }
+
+                    if !overrides.is_empty() {
+                        log::info!(
+                            "Mapping applied: '{}' matched '{}' — overrides: {:?}",
+                            url, mapping.url_pattern, overrides,
+                        );
+                        let timestamp = std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap_or_default()
+                            .as_millis() as i64;
+                        mapping_emit_fn(&MappingAppliedEvent {
+                            mapping_id: mapping.id.clone(),
+                            mapping_name: mapping.id.clone(),
+                            request_id,
+                            timestamp,
+                            overrides_applied: overrides,
+                            original_url: None,
+                            remapped_url: None,
+                        });
+                    }
+                }
+            }
+
             let size = final_bytes.len() as u64;
 
             let response_body: Option<String> =
@@ -856,7 +980,9 @@ impl ProxyServer {
         paused_emit_fn: PausedEmitFn,
         request_emit_fn: RequestEmitFn,
         response_emit_fn: ResponseEmitFn,
+        mapping_emit_fn: MappingEmitFn,
         breakpoints: BreakpointsRef,
+        mappings: MappingsRef,
         pause_registry: PauseRegistryRef,
         pause_timeout: PauseTimeoutRef,
     ) {
@@ -864,7 +990,7 @@ impl ProxyServer {
         self.shutdown_tx = Some(shutdown_tx);
 
         let port = self.port;
-        let handler = InterceptHandler::new(emit_fn, paused_emit_fn, request_emit_fn, response_emit_fn, breakpoints, pause_registry, pause_timeout);
+        let handler = InterceptHandler::new(emit_fn, paused_emit_fn, request_emit_fn, response_emit_fn, mapping_emit_fn, breakpoints, mappings, pause_registry, pause_timeout);
         let crypto_provider = rustls::crypto::ring::default_provider();
 
         tauri::async_runtime::spawn(async move {
@@ -1118,10 +1244,12 @@ mod tests {
         let paused_emit_fn: PausedEmitFn = Arc::new(|_| {});
         let request_emit_fn: RequestEmitFn = Arc::new(|_| {});
         let response_emit_fn: ResponseEmitFn = Arc::new(|_| {});
+        let mapping_emit_fn: MappingEmitFn = Arc::new(|_| {});
         let breakpoints: BreakpointsRef = Arc::new(Mutex::new(Vec::new()));
+        let mappings: MappingsRef = Arc::new(Mutex::new(Vec::new()));
         let pause_registry: PauseRegistryRef = Arc::new(Mutex::new(HashMap::new()));
         let pause_timeout: PauseTimeoutRef = Arc::new(Mutex::new(30));
-        let handler = InterceptHandler::new(emit_fn, paused_emit_fn, request_emit_fn, response_emit_fn, breakpoints, pause_registry, pause_timeout);
+        let handler = InterceptHandler::new(emit_fn, paused_emit_fn, request_emit_fn, response_emit_fn, mapping_emit_fn, breakpoints, mappings, pause_registry, pause_timeout);
         assert!(handler.pending.is_none());
     }
 

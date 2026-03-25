@@ -44,6 +44,17 @@ export interface InterceptResponseSplitPayload {
   isBlocked?: boolean
 }
 
+// Matches MappingAppliedEvent struct in src-tauri/src/proxy.rs (Story 11.7)
+export interface MappingAppliedPayload {
+  mappingId: string
+  mappingName: string
+  requestId: string
+  timestamp: number
+  overridesApplied: string[]
+  originalUrl?: string
+  remappedUrl?: string
+}
+
 // Matches BreakpointPausedEvent struct in src-tauri/src/proxy.rs (Story 10.8)
 export interface BreakpointPausedPayload {
   requestId: string

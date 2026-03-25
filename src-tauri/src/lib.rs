@@ -20,6 +20,7 @@ pub struct ProxyRestartInfo {
     pub paused_emit_fn: proxy::PausedEmitFn,
     pub request_emit_fn: proxy::RequestEmitFn,
     pub response_emit_fn: proxy::ResponseEmitFn,
+    pub mapping_emit_fn: proxy::MappingEmitFn,
 }
 
 /// Current proxy configuration (port + enabled flag).
@@ -72,6 +73,7 @@ fn set_proxy_config(
     proxy_state: tauri::State<'_, ProxyState>,
     restart_info: tauri::State<'_, ProxyRestartInfo>,
     breakpoints: tauri::State<'_, BreakpointsState>,
+    mappings_state: tauri::State<'_, MappingsState>,
     pause_registry: tauri::State<'_, PauseRegistryState>,
     pause_timeout: tauri::State<'_, PauseTimeoutState>,
 ) -> Result<(), String> {
@@ -111,7 +113,9 @@ fn set_proxy_config(
             Arc::clone(&restart_info.paused_emit_fn),
             Arc::clone(&restart_info.request_emit_fn),
             Arc::clone(&restart_info.response_emit_fn),
+            Arc::clone(&restart_info.mapping_emit_fn),
             Arc::clone(&breakpoints.0),
+            Arc::clone(&mappings_state.0),
             Arc::clone(&pause_registry.0),
             Arc::clone(&pause_timeout.0),
         );
@@ -701,6 +705,13 @@ pub fn run() {
                 }
             });
 
+            let app_handle5 = app.handle().clone();
+            let mapping_emit_fn: proxy::MappingEmitFn = Arc::new(move |event| {
+                if let Err(e) = app_handle5.emit("mapping:applied", event) {
+                    log::warn!("Failed to emit mapping-applied event: {e}");
+                }
+            });
+
             // Register restart info so the set_proxy_config command can recreate the proxy.
             app.manage(ProxyRestartInfo {
                 app_data_dir: app_data_dir.clone(),
@@ -708,6 +719,7 @@ pub fn run() {
                 paused_emit_fn: Arc::clone(&paused_emit_fn),
                 request_emit_fn: Arc::clone(&request_emit_fn),
                 response_emit_fn: Arc::clone(&response_emit_fn),
+                mapping_emit_fn: Arc::clone(&mapping_emit_fn),
             });
 
             // Default config: enabled on port 8080.
@@ -744,7 +756,9 @@ pub fn run() {
                         paused_emit_fn,
                         request_emit_fn,
                         response_emit_fn,
+                        mapping_emit_fn,
                         breakpoints_ref,
+                        mappings_ref,
                         pause_registry_ref,
                         pause_timeout_ref,
                     );
