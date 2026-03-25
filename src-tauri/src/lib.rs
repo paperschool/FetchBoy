@@ -166,28 +166,53 @@ fn install_ca_to_system(
 
         let cert_path = restart_info.app_data_dir.join("ca").join("ca.pem");
 
-        // Install into the admin trust domain (-d) so Chrome's Certificate Verifier
-        // honours it. The -d flag makes `security` show macOS's native auth dialog
-        // (Touch ID / password) directly — do NOT wrap in osascript elevation as that
-        // suppresses the interactive SecurityAgent prompt.
+        // Chrome requires the CA in the System keychain for its Certificate Verifier.
+        // Step 1: Import cert to System keychain via elevated shell (needs admin).
+        // Step 2: Mark as trusted root in login keychain (no elevation needed).
         let cert_str = cert_path.to_string_lossy();
+        let home = std::env::var("HOME").unwrap_or_else(|_| "/Users/Shared".to_string());
+        let login_keychain = format!("{}/Library/Keychains/login.keychain-db", home);
 
+        // Step 1: Elevated import to System keychain
+        let import_script = format!(
+            "do shell script \"/usr/bin/security import '{}' -k /Library/Keychains/System.keychain -A\" with administrator privileges",
+            cert_str.replace('\'', "'\\''")
+        );
+        let import = std::process::Command::new("osascript")
+            .args(["-e", &import_script])
+            .output()
+            .map_err(|e| format!("Failed to import certificate: {e}"))?;
+
+        if !import.status.success() {
+            let stderr = String::from_utf8_lossy(&import.stderr);
+            if stderr.contains("User canceled") || stderr.contains("(-128)") {
+                return Err("Installation cancelled.".to_string());
+            }
+            // "already exists" is fine
+            if !stderr.contains("already exists") {
+                return Err(format!("Certificate import failed: {}", stderr));
+            }
+        }
+
+        // Step 2: Set trust in login keychain (no elevation needed)
         let trust = std::process::Command::new("/usr/bin/security")
             .args([
                 "add-trusted-cert",
-                "-d",
                 "-r", "trustRoot",
-                "-k", "/Library/Keychains/System.keychain",
+                "-p", "ssl",
+                "-k", &login_keychain,
                 &cert_str,
             ])
             .output()
             .map_err(|e| format!("Failed to set certificate trust: {e}"))?;
 
+        // Trust setting in login keychain is best-effort — the System keychain
+        // import is what Chrome actually needs.
         if !trust.status.success() {
-            return Err(format!(
-                "Certificate trust failed: {}",
+            log::warn!(
+                "Login keychain trust failed (non-fatal): {}",
                 String::from_utf8_lossy(&trust.stderr)
-            ));
+            );
         }
 
         return Ok(());
