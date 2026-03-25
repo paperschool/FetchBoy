@@ -1114,6 +1114,7 @@ dependencies = [
  "tauri-plugin-http",
  "tauri-plugin-shell",
  "tauri-plugin-sql",
+ "time",
  "tokio",
  "uuid",
 ]

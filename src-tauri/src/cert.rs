@@ -1,7 +1,8 @@
 use hudsucker::certificate_authority::RcgenAuthority;
-use hudsucker::rcgen::{BasicConstraints, CertificateParams, DistinguishedName, DnType, IsCa, KeyPair};
+use hudsucker::rcgen::{BasicConstraints, CertificateParams, DistinguishedName, DnType, IsCa, KeyPair, KeyUsagePurpose};
 use std::fs;
 use std::path::PathBuf;
+use time::{Duration, OffsetDateTime};
 
 pub struct CertificateAuthority {
     authority: RcgenAuthority,
@@ -54,6 +55,13 @@ impl CertificateAuthority {
         let mut params = CertificateParams::new(Vec::<String>::new())?;
         params.is_ca = IsCa::Ca(BasicConstraints::Unconstrained);
         params.distinguished_name = dn;
+        params.key_usages = vec![
+            KeyUsagePurpose::KeyCertSign,
+            KeyUsagePurpose::CrlSign,
+            KeyUsagePurpose::DigitalSignature,
+        ];
+        params.not_before = OffsetDateTime::now_utc() - Duration::days(1);
+        params.not_after = OffsetDateTime::now_utc() + Duration::days(365 * 10);
 
         let cert = params.self_signed(&key_pair)?;
         let cert_pem = cert.pem();
