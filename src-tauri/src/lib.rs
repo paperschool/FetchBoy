@@ -167,26 +167,30 @@ fn install_ca_to_system(
         let cert_path = restart_info.app_data_dir.join("ca").join("ca.pem");
 
         // Install into the admin trust domain (-d) so Chrome's Certificate Verifier
-        // honours it. This triggers macOS's own auth dialog (Touch ID / password).
-        // The -d flag writes to the admin trust domain which Chrome requires.
+        // honours it. Writing to the System keychain requires admin privileges, so
+        // we use AppleScript's "do shell script ... with administrator privileges"
+        // which shows macOS's native password/Touch ID prompt.
         let cert_str = cert_path.to_string_lossy();
 
-        let trust = std::process::Command::new("/usr/bin/security")
-            .args([
-                "add-trusted-cert",
-                "-d",              // admin trust domain (Chrome requires this)
-                "-r", "trustRoot",
-                "-k", "/Library/Keychains/System.keychain",
-                &cert_str,
-            ])
+        let script = format!(
+            "do shell script \"/usr/bin/security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain '{}'\" with administrator privileges",
+            cert_str.replace('\'', "'\\''")
+        );
+
+        let trust = std::process::Command::new("osascript")
+            .args(["-e", &script])
             .current_dir("/tmp")
             .output()
             .map_err(|e| format!("Failed to set certificate trust: {e}"))?;
 
         if !trust.status.success() {
+            let stderr = String::from_utf8_lossy(&trust.stderr);
+            if stderr.contains("User canceled") || stderr.contains("(-128)") {
+                return Err("Installation cancelled.".to_string());
+            }
             return Err(format!(
                 "Certificate trust failed: {}",
-                String::from_utf8_lossy(&trust.stderr)
+                stderr
             ));
         }
 
