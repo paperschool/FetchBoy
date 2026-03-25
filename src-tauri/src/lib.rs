@@ -132,88 +132,50 @@ fn install_ca_to_system(
     {
         let _ = app; // icon resolved via system caution icon instead
 
-        // Pre-confirmation dialog. AppleScript line breaks use `& return &`;
-        // `with icon caution` shows the native macOS warning triangle.
-        let pre_dialog =
-            "display dialog \
-             \"FetchBoy needs to install its CA certificate to your keychain.\" \
-             & return & return & \
-             \"This lets FetchBoy intercept and inspect HTTPS traffic on this device.\" \
-             & return & return & \
-             \"macOS may ask you to confirm access to your keychain.\" \
-             with title \"FetchBoy \u{2014} Install CA Certificate\" \
-             buttons {\"Cancel\", \"Install\"} \
-             default button \"Install\" \
-             cancel button \"Cancel\" \
-             with icon caution";
-
-        let confirm = std::process::Command::new("osascript")
-            .args(["-e", pre_dialog])
-            .current_dir("/tmp")
-            .output()
-            .map_err(|e| format!("Failed to show dialog: {e}"))?;
-
-        if !confirm.status.success() {
-            return Err("Installation cancelled.".to_string());
-        }
-
-        // User confirmed — run the install directly from the app process.
-        // Running `security` directly (not through `do shell script with administrator
-        // privileges`) lets macOS show its own interactive auth dialog, which supports
-        // Touch ID and avoids the "no user interaction was possible" sandbox restriction.
         cert::CertificateAuthority::load_or_create(restart_info.app_data_dir.clone())
             .map_err(|e| format!("Failed to load CA: {e}"))?;
 
         let cert_path = restart_info.app_data_dir.join("ca").join("ca.pem");
-
-        // Chrome requires the CA in the System keychain for its Certificate Verifier.
-        // Step 1: Import cert to System keychain via elevated shell (needs admin).
-        // Step 2: Mark as trusted root in login keychain (no elevation needed).
         let cert_str = cert_path.to_string_lossy();
         let home = std::env::var("HOME").unwrap_or_else(|_| "/Users/Shared".to_string());
         let login_keychain = format!("{}/Library/Keychains/login.keychain-db", home);
 
-        // Step 1: Elevated import to System keychain
-        let import_script = format!(
-            "do shell script \"/usr/bin/security import '{}' -k /Library/Keychains/System.keychain -A\" with administrator privileges",
+        // Single osascript: show confirmation dialog, then elevated import to
+        // System keychain — one admin prompt covers both.
+        let script = format!(
+            "display dialog \
+             \"FetchBoy needs to install its CA certificate to intercept HTTPS traffic.\" \
+             & return & return & \
+             \"macOS will ask for your password or Touch ID to authorize this.\" \
+             with title \"FetchBoy — Install CA Certificate\" \
+             buttons {{\"Cancel\", \"Install\"}} \
+             default button \"Install\" \
+             cancel button \"Cancel\" \
+             with icon caution\n\
+             do shell script \"/usr/bin/security import '{}' -k /Library/Keychains/System.keychain -A\" \
+             with administrator privileges",
             cert_str.replace('\'', "'\\''")
         );
-        let import = std::process::Command::new("osascript")
-            .args(["-e", &import_script])
-            .output()
-            .map_err(|e| format!("Failed to import certificate: {e}"))?;
 
-        if !import.status.success() {
-            let stderr = String::from_utf8_lossy(&import.stderr);
+        let result = std::process::Command::new("osascript")
+            .args(["-e", &script])
+            .output()
+            .map_err(|e| format!("Failed to install certificate: {e}"))?;
+
+        if !result.status.success() {
+            let stderr = String::from_utf8_lossy(&result.stderr);
             if stderr.contains("User canceled") || stderr.contains("(-128)") {
                 return Err("Installation cancelled.".to_string());
             }
-            // "already exists" is fine
             if !stderr.contains("already exists") {
-                return Err(format!("Certificate import failed: {}", stderr));
+                return Err(format!("Certificate install failed: {}", stderr));
             }
         }
 
-        // Step 2: Set trust in login keychain (no elevation needed)
-        let trust = std::process::Command::new("/usr/bin/security")
-            .args([
-                "add-trusted-cert",
-                "-r", "trustRoot",
-                "-p", "ssl",
-                "-k", &login_keychain,
-                &cert_str,
-            ])
-            .output()
-            .map_err(|e| format!("Failed to set certificate trust: {e}"))?;
-
-        // Trust setting in login keychain is best-effort — the System keychain
-        // import is what Chrome actually needs.
-        if !trust.status.success() {
-            log::warn!(
-                "Login keychain trust failed (non-fatal): {}",
-                String::from_utf8_lossy(&trust.stderr)
-            );
-        }
+        // Also set trust in login keychain (best-effort, no elevation needed)
+        let _ = std::process::Command::new("/usr/bin/security")
+            .args(["add-trusted-cert", "-r", "trustRoot", "-k", &login_keychain, &cert_str])
+            .output();
 
         return Ok(());
     }
