@@ -8,18 +8,20 @@ import { validateUrlPattern, MATCH_TYPES, PLACEHOLDERS } from './MappingEditor.u
 import { MappingHeadersEditor } from './MappingHeadersEditor';
 import { MappingCookieEditor } from './MappingCookieEditor';
 import { MappingResponseBodyEditor } from './MappingResponseBodyEditor';
+import { MappingUrlRemapEditor } from './MappingUrlRemapEditor';
 
 interface Props {
     onClose: () => void;
 }
 
-type EditorTab = 'match' | 'response' | 'headers' | 'cookies';
+type EditorTab = 'match' | 'response' | 'headers' | 'cookies' | 'remap';
 
 const TABS = [
     { id: 'match', label: 'Match' },
     { id: 'response', label: 'Response' },
     { id: 'headers', label: 'Headers' },
     { id: 'cookies', label: 'Cookies' },
+    { id: 'remap', label: 'Remap' },
 ];
 
 export function MappingEditor({ onClose }: Props) {
@@ -43,6 +45,8 @@ export function MappingEditor({ onClose }: Props) {
     const [responseBody, setResponseBody] = useState(editForm.responseBody);
     const [responseBodyContentType, setResponseBodyContentType] = useState(editForm.responseBodyContentType);
     const [responseBodyFilePath, setResponseBodyFilePath] = useState(editForm.responseBodyFilePath);
+    const [urlRemapEnabled, setUrlRemapEnabled] = useState(editForm.urlRemapEnabled);
+    const [urlRemapTarget, setUrlRemapTarget] = useState(editForm.urlRemapTarget);
     const [urlError, setUrlError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
 
@@ -69,6 +73,8 @@ export function MappingEditor({ onClose }: Props) {
             responseBody,
             responseBodyContentType,
             responseBodyFilePath,
+            urlRemapEnabled,
+            urlRemapTarget,
         };
         try {
             await saveMapping(form);
@@ -156,6 +162,14 @@ export function MappingEditor({ onClose }: Props) {
                     )}
                     {activeTab === 'cookies' && (
                         <MappingCookieEditor cookies={cookies} onChange={setCookies} />
+                    )}
+                    {activeTab === 'remap' && (
+                        <MappingUrlRemapEditor
+                            enabled={urlRemapEnabled}
+                            target={urlRemapTarget}
+                            onChangeEnabled={setUrlRemapEnabled}
+                            onChangeTarget={setUrlRemapTarget}
+                        />
                     )}
                     {activeTab === 'response' && (
                         <MappingResponseBodyEditor

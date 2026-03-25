@@ -376,11 +376,13 @@ impl HttpHandler for InterceptHandler {
         let emit_fn = Arc::clone(&self.emit_fn);
         let request_emit_fn = Arc::clone(&self.request_emit_fn);
         let response_emit_fn_for_block = Arc::clone(&self.response_emit_fn);
+        let mapping_emit_fn_for_remap = Arc::clone(&self.mapping_emit_fn);
         let breakpoints = Arc::clone(&self.breakpoints);
+        let mappings_for_remap = Arc::clone(&self.mappings);
 
         async move {
             // Buffer the request body so we can both capture it and forward it upstream.
-            let (parts, body) = req.into_parts();
+            let (mut parts, body) = req.into_parts();
             let bytes: Bytes = body.collect().await.unwrap_or_default().to_bytes();
 
             let captured_body: Option<String> = if !bytes.is_empty()
@@ -404,8 +406,64 @@ impl HttpHandler for InterceptHandler {
                 request_body: captured_body.clone(),
             });
 
-            // Check for a blocking breakpoint BEFORE forwarding upstream.
+            // ── URL Remapping ──────────────────────────────────────────────
+            // Check mapping rules for URL remap BEFORE forwarding upstream.
             let full_url = format!("https://{}{}", host, path);
+            {
+                let remap_rule = {
+                    let guard = mappings_for_remap.lock().unwrap();
+                    guard
+                        .iter()
+                        .filter(|m| m.enabled && m.url_remap_enabled && !m.url_remap_target.is_empty())
+                        .find(|m| match_url(&full_url, &m.url_pattern, &m.match_type).matches)
+                        .cloned()
+                };
+
+                if let Some(ref rule) = remap_rule {
+                    if let Ok(target) = rule.url_remap_target.parse::<hudsucker::hyper::Uri>() {
+                        let new_host = target.host().unwrap_or("localhost").to_string();
+                        let target_path = target.path();
+                        // Preserve the original path by appending it to the target base
+                        let new_path = if target_path == "/" || target_path.is_empty() {
+                            path.clone()
+                        } else {
+                            format!("{}{}", target_path.trim_end_matches('/'), path)
+                        };
+                        let scheme = target.scheme_str().unwrap_or("https");
+                        let port_str = target.port().map(|p| format!(":{}", p)).unwrap_or_default();
+                        let new_uri = format!("{scheme}://{new_host}{port_str}{new_path}");
+
+                        log::info!(
+                            "URL remap: '{}' → '{}' (mapping '{}')",
+                            full_url, new_uri, rule.id,
+                        );
+
+                        if let Ok(uri) = new_uri.parse::<hudsucker::hyper::Uri>() {
+                            parts.uri = uri;
+                        }
+                        if let Ok(val) = HeaderValue::from_str(&new_host) {
+                            parts.headers.insert("host", val);
+                        }
+
+                        // Emit mapping:applied event for the remap
+                        let ts = std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap_or_default()
+                            .as_millis() as i64;
+                        mapping_emit_fn_for_remap(&MappingAppliedEvent {
+                            mapping_id: rule.id.clone(),
+                            mapping_name: rule.id.clone(),
+                            request_id: id.clone(),
+                            timestamp: ts,
+                            overrides_applied: vec!["url_remap".to_string()],
+                            original_url: Some(full_url.clone()),
+                            remapped_url: Some(new_uri),
+                        });
+                    }
+                }
+            }
+
+            // Check for a blocking breakpoint BEFORE forwarding upstream.
             let blocking_bp = {
                 let guard = breakpoints.lock().unwrap();
                 guard
