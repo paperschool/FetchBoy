@@ -215,9 +215,8 @@ describe('BreakpointEditor', () => {
         expect(screen.getByTestId('match-type-regex')).toBeInTheDocument();
     });
 
-    it('shows Response tab that contains ResponseMappingEditor', () => {
+    it('does not render a Response tab', () => {
         render(<BreakpointEditor onClose={vi.fn()} />);
-        fireEvent.click(screen.getByText('Response'));
-        expect(screen.getByTestId('rm-enabled-checkbox')).toBeInTheDocument();
+        expect(screen.queryByText('Response')).not.toBeInTheDocument();
     });
 });

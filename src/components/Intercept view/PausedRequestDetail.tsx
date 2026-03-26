@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Clock, Play, Square, Pencil } from 'lucide-react'
 import { useInterceptStore } from '@/stores/interceptStore'
 
@@ -20,6 +20,27 @@ function useCountdown(timeoutAt: number): number {
   }, [timeoutAt])
 
   return remaining
+}
+
+function UrgencyBar({ paused }: { paused: boolean }) {
+  const [collapsed, setCollapsed] = useState(false)
+  const frameRef = useRef(0)
+
+  useEffect(() => {
+    if (!paused) { setCollapsed(false); return }
+    frameRef.current = requestAnimationFrame(() => setCollapsed(true))
+    return () => cancelAnimationFrame(frameRef.current)
+  }, [paused])
+
+  if (!paused) return null
+
+  return (
+    <div className="w-full h-1 rounded-full overflow-hidden mb-1" data-testid="urgency-bar">
+      <div
+        className={`h-full bg-amber-500 rounded-full transition-all duration-[5000ms] ease-linear ${collapsed ? 'w-0' : 'w-full'}`}
+      />
+    </div>
+  )
 }
 
 export function PausedRequestDetail() {
@@ -74,10 +95,9 @@ export function PausedRequestDetail() {
   }
 
   return (
-    <div
-      className="flex items-center justify-between px-3 py-2 border-b border-amber-500/40 mb-2"
-      data-testid="paused-request-detail"
-    >
+    <div data-testid="paused-request-detail">
+      <UrgencyBar paused={pauseState === 'paused' && !editMode} />
+      <div className="flex items-center justify-between px-3 py-2 border-b border-amber-500/40 mb-2">
       <div className="flex items-center gap-2 text-amber-400 text-xs">
         <Clock size={13} />
         <span className="font-medium">Paused</span>
@@ -124,6 +144,7 @@ export function PausedRequestDetail() {
         {isResuming && (
           <span className="text-app-muted text-xs self-center ml-1">Resuming…</span>
         )}
+      </div>
       </div>
     </div>
   )

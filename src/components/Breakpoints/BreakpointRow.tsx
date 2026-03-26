@@ -1,4 +1,4 @@
-import { Bug, ArrowLeftRight, Pencil, Trash2, Gauge, ListPlus, Ban, Play, Pause } from 'lucide-react';
+import { Bug, Pencil, Trash2, Play, Pause } from 'lucide-react';
 import type { Breakpoint } from '@/lib/db';
 import { BreakpointActionPanel } from './BreakpointActionPanel';
 import { useBreakpointsStore } from '@/stores/breakpointsStore';
@@ -33,42 +33,6 @@ export function BreakpointRow({ breakpoint, onEdit, onDelete }: BreakpointRowPro
             </button>
             <Bug size={12} className={`flex-shrink-0 ${breakpoint.enabled ? 'text-blue-400' : 'text-app-muted'}`} />
             <span className="flex-1 text-app-secondary text-xs truncate">{breakpoint.name}</span>
-            {breakpoint.response_mapping_enabled && (
-                <span
-                    title="Has response mapping"
-                    className="flex-shrink-0 text-purple-400"
-                    data-testid="rm-indicator"
-                >
-                    <ArrowLeftRight size={10} />
-                </span>
-            )}
-            {breakpoint.status_code_enabled && (
-                <span
-                    title={`Overrides status code → ${breakpoint.status_code_value}`}
-                    className="flex-shrink-0 text-orange-400"
-                    data-testid="sc-indicator"
-                >
-                    <Gauge size={10} />
-                </span>
-            )}
-            {(breakpoint.custom_headers ?? []).some((h) => h.enabled) && (
-                <span
-                    title={`Injects ${(breakpoint.custom_headers ?? []).filter((h) => h.enabled).length} custom header(s)`}
-                    className="flex-shrink-0 text-teal-400"
-                    data-testid="headers-indicator"
-                >
-                    <ListPlus size={10} />
-                </span>
-            )}
-            {breakpoint.block_request_enabled && (
-                <span
-                    title="Blocks requests"
-                    className="flex-shrink-0 text-red-400"
-                    data-testid="block-indicator"
-                >
-                    <Ban size={10} />
-                </span>
-            )}
             <div className="hidden group-hover:flex items-center gap-0.5">
                 <button
                     onClick={(e) => { e.stopPropagation(); onEdit(); }}

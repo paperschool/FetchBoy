@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-type AppTab = "fetch" | "intercept";
+type AppTab = "fetch" | "intercept" | "debug";
 
 interface AppTabStore {
   activeTab: AppTab;

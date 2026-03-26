@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.15.0] - 2026-03-26
+
+- feat: Debug tab with dual log view — internal Rust events and MITM traffic displayed side-by-side with search, clear, and auto-scroll
+- feat: Breakpoint interaction countdown — 5-second amber progress bar during paused requests as a visual nudge
+- feat: Breakpoint editor simplified — removed pre-configured response override tab (now covered by Mappings); inline live editing during pauses remains
+- fix: Breakpoint and mapping editors now correctly refresh when switching between items
+
 ## [0.14.1] - 2026-03-26
 
 - fix: Breakpoints / Mapping edit views change when selecting different breakpoints

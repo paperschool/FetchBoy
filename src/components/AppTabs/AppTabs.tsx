@@ -1,17 +1,19 @@
 import { type ReactNode } from "react";
 import type React from "react";
-import { Send, Wifi } from "lucide-react";
+import { Send, Wifi, Bug } from "lucide-react";
 import { useAppTabStore } from "@/stores/appTabStore";
 import { useUiSettingsStore } from "@/stores/uiSettingsStore";
 import { InterceptView } from "@/components/Intercept view/InterceptView";
+import { DebugView } from "@/components/Debug/DebugView";
 import { FetchTabActions } from "@/components/TopBar/TopBar";
 import { InterceptTabActions } from "@/components/Intercept view/InterceptTopBar";
 
-type AppTab = "fetch" | "intercept";
+type AppTab = "fetch" | "intercept" | "debug";
 
 const TAB_CONFIG: Record<AppTab, { label: string; icon: React.ReactNode }> = {
   fetch: { label: "Fetch", icon: <Send size={13} /> },
   intercept: { label: "Intercept", icon: <Wifi size={13} /> },
+  debug: { label: "", icon: <Bug size={13} /> },
 };
 
 interface AppTabsProps {
@@ -82,6 +84,14 @@ export function AppTabs({ children }: AppTabsProps) {
           data-testid="intercept-panel"
         >
           <InterceptView />
+        </div>
+
+        {/* Debug panel */}
+        <div
+          className={activeTab === "debug" ? "h-full" : "hidden"}
+          data-testid="debug-panel"
+        >
+          <DebugView />
         </div>
       </div>
     </div>
