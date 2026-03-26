@@ -1,5 +1,6 @@
 mod cert;
 mod db;
+mod debug_logger;
 mod http;
 mod proxy;
 
@@ -40,6 +41,9 @@ pub struct PauseRegistryState(pub proxy::PauseRegistryRef);
 
 /// Configurable pause timeout in seconds (0 = never).
 pub struct PauseTimeoutState(pub proxy::PauseTimeoutRef);
+
+/// Debug logger for persisting events to log files.
+pub struct DebugLoggerState(pub debug_logger::SharedDebugLogger);
 
 // ─── Proxy commands ───────────────────────────────────────────────────────────
 
@@ -511,6 +515,73 @@ fn disable_os_proxy_all_services() {
     }
 }
 
+// ─── Log folder command ───────────────────────────────────────────────────────
+
+#[tauri::command]
+fn open_log_folder(app: tauri::AppHandle) -> Result<(), String> {
+    let log_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| e.to_string())?
+        .join("logs");
+    std::fs::create_dir_all(&log_dir).map_err(|e| e.to_string())?;
+    open::that(&log_dir).map_err(|e| e.to_string())
+}
+
+// ─── OS Settings shortcuts ────────────────────────────────────────────────────
+
+#[tauri::command]
+fn open_proxy_settings() -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg("x-apple.systempreferences:com.apple.preference.network?Proxies")
+            .spawn()
+            .map_err(|e| format!("Failed to open proxy settings: {e}"))?;
+        return Ok(());
+    }
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("cmd")
+            .args(["/C", "start", "ms-settings:network-proxy"])
+            .spawn()
+            .map_err(|e| format!("Failed to open proxy settings: {e}"))?;
+        return Ok(());
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    {
+        std::process::Command::new("gnome-control-center")
+            .arg("network")
+            .spawn()
+            .map_err(|e| format!("Failed to open network settings: {e}. Open your network settings manually."))?;
+        Ok(())
+    }
+}
+
+#[tauri::command]
+fn open_cert_manager() -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .args(["-a", "Keychain Access"])
+            .spawn()
+            .map_err(|e| format!("Failed to open Keychain Access: {e}"))?;
+        return Ok(());
+    }
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("cmd")
+            .args(["/C", "start", "certmgr.msc"])
+            .spawn()
+            .map_err(|e| format!("Failed to open Certificate Manager: {e}"))?;
+        return Ok(());
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    {
+        Err("Certificate trust configuration varies by Linux distribution. Check your distro's documentation for managing trusted certificates.".to_string())
+    }
+}
+
 // ─── URL Matching command ────────────────────────────────────────────────────
 
 #[tauri::command]
@@ -677,6 +748,31 @@ pub fn run() {
                 .app_data_dir()
                 .expect("Failed to get app data directory");
 
+            // Initialise the debug logger for file persistence.
+            let debug_logger: debug_logger::SharedDebugLogger = Arc::new(std::sync::Mutex::new(
+                debug_logger::DebugLogger::new(&app_data_dir)
+                    .expect("Failed to initialise debug logger")
+            ));
+            app.manage(DebugLoggerState(Arc::clone(&debug_logger)));
+
+            // Helper: emit a debug:internal-event to the frontend.
+            let debug_handle = app.handle().clone();
+            let emit_debug = move |level: &str, source: &str, message: &str| {
+                let payload = serde_json::json!({
+                    "timestamp": std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_millis() as u64,
+                    "level": level,
+                    "source": source,
+                    "message": message,
+                });
+                let _ = debug_handle.emit("debug:internal-event", payload);
+            };
+
+            emit_debug("info", "app", "Debug logger initialised");
+
+            let emit_debug_clone = emit_debug.clone();
             let app_handle = app.handle().clone();
             let emit_fn: proxy::EmitFn = Arc::new(move |event| {
                 if let Err(e) = app_handle.emit("intercept:request", event) {
@@ -691,24 +787,54 @@ pub fn run() {
                 }
             });
 
+            let logger_req = Arc::clone(&debug_logger);
+            let emit_debug_req = emit_debug.clone();
             let app_handle3 = app.handle().clone();
             let request_emit_fn: proxy::RequestEmitFn = Arc::new(move |event| {
                 if let Err(e) = app_handle3.emit("intercept:request-split", event) {
                     log::warn!("Failed to emit split request event: {e}");
                 }
+                // Emit as internal debug event for the frontend table
+                emit_debug_req("info", "proxy", &format!("REQ {} {}{}", event.method, event.host, event.path));
+                // Log traffic request to file (non-blocking)
+                if let Ok(mut logger) = logger_req.try_lock() {
+                    logger.log_internal("INFO", "proxy", &format!("{} {}{}",
+                        event.method, event.host, event.path));
+                }
             });
 
+            let logger_resp = Arc::clone(&debug_logger);
+            let emit_debug_resp = emit_debug.clone();
             let app_handle4 = app.handle().clone();
             let response_emit_fn: proxy::ResponseEmitFn = Arc::new(move |event| {
                 if let Err(e) = app_handle4.emit("intercept:response-split", event) {
                     log::warn!("Failed to emit split response event: {e}");
                 }
+                // Emit as internal debug event for the frontend table
+                emit_debug_resp("info", "proxy", &format!("RESP {} {} {}ms", event.id, event.status_code, event.response_time_ms));
+                // Log traffic response to file (non-blocking)
+                if let Ok(mut logger) = logger_resp.try_lock() {
+                    logger.log_traffic(
+                        "RESP",
+                        &event.id,
+                        event.status_code,
+                        event.response_time_ms,
+                    );
+                }
             });
 
+            let logger_mapping = Arc::clone(&debug_logger);
+            let emit_debug_map = emit_debug.clone();
             let app_handle5 = app.handle().clone();
             let mapping_emit_fn: proxy::MappingEmitFn = Arc::new(move |event| {
                 if let Err(e) = app_handle5.emit("mapping:applied", event) {
                     log::warn!("Failed to emit mapping-applied event: {e}");
+                }
+                // Emit as internal debug event for the frontend table
+                emit_debug_map("info", "mapping", &format!("Applied: {}", event.mapping_name));
+                // Log mapping application to file (non-blocking)
+                if let Ok(mut logger) = logger_mapping.try_lock() {
+                    logger.log_internal("INFO", "mapping", &format!("applied: {}", event.mapping_name));
                 }
             });
 
@@ -748,8 +874,10 @@ pub fn run() {
             // Initialise the CA and start the proxy.
             match cert::CertificateAuthority::load_or_create(app_data_dir) {
                 Ok(ca) => {
+                    emit_debug_clone("info", "ca", "CA certificate loaded");
                     let ca_authority = ca.into_authority();
                     let mut proxy = proxy::ProxyServer::new(8080);
+                    emit_debug_clone("info", "proxy", "Starting MITM proxy on port 8080");
                     proxy.start(
                         ca_authority,
                         emit_fn,
@@ -766,6 +894,7 @@ pub fn run() {
                 }
                 Err(e) => {
                     log::error!("MITM proxy CA initialisation failed — proxy disabled: {e}");
+                    emit_debug_clone("error", "ca", &format!("CA init failed — proxy disabled: {e}"));
                     app.manage(ProxyState(std::sync::Mutex::new(None)));
                     *app.state::<ProxyConfigState>().enabled.lock().unwrap() = false;
                 }
@@ -796,6 +925,9 @@ pub fn run() {
             resume_request,
             get_pause_timeout,
             set_pause_timeout,
+            open_log_folder,
+            open_proxy_settings,
+            open_cert_manager,
             exit_app
         ])
         .build(tauri::generate_context!())

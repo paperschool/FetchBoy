@@ -1,17 +1,20 @@
 import { useRef, useState, useEffect } from 'react'
 import { Trash2, Pin, PinOff } from 'lucide-react'
 import { useDebugStore } from '@/stores/debugStore'
+import { formatTimestamp } from '@/components/Intercept view/InterceptTable.utils'
 
-const LEVEL_COLORS: Record<string, string> = {
-    info: 'text-blue-400',
-    warn: 'text-amber-400',
-    error: 'text-red-400',
+const LEVEL_BADGE: Record<string, string> = {
+    info: 'bg-blue-500/20 text-blue-400',
+    warn: 'bg-yellow-500/20 text-yellow-400',
+    error: 'bg-red-500/20 text-red-400',
 }
 
-function formatTime(ts: number): string {
-    const d = new Date(ts)
-    return d.toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
-}
+const columns = [
+    { id: 'time', label: 'Time', className: 'w-[100px] shrink-0' },
+    { id: 'level', label: 'Level', className: 'w-[80px] shrink-0' },
+    { id: 'source', label: 'Source', className: 'w-[120px] shrink-0' },
+    { id: 'message', label: 'Message', className: 'flex-1 min-w-0' },
+]
 
 export function InternalEventTable() {
     const events = useDebugStore((s) => s.internalEvents)
@@ -32,6 +35,7 @@ export function InternalEventTable() {
 
     return (
         <div className="flex flex-col h-full min-h-0">
+            {/* Toolbar */}
             <div className="flex items-center gap-2 px-2 py-1.5 border-b border-app-subtle shrink-0">
                 <span className="text-xs font-semibold text-app-muted uppercase tracking-wider">Internal</span>
                 <input
@@ -48,19 +52,43 @@ export function InternalEventTable() {
                     <Trash2 size={12} />
                 </button>
             </div>
-            <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0 text-xs font-mono">
-                {filtered.length === 0 && (
-                    <p className="text-app-muted text-center py-4">No events</p>
-                )}
-                {filtered.map((e) => (
-                    <div key={e.id} className="flex gap-2 px-2 py-0.5 border-b border-app-subtle/50 hover:bg-app-subtle/30">
-                        <span className="text-app-muted tabular-nums shrink-0 w-[60px]">{formatTime(e.timestamp)}</span>
-                        <span className={`shrink-0 w-[36px] font-semibold ${LEVEL_COLORS[e.level] ?? 'text-app-muted'}`}>{e.level.toUpperCase()}</span>
-                        <span className="text-app-muted shrink-0 w-[60px] truncate">{e.source}</span>
-                        <span className="text-app-inverse flex-1 truncate">{e.message}</span>
+
+            {filtered.length === 0 ? (
+                <div className="flex-1 flex items-center justify-center text-app-muted text-xs">No events</div>
+            ) : (
+                <>
+                    {/* Column headers */}
+                    <div className="flex bg-app-main border-b border-app-subtle shrink-0">
+                        {columns.map((col) => (
+                            <div key={col.id} className={`px-2 py-1.5 text-left text-xs font-medium text-app-secondary uppercase ${col.className}`}>
+                                {col.label}
+                            </div>
+                        ))}
                     </div>
-                ))}
-            </div>
+
+                    {/* Rows */}
+                    <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0">
+                        {filtered.map((e) => (
+                            <div key={e.id} className="flex items-center h-[32px] border-b border-app-subtle hover:bg-app-subtle transition-colors">
+                                <div className="px-2 text-xs text-app-muted w-[100px] shrink-0 tabular-nums">
+                                    {formatTimestamp(e.timestamp)}
+                                </div>
+                                <div className="px-2 w-[80px] shrink-0">
+                                    <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${LEVEL_BADGE[e.level] ?? 'bg-gray-500/20 text-gray-400'}`}>
+                                        {e.level.toUpperCase()}
+                                    </span>
+                                </div>
+                                <div className="px-2 w-[120px] shrink-0 text-xs text-app-muted truncate" title={e.source}>
+                                    {e.source}
+                                </div>
+                                <div className="px-2 text-xs text-app-primary flex-1 min-w-0 truncate" title={e.message}>
+                                    {e.message}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </>
+            )}
         </div>
     )
 }

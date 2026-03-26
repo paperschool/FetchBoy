@@ -1,18 +1,15 @@
 import { useRef, useState, useEffect } from 'react'
 import { Trash2, Pin, PinOff } from 'lucide-react'
 import { useDebugStore } from '@/stores/debugStore'
+import { formatTimestamp, formatMethod, formatStatusCode, CopyButton } from '@/components/Intercept view/InterceptTable.utils'
 
-function formatTime(ts: number): string {
-    const d = new Date(ts)
-    return d.toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
-}
-
-function statusColor(status: number | null): string {
-    if (status === null) return 'text-app-muted'
-    if (status < 300) return 'text-green-400'
-    if (status < 400) return 'text-amber-400'
-    return 'text-red-400'
-}
+const columns = [
+    { id: 'time', label: 'Time', className: 'w-[100px] shrink-0' },
+    { id: 'method', label: 'Method', className: 'w-[85px] shrink-0' },
+    { id: 'url', label: 'URL', className: 'flex-1 min-w-0' },
+    { id: 'status', label: 'Status', className: 'w-[80px] shrink-0' },
+    { id: 'duration', label: 'Duration', className: 'w-[80px] shrink-0' },
+]
 
 export function TrafficTable() {
     const events = useDebugStore((s) => s.trafficEvents)
@@ -33,6 +30,7 @@ export function TrafficTable() {
 
     return (
         <div className="flex flex-col h-full min-h-0">
+            {/* Toolbar */}
             <div className="flex items-center gap-2 px-2 py-1.5 border-b border-app-subtle shrink-0">
                 <span className="text-xs font-semibold text-app-muted uppercase tracking-wider">Traffic</span>
                 <input
@@ -49,20 +47,45 @@ export function TrafficTable() {
                     <Trash2 size={12} />
                 </button>
             </div>
-            <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0 text-xs font-mono">
-                {filtered.length === 0 && (
-                    <p className="text-app-muted text-center py-4">No traffic</p>
-                )}
-                {filtered.map((e) => (
-                    <div key={e.id} className="flex gap-2 px-2 py-0.5 border-b border-app-subtle/50 hover:bg-app-subtle/30">
-                        <span className="text-app-muted tabular-nums shrink-0 w-[60px]">{formatTime(e.timestamp)}</span>
-                        <span className="text-blue-400 shrink-0 w-[40px]">{e.method}</span>
-                        <span className="text-app-inverse flex-1 truncate" title={e.url}>{e.url}</span>
-                        <span className={`shrink-0 w-[30px] text-right ${statusColor(e.status)}`}>{e.status ?? '...'}</span>
-                        <span className="text-app-muted shrink-0 w-[50px] text-right tabular-nums">{e.durationMs !== null ? `${e.durationMs}ms` : ''}</span>
+
+            {filtered.length === 0 ? (
+                <div className="flex-1 flex items-center justify-center text-app-muted text-xs">No traffic</div>
+            ) : (
+                <>
+                    {/* Column headers */}
+                    <div className="flex bg-app-main border-b border-app-subtle shrink-0">
+                        {columns.map((col) => (
+                            <div key={col.id} className={`px-2 py-1.5 text-left text-xs font-medium text-app-secondary uppercase ${col.className}`}>
+                                {col.label}
+                            </div>
+                        ))}
                     </div>
-                ))}
-            </div>
+
+                    {/* Rows */}
+                    <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0">
+                        {filtered.map((e) => (
+                            <div key={e.id} className="flex items-center h-[32px] border-b border-app-subtle hover:bg-app-subtle transition-colors">
+                                <div className="px-2 text-xs text-app-muted w-[100px] shrink-0 tabular-nums">
+                                    {formatTimestamp(e.timestamp)}
+                                </div>
+                                <div className="px-2 w-[85px] shrink-0">
+                                    {formatMethod(e.method)}
+                                </div>
+                                <div className="px-2 text-xs text-app-primary flex-1 min-w-0 flex items-center gap-1 overflow-hidden">
+                                    <span className="truncate" title={e.url}>{e.url}</span>
+                                    <CopyButton text={e.url} />
+                                </div>
+                                <div className="px-2 w-[80px] shrink-0 text-xs tabular-nums">
+                                    {formatStatusCode(e.status ?? undefined, e.status === null)}
+                                </div>
+                                <div className="px-2 w-[80px] shrink-0 text-xs text-app-muted tabular-nums text-right">
+                                    {e.durationMs !== null ? `${e.durationMs}ms` : ''}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </>
+            )}
         </div>
     )
 }

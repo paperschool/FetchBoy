@@ -4,7 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [0.15.0] - 2026-03-26
 
-- feat: Debug tab with dual log view — internal Rust events and MITM traffic displayed side-by-side with search, clear, and auto-scroll
+- feat: Debug tab with dual log view — internal Rust events and MITM traffic displayed stacked vertically with search, clear, and auto-scroll
+- feat: Proxy flow diagram — visual pipeline (Incoming → TLS → Breakpoint → Mapping → Upstream → Response → Client) with real-time flash animation and per-stage counters
+- feat: OS proxy & certificate settings shortcuts — "Proxy Settings" and "Cert Manager" buttons open native OS configuration panels (macOS, Windows, Linux)
+- feat: Debug log file persistence — all internal events and traffic summaries written to daily-rotated log files with 7-day auto-cleanup; "Open Log Folder" button in Debug tab
 - feat: Breakpoint interaction countdown — 5-second amber progress bar during paused requests as a visual nudge
 - feat: Breakpoint editor simplified — removed pre-configured response override tab (now covered by Mappings); inline live editing during pauses remains
 - fix: Breakpoint and mapping editors now correctly refresh when switching between items

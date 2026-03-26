@@ -9,6 +9,7 @@ import {
   FolderOpen,
   Copy,
   ShieldCheck,
+  Globe,
 } from "lucide-react";
 import { BreakpointsTree } from "@/components/Breakpoints/BreakpointsTree";
 import { MappingsTree } from "@/components/Mappings/MappingsTree";
@@ -51,6 +52,7 @@ export function InterceptSidebar({
   const setCaInstalled = useUiSettingsStore((s) => s.setCaInstalled);
   const setProxyEnabled = useUiSettingsStore((s) => s.setProxyEnabled);
   const clearPauseState = useInterceptStore((s) => s.clearPauseState);
+  const [portInput, setPortInput] = useState(String(proxyPort));
   const [caCertInfo, setCaCertInfo] = useState<CaCertificateInfo | null>(null);
   const [certStatus, setCertStatus] = useState<ActionStatus>("idle");
   const [certMessage, setCertMessage] = useState("");
@@ -64,9 +66,14 @@ export function InterceptSidebar({
       .catch(() => setCaInstalled(false));
   }, [setCaInstalled]);
 
-  function handleProxyPortChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const raw = parseInt(e.target.value, 10);
+  function handleProxyPortInput(e: React.ChangeEvent<HTMLInputElement>) {
+    setPortInput(e.target.value);
+  }
+
+  function handleProxyPortCommit() {
+    const raw = parseInt(portInput, 10);
     const clamped = Math.min(65535, Math.max(1024, isNaN(raw) ? 8080 : raw));
+    setPortInput(String(clamped));
     setProxyPort(clamped);
     void saveSetting("proxy_port", clamped);
     void invoke("set_proxy_config", {
@@ -313,8 +320,10 @@ export function InterceptSidebar({
                     type="number"
                     min={1024}
                     max={65535}
-                    value={proxyPort}
-                    onChange={handleProxyPortChange}
+                    value={portInput}
+                    onChange={handleProxyPortInput}
+                    onBlur={handleProxyPortCommit}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleProxyPortCommit() }}
                     disabled={proxyEnabled}
                     className="w-16 bg-transparent border border-gray-700 rounded px-2 py-1 text-app-muted text-xs disabled:opacity-50"
                   />
@@ -333,12 +342,28 @@ export function InterceptSidebar({
                   <p className="text-app-muted text-xs font-medium">
                     CA Certificate
                   </p>
-                  <button
-                    onClick={handleOpenCaFolder}
-                    className="flex items-center gap-1 px-2 py-1 text-xs text-app-muted hover:text-app-inverse hover:bg-gray-700 rounded transition-colors cursor-pointer"
-                  >
-                    <FolderOpen size={12} /> Open Folder
-                  </button>
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <button
+                      onClick={handleOpenCaFolder}
+                      className="flex items-center gap-1 px-2 py-1 text-xs text-app-muted hover:text-app-inverse hover:bg-gray-700 rounded transition-colors cursor-pointer"
+                    >
+                      <FolderOpen size={12} /> Open Folder
+                    </button>
+                    <button
+                      onClick={() => invoke("open_proxy_settings").catch((e: unknown) => console.warn("open_proxy_settings:", e))}
+                      className="flex items-center gap-1 px-2 py-1 text-xs text-app-muted hover:text-app-inverse hover:bg-gray-700 rounded transition-colors cursor-pointer"
+                      title="Open OS Proxy Settings"
+                    >
+                      <Globe size={12} /> Proxy Settings
+                    </button>
+                    <button
+                      onClick={() => invoke("open_cert_manager").catch((e: unknown) => console.warn("open_cert_manager:", e))}
+                      className="flex items-center gap-1 px-2 py-1 text-xs text-app-muted hover:text-app-inverse hover:bg-gray-700 rounded transition-colors cursor-pointer"
+                      title="Open Certificate Manager"
+                    >
+                      <ShieldCheck size={12} /> Cert Manager
+                    </button>
+                  </div>
                   <div className="flex items-center gap-1">
                     <p className="text-xs text-app-muted opacity-70 truncate flex-1">
                       {caCertInfo.certPath}
