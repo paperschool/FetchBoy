@@ -60,6 +60,7 @@ export function InterceptView() {
       <div className="flex border-b border-app-subtle shrink-0 bg-app-main">
         {(['requests', 'mapping-log'] as const).map((tab) => (
           <button key={tab} type="button" onClick={() => setTopTab(tab)}
+            data-tour={tab === 'mapping-log' ? 'overrides-tab' : undefined}
             className={`px-4 py-1.5 text-xs transition-colors ${
               topTab === tab
                 ? 'text-app-inverse font-medium border-b-2 border-app-accent'

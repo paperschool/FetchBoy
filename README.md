@@ -29,13 +29,25 @@ Runs entirely offline. No account required. All data stored locally.
 - Organize requests into collections with folders and drag-and-drop ordering
 - Use environment variables with `{{variable}}` interpolation across requests
 - View and edit request/response bodies in a syntax-highlighted Monaco editor
+- Cancel in-flight requests and configure per-request timeouts
 
 ### HTTP Interception & Debugging
 
 - Intercept HTTP/HTTPS traffic through a local MITM proxy
 - Set breakpoints on requests and modify them before forwarding
-- Override status codes, response headers, and response bodies on the fly
+- Inline breakpoint editing — modify status codes, headers, body, and query params directly in the detail view
 - Block specific requests or simulate timeouts
+- Split request/response display — intercepted requests appear immediately with a pending badge; response data fills in when it arrives
+- View intercepted images inline with zoom and pan
+- "Open in Fetch" button to replay any intercepted request in the request builder
+
+### Request Mappings
+
+- Define URL-pattern rules (exact, partial, wildcard, regex) to automatically modify proxied traffic
+- Rewrite request URLs, add or remove headers, and edit cookies
+- Override response bodies using the Monaco editor or serve a file from disk
+- Organize mappings into folders with drag-and-drop ordering
+- Activity log sub-tab shows which mapping rules fired for each intercepted request
 
 ### User Experience & Productivity
 
@@ -43,11 +55,15 @@ Runs entirely offline. No account required. All data stored locally.
 - Use keyboard shortcuts (Cmd/Ctrl+Enter to send, ? for shortcuts overlay)
 - Customize the application theme (light/dark/system)
 - Import and export collections and environments as JSON
+- Guided onboarding tour on first launch covering Fetch and Intercept tabs
+- "What's New" modal on version update with full changelog
+- Splash screen startup animation
 
 ### History & Persistence
 
 - View history of all sent requests with quick replay
 - Automatic persistence of collections and settings to SQLite
+- Certificate and system proxy installation wizard with one-click setup and full cleanup on uninstall
 
 ---
 

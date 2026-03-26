@@ -12,6 +12,7 @@ interface ViewerShellProps {
   header?: ReactNode
   children: ReactNode
   testId?: string
+  'data-tour'?: string
 }
 
 /**
@@ -26,10 +27,12 @@ export function ViewerShell({
   header,
   children,
   testId,
+  'data-tour': dataTour,
 }: ViewerShellProps) {
   return (
     <section
       data-testid={testId}
+      data-tour={dataTour}
       className="border-app-subtle flex min-h-0 flex-1 flex-col gap-3 overflow-hidden rounded-md border p-3"
     >
       {header}

@@ -74,12 +74,17 @@ describe('TourController', () => {
     expect(screen.getByTestId('joyride-title')).toHaveTextContent('Collections');
   });
 
-  it('advances to next step when Next is clicked', () => {
+  it('advances to next step when Next is clicked', async () => {
+    vi.useFakeTimers();
     render(<TourController />);
     act(() => {
       fireEvent.click(screen.getByTestId('joyride-next'));
     });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
     expect(useTourStore.getState().currentStep).toBe(1);
+    vi.useRealTimers();
   });
 
   it('shows skip button', () => {

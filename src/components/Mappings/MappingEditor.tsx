@@ -115,6 +115,7 @@ export function MappingEditor({ onClose }: Props) {
         <ViewerShell tabs={TABS} activeTab={activeTab} onTabChange={(id) => setActiveTab(id as EditorTab)}
             header={<h3 className="text-app-inverse font-medium text-sm">{isNew ? 'New Mapping' : 'Edit Mapping'}</h3>}
             testId="mapping-editor"
+            data-tour="mapping-editor"
         >
             <>
                 <div className="flex-1 overflow-y-auto space-y-3 pb-3">

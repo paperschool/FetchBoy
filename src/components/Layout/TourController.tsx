@@ -106,10 +106,56 @@ const TOUR_STEPS: Step[] = [
     placement: "left",
     disableBeacon: true,
   },
+  // ── Breakpoint steps ─────────────────────────────────────────────────────
+  {
+    target: '[data-tour="breakpoints-panel"]',
+    content:
+      "The Breakpoints panel lets you pause intercepted requests that match a URL pattern. While paused, you can inspect and edit the request or response — change the status code, modify headers, rewrite the body — before allowing it to continue.",
+    title: "Breakpoints",
+    placement: "right",
+    disableBeacon: true,
+  },
+  {
+    target: '[data-testid="breakpoints-tree"]',
+    content:
+      "Create breakpoints with the + button and organize them into folders. Each breakpoint uses a URL pattern (exact, partial, wildcard, or regex) to match traffic. Toggle individual breakpoints on or off, or click one to open the editor and configure response overrides, header modifications, and request blocking.",
+    title: "Breakpoint Rules",
+    placement: "right",
+    disableBeacon: true,
+  },
+  // ── Mapping steps ───────────────────────────────────────────────────────
+  {
+    target: '[data-tour="mappings-panel"]',
+    content:
+      "Switch to the Mappings panel to define URL-pattern rules that automatically modify proxied traffic. Organize mappings into folders, enable or disable them individually, and create new ones with the + button.",
+    title: "Mappings",
+    placement: "right",
+    disableBeacon: true,
+  },
+  {
+    target: '[data-testid="mappings-tree"]',
+    content:
+      "Click any mapping to open the editor, where you can set a URL pattern and match type, add or remove response headers, edit cookies, override the response body with custom content or a file, and remap the request URL to a different endpoint.",
+    title: "Mapping Editor",
+    placement: "right",
+    disableBeacon: true,
+  },
+  {
+    target: '[data-tour="overrides-tab"]',
+    content:
+      "The Overrides tab shows a live activity log of which mapping rules fired for each intercepted request. Use it to verify your mappings are matching the right traffic and applying the expected modifications.",
+    title: "Overrides",
+    placement: "bottom",
+    disableBeacon: true,
+  },
 ];
 
 /** Index of the first intercept-specific tour step. */
 const INTERCEPT_STEPS_START = 7;
+/** Index of the first breakpoint-specific tour step. */
+const BREAKPOINT_STEPS_START = 12;
+/** Index of the first mapping-specific tour step. */
+const MAPPING_STEPS_START = 14;
 
 export function TourController() {
   const hasCompletedTour = useTourStore((s) => s.hasCompletedTour);
@@ -139,6 +185,18 @@ export function TourController() {
         useUiSettingsStore.getState().setSidebarSettingsExpanded(true);
       } else {
         useAppTabStore.getState().setActiveTab("fetch");
+      }
+
+      // For breakpoint steps, click the Breakpoints panel button so the tree is visible.
+      if (nextStep >= BREAKPOINT_STEPS_START && nextStep <= BREAKPOINT_STEPS_START + 1) {
+        const bpBtn = document.querySelector<HTMLButtonElement>('[data-tour="breakpoints-panel"]');
+        bpBtn?.click();
+      }
+
+      // For mapping steps, click the Mappings panel button so the tree is visible.
+      if (nextStep >= MAPPING_STEPS_START && nextStep <= MAPPING_STEPS_START + 1) {
+        const mappingsBtn = document.querySelector<HTMLButtonElement>('[data-tour="mappings-panel"]');
+        mappingsBtn?.click();
       }
 
       // Small delay so the DOM updates from the tab switch propagate before

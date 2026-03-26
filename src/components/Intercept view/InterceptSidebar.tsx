@@ -242,6 +242,7 @@ export function InterceptSidebar({
         <button
           type="button"
           onClick={() => setActivePanel("breakpoints")}
+          data-tour="breakpoints-panel"
           className={`flex-1 py-1.5 text-xs cursor-pointer ${
             activePanel === "breakpoints"
               ? "bg-gray-700 text-app-inverse font-medium"
@@ -254,6 +255,7 @@ export function InterceptSidebar({
         <button
           type="button"
           onClick={() => setActivePanel("mappings")}
+          data-tour="mappings-panel"
           className={`flex-1 py-1.5 text-xs cursor-pointer ${
             activePanel === "mappings"
               ? "bg-gray-700 text-app-inverse font-medium"
