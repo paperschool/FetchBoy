@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.14.1] - 2026-03-26
+
+- fix: Breakpoints / Mapping edit views change when selecting different breakpoints
+
 ## [0.14.0] - 2026-03-25
 
 - feat: Request mapping system — URL-pattern rules with header add/remove, cookie editing, response body override (Monaco editor + file mode), and URL rewriting applied by the Rust proxy

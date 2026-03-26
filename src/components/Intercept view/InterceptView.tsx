@@ -32,8 +32,8 @@ export function InterceptView() {
   const pendingMods = useInterceptStore((s) => s.pendingMods);
   const updatePendingMods = useInterceptStore((s) => s.updatePendingMods);
 
-  const { isEditing: isBpEditing, cancelEditing: cancelBpEditing } = useBreakpointsStore();
-  const { isEditing: isMappingEditing, cancelEditing: cancelMappingEditing } = useMappingsStore();
+  const { isEditing: isBpEditing, cancelEditing: cancelBpEditing, editForm: bpEditForm } = useBreakpointsStore();
+  const { isEditing: isMappingEditing, cancelEditing: cancelMappingEditing, editForm: mappingEditForm } = useMappingsStore();
   const selectedRequestId = useInterceptStore((s) => s.selectedRequestId);
 
   // Selecting a request dismisses editors
@@ -81,9 +81,9 @@ export function InterceptView() {
       />
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
         {isBpEditing ? (
-          <BreakpointEditor onClose={cancelBpEditing} />
+          <BreakpointEditor key={bpEditForm.id ?? 'new-bp'} onClose={cancelBpEditing} />
         ) : isMappingEditing ? (
-          <MappingEditor onClose={cancelMappingEditing} />
+          <MappingEditor key={mappingEditForm.id ?? 'new-mapping'} onClose={cancelMappingEditing} />
         ) : (
           <div className={`flex-1 min-h-0 flex flex-col p-2 overflow-y-auto ${pauseState !== 'idle' ? 'ring-1 ring-amber-500/40 bg-amber-900/10 rounded-lg' : ''}`}>
             {pauseState !== 'idle' && <PausedRequestDetail />}
