@@ -21,6 +21,20 @@ Runs entirely offline. No account required. All data stored locally.
 
 ---
 
+## Contents
+
+- [Features](#features)
+- [Architecture and Stack](#architecture-and-stack)
+- [Pre-requisites](#pre-requisites)
+- [Getting Started](#getting-started)
+- [Installation](#installation)
+- [About the MITM Proxy](#about-the-mitm-proxy)
+- [Known Issues](#known-issues)
+- [Project Structure](#project-structure)
+- [Author](#author)
+
+---
+
 ## Features
 
 ### Request Building & Execution
@@ -140,6 +154,34 @@ Then open the app from Applications as usual.
 ### Linux
 
 Haven't tested the builds yet, if testing please raise any issues in the issues section!
+
+---
+
+## About the MITM Proxy
+
+Fetch Boy includes a built-in Man-in-the-Middle (MITM) proxy that intercepts HTTP and HTTPS traffic on your device. This is a powerful capability worth understanding before you enable it.
+
+### What it does
+
+When the proxy is active, Fetch Boy:
+
+- **Generates and installs a local Certificate Authority (CA)** into your system's trust store. This allows it to decrypt HTTPS traffic passing through the proxy — the same technique used by tools like Charles Proxy, mitmproxy, and Fiddler.
+- **Routes your device's HTTP/HTTPS traffic** through a local proxy server (default port 8080). It can optionally configure your system's network settings to redirect traffic automatically.
+- **Can intercept, inspect, pause, modify, block, and redirect** any request or response flowing through it — via breakpoints and mapping rules you define.
+
+In effect, the proxy turns Fetch Boy into a local networking control centre for your machine. This is by design — it's what makes the intercept, breakpoint, and mapping features work.
+
+### Things to keep in mind
+
+- **Only enable the proxy when you need it.** The proxy starts automatically with the app (on port 8080), but system-level proxy configuration is opt-in — your browser and other apps won't route through it unless you explicitly enable it or configure them to use it.
+- **The CA certificate grants significant trust.** Any application that trusts your system certificate store will accept HTTPS certificates signed by Fetch Boy's CA. Remove the CA when you're done (`Intercept > Settings > Remove Certificate`) or when uninstalling the app.
+- **Fetch Boy cleans up on exit.** The app automatically stops the proxy and reverts system proxy settings when it closes. If the app crashes or is force-killed, you may need to manually disable the system proxy in your OS network settings.
+- **Don't leave the CA installed on shared or production machines.** The CA private key is stored locally in your app data directory. Anyone with access to that key could theoretically generate trusted certificates for any domain on your machine.
+- **Breakpoints hold open connections.** When a breakpoint pauses a request, the upstream connection stays open until you continue, drop, or the timeout expires. Browsers may retry or abort if held too long.
+
+### When to use it
+
+The proxy is designed for **local development and debugging** — inspecting API calls, testing error scenarios, mocking responses, and understanding how your applications communicate over the network. It is not intended for monitoring other people's traffic or for use on networks you don't control.
 
 ---
 
