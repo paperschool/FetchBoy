@@ -15,7 +15,7 @@
   </tr>
 </table>
 
-A lightweight, cross-platform API client — a focused alternative to Postman that strips away enterprise complexity in favour of a clean, fast, and intuitive experience.
+A lightweight, cross-platform tool for building, intercepting, and debugging HTTP requests. Build and test APIs with a clean editor, intercept live traffic through a built-in MITM proxy, set breakpoints to inspect and modify requests in flight, and use mapping rules to rewrite URLs and mock responses.
 
 Runs entirely offline. No account required. All data stored locally.
 
