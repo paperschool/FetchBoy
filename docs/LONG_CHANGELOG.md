@@ -1,5 +1,13 @@
 # Long Changelog
 
+## [0.15.7] - 2026-03-27
+
+### Refactoring
+
+- **Story 13.7**: Split `useCollectionTreeState` (459 lines) into `useCollectionDragDrop`, `useCollectionInlineEdit`, `useCollectionCrud` — composition hook reduced to 84 lines
+  - Files changed: `useCollectionTreeState.ts` (modified); 3 new hooks
+  - Breaking changes: no
+
 ## [0.15.6] - 2026-03-27
 
 ### Refactoring
