@@ -91,6 +91,7 @@ pub struct BreakpointHeader {
 #[derive(Deserialize, Clone)]
 pub struct BreakpointRule {
     pub id: String,
+    pub name: String,
     pub url_pattern: String,
     pub match_type: String,
     pub enabled: bool,
@@ -262,6 +263,7 @@ mod tests {
     fn breakpoint_rule_deserialises_with_new_fields() {
         let json = r#"{
             "id": "bp1",
+            "name": "Test BP 1",
             "url_pattern": "api/users",
             "match_type": "partial",
             "enabled": true,
@@ -291,6 +293,7 @@ mod tests {
     fn breakpoint_rule_deserialises_with_empty_custom_headers() {
         let json = r#"{
             "id": "bp2",
+            "name": "Test BP 2",
             "url_pattern": "api/orders",
             "match_type": "partial",
             "enabled": true,
@@ -314,6 +317,7 @@ mod tests {
     fn breakpoint_rule_deserialises_with_blocking_enabled() {
         let json = r#"{
             "id": "bp3",
+            "name": "Test BP 3",
             "url_pattern": "api/blocked",
             "match_type": "partial",
             "enabled": true,

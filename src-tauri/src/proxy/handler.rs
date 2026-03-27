@@ -386,7 +386,7 @@ impl HttpHandler for InterceptHandler {
                     let paused_event = BreakpointPausedEvent {
                         request_id: request_id.clone(),
                         breakpoint_id: bp.id.clone(),
-                        breakpoint_name: bp.id.clone(), // name not stored in rule; id used as fallback
+                        breakpoint_name: bp.name.clone(),
                         timeout_at,
                         method: ri.method.clone(),
                         host: ri.host.clone(),

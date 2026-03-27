@@ -1,5 +1,13 @@
 # Long Changelog
 
+## [0.15.12] - 2026-03-27
+
+### Improvements
+
+- **Story 13.12**: TabBar selector optimization with `useShallow`; removed dead `buildSnapshotFromHistory`; added `name` field to `BreakpointRule` — pause events now show actual breakpoint names
+  - Files changed: `TabBar.tsx`, `requestSnapshotUtils.ts`, `breakpoints.ts` (frontend); `types.rs`, `handler.rs` (Rust)
+  - Breaking changes: no
+
 ## [0.15.11] - 2026-03-27
 
 ### Refactoring

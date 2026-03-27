@@ -3,6 +3,7 @@ import { DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } f
 import { SortableContext, horizontalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useTabStore } from '@/stores/tabStore';
+import { useShallow } from 'zustand/react/shallow';
 import { X, Plus } from 'lucide-react';
 
 type TabContextMenuState = { x: number; y: number; tabId: string } | null;
@@ -92,17 +93,12 @@ function SortableTabItem({
 }
 
 export function TabBar() {
-    const tabs = useTabStore((s) => s.tabs);
-    const activeTabId = useTabStore((s) => s.activeTabId);
-    const addTab = useTabStore((s) => s.addTab);
-    const closeTab = useTabStore((s) => s.closeTab);
-    const reorderTabs = useTabStore((s) => s.reorderTabs);
-    const duplicateTab = useTabStore((s) => s.duplicateTab);
-    const closeOtherTabs = useTabStore((s) => s.closeOtherTabs);
-    const closeAllTabs = useTabStore((s) => s.closeAllTabs);
-    const setActiveTab = useTabStore((s) => s.setActiveTab);
-    const renameTab = useTabStore((s) => s.renameTab);
-    const syncLabelFromRequest = useTabStore((s) => s.syncLabelFromRequest);
+    const { tabs, activeTabId } = useTabStore(useShallow((s) => ({ tabs: s.tabs, activeTabId: s.activeTabId })));
+    const { addTab, closeTab, reorderTabs, duplicateTab, closeOtherTabs, closeAllTabs, setActiveTab, renameTab, syncLabelFromRequest } = useTabStore(useShallow((s) => ({
+        addTab: s.addTab, closeTab: s.closeTab, reorderTabs: s.reorderTabs,
+        duplicateTab: s.duplicateTab, closeOtherTabs: s.closeOtherTabs, closeAllTabs: s.closeAllTabs,
+        setActiveTab: s.setActiveTab, renameTab: s.renameTab, syncLabelFromRequest: s.syncLabelFromRequest,
+    })));
 
     const method = useTabStore((s) => s.tabs.find((t) => t.id === s.activeTabId)?.requestState.method ?? 'GET');
     const url = useTabStore((s) => s.tabs.find((t) => t.id === s.activeTabId)?.requestState.url ?? '');

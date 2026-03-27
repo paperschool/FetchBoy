@@ -135,7 +135,7 @@ export async function deleteBreakpoint(id: string): Promise<void> {
 
 export async function syncBreakpointsToProxy(breakpoints: Breakpoint[]): Promise<void> {
     await syncToProxy('sync_breakpoints', 'breakpoints', breakpoints, (bp) => ({
-        id: bp.id, url_pattern: bp.url_pattern, match_type: bp.match_type, enabled: bp.enabled,
+        id: bp.id, name: bp.name, url_pattern: bp.url_pattern, match_type: bp.match_type, enabled: bp.enabled,
         response_mapping_enabled: bp.response_mapping_enabled, response_mapping_body: bp.response_mapping_body,
         response_mapping_content_type: bp.response_mapping_content_type,
         status_code_enabled: bp.status_code_enabled, status_code_value: bp.status_code_value,

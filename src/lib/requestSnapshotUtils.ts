@@ -1,4 +1,4 @@
-import type { HistoryEntry, Request } from '@/lib/db';
+import type { Request } from '@/lib/db';
 import type { RequestSnapshot } from '@/stores/tabStore';
 import type { AuthState } from '@/stores/requestStore';
 import { isHttpMethod, isBodyMode, isApiKeyIn } from '@/lib/validators';
@@ -51,8 +51,4 @@ export function buildSnapshotFromSaved(request: Request): RequestSnapshot {
         isDirty: false,
         timeout: 0,
     };
-}
-
-export function buildSnapshotFromHistory(entry: HistoryEntry): RequestSnapshot {
-    return buildSnapshotFromSaved(entry.request_snapshot);
 }
