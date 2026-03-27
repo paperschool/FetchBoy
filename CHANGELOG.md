@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.16.0] - 2026-03-27
+
+- refactor: Split `proxy.rs` (1,565 lines) into four focused modules — TLS, handler, server, types — with compiled regex caching via `OnceLock`
+- refactor: Split `lib.rs` (947 lines) into six command modules — proxy, certificate, settings, collection, environment, history
+- refactor: Reduced `MainPanel.tsx` from 1,019 to 219 lines — extracted panel-switching logic, tab-bar actions, and sub-components into dedicated files
+- refactor: Extracted shared `DetailToolbar`, `EditorSection`, and sidebar primitives from `RequestDetailView` and `InterceptSidebar`, eliminating cross-component duplication
+- refactor: Unified breakpoints/mappings DB layer with a generic update builder and shared SQL helpers
+- refactor: Consolidated store CRUD patterns across `breakpointsStore` and `mappingsStore` with shared action factories
+- refactor: Split `useCollectionTreeState` (458 → 84 lines) into focused hooks — drag-and-drop, inline rename, tree expansion
+- feat: Shared utility modules — status colour map, array trimmer, typed Tauri invoke wrapper, event listener factory, and centralised constants
+- feat: Type safety hardening — Zod runtime validation on Tauri event payloads, branded ID types, strict non-null fixes across stores
+- feat: Error boundaries around every major panel, SQLite transaction wrappers for multi-step DB writes, and a toast notification system for surfacing async failures
+- refactor: Removed legacy dual event emission (`InterceptEvent`, `EmitFn`, combined `intercept:request` listener) from the Rust proxy — split events are now the sole path
+- chore: Smaller component fixes — `SettingsPanel`, `AuthPanel`, `HistoryPanel`, and `TourController` brought under the 150-line limit; dead code removed
+
 ## [0.15.0] - 2026-03-26
 
 - feat: Debug tab with dual log view — internal Rust events and MITM traffic displayed stacked vertically with search, clear, and auto-scroll

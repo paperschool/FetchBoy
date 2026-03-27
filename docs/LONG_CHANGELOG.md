@@ -1,5 +1,12 @@
 # Long Changelog
 
+## [0.16.0] - 2026-03-27
+
+### Epic 13: Code Quality & Architecture Remediation
+
+- Version bump to 0.16.0 consolidating all 12 stories from Epic 13 (v0.15.1–v0.15.12)
+- See CHANGELOG.md for the full summary of refactoring, type safety, error handling, and shared utility changes
+
 ## [0.15.12] - 2026-03-27
 
 ### Improvements
