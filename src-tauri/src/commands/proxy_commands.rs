@@ -14,7 +14,7 @@ pub fn get_proxy_config(config: tauri::State<'_, ProxyConfigState>) -> serde_jso
 }
 
 #[tauri::command]
-pub fn set_proxy_config(
+pub async fn set_proxy_config(
     enabled: bool,
     port: u16,
     config: tauri::State<'_, ProxyConfigState>,
@@ -29,14 +29,16 @@ pub fn set_proxy_config(
     *config.port.lock().unwrap() = port;
     *config.enabled.lock().unwrap() = enabled;
 
-    // Stop any running proxy.
-    {
+    // Stop any running proxy and check whether one was active.
+    let was_running = {
         let mut opt = proxy_state.0.lock().unwrap();
+        let running = opt.is_some();
         if let Some(ref mut p) = *opt {
             p.stop();
         }
         *opt = None;
-    }
+        running
+    };
 
     // If disabling, drop any requests paused at breakpoints so their async handlers
     // complete immediately and the proxy can actually shut down. Without this, paused
@@ -48,8 +50,30 @@ pub fn set_proxy_config(
         }
     }
 
+    // Wait for the OS to release the port after graceful shutdown.
+    if was_running {
+        const MAX_RETRIES: u32 = 20;
+        const RETRY_DELAY_MS: u64 = 50;
+        for i in 0..MAX_RETRIES {
+            if proxy::server::is_port_available(port) {
+                break;
+            }
+            if i == MAX_RETRIES - 1 {
+                return Err(format!(
+                    "Port {} still in use after {}ms — try again shortly",
+                    port, MAX_RETRIES as u64 * RETRY_DELAY_MS
+                ));
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(RETRY_DELAY_MS)).await;
+        }
+    }
+
     // Restart on the new port if enabled.
     if enabled {
+        if !proxy::server::is_port_available(port) {
+            return Err(format!("Port {} is already in use", port));
+        }
+
         let ca = cert::CertificateAuthority::load_or_create(restart_info.app_data_dir.clone())
             .map_err(|e| format!("Failed to load CA for proxy restart: {e}"))?;
 

@@ -2,11 +2,16 @@ use hudsucker::{
     builder::ProxyBuilder,
     certificate_authority::RcgenAuthority,
 };
-use std::net::SocketAddr;
+use std::net::{SocketAddr, TcpListener};
 use tokio::sync::oneshot;
 
 use super::handler::InterceptHandler;
 use super::types::*;
+
+/// Check whether a port is available for binding on localhost.
+pub fn is_port_available(port: u16) -> bool {
+    TcpListener::bind(("127.0.0.1", port)).is_ok()
+}
 
 // ─── Proxy server ─────────────────────────────────────────────────────────────
 
@@ -97,5 +102,20 @@ mod tests {
     fn proxy_server_stop_does_not_panic_when_not_started() {
         let mut proxy = ProxyServer::new(8080);
         proxy.stop();
+    }
+
+    #[test]
+    fn is_port_available_returns_true_for_unused_port() {
+        // Use port 0 to get an OS-assigned free port, then check a nearby high port
+        assert!(is_port_available(49152)); // Ephemeral range, likely free
+    }
+
+    #[test]
+    fn is_port_available_returns_false_for_bound_port() {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        assert!(!is_port_available(port));
+        drop(listener);
+        assert!(is_port_available(port));
     }
 }

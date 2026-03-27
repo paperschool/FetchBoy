@@ -1,5 +1,29 @@
 # Long Changelog
 
+## [0.16.4] - 2026-03-27
+
+### Bug Fixes
+
+- **Story 14.1**: Hardened proxy shutdown UX — async port-release verification (retry loop after graceful shutdown), "Stopping..." button state with spinner, disabled toggle during shutdown
+  - Files changed: `server.rs`, `proxy_commands.rs` (Rust); `InterceptTopBar.tsx`, `uiSettingsStore.ts` (frontend)
+  - Breaking changes: no
+
+- **Story 14.2**: Fixed disabled breakpoints still firing — `breakpointsStore.toggleBreakpointEnabled()` was not syncing to proxy backend; also fixed `headers_remove` not checking per-header `enabled` flag
+  - Files changed: `breakpointsStore.ts` (frontend); `handler.rs` (Rust)
+  - Breaking changes: no
+
+### Features
+
+- **Story 14.3**: "Open in Fetch" banner — shows info banner above URL bar when opening intercepted request in Fetch mode, auto-dismisses after 5s with timer reset
+  - Files changed: `tabStore.ts`, `openInFetch.ts`, `MainPanel.tsx` (frontend)
+  - Breaking changes: no
+
+### Improvements
+
+- **Story 14.4**: Added `cursor-pointer` to 14 interactive elements across intercept sidebar (InterceptTopBar, InterceptSidebar, CertificateManagement, RequestDetailView)
+  - Files changed: `InterceptTopBar.tsx`, `InterceptSidebar.tsx`, `CertificateManagement.tsx`, `RequestDetailView.tsx`
+  - Breaking changes: no
+
 ## [0.16.0] - 2026-03-27
 
 ### Epic 13: Code Quality & Architecture Remediation

@@ -67,6 +67,6 @@ export function openInFetch(request: InterceptRequest): void {
     body: { mode: bodyMode, raw: request.requestBody ?? '' },
   }
 
-  useTabStore.getState().openRequestInNewTab(snapshot, label)
+  useTabStore.getState().openRequestInNewTab(snapshot, label, { openedFromIntercept: true })
   useAppTabStore.getState().setActiveTab('fetch')
 }

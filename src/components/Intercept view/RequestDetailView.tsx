@@ -86,9 +86,9 @@ export function RequestDetailView({ selectedRequest, editMode = false, pendingMo
       <div className="flex items-center gap-2">
         <span className="text-xs text-app-muted font-mono truncate flex-1" title={fullUrl}>{fullUrl}</span>
         <CopyButton text={fullUrl} />
-        <button type="button" onClick={() => openInFetch(selectedRequest)} className="shrink-0 rounded px-2 py-0.5 text-xs font-medium bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors" title="Open in Fetch tab">Open in Fetch</button>
-        <button type="button" onClick={() => setMapDialogOpen(true)} className="shrink-0 rounded px-2 py-0.5 text-xs font-medium bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 transition-colors" title="Add mapping for this URL">Add Mapping</button>
-        <button type="button" onClick={() => setBreakDialogOpen(true)} className="shrink-0 rounded px-2 py-0.5 text-xs font-medium bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors" title="Add breakpoint for this URL">Add Breakpoint</button>
+        <button type="button" onClick={() => openInFetch(selectedRequest)} className="shrink-0 rounded px-2 py-0.5 text-xs font-medium bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors cursor-pointer" title="Open in Fetch tab">Open in Fetch</button>
+        <button type="button" onClick={() => setMapDialogOpen(true)} className="shrink-0 rounded px-2 py-0.5 text-xs font-medium bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 transition-colors cursor-pointer" title="Add mapping for this URL">Add Mapping</button>
+        <button type="button" onClick={() => setBreakDialogOpen(true)} className="shrink-0 rounded px-2 py-0.5 text-xs font-medium bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors cursor-pointer" title="Add breakpoint for this URL">Add Breakpoint</button>
       </div>
       <div className="flex flex-wrap items-center gap-3 text-xs">
         <span className={`px-2 py-0.5 rounded font-medium ${methodColor}`}>{selectedRequest.method}</span>
@@ -132,13 +132,13 @@ export function RequestDetailView({ selectedRequest, editMode = false, pendingMo
                 <div key={i} className="flex gap-1 mb-1">
                   <input type="text" value={k} onChange={(e) => { const updated = (pendingMods.queryParams ?? []).map((pair, idx) => idx === i ? [e.target.value, pair[1]] as [string, string] : pair); onModsChange?.({ queryParams: updated }) }} className="w-2/5 px-2 py-0.5 rounded border border-amber-500/40 bg-amber-900/10 text-xs font-mono text-app-primary focus:outline-none focus:border-amber-400" />
                   <input type="text" value={v} onChange={(e) => { const updated = (pendingMods.queryParams ?? []).map((pair, idx) => idx === i ? [pair[0], e.target.value] as [string, string] : pair); onModsChange?.({ queryParams: updated }) }} className="flex-1 px-2 py-0.5 rounded border border-amber-500/40 bg-amber-900/10 text-xs text-app-primary focus:outline-none focus:border-amber-400" />
-                  <button type="button" onClick={() => onModsChange?.({ queryParams: (pendingMods.queryParams ?? []).filter((_, idx) => idx !== i) })} className="shrink-0 text-red-400 hover:text-red-300 text-sm px-1.5" aria-label="Remove param">×</button>
+                  <button type="button" onClick={() => onModsChange?.({ queryParams: (pendingMods.queryParams ?? []).filter((_, idx) => idx !== i) })} className="shrink-0 text-red-400 hover:text-red-300 text-sm px-1.5 cursor-pointer" aria-label="Remove param">×</button>
                 </div>
               ))}
               <div className="flex gap-1 mt-2">
                 <input type="text" value={newHeaderKey} onChange={(e) => setNewHeaderKey(e.target.value)} placeholder="Param name" className="w-2/5 px-2 py-0.5 rounded border border-amber-500/40 bg-amber-900/10 text-xs font-mono text-app-primary focus:outline-none focus:border-amber-400" />
                 <input type="text" value={newHeaderValue} onChange={(e) => setNewHeaderValue(e.target.value)} placeholder="Value" className="flex-1 px-2 py-0.5 rounded border border-amber-500/40 bg-amber-900/10 text-xs text-app-primary focus:outline-none focus:border-amber-400" />
-                <button type="button" onClick={() => { if (!newHeaderKey.trim()) return; onModsChange?.({ queryParams: [...(pendingMods.queryParams ?? []), [newHeaderKey.trim(), newHeaderValue]] }); setNewHeaderKey(''); setNewHeaderValue('') }} className="shrink-0 px-2 py-0.5 bg-amber-700/60 hover:bg-amber-600/70 rounded text-xs text-white transition-colors">Add</button>
+                <button type="button" onClick={() => { if (!newHeaderKey.trim()) return; onModsChange?.({ queryParams: [...(pendingMods.queryParams ?? []), [newHeaderKey.trim(), newHeaderValue]] }); setNewHeaderKey(''); setNewHeaderValue('') }} className="shrink-0 px-2 py-0.5 bg-amber-700/60 hover:bg-amber-600/70 rounded text-xs text-white transition-colors cursor-pointer">Add</button>
               </div>
             </div>
           ) : (

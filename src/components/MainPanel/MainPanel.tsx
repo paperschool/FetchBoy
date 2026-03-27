@@ -22,7 +22,7 @@ import { useUiSettingsStore } from "@/stores/uiSettingsStore";
 import { useEnvironment } from "@/hooks/useEnvironment";
 import { useSendRequest } from "@/hooks/useSendRequest";
 import { useProgressBar } from "@/hooks/useProgressBar";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import useSendRequestKeyboardShortcut from "@/hooks/useSendRequestKeyboardShortcut";
 
 export function MainPanel(): React.ReactElement {
@@ -34,6 +34,27 @@ export function MainPanel(): React.ReactElement {
   const sslVerify = useUiSettingsStore((s) => s.sslVerify);
 
   const activeTabId = useTabStore((s) => s.activeTabId);
+  const openedFromIntercept = useTabStore((s) => s.tabs.find((t) => t.id === s.activeTabId)?.openedFromIntercept);
+  const clearOpenedFromIntercept = useTabStore((s) => s.clearOpenedFromIntercept);
+  const [showInterceptBanner, setShowInterceptBanner] = useState(false);
+  const bannerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const dismissBanner = useCallback((): void => {
+    if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current);
+    bannerTimerRef.current = null;
+    setShowInterceptBanner(false);
+  }, []);
+
+  useEffect(() => {
+    if (openedFromIntercept) {
+      clearOpenedFromIntercept(activeTabId);
+      setShowInterceptBanner(true);
+      if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current);
+      bannerTimerRef.current = setTimeout(dismissBanner, 5000);
+    }
+    return () => { if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current); };
+  }, [openedFromIntercept, activeTabId, clearOpenedFromIntercept, dismissBanner]);
+
   const collectionStore = useCollectionStore();
   const {
     interpolate: applyEnv,
@@ -140,6 +161,12 @@ export function MainPanel(): React.ReactElement {
       <main data-testid="main-panel" className="bg-app-main text-app-primary flex flex-col overflow-hidden p-4 h-full">
         <div className="flex min-h-0 flex-1 flex-col gap-4">
           <p className="text-app-muted text-sm">Request Builder</p>
+
+          {showInterceptBanner && (
+            <div className="animate-pulse rounded-md bg-blue-500/15 px-3 py-2 text-xs text-blue-400">
+              Headers and query params have been added to the Request Details section below
+            </div>
+          )}
 
           <div className="grid grid-cols-[8rem_1fr_auto] items-start gap-3" data-tour="request-builder">
             <div>

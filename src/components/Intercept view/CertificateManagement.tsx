@@ -48,7 +48,7 @@ export function CertificateManagement({
           </div>
           <div className="flex items-center gap-1">
             <p className="text-xs text-app-muted opacity-70 truncate flex-1">{caCertInfo.certPath}</p>
-            <button onClick={onCopyPath} className="text-app-muted hover:text-app-inverse shrink-0" title="Copy path">
+            <button onClick={onCopyPath} className="text-app-muted hover:text-app-inverse shrink-0 cursor-pointer" title="Copy path">
               <Copy size={12} />
             </button>
           </div>

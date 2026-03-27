@@ -67,6 +67,7 @@ export interface TabEntry {
     isCustomLabel: boolean;
     requestState: RequestSnapshot;
     responseState: ResponseSnapshot;
+    openedFromIntercept?: boolean;
 }
 
 // ─── Store Interface ──────────────────────────────────────────────────────────
@@ -87,7 +88,8 @@ interface TabStore {
     updateTabRequestState: (id: string, patch: Partial<RequestSnapshot>) => void;
     updateTabResponseState: (id: string, patch: Partial<ResponseSnapshot>) => void;
     appendResponseLog: (id: string, log: string) => void;
-    openRequestInNewTab: (snapshot: RequestSnapshot, label: string) => void;
+    openRequestInNewTab: (snapshot: RequestSnapshot, label: string, meta?: { openedFromIntercept?: boolean }) => void;
+    clearOpenedFromIntercept: (id: string) => void;
 }
 
 const createInitialTab = (): TabEntry => ({
@@ -227,7 +229,7 @@ export const useTabStore = create<TabStore>()(
                 if (tab) tab.responseState.verboseLogs.push(log);
             }),
 
-        openRequestInNewTab: (snapshot, label) =>
+        openRequestInNewTab: (snapshot, label, meta?) =>
             set((state) => {
                 const newTab: TabEntry = {
                     id: crypto.randomUUID(),
@@ -235,9 +237,16 @@ export const useTabStore = create<TabStore>()(
                     isCustomLabel: true,
                     requestState: { ...snapshot },
                     responseState: createDefaultResponseSnapshot(),
+                    openedFromIntercept: meta?.openedFromIntercept,
                 };
                 state.tabs.push(newTab);
                 state.activeTabId = newTab.id;
+            }),
+
+        clearOpenedFromIntercept: (id) =>
+            set((state) => {
+                const tab = state.tabs.find((t) => t.id === id);
+                if (tab) tab.openedFromIntercept = undefined;
             }),
     })),
 );

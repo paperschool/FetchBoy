@@ -82,11 +82,11 @@ export function InterceptSidebar({ collapsed, onToggle }: InterceptSidebarProps)
   if (collapsed) {
     return (
       <aside data-testid="sidebar" className="bg-app-sidebar text-app-inverse overflow-hidden p-2 flex flex-col items-center gap-2 h-full">
-        <button type="button" onClick={onToggle} className="p-2 hover:bg-gray-700 rounded transition-colors" aria-label="Expand sidebar" title="Expand sidebar (Cmd/Ctrl+B)"><ChevronRight size={20} className="text-app-muted" /></button>
+        <button type="button" onClick={onToggle} className="p-2 hover:bg-gray-700 rounded transition-colors cursor-pointer" aria-label="Expand sidebar" title="Expand sidebar (Cmd/Ctrl+B)"><ChevronRight size={20} className="text-app-muted" /></button>
         <div className={`w-2 h-2 rounded-full mt-2 ${proxyEnabled ? "bg-green-500" : "bg-gray-500"}`} title={proxyEnabled ? "Proxy Active" : "Proxy Inactive"} />
-        <button type="button" onClick={() => { setActivePanel("breakpoints"); onToggle() }} className="p-2 hover:bg-gray-700 rounded transition-colors" aria-label="Breakpoints" title="Breakpoints"><Bug size={20} className="text-app-muted" /></button>
-        <button type="button" onClick={() => { setActivePanel("mappings"); onToggle() }} className="p-2 hover:bg-gray-700 rounded transition-colors" aria-label="Mappings" title="Mappings"><Route size={20} className="text-app-muted" /></button>
-        <button type="button" onClick={() => { setSidebarSettingsExpanded(true); void saveSetting("sidebar_settings_expanded", true); onToggle() }} className="p-2 hover:bg-gray-700 rounded transition-colors mt-auto" aria-label="Settings" title="Settings" data-testid="collapsed-settings-button"><SettingsIcon size={20} className="text-app-muted" /></button>
+        <button type="button" onClick={() => { setActivePanel("breakpoints"); onToggle() }} className="p-2 hover:bg-gray-700 rounded transition-colors cursor-pointer" aria-label="Breakpoints" title="Breakpoints"><Bug size={20} className="text-app-muted" /></button>
+        <button type="button" onClick={() => { setActivePanel("mappings"); onToggle() }} className="p-2 hover:bg-gray-700 rounded transition-colors cursor-pointer" aria-label="Mappings" title="Mappings"><Route size={20} className="text-app-muted" /></button>
+        <button type="button" onClick={() => { setSidebarSettingsExpanded(true); void saveSetting("sidebar_settings_expanded", true); onToggle() }} className="p-2 hover:bg-gray-700 rounded transition-colors cursor-pointer mt-auto" aria-label="Settings" title="Settings" data-testid="collapsed-settings-button"><SettingsIcon size={20} className="text-app-muted" /></button>
       </aside>
     );
   }
@@ -94,7 +94,7 @@ export function InterceptSidebar({ collapsed, onToggle }: InterceptSidebarProps)
   return (
     <aside data-testid="sidebar" className="bg-app-sidebar text-app-inverse overflow-hidden p-3 flex flex-col h-full">
       <div className="flex items-center justify-between mb-3">
-        <button type="button" onClick={onToggle} className="p-1.5 hover:bg-gray-700 rounded transition-colors" aria-label="Collapse sidebar" title="Collapse sidebar (Cmd/Ctrl+B)"><ChevronLeft size={18} className="text-app-muted" /></button>
+        <button type="button" onClick={onToggle} className="p-1.5 hover:bg-gray-700 rounded transition-colors cursor-pointer" aria-label="Collapse sidebar" title="Collapse sidebar (Cmd/Ctrl+B)"><ChevronLeft size={18} className="text-app-muted" /></button>
         <div className="flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full ${proxyEnabled ? "bg-green-500" : "bg-gray-500"}`} />
           {proxyEnabled ? <span className="text-xs text-green-500 font-medium">Proxy Active</span> : <span className="text-xs text-app-muted">:{proxyPort}</span>}
@@ -111,7 +111,7 @@ export function InterceptSidebar({ collapsed, onToggle }: InterceptSidebarProps)
 
       <div data-tour="settings-env" className="mt-auto">
         <div data-tour="intercept-settings" className="shrink-0 border-t border-gray-700">
-          <button type="button" className="w-full flex items-center gap-2 p-2 text-app-muted hover:text-app-inverse hover:bg-gray-700 rounded transition-colors" onClick={handleSettingsToggle} aria-expanded={sidebarSettingsExpanded} aria-controls="settings-accordion-content" data-testid="settings-accordion-toggle">
+          <button type="button" className="w-full flex items-center gap-2 p-2 text-app-muted hover:text-app-inverse hover:bg-gray-700 rounded transition-colors cursor-pointer" onClick={handleSettingsToggle} aria-expanded={sidebarSettingsExpanded} aria-controls="settings-accordion-content" data-testid="settings-accordion-toggle">
             {sidebarSettingsExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
             <SettingsIcon size={16} /><span className="text-xs font-medium">Settings</span>
           </button>

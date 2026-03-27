@@ -25,6 +25,8 @@ interface UiSettingsState {
     setCaInstalled: (installed: boolean) => void;
     flashInstallCert: boolean;
     setFlashInstallCert: (flash: boolean) => void;
+    proxyShuttingDown: boolean;
+    setProxyShuttingDown: (shuttingDown: boolean) => void;
 }
 
 export const useUiSettingsStore = create<UiSettingsState>((set) => ({
@@ -52,4 +54,6 @@ export const useUiSettingsStore = create<UiSettingsState>((set) => ({
     setCaInstalled: (installed) => set({ caInstalled: installed }),
     flashInstallCert: false,
     setFlashInstallCert: (flash) => set({ flashInstallCert: flash }),
+    proxyShuttingDown: false,
+    setProxyShuttingDown: (shuttingDown) => set({ proxyShuttingDown: shuttingDown }),
 }));

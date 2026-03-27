@@ -572,13 +572,13 @@ impl HttpHandler for InterceptHandler {
 
                     // Remove headers
                     for h in &mapping.headers_remove {
-                        if !h.key.is_empty() {
+                        if h.enabled && !h.key.is_empty() {
                             if let Ok(name) = hudsucker::hyper::header::HeaderName::from_bytes(h.key.as_bytes()) {
                                 parts.headers.remove(&name);
                             }
                         }
                     }
-                    if mapping.headers_remove.iter().any(|h| !h.key.is_empty()) {
+                    if mapping.headers_remove.iter().any(|h| h.enabled && !h.key.is_empty()) {
                         overrides.push("headers_remove".to_string());
                     }
 

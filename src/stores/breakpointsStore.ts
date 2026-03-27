@@ -4,6 +4,7 @@ import type { Breakpoint, BreakpointFolder, BreakpointHeader } from '@/lib/db';
 import {
     createBreakpoint as dbCreateBreakpoint,
     updateBreakpoint as dbUpdateBreakpoint,
+    syncBreakpointsToProxy,
 } from '@/lib/breakpoints';
 import { saveEntity, breakpointFormToDb } from '@/stores/helpers/crudStoreHelpers';
 
@@ -112,8 +113,12 @@ export const useBreakpointsStore = create<BreakpointsState>()(
             if (!bp) return;
             const newEnabled = !bp.enabled;
             set((state) => { const found = state.breakpoints.find((b) => b.id === id); if (found) found.enabled = newEnabled; });
-            try { await dbUpdateBreakpoint(id, { enabled: newEnabled }); }
-            catch { set((state) => { const found = state.breakpoints.find((b) => b.id === id); if (found) found.enabled = !newEnabled; }); }
+            try {
+                await dbUpdateBreakpoint(id, { enabled: newEnabled });
+                await syncBreakpointsToProxy(get().breakpoints);
+            } catch {
+                set((state) => { const found = state.breakpoints.find((b) => b.id === id); if (found) found.enabled = !newEnabled; });
+            }
         },
 
         deleteBreakpoint: (id) =>
@@ -156,6 +161,7 @@ export const useBreakpointsStore = create<BreakpointsState>()(
                     });
                 },
             });
+            await syncBreakpointsToProxy(get().breakpoints);
         },
     })),
 );
