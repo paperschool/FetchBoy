@@ -11,6 +11,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { useTheme } from '@/hooks/useTheme';
 import useTabKeyboardShortcuts from '@/hooks/useTabKeyboardShortcuts';
 import useSidebarKeyboardShortcut from '@/hooks/useSidebarKeyboardShortcut';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 export function AppShell() {
   useTheme();
@@ -58,7 +59,9 @@ export function AppShell() {
       } grid-rows-[3rem_2.25rem_1fr] overflow-hidden transition-[grid-template-columns] duration-200 ease-in-out [&>aside]:row-span-2 [&>main]:col-start-2 [&>main]:row-start-3`}
     >
       <TopBar />
-      <Sidebar collapsed={sidebarCollapsed} onToggle={handleToggleSidebar} />
+      <ErrorBoundary fallbackLabel="Sidebar">
+        <Sidebar collapsed={sidebarCollapsed} onToggle={handleToggleSidebar} />
+      </ErrorBoundary>
       <div className="col-start-2 row-start-2 border-b border-app-subtle bg-app-sidebar overflow-hidden">
         <TabBar />
       </div>

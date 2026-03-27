@@ -1,6 +1,8 @@
 import { type ReactNode } from "react";
 import type React from "react";
 import { Send, Wifi, Bug } from "lucide-react";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
+import { ToastContainer } from "@/components/ui/ToastContainer";
 import { useAppTabStore } from "@/stores/appTabStore";
 import { useUiSettingsStore } from "@/stores/uiSettingsStore";
 import { InterceptView } from "@/components/Intercept view/InterceptView";
@@ -75,7 +77,9 @@ export function AppTabs({ children }: AppTabsProps) {
           className={activeTab === "fetch" ? "h-full" : "hidden"}
           data-testid="fetch-panel"
         >
-          {children}
+          <ErrorBoundary fallbackLabel="Fetch">
+            {children}
+          </ErrorBoundary>
         </div>
 
         {/* Intercept panel */}
@@ -83,7 +87,9 @@ export function AppTabs({ children }: AppTabsProps) {
           className={activeTab === "intercept" ? "h-full" : "hidden"}
           data-testid="intercept-panel"
         >
-          <InterceptView />
+          <ErrorBoundary fallbackLabel="Intercept">
+            <InterceptView />
+          </ErrorBoundary>
         </div>
 
         {/* Debug panel */}
@@ -91,9 +97,13 @@ export function AppTabs({ children }: AppTabsProps) {
           className={activeTab === "debug" ? "h-full" : "hidden"}
           data-testid="debug-panel"
         >
-          <DebugView />
+          <ErrorBoundary fallbackLabel="Debug">
+            <DebugView />
+          </ErrorBoundary>
         </div>
       </div>
+
+      <ToastContainer />
     </div>
   );
 }

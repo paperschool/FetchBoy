@@ -60,6 +60,20 @@ export function buildUpdate(
   };
 }
 
+/** Run a series of DB operations inside a SQLite transaction. Rolls back on error. */
+export async function withTransaction<T>(fn: () => Promise<T>): Promise<T> {
+  const db = await getDb();
+  await db.execute('BEGIN TRANSACTION');
+  try {
+    const result = await fn();
+    await db.execute('COMMIT');
+    return result;
+  } catch (err) {
+    await db.execute('ROLLBACK');
+    throw err;
+  }
+}
+
 /** Generic proxy sync — invoke a Tauri command with mapped items. */
 export async function syncToProxy<T>(
   commandName: string,

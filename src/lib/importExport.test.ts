@@ -203,21 +203,24 @@ describe('importCollectionFromJson', () => {
         expect(newChild!.parent_id).toBe(newParent!.id);
     });
 
-    it('calls DB execute: 1 collection + N folders + M requests times', async () => {
+    it('calls DB execute: BEGIN + 1 collection + N folders + M requests + COMMIT', async () => {
         const { importCollectionFromJson } = await import('./importExport');
         await importCollectionFromJson(buildCollectionJson());
 
-        // 1 collection + 1 folder + 1 request = 3 calls
-        expect(mockExecute).toHaveBeenCalledTimes(3);
+        // BEGIN + 1 collection + 1 folder + 1 request + COMMIT = 5 calls
+        expect(mockExecute).toHaveBeenCalledTimes(5);
+        expect(mockExecute.mock.calls[0][0]).toBe('BEGIN TRANSACTION');
+        expect(mockExecute.mock.calls[4][0]).toBe('COMMIT');
     });
 
-    it('first execute call includes the new collection ID', async () => {
+    it('collection INSERT includes the new collection ID', async () => {
         const { importCollectionFromJson } = await import('./importExport');
         const { collection } = await importCollectionFromJson(buildCollectionJson());
 
-        const firstCall = mockExecute.mock.calls[0] as [string, unknown[]];
-        expect(firstCall[0]).toContain('INSERT INTO collections');
-        expect(firstCall[1]).toContain(collection.id);
+        // Call index 1 is the collection insert (after BEGIN TRANSACTION)
+        const collectionCall = mockExecute.mock.calls[1] as [string, unknown[]];
+        expect(collectionCall[0]).toContain('INSERT INTO collections');
+        expect(collectionCall[1]).toContain(collection.id);
     });
 
     it('throws "Invalid JSON" if json is malformed', async () => {

@@ -1,5 +1,13 @@
 # Long Changelog
 
+## [0.15.10] - 2026-03-27
+
+### Improvements
+
+- **Story 13.10**: Error boundaries wrapping Fetch/Intercept/Debug/Sidebar panels; toast notification system; SQLite transaction for collection import; `withTransaction()` DB helper
+  - Files changed: `ErrorBoundary.tsx`, `ToastContainer.tsx`, `toastStore.ts` (new); `dbHelpers.ts`, `importExport.ts`, `AppTabs.tsx`, `AppShell.tsx` (modified)
+  - Breaking changes: no
+
 ## [0.15.9] - 2026-03-27
 
 ### Refactoring
