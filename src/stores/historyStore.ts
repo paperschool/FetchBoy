@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import type { HistoryEntry } from '@/lib/db';
-
-const MAX_HISTORY = 200;
+import { addWithMaxSize } from '@/lib/arrayHelpers';
+import { MAX_HISTORY_ENTRIES } from '@/lib/constants';
 
 interface HistoryState {
     entries: HistoryEntry[];
@@ -19,12 +19,7 @@ export const useHistoryStore = create<HistoryState>()(
                 state.entries = entries;
             }),
         addEntry: (entry) =>
-            set((state) => {
-                state.entries.unshift(entry);
-                if (state.entries.length > MAX_HISTORY) {
-                    state.entries.length = MAX_HISTORY;
-                }
-            }),
+            set((state) => { addWithMaxSize(state.entries, entry, MAX_HISTORY_ENTRIES, true); }),
         clearAll: () =>
             set((state) => {
                 state.entries = [];

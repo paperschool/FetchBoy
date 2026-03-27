@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
+import { addWithMaxSize } from '@/lib/arrayHelpers';
+import { MAX_DEBUG_ENTRIES } from '@/lib/constants';
 
 export interface DebugInternalEvent {
     id: string;
@@ -18,8 +20,6 @@ export interface DebugTrafficEvent {
     durationMs: number | null;
 }
 
-const MAX_ENTRIES = 1000;
-
 interface DebugStore {
     internalEvents: DebugInternalEvent[];
     trafficEvents: DebugTrafficEvent[];
@@ -35,19 +35,9 @@ export const useDebugStore = create<DebugStore>()(
         internalEvents: [],
         trafficEvents: [],
         addInternalEvent: (event) =>
-            set((state) => {
-                state.internalEvents.push(event);
-                if (state.internalEvents.length > MAX_ENTRIES) {
-                    state.internalEvents.splice(0, state.internalEvents.length - MAX_ENTRIES);
-                }
-            }),
+            set((state) => { addWithMaxSize(state.internalEvents, event, MAX_DEBUG_ENTRIES); }),
         addTrafficEvent: (event) =>
-            set((state) => {
-                state.trafficEvents.push(event);
-                if (state.trafficEvents.length > MAX_ENTRIES) {
-                    state.trafficEvents.splice(0, state.trafficEvents.length - MAX_ENTRIES);
-                }
-            }),
+            set((state) => { addWithMaxSize(state.trafficEvents, event, MAX_DEBUG_ENTRIES); }),
         updateTrafficEvent: (id, status, durationMs) =>
             set((state) => {
                 const event = state.trafficEvents.find((e) => e.id === id);

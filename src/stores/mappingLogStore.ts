@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
+import { addWithMaxSize } from '@/lib/arrayHelpers';
+import { MAX_MAPPING_LOG_ENTRIES } from '@/lib/constants';
 
 export type OverrideSource = 'mapping' | 'breakpoint';
 
@@ -16,8 +18,6 @@ export interface MappingLogEntry {
     source: OverrideSource;
 }
 
-const MAX_ENTRIES = 500;
-
 interface MappingLogState {
     entries: MappingLogEntry[];
     searchQuery: string;
@@ -32,12 +32,7 @@ export const useMappingLogStore = create<MappingLogState>()(
         searchQuery: '',
 
         addEntry: (entry) =>
-            set((state) => {
-                state.entries.unshift(entry);
-                if (state.entries.length > MAX_ENTRIES) {
-                    state.entries.length = MAX_ENTRIES;
-                }
-            }),
+            set((state) => { addWithMaxSize(state.entries, entry, MAX_MAPPING_LOG_ENTRIES, true); }),
 
         clearLog: () =>
             set((state) => {

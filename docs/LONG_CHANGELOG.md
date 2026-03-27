@@ -1,5 +1,13 @@
 # Long Changelog
 
+## [0.15.8] - 2026-03-27
+
+### Refactoring
+
+- **Story 13.8**: Created shared utilities — `arrayHelpers.ts` (addWithMaxSize), `constants.ts` (max entries), `useTauriListener.ts` hook; updated 3 stores and reduced `useInterceptEvents` from 111→45 lines
+  - Files changed: 3 new utilities; `debugStore.ts`, `mappingLogStore.ts`, `historyStore.ts`, `useInterceptEvents.ts` (modified)
+  - Breaking changes: no
+
 ## [0.15.7] - 2026-03-27
 
 ### Refactoring
