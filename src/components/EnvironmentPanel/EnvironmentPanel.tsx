@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Download, Globe, Trash2, Upload } from 'lucide-react';
 import { save, open as openDialog } from '@tauri-apps/plugin-dialog';
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
@@ -23,10 +23,30 @@ export function EnvironmentPanel({ open, onClose }: EnvironmentPanelProps) {
     const storeRenameEnvironment = useEnvironmentStore((s) => s.renameEnvironment);
     const storeDeleteEnvironment = useEnvironmentStore((s) => s.deleteEnvironment);
     const storeUpdateVariables = useEnvironmentStore((s) => s.updateVariables);
+    const pendingVariable = useEnvironmentStore((s) => s.pendingVariable);
+    const activeEnvironmentId = useEnvironmentStore((s) => s.activeEnvironmentId);
+    const clearPendingVariable = useEnvironmentStore((s) => s.clearPendingVariable);
 
     const [selectedEnvId, setSelectedEnvId] = useState<string | null>(null);
     const [renamingId, setRenamingId] = useState<string | null>(null);
     const [renameValue, setRenameValue] = useState('');
+
+    // Auto-select active environment and add pending variable when opened via quick-add.
+    useEffect(() => {
+        if (!pendingVariable) return;
+        const targetEnvId = activeEnvironmentId ?? environments[0]?.id ?? null;
+        if (!targetEnvId) { clearPendingVariable(); return; }
+
+        setSelectedEnvId(targetEnvId);
+        const env = environments.find((e) => e.id === targetEnvId);
+        if (env && !env.variables.some((v) => v.key === pendingVariable)) {
+            const updated = [...env.variables, { key: pendingVariable, value: '', enabled: true }];
+            void updateEnvironmentVariables(targetEnvId, updated).then(() => {
+                storeUpdateVariables(targetEnvId, updated);
+            });
+        }
+        clearPendingVariable();
+    }, [pendingVariable, activeEnvironmentId, environments, storeUpdateVariables, clearPendingVariable]);
 
     if (!open) return null;
 

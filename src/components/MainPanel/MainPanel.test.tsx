@@ -400,7 +400,8 @@ describe('MainPanel request builder', () => {
       target: { value: '{{BASE_URL}}/posts/1' },
     });
 
-    expect(screen.getByText(/⚠ Unresolved:.*\{\{BASE_URL\}\}/)).toBeInTheDocument();
+    expect(screen.getByText(/⚠ Unresolved:/)).toBeInTheDocument();
+    expect(screen.getByTitle('Add {{BASE_URL}} to active environment')).toBeInTheDocument();
   });
 
   it('does not show warning when unresolvedIn returns empty array', () => {

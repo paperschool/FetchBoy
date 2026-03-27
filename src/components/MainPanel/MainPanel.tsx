@@ -1,4 +1,4 @@
-import { Loader2, Save, Send, X } from "lucide-react";
+import { Loader2, Plus, Save, Send, X } from "lucide-react";
 import { CopyAsButton } from "./CopyAsButton";
 import { HighlightedUrlInput } from "./HighlightedUrlInput";
 import { RequestDetailsAccordion, HTTP_METHODS } from "./RequestDetailsAccordion";
@@ -20,6 +20,7 @@ import {
 import { useCollectionStore } from "@/stores/collectionStore";
 import { useUiSettingsStore } from "@/stores/uiSettingsStore";
 import { useEnvironment } from "@/hooks/useEnvironment";
+import { useEnvironmentStore } from "@/stores/environmentStore";
 import { useSendRequest } from "@/hooks/useSendRequest";
 import { useProgressBar } from "@/hooks/useProgressBar";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -174,7 +175,16 @@ export function MainPanel(): React.ReactElement {
               <label htmlFor="request-url" className="text-app-secondary mb-1 block text-xs font-medium">Request URL</label>
               <HighlightedUrlInput id="request-url" value={url} onChange={setUrl} placeholder="https://api.example.com" variables={activeVariables} />
               {unresolvedVars.length > 0 && (
-                <p className="mt-1 text-xs text-orange-400">⚠ Unresolved: {unresolvedVars.map((v) => `{{${v}}}`).join(", ")}</p>
+                <p className="mt-1 flex flex-wrap items-center gap-1 text-xs text-orange-400">
+                  <span>⚠ Unresolved:</span>
+                  {unresolvedVars.map((v) => (
+                    <button key={v} type="button" onClick={() => useEnvironmentStore.getState().requestAddVariable(v)}
+                      className="inline-flex items-center gap-0.5 rounded bg-orange-500/15 px-1.5 py-0.5 hover:bg-orange-500/25 cursor-pointer transition-colors"
+                      title={`Add {{${v}}} to active environment`}>
+                      {`{{${v}}}`}<Plus size={10} />
+                    </button>
+                  ))}
+                </p>
               )}
             </div>
             <div>

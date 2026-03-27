@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Globe } from "lucide-react";
 import { useEnvironmentStore } from "@/stores/environmentStore";
 import { setActiveEnvironment } from "@/lib/environments";
@@ -7,7 +7,12 @@ import { EnvironmentPanel } from "@/components/EnvironmentPanel/EnvironmentPanel
 export function FetchTabActions() {
   const environments = useEnvironmentStore((s) => s.environments);
   const activeEnvironmentId = useEnvironmentStore((s) => s.activeEnvironmentId);
+  const envPanelRequested = useEnvironmentStore((s) => s.envPanelRequested);
   const [panelOpen, setPanelOpen] = useState(false);
+
+  useEffect(() => {
+    if (envPanelRequested) setPanelOpen(true);
+  }, [envPanelRequested]);
 
   async function handleEnvChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const newId = e.target.value || null;
@@ -40,7 +45,7 @@ export function FetchTabActions() {
         </button>
       </div>
       {panelOpen && (
-        <EnvironmentPanel open={panelOpen} onClose={() => setPanelOpen(false)} />
+        <EnvironmentPanel open={panelOpen} onClose={() => { setPanelOpen(false); useEnvironmentStore.getState().clearPendingVariable(); }} />
       )}
     </>
   );

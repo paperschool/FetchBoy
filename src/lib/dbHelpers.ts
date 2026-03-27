@@ -63,13 +63,14 @@ export function buildUpdate(
 /** Run a series of DB operations inside a SQLite transaction. Rolls back on error. */
 export async function withTransaction<T>(fn: () => Promise<T>): Promise<T> {
   const db = await getDb();
-  await db.execute('BEGIN TRANSACTION');
+  const txName = `sp_${Date.now()}`;
+  await db.execute(`SAVEPOINT ${txName}`);
   try {
     const result = await fn();
-    await db.execute('COMMIT');
+    await db.execute(`RELEASE SAVEPOINT ${txName}`);
     return result;
   } catch (err) {
-    await db.execute('ROLLBACK');
+    try { await db.execute(`ROLLBACK TO SAVEPOINT ${txName}`); } catch { /* already rolled back */ }
     throw err;
   }
 }

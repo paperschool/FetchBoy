@@ -5,6 +5,8 @@ import type { Environment, KeyValuePair } from '@/lib/db';
 interface EnvironmentState {
     environments: Environment[];
     activeEnvironmentId: string | null;
+    pendingVariable: string | null;
+    envPanelRequested: boolean;
 
     loadAll: (environments: Environment[]) => void;
     addEnvironment: (env: Environment) => void;
@@ -12,12 +14,16 @@ interface EnvironmentState {
     deleteEnvironment: (id: string) => void;
     updateVariables: (id: string, variables: KeyValuePair[]) => void;
     setActive: (id: string | null) => void;
+    requestAddVariable: (key: string) => void;
+    clearPendingVariable: () => void;
 }
 
 export const useEnvironmentStore = create<EnvironmentState>()(
     immer((set) => ({
         environments: [],
         activeEnvironmentId: null,
+        pendingVariable: null,
+        envPanelRequested: false,
 
         loadAll: (environments) =>
             set((state) => {
@@ -57,6 +63,18 @@ export const useEnvironmentStore = create<EnvironmentState>()(
                 for (const env of state.environments) {
                     env.is_active = env.id === id;
                 }
+            }),
+
+        requestAddVariable: (key) =>
+            set((state) => {
+                state.pendingVariable = key;
+                state.envPanelRequested = true;
+            }),
+
+        clearPendingVariable: () =>
+            set((state) => {
+                state.pendingVariable = null;
+                state.envPanelRequested = false;
             }),
     })),
 );
