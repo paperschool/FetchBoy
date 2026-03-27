@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Upload, ChevronRight } from 'lucide-react';
+import { Plus, Upload, ChevronRight, FileDown } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Folder } from 'lucide-react';
 import { CollectionRow } from './CollectionRow';
@@ -14,8 +14,10 @@ import {
     type DragStartEvent,
 } from '@dnd-kit/core';
 import { useCollectionStore } from '@/stores/collectionStore';
+import { ImportWizard } from '@/components/ImportWizard/ImportWizard';
 
 export function CollectionTree() {
+    const [importWizardOpen, setImportWizardOpen] = useState(false);
     const {
         expanded,
         editingId,
@@ -82,6 +84,7 @@ export function CollectionTree() {
     };
 
     return (
+        <>
         <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -100,9 +103,17 @@ export function CollectionTree() {
                     </span>
                     <div className="flex items-center gap-0.5">
                         <button
+                            onClick={() => setImportWizardOpen(true)}
+                            aria-label="Import from Postman/Insomnia"
+                            title="Import from Postman/Insomnia"
+                            className="text-gray-300 hover:text-white p-1 rounded cursor-pointer"
+                        >
+                            <FileDown size={14} />
+                        </button>
+                        <button
                             onClick={() => void handleImportCollection()}
                             aria-label="Import collection"
-                            title="Import collection"
+                            title="Import FetchBoy collection"
                             className="text-gray-300 hover:text-white p-1 rounded cursor-pointer"
                         >
                             <Upload size={14} />
@@ -191,5 +202,7 @@ export function CollectionTree() {
                 )}
             </DragOverlay>
         </DndContext>
+        <ImportWizard isOpen={importWizardOpen} onClose={() => setImportWizardOpen(false)} />
+        </>
     );
 }

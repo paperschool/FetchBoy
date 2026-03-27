@@ -1,4 +1,4 @@
-import { Loader2, Save, Send } from "lucide-react";
+import { Loader2, Save, Send, X } from "lucide-react";
 import { CopyAsButton } from "./CopyAsButton";
 import { HighlightedUrlInput } from "./HighlightedUrlInput";
 import { RequestDetailsAccordion, HTTP_METHODS } from "./RequestDetailsAccordion";
@@ -36,24 +36,24 @@ export function MainPanel(): React.ReactElement {
   const activeTabId = useTabStore((s) => s.activeTabId);
   const openedFromIntercept = useTabStore((s) => s.tabs.find((t) => t.id === s.activeTabId)?.openedFromIntercept);
   const clearOpenedFromIntercept = useTabStore((s) => s.clearOpenedFromIntercept);
-  const [showInterceptBanner, setShowInterceptBanner] = useState(false);
+  const [bannerTabId, setBannerTabId] = useState<string | null>(null);
   const bannerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const dismissBanner = useCallback((): void => {
     if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current);
     bannerTimerRef.current = null;
-    setShowInterceptBanner(false);
+    setBannerTabId(null);
   }, []);
 
   useEffect(() => {
-    if (openedFromIntercept) {
-      clearOpenedFromIntercept(activeTabId);
-      setShowInterceptBanner(true);
-      if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current);
-      bannerTimerRef.current = setTimeout(dismissBanner, 5000);
-    }
-    return () => { if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current); };
+    if (!openedFromIntercept) return;
+    clearOpenedFromIntercept(activeTabId);
+    setBannerTabId(activeTabId);
+    if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current);
+    bannerTimerRef.current = setTimeout(dismissBanner, 5000);
   }, [openedFromIntercept, activeTabId, clearOpenedFromIntercept, dismissBanner]);
+
+  useEffect(() => () => { if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current); }, []);
 
   const collectionStore = useCollectionStore();
   const {
@@ -162,12 +162,6 @@ export function MainPanel(): React.ReactElement {
         <div className="flex min-h-0 flex-1 flex-col gap-4">
           <p className="text-app-muted text-sm">Request Builder</p>
 
-          {showInterceptBanner && (
-            <div className="animate-pulse rounded-md bg-blue-500/15 px-3 py-2 text-xs text-blue-400">
-              Headers and query params have been added to the Request Details section below
-            </div>
-          )}
-
           <div className="grid grid-cols-[8rem_1fr_auto] items-start gap-3" data-tour="request-builder">
             <div>
               <label htmlFor="http-method" className="text-app-secondary mb-1 block text-xs font-medium">HTTP Method</label>
@@ -225,6 +219,15 @@ export function MainPanel(): React.ReactElement {
             setRequestTimeout={setRequestTimeout}
             setAuth={setAuth}
             setBodyRaw={setBodyRaw}
+            activeVariables={activeVariables}
+            banner={bannerTabId === activeTabId ? (
+              <span className="flex items-center gap-1.5 rounded bg-blue-500/15 px-2 py-0.5 text-xs text-blue-400 font-normal animate-pulse" onClick={(e) => e.preventDefault()}>
+                Headers and Query Parameters added below
+                <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); dismissBanner(); }} className="cursor-pointer hover:text-blue-300" aria-label="Dismiss">
+                  <X size={12} />
+                </button>
+              </span>
+            ) : undefined}
           />
 
           <section className="border-app-subtle flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border p-2" data-testid="response-panel" data-tour="response-panel">

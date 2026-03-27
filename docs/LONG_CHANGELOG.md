@@ -1,5 +1,17 @@
 # Long Changelog
 
+## [0.16.6] - 2026-03-27
+
+### Features
+
+- **Story 14.5**: Environment variable validation indicators — green/red ring on header and query param value inputs when `{{variables}}` resolve or fail to resolve
+  - Files changed: `KeyValueRows.tsx`, `RequestDetailsAccordion.tsx`, `MainPanel.tsx`
+  - Breaking changes: no
+
+- **Story 14.6**: Import collections from Postman (v2.1) and Insomnia (v4) — wizard UI with vendor select, file picker, preview, and atomic DB import
+  - Files changed: 4 new importers (`types.ts`, `postmanV21.ts`, `insomniaV4.ts`, `persist.ts`), 2 test files, `ImportWizard.tsx` (new), `CollectionTree.tsx` (modified)
+  - Breaking changes: no
+
 ## [0.16.4] - 2026-03-27
 
 ### Bug Fixes

@@ -42,6 +42,8 @@ interface RequestDetailsAccordionProps {
   setRequestTimeout: (ms: number) => void;
   setAuth: (a: AuthState) => void;
   setBodyRaw: (raw: string) => void;
+  banner?: React.ReactNode;
+  activeVariables?: import('@/lib/db').KeyValuePair[];
 }
 
 export function RequestDetailsAccordion(props: RequestDetailsAccordionProps): React.ReactElement {
@@ -66,6 +68,8 @@ export function RequestDetailsAccordion(props: RequestDetailsAccordionProps): Re
     setRequestTimeout,
     setAuth,
     setBodyRaw,
+    banner,
+    activeVariables,
   } = props;
 
   const [queryMatchError, setQueryMatchError] = useState<string | null>(null);
@@ -145,8 +149,9 @@ export function RequestDetailsAccordion(props: RequestDetailsAccordionProps): Re
       data-testid="request-details-accordion"
       data-tour="request-details"
     >
-      <summary className="text-app-secondary cursor-pointer text-sm font-medium">
-        Request Details
+      <summary className="text-app-secondary cursor-pointer text-sm font-medium flex items-center gap-3">
+        <span>Request Details</span>
+        {banner}
       </summary>
       {open ? (
         <div className="mt-3 flex min-h-0 flex-1 flex-col space-y-3">
@@ -181,6 +186,7 @@ export function RequestDetailsAccordion(props: RequestDetailsAccordionProps): Re
               onUpdate={updateHeader}
               onToggleEnabled={toggleHeaderEnabled}
               onRemove={removeHeader}
+              activeVariables={activeVariables}
             />
           ) : null}
 
@@ -193,6 +199,7 @@ export function RequestDetailsAccordion(props: RequestDetailsAccordionProps): Re
               onUpdate={updateQueryParam}
               onToggleEnabled={toggleQueryParamEnabled}
               onRemove={removeQueryParam}
+              activeVariables={activeVariables}
               toolbarRightAction={
                 <label className="text-app-secondary inline-flex items-center gap-2 text-sm">
                   <input

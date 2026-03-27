@@ -1,6 +1,15 @@
 import type { KeyValueRow } from '@/stores/requestStore';
 import type { ReactNode } from 'react';
 import { Trash2 } from 'lucide-react';
+import type { KeyValuePair } from '@/lib/db';
+import { unresolvedTokens } from '@/lib/interpolate';
+
+function getVariableRingClass(value: string, activeVariables?: KeyValuePair[]): string {
+  if (!activeVariables || !value.includes('{{')) return '';
+  return unresolvedTokens(value, activeVariables).length > 0
+    ? 'ring-1 ring-red-500/50'
+    : 'ring-1 ring-green-500/50';
+}
 
 interface KeyValueRowsProps {
   sectionName: 'headers' | 'query';
@@ -12,6 +21,7 @@ interface KeyValueRowsProps {
   onRemove: (index: number) => void;
   toolbarRightAction?: ReactNode;
   toolbarInlineMessage?: string | null;
+  activeVariables?: KeyValuePair[];
 }
 
 export function KeyValueRows({
@@ -24,6 +34,7 @@ export function KeyValueRows({
   onRemove,
   toolbarRightAction,
   toolbarInlineMessage,
+  activeVariables,
 }: KeyValueRowsProps) {
   const rowsContainerClassName =
     sectionName === 'query'
@@ -77,7 +88,7 @@ export function KeyValueRows({
               value={row.value}
               onChange={(event) => onUpdate(index, 'value', event.target.value)}
               placeholder="Value"
-              className="border-app-subtle bg-app-main text-app-primary h-9 rounded-md border px-2 text-sm"
+              className={`border-app-subtle bg-app-main text-app-primary h-9 rounded-md border px-2 text-sm ${getVariableRingClass(row.value, activeVariables)}`}
             />
             <button
               type="button"
