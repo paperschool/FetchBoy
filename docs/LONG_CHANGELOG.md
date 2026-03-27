@@ -1,47 +1,24 @@
 # Long Changelog
 
-## [0.16.6] - 2026-03-27
+## [0.17.0] - 2026-03-27
 
-### Features
+### Epic 14: Bug Fixes, UX Refinements & Collection Import
 
-- **Story 14.5**: Environment variable validation indicators — green/red ring on header and query param value inputs when `{{variables}}` resolve or fail to resolve
-  - Files changed: `KeyValueRows.tsx`, `RequestDetailsAccordion.tsx`, `MainPanel.tsx`
-  - Breaking changes: no
-
-- **Story 14.6**: Import collections from Postman (v2.1) and Insomnia (v4) — wizard UI with vendor select, file picker, preview, and atomic DB import
-  - Files changed: 4 new importers (`types.ts`, `postmanV21.ts`, `insomniaV4.ts`, `persist.ts`), 2 test files, `ImportWizard.tsx` (new), `CollectionTree.tsx` (modified)
-  - Breaking changes: no
-
-## [0.16.4] - 2026-03-27
-
-### Bug Fixes
-
-- **Story 14.1**: Hardened proxy shutdown UX — async port-release verification (retry loop after graceful shutdown), "Stopping..." button state with spinner, disabled toggle during shutdown
-  - Files changed: `server.rs`, `proxy_commands.rs` (Rust); `InterceptTopBar.tsx`, `uiSettingsStore.ts` (frontend)
-  - Breaking changes: no
-
-- **Story 14.2**: Fixed disabled breakpoints still firing — `breakpointsStore.toggleBreakpointEnabled()` was not syncing to proxy backend; also fixed `headers_remove` not checking per-header `enabled` flag
-  - Files changed: `breakpointsStore.ts` (frontend); `handler.rs` (Rust)
-  - Breaking changes: no
-
-### Features
-
-- **Story 14.3**: "Open in Fetch" banner — shows info banner above URL bar when opening intercepted request in Fetch mode, auto-dismisses after 5s with timer reset
-  - Files changed: `tabStore.ts`, `openInFetch.ts`, `MainPanel.tsx` (frontend)
-  - Breaking changes: no
-
-### Improvements
-
-- **Story 14.4**: Added `cursor-pointer` to 14 interactive elements across intercept sidebar (InterceptTopBar, InterceptSidebar, CertificateManagement, RequestDetailView)
-  - Files changed: `InterceptTopBar.tsx`, `InterceptSidebar.tsx`, `CertificateManagement.tsx`, `RequestDetailView.tsx`
-  - Breaking changes: no
+- Hardened proxy shutdown with port-release verification, "Stopping..." UI state, and fixed disabled breakpoints/mappings not syncing to backend
+- Import wizard for Postman (v1, v2.0, v2.1) and Insomnia (v4) collections with environment extraction, collection-environment binding, and version-specific format selection
+- Environment variable validation indicators (green/red ring) on header and query param inputs, plus clickable quick-add for unresolved `{{variables}}` from the URL bar
+- "Open in Fetch" info banner in Request Details, cursor-pointer audit across intercept sidebar, and reorganised collection header actions
+- DB migration: `default_environment_id` on collections — auto-switches environment when loading requests from a bound collection
 
 ## [0.16.0] - 2026-03-27
 
 ### Epic 13: Code Quality & Architecture Remediation
 
-- Version bump to 0.16.0 consolidating all 12 stories from Epic 13 (v0.15.1–v0.15.12)
-- See CHANGELOG.md for the full summary of refactoring, type safety, error handling, and shared utility changes
+- Split proxy, MainPanel, RequestDetailView, InterceptSidebar, and CollectionTreeState into modular files; unified breakpoints/mappings DB layer and store CRUD patterns
+- Created shared utilities (`arrayHelpers`, `constants`, `useTauriListener`, `validators`, `dbHelpers`) reducing duplication across stores and hooks
+- Type safety hardening: type guards replacing unsafe `as` casts, strict null checks in `useActiveTabState` and `requestSnapshotUtils`
+- Error boundaries wrapping all major panels, toast notification system, and SQLite transaction helper (`withTransaction`)
+- Removed legacy dual event emission from proxy handler; virtualised debug tables for performance
 
 ## [0.15.12] - 2026-03-27
 

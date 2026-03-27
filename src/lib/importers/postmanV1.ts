@@ -127,11 +127,35 @@ export function parsePostmanV1(json: string): ImportResult {
     };
   });
 
+  // Extract {{variable}} references from URLs, headers, and data params to create an environment.
+  const varSet = new Set<string>();
+  const varRegex = /\{\{([^}]+)\}\}/g;
+  for (const req of data.requests ?? []) {
+    for (const str of [req.url ?? '', req.headers ?? '', req.rawModeData ?? '']) {
+      let m: RegExpExecArray | null;
+      while ((m = varRegex.exec(str)) !== null) varSet.add(m[1]);
+    }
+    if (Array.isArray(req.data)) {
+      for (const d of req.data) {
+        let m: RegExpExecArray | null;
+        while ((m = varRegex.exec(d.value)) !== null) varSet.add(m[1]);
+      }
+    }
+  }
+
+  const environments: ImportResult['environments'] = [];
+  if (varSet.size > 0) {
+    environments.push({
+      name: `${data.name} Variables`,
+      variables: Array.from(varSet).sort().map((key) => ({ key, value: '', enabled: true })),
+    });
+  }
+
   return {
     collection: { id: collectionId, name: data.name, description: data.description ?? '', default_environment_id: null },
     folders,
     requests,
     warnings,
-    environments: [],
+    environments,
   };
 }

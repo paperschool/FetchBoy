@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.17.0] - 2026-03-27
+
+- feat: Import wizard for Postman (v1, v2.0, v2.1) and Insomnia (v4) collections with environment extraction and collection-environment binding
+- fix: Hardened proxy shutdown with port-release verification and "Stopping..." UI state; fixed disabled breakpoints/mappings not syncing to backend
+- feat: Environment variable validation indicators on header and query param inputs; clickable quick-add for unresolved variables from the URL bar
+- feat: "Open in Fetch" info banner in Request Details; collection-default environment auto-switches when loading requests
+- fix: Cursor-pointer audit across intercept sidebar; reorganised collection header with Create/Import action groups
+
 ## [0.16.0] - 2026-03-27
 
 - refactor: Split `proxy.rs` (1,565 lines) into four focused modules — TLS, handler, server, types — with compiled regex caching via `OnceLock`

@@ -1,0 +1,26 @@
+{
+  "changelog": [
+    {
+      "version": "0.17.0",
+      "date": "2026-03-27",
+      "changes": [
+        "Import wizard for Postman (v1, v2.0, v2.1) and Insomnia (v4) collections with environment extraction and collection-environment binding",
+        "Hardened proxy shutdown with port-release verification and \"Stopping...\" UI state; fixed disabled breakpoints/mappings not syncing to backend",
+        "Environment variable validation indicators on header and query param inputs; clickable quick-add for unresolved variables from the URL bar",
+        "\"Open in Fetch\" info banner in Request Details; collection-default environment auto-switches when loading requests",
+        "Cursor-pointer audit across intercept sidebar; reorganised collection header with Create/Import action groups"
+      ]
+    },
+    {
+      "version": "0.16.0",
+      "date": "2026-03-27",
+      "changes": [
+        "Split proxy, MainPanel, and sidebar into modular files; unified breakpoints/mappings DB layer and store CRUD patterns",
+        "Shared utilities, type safety hardening, and strict null checks across stores",
+        "Error boundaries, toast notification system, and SQLite transaction helpers",
+        "Removed legacy dual event emission from proxy handler",
+        "Virtualised debug tables and component size compliance fixes"
+      ]
+    }
+  ]
+}

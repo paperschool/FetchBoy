@@ -98,32 +98,34 @@ export function CollectionTree() {
             <div data-testid="collection-tree" className="text-sm">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-2 px-1">
-                    <span className="text-app-muted text-xs font-semibold uppercase tracking-widest">
-                        Collections
-                    </span>
-                    <div className="flex items-center gap-0.5">
+                    <div className="flex items-center gap-1">
+                        <span className="text-app-muted text-[10px]">Create:</span>
+                        <button
+                            onClick={() => void handleAddCollection()}
+                            aria-label="Add Collection"
+                            title="New collection"
+                            className="text-green-400 hover:text-green-300 p-1 rounded cursor-pointer"
+                        >
+                            <Plus size={14} />
+                        </button>
+                    </div>
+                    <div className="flex items-center gap-1">
+                        <span className="text-app-muted text-[10px]">Import:</span>
                         <button
                             onClick={() => setImportWizardOpen(true)}
                             aria-label="Import from Postman/Insomnia"
                             title="Import from Postman/Insomnia"
-                            className="text-gray-300 hover:text-white p-1 rounded cursor-pointer"
+                            className="text-orange-400 hover:text-orange-300 p-1 rounded cursor-pointer"
                         >
                             <FolderInput size={14} />
                         </button>
                         <button
                             onClick={() => void handleImportCollection()}
-                            aria-label="Import collection"
+                            aria-label="Import FetchBoy collection"
                             title="Import FetchBoy collection"
                             className="text-gray-300 hover:text-white p-1 rounded cursor-pointer"
                         >
                             <Upload size={14} />
-                        </button>
-                        <button
-                            onClick={() => void handleAddCollection()}
-                            aria-label="Add Collection"
-                            className="text-gray-300 hover:text-white p-1 rounded cursor-pointer"
-                        >
-                            <Plus size={16} />
                         </button>
                     </div>
                 </div>

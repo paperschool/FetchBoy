@@ -86,6 +86,18 @@ describe('parsePostmanV1', () => {
     expect(health?.folder_id).toBeNull();
   });
 
+  it('extracts {{variables}} from URLs into an environment', () => {
+    const withVars = JSON.stringify({
+      name: 'Vars API',
+      order: ['r1'],
+      requests: [{ id: 'r1', name: 'Test', method: 'GET', url: 'https://{{HOST}}/api?key={{API_KEY}}', headers: '' }],
+    });
+    const result = parsePostmanV1(withVars);
+    expect(result.environments).toHaveLength(1);
+    expect(result.environments[0].name).toBe('Vars API Variables');
+    expect(result.environments[0].variables.map((v) => v.key)).toEqual(['API_KEY', 'HOST']);
+  });
+
   it('throws on invalid JSON', () => {
     expect(() => parsePostmanV1('not json')).toThrow('Invalid JSON');
   });

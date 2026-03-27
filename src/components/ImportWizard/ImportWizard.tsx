@@ -3,20 +3,34 @@ import { X, FileUp, AlertTriangle, CheckCircle2, Loader2, Globe } from 'lucide-r
 import { open } from '@tauri-apps/plugin-dialog';
 import { readTextFile } from '@tauri-apps/plugin-fs';
 import { parsePostmanV21 } from '@/lib/importers/postmanV21';
-import { isPostmanV1, parsePostmanV1 } from '@/lib/importers/postmanV1';
+import { parsePostmanV1 } from '@/lib/importers/postmanV1';
 import { parseInsomniaV4 } from '@/lib/importers/insomniaV4';
 import { persistImportResult } from '@/lib/importers/persist';
 import { useCollectionStore } from '@/stores/collectionStore';
 import { useEnvironmentStore } from '@/stores/environmentStore';
-import type { VendorType, ImportResult } from '@/lib/importers/types';
+import type { ImportFormat, ImportResult } from '@/lib/importers/types';
 
-type WizardStep = 'vendor' | 'file' | 'preview' | 'importing' | 'done' | 'error';
+type WizardStep = 'format' | 'file' | 'preview' | 'importing' | 'done' | 'error';
 
 interface ImportWizardProps { isOpen: boolean; onClose: () => void }
 
+const FORMAT_LABEL: Record<ImportFormat, string> = {
+  'postman-v1': 'v1 (Legacy)',
+  'postman-v2': 'v2.0 / v2.1',
+  'insomnia-v4': 'v4',
+};
+
+function parseByFormat(text: string, format: ImportFormat): ImportResult {
+  switch (format) {
+    case 'postman-v1': return parsePostmanV1(text);
+    case 'postman-v2': return parsePostmanV21(text);
+    case 'insomnia-v4': return parseInsomniaV4(text);
+  }
+}
+
 export function ImportWizard({ isOpen, onClose }: ImportWizardProps): React.ReactElement | null {
-  const [step, setStep] = useState<WizardStep>('vendor');
-  const [vendor, setVendor] = useState<VendorType>('postman');
+  const [step, setStep] = useState<WizardStep>('format');
+  const [format, setFormat] = useState<ImportFormat | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [importedCount, setImportedCount] = useState({ folders: 0, requests: 0, environments: 0 });
@@ -26,14 +40,20 @@ export function ImportWizard({ isOpen, onClose }: ImportWizardProps): React.Reac
   if (!isOpen) return null;
 
   const reset = (): void => {
-    setStep('vendor');
-    setVendor('postman');
+    setStep('format');
+    setFormat(null);
     setResult(null);
     setError(null);
     onClose();
   };
 
+  const selectFormat = (f: ImportFormat): void => {
+    setFormat(f);
+    setStep('file');
+  };
+
   const handleFileSelect = async (): Promise<void> => {
+    if (!format) return;
     try {
       const selected = await open({
         multiple: false,
@@ -42,15 +62,7 @@ export function ImportWizard({ isOpen, onClose }: ImportWizardProps): React.Reac
       if (!selected) return;
       const path = typeof selected === 'string' ? selected : selected[0];
       const text = await readTextFile(path);
-
-      let parsed: ImportResult;
-      if (vendor === 'postman') {
-        const raw = JSON.parse(text) as Record<string, unknown>;
-        parsed = isPostmanV1(raw) ? parsePostmanV1(text) : parsePostmanV21(text);
-      } else {
-        parsed = parseInsomniaV4(text);
-      }
-      setResult(parsed);
+      setResult(parseByFormat(text, format));
       setStep('preview');
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -82,6 +94,18 @@ export function ImportWizard({ isOpen, onClose }: ImportWizardProps): React.Reac
 
   const totalVars = result?.environments.reduce((sum, e) => sum + e.variables.length, 0) ?? 0;
 
+  const formatBtn = (f: ImportFormat, color: 'orange' | 'purple'): React.ReactElement => {
+    const cls = color === 'orange'
+      ? 'border-orange-500/30 text-orange-400 hover:bg-orange-500/10 hover:border-orange-500/60'
+      : 'border-purple-500/30 text-purple-400 hover:bg-purple-500/10 hover:border-purple-500/60';
+    return (
+      <button key={f} onClick={() => selectFormat(f)}
+        className={`rounded border px-3 py-1.5 text-xs font-medium cursor-pointer transition-colors ${cls}`}>
+        {FORMAT_LABEL[f]}
+      </button>
+    );
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={reset}>
       <div className="bg-app-main border border-app-subtle w-[28rem] rounded-lg shadow-xl" onClick={(e) => e.stopPropagation()}>
@@ -92,33 +116,39 @@ export function ImportWizard({ isOpen, onClose }: ImportWizardProps): React.Reac
         </div>
 
         <div className="px-4 py-4 space-y-4">
-          {/* Step 1: Vendor select */}
-          {step === 'vendor' && (
+          {/* Step 1: Format select */}
+          {step === 'format' && (
             <>
               <p className="text-xs text-app-muted">Select the tool you exported from:</p>
-              <div className="flex gap-2">
-                {(['postman', 'insomnia'] as VendorType[]).map((v) => (
-                  <button key={v} onClick={() => setVendor(v)}
-                    className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium cursor-pointer transition-colors ${vendor === v ? 'border-blue-500 bg-blue-500/10 text-blue-400' : 'border-app-subtle text-app-muted hover:text-app-primary'}`}>
-                    {v === 'postman' ? 'Postman (v2.1)' : 'Insomnia (v4)'}
-                  </button>
-                ))}
-              </div>
-              <div className="flex justify-end">
-                <button onClick={() => setStep('file')} className="rounded-md bg-blue-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-blue-700 cursor-pointer">Next</button>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-app-primary">Postman</p>
+                  <div className="flex flex-col gap-1.5">
+                    {formatBtn('postman-v2', 'orange')}
+                    {formatBtn('postman-v1', 'orange')}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-app-primary">Insomnia</p>
+                  <div className="flex flex-col gap-1.5">
+                    {formatBtn('insomnia-v4', 'purple')}
+                  </div>
+                </div>
               </div>
             </>
           )}
 
           {/* Step 2: File select */}
-          {step === 'file' && (
+          {step === 'file' && format && (
             <>
-              <p className="text-xs text-app-muted">Select the exported JSON file from {vendor === 'postman' ? 'Postman' : 'Insomnia'}:</p>
+              <p className="text-xs text-app-muted">
+                Select the exported JSON file <span className="text-app-secondary">({FORMAT_LABEL[format]})</span>:
+              </p>
               <button onClick={() => void handleFileSelect()} className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-app-subtle py-6 text-sm text-app-muted hover:text-app-primary hover:border-blue-500/50 cursor-pointer transition-colors">
                 <FileUp size={18} /> Choose File...
               </button>
               <div className="flex justify-between">
-                <button onClick={() => setStep('vendor')} className="text-xs text-app-muted hover:text-app-primary cursor-pointer">Back</button>
+                <button onClick={() => setStep('format')} className="text-xs text-app-muted hover:text-app-primary cursor-pointer">Back</button>
               </div>
             </>
           )}

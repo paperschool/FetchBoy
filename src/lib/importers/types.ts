@@ -19,4 +19,4 @@ export interface ImportResult {
   environments: ImportedEnvironment[];
 }
 
-export type VendorType = 'postman' | 'insomnia';
+export type ImportFormat = 'postman-v1' | 'postman-v2' | 'insomnia-v4';
