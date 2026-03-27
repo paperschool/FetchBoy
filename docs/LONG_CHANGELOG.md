@@ -1,5 +1,13 @@
 # Long Changelog
 
+## [0.15.6] - 2026-03-27
+
+### Refactoring
+
+- **Story 13.6**: Unified store CRUD patterns — created `crudStoreHelpers.ts` with `saveEntity` and form→DB serializers; breakpointsStore 267→161 lines, mappingsStore 233→168 lines; added error rollback to toggle actions
+  - Files changed: `crudStoreHelpers.ts` (new); `breakpointsStore.ts`, `mappingsStore.ts` (modified)
+  - Breaking changes: no
+
 ## [0.15.5] - 2026-03-27
 
 ### Refactoring
