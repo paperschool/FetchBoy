@@ -132,10 +132,14 @@ export function InterceptTable() {
     getItemKey: (index) => filteredRequests[index]?.id ?? index,
   });
 
-  // Force virtualizer to re-measure when data or container changes —
-  // prevents blank render when deferred updates land before layout settles.
+  // Debounced re-measure: only trigger after filtered data stabilises,
+  // not on every rapid-fire update from high-traffic proxy events.
+  const prevCountRef = useRef(filteredRequests.length);
   useEffect(() => {
-    rowVirtualizer.measure();
+    if (prevCountRef.current === filteredRequests.length) return;
+    prevCountRef.current = filteredRequests.length;
+    const id = setTimeout(() => rowVirtualizer.measure(), 50);
+    return () => clearTimeout(id);
   }, [filteredRequests.length, rowVirtualizer]);
 
   return (

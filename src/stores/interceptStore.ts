@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { invoke } from '@tauri-apps/api/core'
+import { MAX_INTERCEPT_ENTRIES } from '@/lib/constants'
 
 export interface InterceptRequest {
   id: string
@@ -84,6 +85,11 @@ interface InterceptStore {
   exitEditMode: () => void
 }
 
+function trimRequests(requests: InterceptRequest[]): InterceptRequest[] {
+  if (requests.length <= MAX_INTERCEPT_ENTRIES) return requests
+  return requests.slice(requests.length - MAX_INTERCEPT_ENTRIES)
+}
+
 export const useInterceptStore = create<InterceptStore>((set, get) => ({
   requests: [],
   selectedRequestId: null,
@@ -107,7 +113,7 @@ export const useInterceptStore = create<InterceptStore>((set, get) => ({
         requests: state.requests.map((r) => r.id === request.id ? { ...r, ...request, isPending: false } : r),
       }
     }
-    return { requests: [...state.requests, request] }
+    return { requests: trimRequests([...state.requests, request]) }
   }),
 
   addPendingRequest: (payload) => set((state) => {
@@ -123,7 +129,7 @@ export const useInterceptStore = create<InterceptStore>((set, get) => ({
       requestBody: payload.requestBody,
       isPending: true,
     }
-    return { requests: [...state.requests, pending] }
+    return { requests: trimRequests([...state.requests, pending]) }
   }),
 
   updateWithResponse: (payload) => set((state) => {
