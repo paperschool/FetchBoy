@@ -158,7 +158,7 @@ export function InterceptTable() {
         {hasItems && (
           <button
             onClick={clearRequests}
-            className="flex items-center gap-1.5 px-2 py-1 text-xs text-app-muted hover:text-red-400 hover:bg-app-subtle rounded transition-colors"
+            className="flex items-center gap-1.5 px-2 py-1 text-xs text-app-muted hover:text-red-400 hover:bg-app-subtle rounded transition-colors cursor-pointer"
             title="Clear all requests"
           >
             <Trash2 size={14} />
