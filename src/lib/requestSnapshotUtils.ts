@@ -1,6 +1,7 @@
 import type { HistoryEntry, Request } from '@/lib/db';
 import type { RequestSnapshot } from '@/stores/tabStore';
-import type { AuthState, BodyMode, HttpMethod } from '@/stores/requestStore';
+import type { AuthState } from '@/stores/requestStore';
+import { isHttpMethod, isBodyMode, isApiKeyIn } from '@/lib/validators';
 
 function authConfigToState(
     authType: Request['auth_type'],
@@ -20,7 +21,7 @@ function authConfigToState(
                 type: 'api-key',
                 key: authConfig['key'] ?? '',
                 value: authConfig['value'] ?? '',
-                in: (authConfig['in'] as 'header' | 'query') ?? 'header',
+                in: isApiKeyIn(authConfig['in'] ?? '') ? authConfig['in'] as 'header' | 'query' : 'header',
             };
         default:
             return { type: 'none' };
@@ -29,7 +30,7 @@ function authConfigToState(
 
 export function buildSnapshotFromSaved(request: Request): RequestSnapshot {
     return {
-        method: request.method as HttpMethod,
+        method: isHttpMethod(request.method) ? request.method : 'GET',
         url: request.url,
         headers: request.headers.map((h) => ({
             key: h.key,
@@ -42,7 +43,7 @@ export function buildSnapshotFromSaved(request: Request): RequestSnapshot {
             enabled: p.enabled,
         })),
         body: {
-            mode: request.body_type as BodyMode,
+            mode: isBodyMode(request.body_type) ? request.body_type : 'raw',
             raw: request.body_content,
         },
         auth: authConfigToState(request.auth_type, request.auth_config),

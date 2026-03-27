@@ -1,4 +1,5 @@
 import type { AuthState } from '@/stores/requestStore';
+import { isAuthType } from '@/lib/validators';
 
 interface AuthPanelProps {
   auth: AuthState;
@@ -28,7 +29,7 @@ export function AuthPanel({ auth, onAuthChange }: AuthPanelProps) {
         <select
           id="auth-type"
           value={auth.type}
-          onChange={(e) => handleTypeChange(e.target.value as AuthState['type'])}
+          onChange={(e) => { const v = e.target.value; if (isAuthType(v)) handleTypeChange(v); }}
           className="select-flat border-app-subtle bg-app-main text-app-primary h-9 rounded-md border pl-2 pr-7 text-sm"
         >
           <option value="none">No Auth</option>

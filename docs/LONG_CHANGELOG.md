@@ -1,5 +1,13 @@
 # Long Changelog
 
+## [0.15.9] - 2026-03-27
+
+### Refactoring
+
+- **Story 13.9**: Type safety hardening — created `validators.ts` with type guards; fixed non-null assertions in `useActiveTabState`; replaced unsafe `as` casts in `requestSnapshotUtils`, `AuthPanel`
+  - Files changed: `validators.ts` (new); `useActiveTabState.ts`, `requestSnapshotUtils.ts`, `AuthPanel.tsx` (modified)
+  - Breaking changes: no
+
 ## [0.15.8] - 2026-03-27
 
 ### Refactoring
