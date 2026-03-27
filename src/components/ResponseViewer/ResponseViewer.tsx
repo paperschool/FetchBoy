@@ -49,12 +49,8 @@ interface ResponseViewerProps {
 
 type ResponseTab = 'body' | 'headers' | 'logs';
 
-function getStatusColorClass(status: number): string {
-  if (status >= 200 && status < 300) return 'text-green-600';
-  if (status >= 400 && status < 500) return 'text-yellow-600';
-  if (status >= 500) return 'text-red-600';
-  return 'text-app-primary';
-}
+// Re-exported from shared utility for backwards compatibility
+import { getStatusColorClass } from '@/lib/statusColors';
 
 // Image viewer component with zoom and scroll
 export function ImageViewer({ contentType, body }: { contentType?: string; body: string }) {

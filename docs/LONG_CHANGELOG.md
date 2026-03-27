@@ -1,5 +1,13 @@
 # Long Changelog
 
+## [0.15.4] - 2026-03-27
+
+### Refactoring
+
+- **Story 13.4**: Refactored `RequestDetailView.tsx` (442→162) and `InterceptSidebar.tsx` (425→128); extracted shared `statusColors.ts`, `RequestDetailHeaders`, `RequestDetailBody`, `CertificateManagement`, `ProxyPortConfig` sub-components
+  - Files changed: `RequestDetailView.tsx`, `InterceptSidebar.tsx`, `ResponseViewer.tsx`, `HistoryPanel.tsx` (modified); `statusColors.ts`, 4 new sub-components
+  - Breaking changes: no
+
 ## [0.15.3] - 2026-03-27
 
 ### Refactoring

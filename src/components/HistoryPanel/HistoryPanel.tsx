@@ -6,25 +6,7 @@ import { formatRelativeTime } from '@/lib/utils';
 import { useHistoryStore } from '@/stores/historyStore';
 import { useTabStore } from '@/stores/tabStore';
 import { buildSnapshotFromSaved } from '@/lib/requestSnapshotUtils';
-
-function methodColour(method: string): string {
-    const map: Record<string, string> = {
-        GET: 'text-blue-400',
-        POST: 'text-green-400',
-        PUT: 'text-orange-400',
-        PATCH: 'text-yellow-400',
-        DELETE: 'text-red-400',
-    };
-    return map[method.toUpperCase()] ?? 'text-gray-400';
-}
-
-function statusColour(status: number): string {
-    if (status === 0) return 'text-gray-400';
-    if (status < 300) return 'text-green-400';
-    if (status < 400) return 'text-blue-400';
-    if (status < 500) return 'text-yellow-400';
-    return 'text-red-400';
-}
+import { getMethodColorClass as methodColour, getHistoryStatusColorClass as statusColour } from '@/lib/statusColors';
 
 function statusLabel(status: number): string {
     return status === 0 ? 'ERR' : String(status);
