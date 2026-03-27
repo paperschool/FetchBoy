@@ -1,5 +1,13 @@
 # Long Changelog
 
+## [0.15.3] - 2026-03-27
+
+### Refactoring
+
+- **Story 13.3**: Refactored `MainPanel.tsx` from 1,019 to 219 lines — extracted `urlUtils.ts`, `useSendRequest` hook, `useProgressBar` hook, and `RequestDetailsAccordion` sub-component
+  - Files changed: `MainPanel.tsx` (modified), `urlUtils.ts`, `useSendRequest.ts`, `useProgressBar.ts`, `RequestDetailsAccordion.tsx` (all new)
+  - Breaking changes: no
+
 ## [0.15.2] - 2026-03-27
 
 ### Refactoring
