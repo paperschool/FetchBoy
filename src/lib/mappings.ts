@@ -1,8 +1,6 @@
-import { invoke } from '@tauri-apps/api/core';
 import { getDb } from '@/lib/db';
 import type { Mapping, MappingFolder, MappingHeader, MappingCookie } from '@/lib/db';
-
-const now = () => new Date().toISOString();
+import { now, parseJsonField, insertOne, buildUpdate, syncToProxy } from '@/lib/dbHelpers';
 
 interface RawMapping {
     id: string;
@@ -24,22 +22,17 @@ interface RawMapping {
     updated_at: string;
 }
 
-function parseJson<T>(raw: string, fallback: T): T {
-    try {
-        return JSON.parse(raw) as T;
-    } catch {
-        return fallback;
-    }
-}
+const boolToInt = (v: unknown): number => (v ? 1 : 0);
+const toJson = (v: unknown): string => JSON.stringify(v);
 
 function deserializeMapping(raw: RawMapping): Mapping {
     return {
         ...raw,
         match_type: raw.match_type as Mapping['match_type'],
         enabled: raw.enabled === 1,
-        headers_add: parseJson<MappingHeader[]>(raw.headers_add ?? '[]', []),
-        headers_remove: parseJson<MappingHeader[]>(raw.headers_remove ?? '[]', []),
-        cookies: parseJson<MappingCookie[]>(raw.cookies ?? '[]', []),
+        headers_add: parseJsonField<MappingHeader[]>(raw.headers_add, []),
+        headers_remove: parseJsonField<MappingHeader[]>(raw.headers_remove, []),
+        cookies: parseJsonField<MappingCookie[]>(raw.cookies, []),
         response_body_enabled: raw.response_body_enabled === 1,
         response_body: raw.response_body ?? '',
         response_body_content_type: raw.response_body_content_type ?? 'application/json',
@@ -68,22 +61,15 @@ export async function loadAllMappings(): Promise<{
 // ─── Folder CRUD ─────────────────────────────────────────────────────────────
 
 export async function createMappingFolder(name: string, sortOrder: number): Promise<MappingFolder> {
-    const db = await getDb();
     const id = crypto.randomUUID();
     const ts = now();
-    await db.execute(
-        'INSERT INTO mapping_folders (id, name, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
-        [id, name, sortOrder, ts, ts],
-    );
+    await insertOne('mapping_folders', ['id', 'name', 'sort_order', 'created_at', 'updated_at'], [id, name, sortOrder, ts, ts]);
     return { id, name, sort_order: sortOrder, created_at: ts, updated_at: ts };
 }
 
 export async function renameMappingFolder(id: string, name: string): Promise<void> {
     const db = await getDb();
-    await db.execute(
-        'UPDATE mapping_folders SET name = ?, updated_at = ? WHERE id = ?',
-        [name, now(), id],
-    );
+    await db.execute('UPDATE mapping_folders SET name = ?, updated_at = ? WHERE id = ?', [name, now(), id]);
 }
 
 export async function deleteMappingFolder(id: string): Promise<void> {
@@ -99,29 +85,22 @@ export async function createMapping(
     urlPattern: string,
     matchType: Mapping['match_type'],
 ): Promise<Mapping> {
-    const db = await getDb();
     const id = crypto.randomUUID();
     const ts = now();
-    await db.execute(
-        `INSERT INTO mappings
-         (id, folder_id, name, url_pattern, match_type, enabled,
-          headers_add, headers_remove, cookies,
-          response_body_enabled, response_body, response_body_content_type, response_body_file_path,
-          url_remap_enabled, url_remap_target,
-          created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, 1, '[]', '[]', '[]', 0, '', 'application/json', '', 0, '', ?, ?)`,
-        [id, folderId, name, urlPattern, matchType, ts, ts],
-    );
+    await insertOne('mappings', [
+        'id', 'folder_id', 'name', 'url_pattern', 'match_type', 'enabled',
+        'headers_add', 'headers_remove', 'cookies',
+        'response_body_enabled', 'response_body', 'response_body_content_type', 'response_body_file_path',
+        'url_remap_enabled', 'url_remap_target',
+        'created_at', 'updated_at',
+    ], [id, folderId, name, urlPattern, matchType, 1, '[]', '[]', '[]', 0, '', 'application/json', '', 0, '', ts, ts]);
     return {
         id, folder_id: folderId, name, url_pattern: urlPattern,
         match_type: matchType, enabled: true,
         headers_add: [], headers_remove: [], cookies: [],
-        response_body_enabled: false,
-        response_body: '',
-        response_body_content_type: 'application/json',
-        response_body_file_path: '',
-        url_remap_enabled: false,
-        url_remap_target: '',
+        response_body_enabled: false, response_body: '',
+        response_body_content_type: 'application/json', response_body_file_path: '',
+        url_remap_enabled: false, url_remap_target: '',
         created_at: ts, updated_at: ts,
     };
 }
@@ -137,39 +116,17 @@ export async function updateMapping(
         cookies?: MappingCookie[];
     }>,
 ): Promise<void> {
+    const update = buildUpdate('mappings', id, changes, {
+        enabled: boolToInt,
+        response_body_enabled: boolToInt,
+        url_remap_enabled: boolToInt,
+        headers_add: toJson,
+        headers_remove: toJson,
+        cookies: toJson,
+    });
+    if (!update) return;
     const db = await getDb();
-    const parts: string[] = [];
-    const values: unknown[] = [];
-    if (changes.name !== undefined) { parts.push('name = ?'); values.push(changes.name); }
-    if (changes.url_pattern !== undefined) { parts.push('url_pattern = ?'); values.push(changes.url_pattern); }
-    if (changes.match_type !== undefined) { parts.push('match_type = ?'); values.push(changes.match_type); }
-    if (changes.enabled !== undefined) { parts.push('enabled = ?'); values.push(changes.enabled ? 1 : 0); }
-    if (changes.headers_add !== undefined) { parts.push('headers_add = ?'); values.push(JSON.stringify(changes.headers_add)); }
-    if (changes.headers_remove !== undefined) { parts.push('headers_remove = ?'); values.push(JSON.stringify(changes.headers_remove)); }
-    if (changes.cookies !== undefined) { parts.push('cookies = ?'); values.push(JSON.stringify(changes.cookies)); }
-    if (changes.response_body_enabled !== undefined) {
-        parts.push('response_body_enabled = ?');
-        values.push(changes.response_body_enabled ? 1 : 0);
-    }
-    if (changes.response_body !== undefined) { parts.push('response_body = ?'); values.push(changes.response_body); }
-    if (changes.response_body_content_type !== undefined) {
-        parts.push('response_body_content_type = ?');
-        values.push(changes.response_body_content_type);
-    }
-    if (changes.response_body_file_path !== undefined) {
-        parts.push('response_body_file_path = ?');
-        values.push(changes.response_body_file_path);
-    }
-    if (changes.url_remap_enabled !== undefined) {
-        parts.push('url_remap_enabled = ?');
-        values.push(changes.url_remap_enabled ? 1 : 0);
-    }
-    if (changes.url_remap_target !== undefined) { parts.push('url_remap_target = ?'); values.push(changes.url_remap_target); }
-    if (parts.length === 0) return;
-    parts.push('updated_at = ?');
-    values.push(now());
-    values.push(id);
-    await db.execute(`UPDATE mappings SET ${parts.join(', ')} WHERE id = ?`, values);
+    await db.execute(update.sql, update.values);
 }
 
 export async function deleteMapping(id: string): Promise<void> {
@@ -180,21 +137,12 @@ export async function deleteMapping(id: string): Promise<void> {
 // ─── Proxy Sync ───────────────────────────────────────────────────────────────
 
 export async function syncMappingsToProxy(mappings: Mapping[]): Promise<void> {
-    await invoke('sync_mappings', {
-        mappings: mappings.map((m) => ({
-            id: m.id,
-            url_pattern: m.url_pattern,
-            match_type: m.match_type,
-            enabled: m.enabled,
-            headers_add: m.headers_add,
-            headers_remove: m.headers_remove,
-            cookies: m.cookies,
-            response_body_enabled: m.response_body_enabled,
-            response_body: m.response_body,
-            response_body_content_type: m.response_body_content_type,
-            response_body_file_path: m.response_body_file_path,
-            url_remap_enabled: m.url_remap_enabled,
-            url_remap_target: m.url_remap_target,
-        })),
-    }).catch(() => {});
+    await syncToProxy('sync_mappings', 'mappings', mappings, (m) => ({
+        id: m.id, url_pattern: m.url_pattern, match_type: m.match_type, enabled: m.enabled,
+        headers_add: m.headers_add, headers_remove: m.headers_remove, cookies: m.cookies,
+        response_body_enabled: m.response_body_enabled, response_body: m.response_body,
+        response_body_content_type: m.response_body_content_type,
+        response_body_file_path: m.response_body_file_path,
+        url_remap_enabled: m.url_remap_enabled, url_remap_target: m.url_remap_target,
+    }));
 }

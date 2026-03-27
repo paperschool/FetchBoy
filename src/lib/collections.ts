@@ -1,7 +1,6 @@
 import { getDb } from '@/lib/db';
 import type { Collection, Folder, KeyValuePair, Request } from '@/lib/db';
-
-const now = () => new Date().toISOString();
+import { now, parseJsonField, insertOne } from '@/lib/dbHelpers';
 
 // ─── Internal raw DB types ────────────────────────────────────────────────────
 
@@ -26,11 +25,11 @@ interface RawRequest {
 function deserializeRequest(raw: RawRequest): Request {
     return {
         ...raw,
-        headers: JSON.parse(raw.headers) as KeyValuePair[],
-        query_params: JSON.parse(raw.query_params) as KeyValuePair[],
+        headers: parseJsonField<KeyValuePair[]>(raw.headers, []),
+        query_params: parseJsonField<KeyValuePair[]>(raw.query_params, []),
         body_type: raw.body_type as Request['body_type'],
         auth_type: raw.auth_type as Request['auth_type'],
-        auth_config: JSON.parse(raw.auth_config) as Record<string, string>,
+        auth_config: parseJsonField<Record<string, string>>(raw.auth_config, {}),
     };
 }
 
@@ -139,6 +138,22 @@ export async function updateFolderOrder(folderId: string, sortOrder: number): Pr
     ]);
 }
 
+// ─── Request INSERT helper ────────────────────────────────────────────────────
+
+const REQUEST_FIELDS = [
+    'id', 'collection_id', 'folder_id', 'name', 'method', 'url', 'headers', 'query_params',
+    'body_type', 'body_content', 'auth_type', 'auth_config', 'sort_order', 'created_at', 'updated_at',
+] as const;
+
+async function insertRequestRow(req: Request): Promise<void> {
+    await insertOne('requests', [...REQUEST_FIELDS], [
+        req.id, req.collection_id, req.folder_id, req.name, req.method, req.url,
+        JSON.stringify(req.headers), JSON.stringify(req.query_params),
+        req.body_type, req.body_content, req.auth_type, JSON.stringify(req.auth_config),
+        req.sort_order, req.created_at, req.updated_at,
+    ]);
+}
+
 // ─── Requests ────────────────────────────────────────────────────────────────
 
 export async function createSavedRequest(
@@ -146,7 +161,6 @@ export async function createSavedRequest(
     name: string,
     folderId: string | null = null,
 ): Promise<Request> {
-    const db = await getDb();
     const req: Request = {
         id: crypto.randomUUID(),
         collection_id: collectionId,
@@ -164,29 +178,7 @@ export async function createSavedRequest(
         created_at: now(),
         updated_at: now(),
     };
-    await db.execute(
-        `INSERT INTO requests
-            (id, collection_id, folder_id, name, method, url, headers, query_params,
-             body_type, body_content, auth_type, auth_config, sort_order, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-            req.id,
-            req.collection_id,
-            req.folder_id,
-            req.name,
-            req.method,
-            req.url,
-            JSON.stringify(req.headers),
-            JSON.stringify(req.query_params),
-            req.body_type,
-            req.body_content,
-            req.auth_type,
-            JSON.stringify(req.auth_config),
-            req.sort_order,
-            req.created_at,
-            req.updated_at,
-        ],
-    );
+    await insertRequestRow(req);
     return req;
 }
 
@@ -260,35 +252,12 @@ export async function updateSavedRequest(
 export async function createFullSavedRequest(
     request: Omit<Request, 'id' | 'created_at' | 'updated_at'>,
 ): Promise<Request> {
-    const db = await getDb();
     const full: Request = {
         ...request,
         id: crypto.randomUUID(),
         created_at: now(),
         updated_at: now(),
     };
-    await db.execute(
-        `INSERT INTO requests
-            (id, collection_id, folder_id, name, method, url, headers, query_params,
-             body_type, body_content, auth_type, auth_config, sort_order, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-            full.id,
-            full.collection_id,
-            full.folder_id,
-            full.name,
-            full.method,
-            full.url,
-            JSON.stringify(full.headers),
-            JSON.stringify(full.query_params),
-            full.body_type,
-            full.body_content,
-            full.auth_type,
-            JSON.stringify(full.auth_config),
-            full.sort_order,
-            full.created_at,
-            full.updated_at,
-        ],
-    );
+    await insertRequestRow(full);
     return full;
 }

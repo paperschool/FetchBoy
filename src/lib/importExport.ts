@@ -1,5 +1,5 @@
-import { getDb } from '@/lib/db';
 import type { Collection, Environment, Folder, Request } from '@/lib/db';
+import { insertOne } from '@/lib/dbHelpers';
 
 // ─── Export Envelope Interfaces ───────────────────────────────────────────────
 
@@ -117,44 +117,24 @@ export async function importCollectionFromJson(
     }));
 
     // Write to DB — collection first, then folders, then requests
-    const db = await getDb();
-
-    await db.execute(
-        'INSERT INTO collections (id, name, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
-        [collection.id, collection.name, collection.description, collection.created_at, collection.updated_at],
-    );
+    await insertOne('collections', ['id', 'name', 'description', 'created_at', 'updated_at'],
+        [collection.id, collection.name, collection.description, collection.created_at, collection.updated_at]);
 
     for (const f of folders) {
-        await db.execute(
-            'INSERT INTO folders (id, collection_id, parent_id, name, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [f.id, f.collection_id, f.parent_id, f.name, f.sort_order, f.created_at, f.updated_at],
-        );
+        await insertOne('folders', ['id', 'collection_id', 'parent_id', 'name', 'sort_order', 'created_at', 'updated_at'],
+            [f.id, f.collection_id, f.parent_id, f.name, f.sort_order, f.created_at, f.updated_at]);
     }
 
     for (const r of requests) {
-        await db.execute(
-            `INSERT INTO requests
-                (id, collection_id, folder_id, name, method, url, headers, query_params,
-                 body_type, body_content, auth_type, auth_config, sort_order, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-                r.id,
-                r.collection_id,
-                r.folder_id,
-                r.name,
-                r.method,
-                r.url,
-                JSON.stringify(r.headers),
-                JSON.stringify(r.query_params),
-                r.body_type,
-                r.body_content,
-                r.auth_type,
-                JSON.stringify(r.auth_config),
-                r.sort_order,
-                r.created_at,
-                r.updated_at,
-            ],
-        );
+        await insertOne('requests', [
+            'id', 'collection_id', 'folder_id', 'name', 'method', 'url', 'headers', 'query_params',
+            'body_type', 'body_content', 'auth_type', 'auth_config', 'sort_order', 'created_at', 'updated_at',
+        ], [
+            r.id, r.collection_id, r.folder_id, r.name, r.method, r.url,
+            JSON.stringify(r.headers), JSON.stringify(r.query_params),
+            r.body_type, r.body_content, r.auth_type, JSON.stringify(r.auth_config),
+            r.sort_order, r.created_at, r.updated_at,
+        ]);
     }
 
     return { collection, folders, requests };
@@ -187,11 +167,8 @@ export async function importEnvironmentFromJson(json: string): Promise<Environme
         created_at: new Date().toISOString(),
     };
 
-    const db = await getDb();
-    await db.execute(
-        'INSERT INTO environments (id, name, variables, is_active, created_at) VALUES (?, ?, ?, ?, ?)',
-        [environment.id, environment.name, JSON.stringify(environment.variables), 0, environment.created_at],
-    );
+    await insertOne('environments', ['id', 'name', 'variables', 'is_active', 'created_at'],
+        [environment.id, environment.name, JSON.stringify(environment.variables), 0, environment.created_at]);
 
     return environment;
 }

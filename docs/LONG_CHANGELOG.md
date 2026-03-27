@@ -1,5 +1,13 @@
 # Long Changelog
 
+## [0.15.5] - 2026-03-27
+
+### Refactoring
+
+- **Story 13.5**: Unified breakpoints/mappings DB layer — created `dbHelpers.ts` with `buildUpdate`, `insertOne`, `parseJsonField`, `syncToProxy`; replaced if-chain update patterns and unsafe JSON.parse casts across 5 files
+  - Files changed: `dbHelpers.ts` (new); `breakpoints.ts`, `mappings.ts`, `collections.ts`, `importExport.ts` (modified)
+  - Breaking changes: no
+
 ## [0.15.4] - 2026-03-27
 
 ### Refactoring
