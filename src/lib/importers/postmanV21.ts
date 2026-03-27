@@ -58,8 +58,8 @@ export function parsePostmanV21(json: string): ImportResult {
 
   if (!data.info?.name) throw new Error('Missing collection name (info.name)');
   const schema = data.info.schema ?? '';
-  if (schema && !schema.includes('v2.1')) {
-    throw new Error(`Unsupported Postman schema: ${schema}. Only v2.1 is supported.`);
+  if (schema && !schema.includes('v2.1') && !schema.includes('v2.0')) {
+    throw new Error(`Unsupported Postman schema: ${schema}. Only v2.0/v2.1 are supported.`);
   }
 
   const collectionId = crypto.randomUUID();

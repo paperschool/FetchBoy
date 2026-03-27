@@ -3,6 +3,7 @@ import { X, FileUp, AlertTriangle, CheckCircle2, Loader2, Globe } from 'lucide-r
 import { open } from '@tauri-apps/plugin-dialog';
 import { readTextFile } from '@tauri-apps/plugin-fs';
 import { parsePostmanV21 } from '@/lib/importers/postmanV21';
+import { isPostmanV1, parsePostmanV1 } from '@/lib/importers/postmanV1';
 import { parseInsomniaV4 } from '@/lib/importers/insomniaV4';
 import { persistImportResult } from '@/lib/importers/persist';
 import { useCollectionStore } from '@/stores/collectionStore';
@@ -42,7 +43,13 @@ export function ImportWizard({ isOpen, onClose }: ImportWizardProps): React.Reac
       const path = typeof selected === 'string' ? selected : selected[0];
       const text = await readTextFile(path);
 
-      const parsed = vendor === 'postman' ? parsePostmanV21(text) : parseInsomniaV4(text);
+      let parsed: ImportResult;
+      if (vendor === 'postman') {
+        const raw = JSON.parse(text) as Record<string, unknown>;
+        parsed = isPostmanV1(raw) ? parsePostmanV1(text) : parsePostmanV21(text);
+      } else {
+        parsed = parseInsomniaV4(text);
+      }
       setResult(parsed);
       setStep('preview');
     } catch (err) {

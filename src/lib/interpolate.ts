@@ -22,7 +22,7 @@ export function unresolvedTokens(template: string, variables: KeyValuePair[]): s
 
     while ((match = regex.exec(template)) !== null) {
         const key = match[1];
-        const resolved = variables.some((v) => v.key === key && v.enabled);
+        const resolved = variables.some((v) => v.key === key && v.enabled && v.value !== '');
         if (!resolved) {
             unresolved.add(key);
         }
