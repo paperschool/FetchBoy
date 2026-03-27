@@ -18,7 +18,6 @@ use super::url_matching::match_url;
 
 #[derive(Clone)]
 pub struct InterceptHandler {
-    emit_fn: EmitFn,
     paused_emit_fn: PausedEmitFn,
     request_emit_fn: RequestEmitFn,
     response_emit_fn: ResponseEmitFn,
@@ -36,7 +35,6 @@ pub struct InterceptHandler {
 
 impl InterceptHandler {
     pub(crate) fn new(
-        emit_fn: EmitFn,
         paused_emit_fn: PausedEmitFn,
         request_emit_fn: RequestEmitFn,
         response_emit_fn: ResponseEmitFn,
@@ -47,7 +45,6 @@ impl InterceptHandler {
         pause_timeout: PauseTimeoutRef,
     ) -> Self {
         Self {
-            emit_fn,
             paused_emit_fn,
             request_emit_fn,
             response_emit_fn,
@@ -124,7 +121,6 @@ impl HttpHandler for InterceptHandler {
             started: std::time::Instant::now(),
         });
 
-        let emit_fn = Arc::clone(&self.emit_fn);
         let request_emit_fn = Arc::clone(&self.request_emit_fn);
         let response_emit_fn_for_block = Arc::clone(&self.response_emit_fn);
         let mapping_emit_fn_for_remap = Arc::clone(&self.mapping_emit_fn);
@@ -255,23 +251,6 @@ impl HttpHandler for InterceptHandler {
                     is_blocked: Some(true),
                 });
 
-                let event = InterceptEvent {
-                    id,
-                    timestamp,
-                    method,
-                    host,
-                    path,
-                    status_code: Some(block_status),
-                    content_type: Some("text/plain".to_string()),
-                    size: Some(block_body_bytes.len() as u64),
-                    request_headers,
-                    request_body: captured_body,
-                    response_headers: HashMap::new(),
-                    response_body: block_body_for_resp,
-                    is_blocked: Some(true),
-                };
-                emit_fn(&event);
-
                 let status = hudsucker::hyper::StatusCode::from_u16(block_status)
                     .unwrap_or(hudsucker::hyper::StatusCode::NOT_IMPLEMENTED);
                 let response = Response::builder()
@@ -294,7 +273,6 @@ impl HttpHandler for InterceptHandler {
     ) -> impl std::future::Future<Output = Response<Body>> + Send {
         // Emit an event so failed requests still appear in the intercept table.
         let req_info = self.pending.take();
-        let emit_fn = Arc::clone(&self.emit_fn);
         let response_emit_fn = Arc::clone(&self.response_emit_fn);
         let err_str = err.to_string();
 
@@ -315,22 +293,6 @@ impl HttpHandler for InterceptHandler {
                     is_blocked: None,
                 });
 
-                let event = InterceptEvent {
-                    id: req_info.id,
-                    timestamp: req_info.timestamp,
-                    method: req_info.method,
-                    host: req_info.host,
-                    path: req_info.path,
-                    status_code: None,
-                    content_type: None,
-                    size: None,
-                    request_headers: req_info.request_headers,
-                    request_body,
-                    response_headers: HashMap::new(),
-                    response_body: Some(err_str),
-                    is_blocked: None,
-                };
-                emit_fn(&event);
             }
 
             Response::builder()
@@ -355,7 +317,6 @@ impl HttpHandler for InterceptHandler {
 
         // Take the pending request that was stored by handle_request on this same clone.
         let req_info = self.pending.take();
-        let emit_fn = Arc::clone(&self.emit_fn);
         let paused_emit_fn = Arc::clone(&self.paused_emit_fn);
         let response_emit_fn = Arc::clone(&self.response_emit_fn);
         let mapping_emit_fn = Arc::clone(&self.mapping_emit_fn);
@@ -485,22 +446,6 @@ impl HttpHandler for InterceptHandler {
                         is_blocked: Some(true),
                     });
 
-                    let event = InterceptEvent {
-                        id: ri.id.clone(),
-                        timestamp: ri.timestamp,
-                        method: ri.method.clone(),
-                        host: ri.host.clone(),
-                        path: ri.path.clone(),
-                        status_code: Some(0),
-                        content_type: None,
-                        size: Some(0),
-                        request_headers: ri.request_headers.clone(),
-                        request_body,
-                        response_headers: HashMap::new(),
-                        response_body: Some("Request dropped by user".to_string()),
-                        is_blocked: Some(true),
-                    };
-                    emit_fn(&event);
                 }
                 return Response::builder()
                     .status(502)
@@ -742,23 +687,6 @@ impl HttpHandler for InterceptHandler {
                     is_blocked: None,
                 });
 
-                // Emit combined event for backwards compatibility.
-                let event = InterceptEvent {
-                    id: req_info.id,
-                    timestamp: req_info.timestamp,
-                    method: req_info.method,
-                    host: req_info.host,
-                    path: req_info.path,
-                    status_code: Some(effective_status_code),
-                    content_type: final_content_type,
-                    size: Some(size),
-                    request_headers: req_info.request_headers,
-                    request_body,
-                    response_headers,
-                    response_body,
-                    is_blocked: None,
-                };
-                emit_fn(&event);
             }
 
             res
@@ -773,15 +701,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn emit_fn_is_called_by_handler() {
-        use std::sync::atomic::{AtomicBool, Ordering};
-
-        let called = Arc::new(AtomicBool::new(false));
-        let called_clone = Arc::clone(&called);
-
-        let emit_fn: EmitFn = Arc::new(move |_event| {
-            called_clone.store(true, Ordering::SeqCst);
-        });
+    fn handler_creates_with_no_pending() {
         let paused_emit_fn: PausedEmitFn = Arc::new(|_| {});
         let request_emit_fn: RequestEmitFn = Arc::new(|_| {});
         let response_emit_fn: ResponseEmitFn = Arc::new(|_| {});
@@ -790,7 +710,7 @@ mod tests {
         let mappings: MappingsRef = Arc::new(Mutex::new(Vec::new()));
         let pause_registry: PauseRegistryRef = Arc::new(Mutex::new(HashMap::new()));
         let pause_timeout: PauseTimeoutRef = Arc::new(Mutex::new(30));
-        let handler = InterceptHandler::new(emit_fn, paused_emit_fn, request_emit_fn, response_emit_fn, mapping_emit_fn, breakpoints, mappings, pause_registry, pause_timeout);
+        let handler = InterceptHandler::new(paused_emit_fn, request_emit_fn, response_emit_fn, mapping_emit_fn, breakpoints, mappings, pause_registry, pause_timeout);
         assert!(handler.pending.is_none());
     }
 }

@@ -8,26 +8,6 @@ use tokio::sync::oneshot;
 /// Maximum response body size to capture (1 MB). Larger bodies are skipped.
 pub const MAX_BODY_CAPTURE_BYTES: usize = 1024 * 1024;
 
-// ─── Event payload emitted to the frontend ────────────────────────────────────
-
-#[derive(Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct InterceptEvent {
-    pub id: String,
-    pub timestamp: i64,
-    pub method: String,
-    pub host: String,
-    pub path: String,
-    pub status_code: Option<u16>,
-    pub content_type: Option<String>,
-    pub size: Option<u64>,
-    pub request_headers: HashMap<String, String>,
-    pub request_body: Option<String>,
-    pub response_headers: HashMap<String, String>,
-    pub response_body: Option<String>,
-    pub is_blocked: Option<bool>,
-}
-
 // ─── Split event payloads ──────────────────────────────────────────────────────
 
 /// Request-only event emitted as soon as the proxy intercepts a request (before
@@ -245,7 +225,6 @@ pub struct MappingAppliedEvent {
     pub remapped_url: Option<String>,
 }
 
-pub type EmitFn = Arc<dyn Fn(&InterceptEvent) + Send + Sync + 'static>;
 pub type PausedEmitFn = Arc<dyn Fn(&BreakpointPausedEvent) + Send + Sync + 'static>;
 pub type RequestEmitFn = Arc<dyn Fn(&InterceptRequestEvent) + Send + Sync + 'static>;
 pub type ResponseEmitFn = Arc<dyn Fn(&InterceptResponseEvent) + Send + Sync + 'static>;
@@ -258,66 +237,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn intercept_event_serialises_camelcase_fields() {
-        let mut request_headers = HashMap::new();
-        request_headers.insert("content-type".to_string(), "application/json".to_string());
-        let mut response_headers = HashMap::new();
-        response_headers.insert("x-request-id".to_string(), "abc123".to_string());
-
-        let event = InterceptEvent {
-            id: "test-id".to_string(),
-            timestamp: 1234567890,
-            method: "GET".to_string(),
-            host: "example.com".to_string(),
-            path: "/api/data".to_string(),
-            status_code: Some(200),
-            content_type: Some("application/json".to_string()),
-            size: Some(1024),
-            request_headers,
-            request_body: Some("{\"query\":\"test\"}".to_string()),
-            response_headers,
-            response_body: Some("{\"ok\":true}".to_string()),
-            is_blocked: None,
-        };
-
-        let json = serde_json::to_value(&event).unwrap();
-        assert_eq!(json["statusCode"], 200);
-        assert_eq!(json["contentType"], "application/json");
-        assert_eq!(json["method"], "GET");
-        assert_eq!(json["host"], "example.com");
-        assert_eq!(json["requestHeaders"]["content-type"], "application/json");
-        assert_eq!(json["requestBody"], "{\"query\":\"test\"}");
-        assert_eq!(json["responseHeaders"]["x-request-id"], "abc123");
-        assert_eq!(json["responseBody"], "{\"ok\":true}");
-    }
-
-    #[test]
-    fn intercept_event_optional_fields_are_null_when_none() {
-        let event = InterceptEvent {
-            id: "id".to_string(),
-            timestamp: 0,
-            method: "GET".to_string(),
-            host: "example.com".to_string(),
-            path: "/".to_string(),
-            status_code: None,
-            content_type: None,
-            size: None,
-            request_headers: HashMap::new(),
-            request_body: None,
-            response_headers: HashMap::new(),
-            response_body: None,
-            is_blocked: None,
-        };
-
-        let json = serde_json::to_value(&event).unwrap();
-        assert!(json["statusCode"].is_null());
-        assert!(json["contentType"].is_null());
-        assert!(json["size"].is_null());
-        assert!(json["requestBody"].is_null());
-        assert!(json["responseBody"].is_null());
-    }
-
-    #[test]
     fn is_text_content_type_matches_common_types() {
         assert!(is_text_content_type("application/json"));
         assert!(is_text_content_type("application/json; charset=utf-8"));
@@ -328,28 +247,6 @@ mod tests {
         assert!(!is_text_content_type("image/png"));
         assert!(!is_text_content_type("application/octet-stream"));
         assert!(!is_text_content_type("image/gif"));
-    }
-
-    #[test]
-    fn intercept_event_is_blocked_field_serialises() {
-        let event = InterceptEvent {
-            id: "id".to_string(),
-            timestamp: 0,
-            method: "GET".to_string(),
-            host: "example.com".to_string(),
-            path: "/api/test".to_string(),
-            status_code: Some(501),
-            content_type: Some("text/plain".to_string()),
-            size: Some(0),
-            request_headers: HashMap::new(),
-            request_body: None,
-            response_headers: HashMap::new(),
-            response_body: None,
-            is_blocked: Some(true),
-        };
-        let json = serde_json::to_value(&event).unwrap();
-        assert_eq!(json["isBlocked"], true);
-        assert_eq!(json["statusCode"], 501);
     }
 
     #[test]

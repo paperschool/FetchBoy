@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react'
-import type { InterceptEventPayload, BreakpointPausedPayload, InterceptRequestSplitPayload, InterceptResponseSplitPayload } from '@/types/intercept'
+import type { BreakpointPausedPayload, InterceptRequestSplitPayload, InterceptResponseSplitPayload } from '@/types/intercept'
 import { useInterceptStore } from '@/stores/interceptStore'
 import { useTauriListener } from '@/hooks/useTauriListener'
 import { INTERCEPT_FLUSH_INTERVAL_MS } from '@/lib/constants'
@@ -8,11 +8,10 @@ import { INTERCEPT_FLUSH_INTERVAL_MS } from '@/lib/constants'
 interface EventBuffer {
   pending: InterceptRequestSplitPayload[]
   responses: InterceptResponseSplitPayload[]
-  combined: InterceptEventPayload[]
 }
 
 function createBuffer(): EventBuffer {
-  return { pending: [], responses: [], combined: [] }
+  return { pending: [], responses: [] }
 }
 
 export function useInterceptEvents(): void {
@@ -22,22 +21,15 @@ export function useInterceptEvents(): void {
   useEffect(() => {
     const intervalId = setInterval(() => {
       const buf = bufferRef.current
-      const hasPending = buf.pending.length > 0
-      const hasResponses = buf.responses.length > 0
-      const hasCombined = buf.combined.length > 0
-      if (!hasPending && !hasResponses && !hasCombined) return
+      if (buf.pending.length === 0 && buf.responses.length === 0) return
 
-      // Snapshot and reset buffer before the synchronous store update.
       const pending = buf.pending
       const responses = buf.responses
-      const combined = buf.combined
       bufferRef.current = createBuffer()
 
-      // Apply all buffered mutations in one setState call.
       useInterceptStore.setState((state) => {
         let requests = [...state.requests]
 
-        // 1. Add pending requests (new request-split events).
         for (const p of pending) {
           if (requests.some((r) => r.id === p.id)) continue
           requests.push({
@@ -52,7 +44,6 @@ export function useInterceptEvents(): void {
           })
         }
 
-        // 2. Merge response data into existing pending entries.
         for (const r of responses) {
           const idx = requests.findIndex((req) => req.id === r.id)
           if (idx === -1) continue
@@ -68,17 +59,6 @@ export function useInterceptEvents(): void {
           }
         }
 
-        // 3. Handle combined events (fallback — update or append).
-        for (const c of combined) {
-          const idx = requests.findIndex((req) => req.id === c.id)
-          if (idx !== -1) {
-            requests[idx] = { ...requests[idx], ...c, isPending: false }
-          } else {
-            requests.push(c)
-          }
-        }
-
-        // 4. Trim to max size.
         const max = 5000
         if (requests.length > max) {
           requests = requests.slice(requests.length - max)
@@ -98,10 +78,6 @@ export function useInterceptEvents(): void {
 
   const handleResponseSplit = useCallback((payload: InterceptResponseSplitPayload) => {
     bufferRef.current.responses.push(payload)
-  }, [])
-
-  const handleInterceptRequest = useCallback((payload: InterceptEventPayload) => {
-    bufferRef.current.combined.push(payload)
   }, [])
 
   // Breakpoint paused events are rare and need immediate UI response — no buffering.
@@ -127,6 +103,5 @@ export function useInterceptEvents(): void {
 
   useTauriListener<InterceptRequestSplitPayload>('intercept:request-split', handleRequestSplit)
   useTauriListener<InterceptResponseSplitPayload>('intercept:response-split', handleResponseSplit)
-  useTauriListener<InterceptEventPayload>('intercept:request', handleInterceptRequest)
   useTauriListener<BreakpointPausedPayload>('breakpoint:paused', handleBreakpointPaused)
 }

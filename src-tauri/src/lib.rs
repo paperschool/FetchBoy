@@ -20,7 +20,6 @@ pub struct ProxyState(pub std::sync::Mutex<Option<proxy::ProxyServer>>);
 /// Persistent info needed to restart the proxy after a config change.
 pub struct ProxyRestartInfo {
     pub app_data_dir: PathBuf,
-    pub emit_fn: proxy::EmitFn,
     pub paused_emit_fn: proxy::PausedEmitFn,
     pub request_emit_fn: proxy::RequestEmitFn,
     pub response_emit_fn: proxy::ResponseEmitFn,
@@ -164,7 +163,6 @@ pub fn run() {
             emit_debug("info", "app", "Debug logger initialised");
 
             // Build emit closures using factory for simple cases.
-            let emit_fn: proxy::EmitFn = make_emit(app.handle(), "intercept:request");
             let paused_emit_fn: proxy::PausedEmitFn = make_emit(app.handle(), "breakpoint:paused");
 
             // Request/response/mapping emit fns need additional debug logging.
@@ -215,7 +213,6 @@ pub fn run() {
             // Register restart info so the set_proxy_config command can recreate the proxy.
             app.manage(ProxyRestartInfo {
                 app_data_dir: app_data_dir.clone(),
-                emit_fn: Arc::clone(&emit_fn),
                 paused_emit_fn: Arc::clone(&paused_emit_fn),
                 request_emit_fn: Arc::clone(&request_emit_fn),
                 response_emit_fn: Arc::clone(&response_emit_fn),
@@ -254,7 +251,6 @@ pub fn run() {
                     emit_debug_clone("info", "proxy", "Starting MITM proxy on port 8080");
                     proxy.start(
                         ca_authority,
-                        emit_fn,
                         paused_emit_fn,
                         request_emit_fn,
                         response_emit_fn,

@@ -1,5 +1,13 @@
 # Long Changelog
 
+## [0.15.11] - 2026-03-27
+
+### Refactoring
+
+- **Story 13.11**: Removed legacy dual event emission — deleted `InterceptEvent` struct, `EmitFn` type, and all combined event emissions from proxy handler; removed `intercept:request` listener from frontend
+  - Files changed: `types.rs`, `handler.rs`, `server.rs`, `lib.rs`, `proxy_commands.rs` (Rust); `useInterceptEvents.ts` (frontend)
+  - Breaking changes: no (split events were already the primary path)
+
 ## [0.15.10] - 2026-03-27
 
 ### Improvements

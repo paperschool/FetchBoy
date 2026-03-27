@@ -57,7 +57,6 @@ pub fn set_proxy_config(
         let mut new_proxy = proxy::ProxyServer::new(port);
         new_proxy.start(
             ca_authority,
-            Arc::clone(&restart_info.emit_fn),
             Arc::clone(&restart_info.paused_emit_fn),
             Arc::clone(&restart_info.request_emit_fn),
             Arc::clone(&restart_info.response_emit_fn),
