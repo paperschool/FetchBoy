@@ -9,8 +9,9 @@ interface PostmanUrl { raw?: string; host?: string[]; path?: string[]; query?: P
 interface PostmanBody { mode?: string; raw?: string }
 interface PostmanAuth { type?: string; bearer?: Array<{ key: string; value: string }>; basic?: Array<{ key: string; value: string }>; apikey?: Array<{ key: string; value: string }> }
 interface PostmanRequest { method?: string; url?: PostmanUrl | string; header?: PostmanHeader[]; body?: PostmanBody; auth?: PostmanAuth }
+interface PostmanVariable { key?: string; value?: string; disabled?: boolean }
 interface PostmanItem { name?: string; item?: PostmanItem[]; request?: PostmanRequest }
-interface PostmanCollection { info?: { name?: string; schema?: string }; item?: PostmanItem[]; event?: unknown[]; variable?: unknown[] }
+interface PostmanCollection { info?: { name?: string; schema?: string }; item?: PostmanItem[]; event?: unknown[]; variable?: PostmanVariable[] }
 
 function resolveUrl(url: PostmanUrl | string | undefined): string {
   if (!url) return '';
@@ -67,7 +68,16 @@ export function parsePostmanV21(json: string): ImportResult {
   const requests: ImportResult['requests'] = [];
 
   if (data.event?.length) warnings.push({ field: 'event', message: 'Pre-request scripts and tests are not supported and will be skipped', severity: 'info' });
-  if (data.variable?.length) warnings.push({ field: 'variable', message: 'Collection-level variables are not imported (use FetchBoy environments instead)', severity: 'info' });
+
+  const environments: ImportResult['environments'] = [];
+  if (data.variable?.length) {
+    environments.push({
+      name: `${data.info.name} Variables`,
+      variables: data.variable
+        .filter((v): v is PostmanVariable & { key: string } => !!v.key)
+        .map((v) => ({ key: v.key, value: v.value ?? '', enabled: !v.disabled })),
+    });
+  }
 
   function processItems(items: PostmanItem[], parentFolderId: string | null, sortStart: number): void {
     let sort = sortStart;
@@ -107,9 +117,10 @@ export function parsePostmanV21(json: string): ImportResult {
   processItems(data.item ?? [], null, 0);
 
   return {
-    collection: { id: collectionId, name: data.info.name, description: '' },
+    collection: { id: collectionId, name: data.info.name, description: '', default_environment_id: null },
     folders,
     requests,
     warnings,
+    environments,
   };
 }

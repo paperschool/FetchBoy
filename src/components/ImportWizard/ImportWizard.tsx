@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { X, FileUp, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
+import { X, FileUp, AlertTriangle, CheckCircle2, Loader2, Globe } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { readTextFile } from '@tauri-apps/plugin-fs';
 import { parsePostmanV21 } from '@/lib/importers/postmanV21';
 import { parseInsomniaV4 } from '@/lib/importers/insomniaV4';
 import { persistImportResult } from '@/lib/importers/persist';
 import { useCollectionStore } from '@/stores/collectionStore';
+import { useEnvironmentStore } from '@/stores/environmentStore';
 import type { VendorType, ImportResult } from '@/lib/importers/types';
 
 type WizardStep = 'vendor' | 'file' | 'preview' | 'importing' | 'done' | 'error';
@@ -17,8 +18,9 @@ export function ImportWizard({ isOpen, onClose }: ImportWizardProps): React.Reac
   const [vendor, setVendor] = useState<VendorType>('postman');
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [importedCount, setImportedCount] = useState({ folders: 0, requests: 0 });
-  const store = useCollectionStore();
+  const [importedCount, setImportedCount] = useState({ folders: 0, requests: 0, environments: 0 });
+  const collectionStore = useCollectionStore();
+  const envStore = useEnvironmentStore();
 
   if (!isOpen) return null;
 
@@ -53,11 +55,12 @@ export function ImportWizard({ isOpen, onClose }: ImportWizardProps): React.Reac
     if (!result) return;
     setStep('importing');
     try {
-      const { collection, folders, requests } = await persistImportResult(result);
-      store.addCollection(collection);
-      for (const f of folders) store.addFolder(f);
-      for (const r of requests) store.addRequest(r);
-      setImportedCount({ folders: folders.length, requests: requests.length });
+      const { collection, folders, requests, environments } = await persistImportResult(result);
+      collectionStore.addCollection(collection);
+      for (const f of folders) collectionStore.addFolder(f);
+      for (const r of requests) collectionStore.addRequest(r);
+      for (const env of environments) envStore.addEnvironment(env);
+      setImportedCount({ folders: folders.length, requests: requests.length, environments: environments.length });
       setStep('done');
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -70,9 +73,11 @@ export function ImportWizard({ isOpen, onClose }: ImportWizardProps): React.Reac
     return acc;
   }, {});
 
+  const totalVars = result?.environments.reduce((sum, e) => sum + e.variables.length, 0) ?? 0;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={reset}>
-      <div className="bg-app-surface border-app-subtle w-[28rem] rounded-lg border shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-app-main border border-app-subtle w-[28rem] rounded-lg shadow-xl" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between border-b border-app-subtle px-4 py-3">
           <h2 className="text-sm font-semibold text-app-primary">Import Collection</h2>
@@ -125,6 +130,12 @@ export function ImportWizard({ isOpen, onClose }: ImportWizardProps): React.Reac
                     ))}
                   </div>
                 )}
+                {result.environments.length > 0 && (
+                  <div className="mt-2 flex items-center gap-1.5 border-t border-app-subtle pt-2 text-green-400">
+                    <Globe size={12} />
+                    <span>{result.environments.length} environment(s) with {totalVars} variable(s) will be created</span>
+                  </div>
+                )}
                 {result.warnings.length > 0 && (
                   <div className="mt-2 space-y-1 border-t border-app-subtle pt-2">
                     {result.warnings.map((w, i) => (
@@ -156,6 +167,9 @@ export function ImportWizard({ isOpen, onClose }: ImportWizardProps): React.Reac
               <CheckCircle2 size={24} className="text-green-400" />
               <p className="text-sm font-medium text-app-primary">Import complete!</p>
               <p className="text-xs text-app-muted">{importedCount.folders} folder(s), {importedCount.requests} request(s) imported</p>
+              {importedCount.environments > 0 && (
+                <p className="text-xs text-green-400">{importedCount.environments} environment(s) created and linked</p>
+              )}
               <button onClick={reset} className="mt-2 rounded-md bg-blue-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-blue-700 cursor-pointer">Done</button>
             </div>
           )}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Upload, ChevronRight, FileDown } from 'lucide-react';
+import { Plus, Upload, ChevronRight, FolderInput } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Folder } from 'lucide-react';
 import { CollectionRow } from './CollectionRow';
@@ -108,7 +108,7 @@ export function CollectionTree() {
                             title="Import from Postman/Insomnia"
                             className="text-gray-300 hover:text-white p-1 rounded cursor-pointer"
                         >
-                            <FileDown size={14} />
+                            <FolderInput size={14} />
                         </button>
                         <button
                             onClick={() => void handleImportCollection()}

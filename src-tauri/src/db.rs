@@ -47,5 +47,11 @@ pub fn migrations() -> Vec<Migration> {
             sql: include_str!("../migrations/007_mappings.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 8,
+            description: "add_default_environment_id_to_collections",
+            sql: include_str!("../migrations/008_collection_default_environment.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }

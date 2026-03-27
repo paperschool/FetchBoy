@@ -48,9 +48,19 @@ describe('parseInsomniaV4', () => {
     expect(login?.body_content).toBe('{"user":"test"}');
   });
 
-  it('warns about environments', () => {
-    const result = parseInsomniaV4(GROUPED_EXPORT);
-    expect(result.warnings.some((w) => w.field === 'environment')).toBe(true);
+  it('extracts environments with variables', () => {
+    const withEnvData = JSON.stringify({
+      __export_format: 4,
+      resources: [
+        { _id: 'wrk_1', _type: 'workspace', name: 'API Tests', parentId: null },
+        { _id: 'env_1', _type: 'environment', parentId: 'wrk_1', name: 'Dev', data: { base_url: 'https://dev.api.com', api_key: 'test123' } },
+        { _id: 'req_1', _type: 'request', parentId: 'wrk_1', name: 'Health', method: 'GET', url: 'https://api.example.com/health' },
+      ],
+    });
+    const result = parseInsomniaV4(withEnvData);
+    expect(result.environments).toHaveLength(1);
+    expect(result.environments[0].name).toBe('API Tests - Dev');
+    expect(result.environments[0].variables).toHaveLength(2);
   });
 
   it('throws on invalid JSON', () => {

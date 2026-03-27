@@ -94,6 +94,7 @@ export async function importCollectionFromJson(
     const collection: Collection = {
         ...envelope.collection,
         id: newCollectionId,
+        default_environment_id: envelope.collection.default_environment_id ?? null,
         created_at: now,
         updated_at: now,
     };
@@ -118,8 +119,8 @@ export async function importCollectionFromJson(
 
     // Write to DB inside a transaction — partial failure rolls back cleanly.
     await withTransaction(async () => {
-        await insertOne('collections', ['id', 'name', 'description', 'created_at', 'updated_at'],
-            [collection.id, collection.name, collection.description, collection.created_at, collection.updated_at]);
+        await insertOne('collections', ['id', 'name', 'description', 'default_environment_id', 'created_at', 'updated_at'],
+            [collection.id, collection.name, collection.description, collection.default_environment_id, collection.created_at, collection.updated_at]);
 
         for (const f of folders) {
             await insertOne('folders', ['id', 'collection_id', 'parent_id', 'name', 'sort_order', 'created_at', 'updated_at'],

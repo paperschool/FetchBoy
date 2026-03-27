@@ -18,6 +18,8 @@ import {
 } from "@/lib/importExport";
 import { save, open } from "@tauri-apps/plugin-dialog";
 import { writeTextFile, readTextFile } from "@tauri-apps/plugin-fs";
+import { useEnvironmentStore } from "@/stores/environmentStore";
+import { setActiveEnvironment } from "@/lib/environments";
 import type { EditingType } from "./useCollectionInlineEdit";
 
 interface UseCollectionCrudReturn {
@@ -51,6 +53,16 @@ export function useCollectionCrud(
       }
       updateTabRequestState(activeTabId, buildSnapshotFromSaved(request));
       store.setActiveRequest(id);
+
+      // Auto-switch to the collection's default environment if one is set.
+      const collection = store.collections.find((c) => c.id === request.collection_id);
+      if (collection?.default_environment_id) {
+        const envStore = useEnvironmentStore.getState();
+        if (envStore.activeEnvironmentId !== collection.default_environment_id) {
+          envStore.setActive(collection.default_environment_id);
+          void setActiveEnvironment(collection.default_environment_id);
+        }
+      }
     },
     [store],
   );

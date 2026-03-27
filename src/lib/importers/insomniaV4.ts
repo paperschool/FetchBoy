@@ -16,6 +16,7 @@ interface InsomniaResource {
   headers?: InsomniaHeader[];
   body?: InsomniaBody;
   authentication?: InsomniaAuth;
+  data?: Record<string, string>;
 }
 interface InsomniaExport { resources?: InsomniaResource[]; __export_format?: number }
 
@@ -66,9 +67,12 @@ export function parseInsomniaV4(json: string): ImportResult {
   const requestResources = resources.filter((r) => r._type === 'request');
   const envResources = resources.filter((r) => r._type === 'environment');
 
-  if (envResources.length > 0) {
-    warnings.push({ field: 'environment', message: 'Insomnia environments are not imported (use FetchBoy environments instead)', severity: 'info' });
-  }
+  const environments: ImportResult['environments'] = envResources
+    .filter((e) => e.data && Object.keys(e.data).length > 0)
+    .map((e) => ({
+      name: `${workspace.name ?? 'Imported'} - ${e.name ?? 'Environment'}`,
+      variables: Object.entries(e.data!).map(([key, value]) => ({ key, value: String(value), enabled: true })),
+    }));
 
   const folders: ImportResult['folders'] = requestGroups.map((g, i) => ({
     id: idMap.get(g._id)!,
@@ -101,9 +105,10 @@ export function parseInsomniaV4(json: string): ImportResult {
   });
 
   return {
-    collection: { id: collectionId, name: workspace.name ?? 'Imported Workspace', description: '' },
+    collection: { id: collectionId, name: workspace.name ?? 'Imported Workspace', description: '', default_environment_id: null },
     folders,
     requests,
     warnings,
+    environments,
   };
 }

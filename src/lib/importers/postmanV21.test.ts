@@ -65,7 +65,7 @@ describe('parsePostmanV21', () => {
     expect(() => parsePostmanV21(JSON.stringify({ info: {} }))).toThrow('Missing collection name');
   });
 
-  it('warns about scripts and variables', () => {
+  it('warns about scripts and extracts variables as environment', () => {
     const json = JSON.stringify({
       info: { name: 'Test', schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json' },
       item: [],
@@ -73,8 +73,10 @@ describe('parsePostmanV21', () => {
       variable: [{ key: 'base_url', value: 'https://api.example.com' }],
     });
     const result = parsePostmanV21(json);
-    expect(result.warnings).toHaveLength(2);
+    expect(result.warnings).toHaveLength(1);
     expect(result.warnings[0].field).toBe('event');
-    expect(result.warnings[1].field).toBe('variable');
+    expect(result.environments).toHaveLength(1);
+    expect(result.environments[0].name).toBe('Test Variables');
+    expect(result.environments[0].variables).toEqual([{ key: 'base_url', value: 'https://api.example.com', enabled: true }]);
   });
 });

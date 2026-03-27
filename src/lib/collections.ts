@@ -63,12 +63,13 @@ export async function createCollection(name: string): Promise<Collection> {
         id: crypto.randomUUID(),
         name,
         description: '',
+        default_environment_id: null,
         created_at: now(),
         updated_at: now(),
     };
     await db.execute(
-        'INSERT INTO collections (id, name, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
-        [col.id, col.name, col.description, col.created_at, col.updated_at],
+        'INSERT INTO collections (id, name, description, default_environment_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+        [col.id, col.name, col.description, col.default_environment_id, col.created_at, col.updated_at],
     );
     return col;
 }

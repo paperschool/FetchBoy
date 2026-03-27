@@ -11,6 +11,7 @@ const SAMPLE_COLLECTION: Collection = {
   id: SAMPLE_COLLECTION_ID,
   name: "Getting Started",
   description: "Sample API requests to help you get started with FetchBoy",
+  default_environment_id: null,
   created_at: now(),
   updated_at: now(),
 };
