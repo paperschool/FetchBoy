@@ -17,6 +17,8 @@ interface RawRequest {
     body_content: string;
     auth_type: string;
     auth_config: string;
+    pre_request_script: string;
+    pre_request_script_enabled: number;
     sort_order: number;
     created_at: string;
     updated_at: string;
@@ -30,6 +32,8 @@ function deserializeRequest(raw: RawRequest): Request {
         body_type: raw.body_type as Request['body_type'],
         auth_type: raw.auth_type as Request['auth_type'],
         auth_config: parseJsonField<Record<string, string>>(raw.auth_config, {}),
+        pre_request_script: raw.pre_request_script ?? '',
+        pre_request_script_enabled: Boolean(raw.pre_request_script_enabled ?? 1),
     };
 }
 
@@ -143,7 +147,8 @@ export async function updateFolderOrder(folderId: string, sortOrder: number): Pr
 
 const REQUEST_FIELDS = [
     'id', 'collection_id', 'folder_id', 'name', 'method', 'url', 'headers', 'query_params',
-    'body_type', 'body_content', 'auth_type', 'auth_config', 'sort_order', 'created_at', 'updated_at',
+    'body_type', 'body_content', 'auth_type', 'auth_config', 'pre_request_script',
+    'pre_request_script_enabled', 'sort_order', 'created_at', 'updated_at',
 ] as const;
 
 async function insertRequestRow(req: Request): Promise<void> {
@@ -151,6 +156,7 @@ async function insertRequestRow(req: Request): Promise<void> {
         req.id, req.collection_id, req.folder_id, req.name, req.method, req.url,
         JSON.stringify(req.headers), JSON.stringify(req.query_params),
         req.body_type, req.body_content, req.auth_type, JSON.stringify(req.auth_config),
+        req.pre_request_script, req.pre_request_script_enabled ? 1 : 0,
         req.sort_order, req.created_at, req.updated_at,
     ]);
 }
@@ -175,6 +181,8 @@ export async function createSavedRequest(
         body_content: '',
         auth_type: 'none',
         auth_config: {},
+        pre_request_script: '',
+        pre_request_script_enabled: true,
         sort_order: 0,
         created_at: now(),
         updated_at: now(),
@@ -230,6 +238,8 @@ export async function updateSavedRequest(
             body_content = ?,
             auth_type = ?,
             auth_config = ?,
+            pre_request_script = ?,
+            pre_request_script_enabled = ?,
             sort_order = ?,
             updated_at = ?
          WHERE id = ?`,
@@ -243,6 +253,8 @@ export async function updateSavedRequest(
             data.body_content ?? '',
             data.auth_type ?? 'none',
             JSON.stringify(data.auth_config ?? {}),
+            data.pre_request_script ?? '',
+            (data.pre_request_script_enabled ?? true) ? 1 : 0,
             data.sort_order ?? 0,
             now(),
             id,

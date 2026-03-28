@@ -15,6 +15,8 @@ const makeRequest = (o: Partial<Request> = {}): Request => ({
     body_content: '{"hello":"world"}',
     auth_type: 'none',
     auth_config: {},
+    pre_request_script: '',
+    pre_request_script_enabled: true,
     sort_order: 0,
     created_at: '2026-01-01',
     updated_at: '2026-01-01',

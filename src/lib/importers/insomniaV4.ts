@@ -100,6 +100,8 @@ export function parseInsomniaV4(json: string): ImportResult {
       body_content: r.body?.text ?? '',
       auth_type,
       auth_config,
+      pre_request_script: '',
+      pre_request_script_enabled: true,
       sort_order: i,
     };
   });

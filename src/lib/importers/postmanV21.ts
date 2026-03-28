@@ -10,8 +10,9 @@ interface PostmanBody { mode?: string; raw?: string }
 interface PostmanAuth { type?: string; bearer?: Array<{ key: string; value: string }>; basic?: Array<{ key: string; value: string }>; apikey?: Array<{ key: string; value: string }> }
 interface PostmanRequest { method?: string; url?: PostmanUrl | string; header?: PostmanHeader[]; body?: PostmanBody; auth?: PostmanAuth }
 interface PostmanVariable { key?: string; value?: string; disabled?: boolean }
-interface PostmanItem { name?: string; item?: PostmanItem[]; request?: PostmanRequest }
-interface PostmanCollection { info?: { name?: string; schema?: string }; item?: PostmanItem[]; event?: unknown[]; variable?: PostmanVariable[] }
+interface PostmanEvent { listen?: string; script?: { exec?: string[]; type?: string } }
+interface PostmanItem { name?: string; item?: PostmanItem[]; request?: PostmanRequest; event?: PostmanEvent[] }
+interface PostmanCollection { info?: { name?: string; schema?: string }; item?: PostmanItem[]; event?: PostmanEvent[]; variable?: PostmanVariable[] }
 
 function resolveUrl(url: PostmanUrl | string | undefined): string {
   if (!url) return '';
@@ -67,7 +68,9 @@ export function parsePostmanV21(json: string): ImportResult {
   const folders: ImportResult['folders'] = [];
   const requests: ImportResult['requests'] = [];
 
-  if (data.event?.length) warnings.push({ field: 'event', message: 'Pre-request scripts and tests are not supported and will be skipped', severity: 'info' });
+  if (data.event?.some((e) => e.listen === 'test')) {
+    warnings.push({ field: 'event', message: 'Test scripts are not supported and will be skipped', severity: 'info' });
+  }
 
   const environments: ImportResult['environments'] = [];
   if (data.variable?.length) {
@@ -95,6 +98,9 @@ export function parsePostmanV21(json: string): ImportResult {
           warnings.push({ field: `request.${item.name}`, message: `Body mode "${req.body.mode}" not fully supported — imported as raw`, severity: 'warning' });
         }
 
+        const preRequestEvent = item.event?.find((e) => e.listen === 'prerequest');
+        const preRequestScript = preRequestEvent?.script?.exec?.join('\n') ?? '';
+
         requests.push({
           id: crypto.randomUUID(),
           collection_id: collectionId,
@@ -108,6 +114,8 @@ export function parsePostmanV21(json: string): ImportResult {
           body_content: req.body?.raw ?? '',
           auth_type,
           auth_config,
+          pre_request_script: preRequestScript,
+          pre_request_script_enabled: true,
           sort_order: sort++,
         });
       }

@@ -50,5 +50,7 @@ export function buildSnapshotFromSaved(request: Request): RequestSnapshot {
         activeTab: 'headers',
         isDirty: false,
         timeout: 0,
+        preRequestScript: request.pre_request_script ?? '',
+        preRequestScriptEnabled: request.pre_request_script_enabled ?? true,
     };
 }

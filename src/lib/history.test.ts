@@ -29,6 +29,8 @@ const makeSnapshot = () =>
         body_content: '',
         auth_type: 'none',
         auth_config: {},
+        pre_request_script: '',
+        pre_request_script_enabled: true,
         sort_order: 0,
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z',

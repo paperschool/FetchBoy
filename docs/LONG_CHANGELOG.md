@@ -1,5 +1,16 @@
 # Long Changelog
 
+## [0.17.1] - 2026-03-28
+
+### Features
+
+- **Story 15.1**: Pre-request script system — JavaScript scripts execute in a QuickJS WASM sandbox before each request, with `fb.env`, `fb.request`, and `fb.utils` API surface
+  - New "Scripts" tab in Request Details with Monaco JS editor and enable/disable toggle
+  - Postman v2.1 and v1 importers now extract pre-request scripts instead of skipping them
+  - FetchBoy export/import includes script fields; DB migration adds script columns to requests table
+  - 19 new unit tests for script engine; importer tests for script extraction
+  - Breaking changes: no
+
 ## [0.17.0] - 2026-03-27
 
 ### Epic 14: Bug Fixes, UX Refinements & Collection Import

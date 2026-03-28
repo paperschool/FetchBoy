@@ -2,6 +2,7 @@ import { MonacoEditorField } from "@/components/Editor/MonacoEditorField";
 import { KeyValueRows } from "@/components/RequestBuilder/KeyValueRows";
 import { AuthPanel } from "@/components/AuthPanel/AuthPanel";
 import { TimeoutInput } from "@/components/RequestBuilder/TimeoutInput";
+import { ScriptsTab } from "./components/ScriptsTab";
 import { extractQueryParamsFromUrl } from "@/lib/extractQueryParamsFromUrl";
 import { areQueryParamsEqual, buildUrlFromQueryParams } from "@/lib/urlUtils";
 import type { AuthState, HttpMethod, RequestTab } from "@/stores/requestStore";
@@ -16,6 +17,7 @@ const REQUEST_TABS: Array<{ id: RequestTab; label: string }> = [
   { id: "query", label: "Query Params" },
   { id: "body", label: "Body" },
   { id: "auth", label: "Auth" },
+  { id: "scripts", label: "Scripts" },
   { id: "options", label: "Options" },
 ];
 
@@ -42,6 +44,10 @@ interface RequestDetailsAccordionProps {
   setRequestTimeout: (ms: number) => void;
   setAuth: (a: AuthState) => void;
   setBodyRaw: (raw: string) => void;
+  preRequestScript: string;
+  preRequestScriptEnabled: boolean;
+  onScriptChange: (script: string) => void;
+  onScriptEnabledChange: (enabled: boolean) => void;
   banner?: React.ReactNode;
   activeVariables?: import('@/lib/db').KeyValuePair[];
 }
@@ -68,6 +74,10 @@ export function RequestDetailsAccordion(props: RequestDetailsAccordionProps): Re
     setRequestTimeout,
     setAuth,
     setBodyRaw,
+    preRequestScript,
+    preRequestScriptEnabled,
+    onScriptChange,
+    onScriptEnabledChange,
     banner,
     activeVariables,
   } = props;
@@ -277,6 +287,16 @@ export function RequestDetailsAccordion(props: RequestDetailsAccordionProps): Re
 
           {activeTab === "auth" ? (
             <AuthPanel auth={auth} onAuthChange={setAuth} />
+          ) : null}
+
+          {activeTab === "scripts" ? (
+            <ScriptsTab
+              script={preRequestScript}
+              enabled={preRequestScriptEnabled}
+              onScriptChange={onScriptChange}
+              onEnabledChange={onScriptEnabledChange}
+              editorFontSize={editorFontSize}
+            />
           ) : null}
 
           {activeTab === "options" ? (

@@ -98,9 +98,6 @@ export function parsePostmanV1(json: string): ImportResult {
     const rootIdx = rootOrder.indexOf(req.id);
     const sortOrder = rootIdx >= 0 ? rootIdx : 999;
 
-    if (req.preRequestScript?.trim()) {
-      warnings.push({ field: `request.${req.name}`, message: 'Pre-request script not supported — skipped', severity: 'info' });
-    }
     if (req.tests?.trim()) {
       warnings.push({ field: `request.${req.name}`, message: 'Test script not supported — skipped', severity: 'info' });
     }
@@ -123,6 +120,8 @@ export function parsePostmanV1(json: string): ImportResult {
       body_content: bodyContent,
       auth_type: 'none' as const,
       auth_config: {},
+      pre_request_script: req.preRequestScript?.trim() ?? '',
+      pre_request_script_enabled: true,
       sort_order: sortOrder,
     };
   });

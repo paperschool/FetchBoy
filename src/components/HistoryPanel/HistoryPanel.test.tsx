@@ -38,6 +38,8 @@ const makeSnapshot = (): HistoryEntry['request_snapshot'] => ({
     body_content: '',
     auth_type: 'none',
     auth_config: {},
+    pre_request_script: '',
+    pre_request_script_enabled: true,
     sort_order: 0,
     created_at: '',
     updated_at: '',

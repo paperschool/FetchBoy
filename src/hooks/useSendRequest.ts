@@ -8,9 +8,11 @@ import {
   parseUrlWithFallback,
   buildRequestedUrlForDisplay,
 } from "@/lib/urlUtils";
+import { executePreRequestScript, type ScriptError } from "@/lib/scriptEngine";
 import type { AuthState, HttpMethod } from "@/stores/requestStore";
 import { useTabStore } from "@/stores/tabStore";
 import { useHistoryStore } from "@/stores/historyStore";
+import { useEnvironmentStore } from "@/stores/environmentStore";
 
 interface UseSendRequestParams {
   url: string;
@@ -27,6 +29,8 @@ interface UseSendRequestParams {
   abortControllerRef: React.MutableRefObject<AbortController | null>;
   updateRes: (patch: Record<string, unknown>) => void;
   setRequestDetailsOpen: (open: boolean) => void;
+  preRequestScript: string;
+  preRequestScriptEnabled: boolean;
 }
 
 function invokeWithTimeout<T>(
@@ -70,6 +74,8 @@ export function useSendRequest(params: UseSendRequestParams): {
     abortControllerRef,
     updateRes,
     setRequestDetailsOpen,
+    preRequestScript,
+    preRequestScriptEnabled,
   } = params;
 
   const historyStore = useHistoryStore();
@@ -106,7 +112,7 @@ export function useSendRequest(params: UseSendRequestParams): {
 
     const sendUrl = applyEnv(normalizedUrl);
     const sendUrlBase = stripQueryFromUrl(sendUrl);
-    const sendUrlForRequest = syncQueryParams ? sendUrlBase : sendUrl;
+    let sendUrlForRequest = syncQueryParams ? sendUrlBase : sendUrl;
     if (
       syncQueryParams &&
       !parseUrlWithFallback(sendUrl) &&
@@ -116,15 +122,78 @@ export function useSendRequest(params: UseSendRequestParams): {
         "Sync Query Parameters: using string-based query stripping fallback for an unparseable URL.",
       );
     }
-    const sendHeaders = headers.map((h) => ({
+    let sendHeaders = headers.map((h) => ({
       ...h,
       value: applyEnv(h.value),
     }));
-    const sendQueryParams = queryParams.map((q) => ({
+    let sendQueryParams = queryParams.map((q) => ({
       ...q,
       value: applyEnv(q.value),
     }));
-    const sendBody = { ...body, raw: applyEnv(body.raw) };
+    let sendBody = { ...body, raw: applyEnv(body.raw) };
+
+    // Pre-request script execution
+    if (preRequestScript.trim() && preRequestScriptEnabled) {
+      appendLog("Executing pre-request script...");
+      try {
+        const envStore = useEnvironmentStore.getState();
+        const envVars: Record<string, string> = {};
+        for (const env of envStore.environments) {
+          if (env.is_active) {
+            for (const v of env.variables) {
+              if (v.enabled) envVars[v.key] = v.value;
+            }
+          }
+        }
+
+        const scriptResult = await executePreRequestScript(preRequestScript, {
+          url: sendUrlForRequest,
+          method,
+          headers: sendHeaders,
+          queryParams: sendQueryParams,
+          body: sendBody.raw,
+          envVars,
+        });
+
+        // Apply script modifications
+        sendUrlForRequest = scriptResult.url;
+        sendHeaders = scriptResult.headers;
+        sendQueryParams = scriptResult.queryParams;
+        sendBody = { ...sendBody, raw: scriptResult.body };
+
+        // Persist env mutations
+        if (Object.keys(scriptResult.envMutations).length > 0) {
+          const activeEnv = envStore.environments.find((e) => e.is_active);
+          if (activeEnv) {
+            const updatedVars = [...activeEnv.variables];
+            for (const [key, value] of Object.entries(scriptResult.envMutations)) {
+              const existing = updatedVars.find((v) => v.key === key);
+              if (existing) {
+                existing.value = value;
+              } else {
+                updatedVars.push({ key, value, enabled: true });
+              }
+            }
+            envStore.updateVariables(activeEnv.id, updatedVars);
+          }
+          appendLog(`Pre-request script set ${Object.keys(scriptResult.envMutations).length} env var(s).`);
+        }
+
+        appendLog("Pre-request script completed successfully.");
+      } catch (scriptError) {
+        const err = scriptError as ScriptError;
+        const lineInfo = err.lineNumber ? ` (line ${err.lineNumber})` : '';
+        const message = `Pre-request script error${lineInfo}: ${err.message}`;
+        updateRes({
+          requestError: message,
+          responseData: null,
+          isSending: false,
+        });
+        appendLog(`Script error: ${message}`);
+        return;
+      }
+    }
+
     const requestedUrlForDisplay = buildRequestedUrlForDisplay(
       sendUrlForRequest,
       sendQueryParams,
@@ -160,6 +229,8 @@ export function useSendRequest(params: UseSendRequestParams): {
       body_content: sendBody.raw,
       auth_type: auth.type,
       auth_config: {},
+      pre_request_script: preRequestScript,
+      pre_request_script_enabled: preRequestScriptEnabled,
       sort_order: 0,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -279,6 +350,8 @@ export function useSendRequest(params: UseSendRequestParams): {
     timeout,
     sslVerify,
     activeTabId,
+    preRequestScript,
+    preRequestScriptEnabled,
   ]);
 
   return { handleSendRequest };

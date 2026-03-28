@@ -51,6 +51,8 @@ const makeRequest = (overrides: Partial<Request> = {}): Request => ({
     body_content: '',
     auth_type: 'none',
     auth_config: {},
+    pre_request_script: '',
+    pre_request_script_enabled: true,
     sort_order: 0,
     created_at: '2026-01-01T00:00:00.000Z',
     updated_at: '2026-01-01T00:00:00.000Z',

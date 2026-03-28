@@ -132,7 +132,7 @@ export function useCollectionCrud(
       if (!req) return;
       const { activeTabId, tabs, updateTabRequestState } = useTabStore.getState();
       const activeTabEntry = tabs.find((t) => t.id === activeTabId);
-      const { method, url, headers, queryParams, body, auth } =
+      const { method, url, headers, queryParams, body, auth, preRequestScript, preRequestScriptEnabled } =
         activeTabEntry?.requestState ?? useTabStore.getState().tabs[0].requestState;
 
       const changes = {
@@ -142,6 +142,8 @@ export function useCollectionCrud(
         body_content: body.raw,
         auth_type: auth.type,
         auth_config: authStateToConfig(auth),
+        pre_request_script: preRequestScript,
+        pre_request_script_enabled: preRequestScriptEnabled,
       };
 
       try {

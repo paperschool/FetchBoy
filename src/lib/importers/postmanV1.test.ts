@@ -105,4 +105,20 @@ describe('parsePostmanV1', () => {
   it('throws on missing name', () => {
     expect(() => parsePostmanV1(JSON.stringify({ requests: [{ id: '1' }] }))).toThrow('Missing collection name');
   });
+
+  it('extracts preRequestScript from v1 requests', () => {
+    const withScript = JSON.stringify({
+      name: 'Script API',
+      order: ['r1', 'r2'],
+      requests: [
+        { id: 'r1', name: 'With Script', method: 'GET', url: 'https://api.example.com', headers: '', preRequestScript: 'console.log("hello");' },
+        { id: 'r2', name: 'Without Script', method: 'GET', url: 'https://api.example.com/other', headers: '' },
+      ],
+    });
+    const result = parsePostmanV1(withScript);
+    const withScriptReq = result.requests.find((r) => r.name === 'With Script');
+    const withoutScriptReq = result.requests.find((r) => r.name === 'Without Script');
+    expect(withScriptReq?.pre_request_script).toBe('console.log("hello");');
+    expect(withoutScriptReq?.pre_request_script).toBe('');
+  });
 });

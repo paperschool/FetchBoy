@@ -65,11 +65,11 @@ describe('parsePostmanV21', () => {
     expect(() => parsePostmanV21(JSON.stringify({ info: {} }))).toThrow('Missing collection name');
   });
 
-  it('warns about scripts and extracts variables as environment', () => {
+  it('warns about test scripts and extracts variables as environment', () => {
     const json = JSON.stringify({
       info: { name: 'Test', schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json' },
       item: [],
-      event: [{ listen: 'prerequest' }],
+      event: [{ listen: 'test' }],
       variable: [{ key: 'base_url', value: 'https://api.example.com' }],
     });
     const result = parsePostmanV21(json);
@@ -78,5 +78,37 @@ describe('parsePostmanV21', () => {
     expect(result.environments).toHaveLength(1);
     expect(result.environments[0].name).toBe('Test Variables');
     expect(result.environments[0].variables).toEqual([{ key: 'base_url', value: 'https://api.example.com', enabled: true }]);
+  });
+
+  it('does not warn about pre-request scripts (they are now supported)', () => {
+    const json = JSON.stringify({
+      info: { name: 'Test', schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json' },
+      item: [],
+      event: [{ listen: 'prerequest' }],
+    });
+    const result = parsePostmanV21(json);
+    expect(result.warnings).toHaveLength(0);
+  });
+
+  it('extracts pre-request scripts from item events', () => {
+    const json = JSON.stringify({
+      info: { name: 'Scripts Test', schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json' },
+      item: [
+        {
+          name: 'With Script',
+          request: { method: 'GET', url: 'https://api.example.com' },
+          event: [{ listen: 'prerequest', script: { exec: ['const a = 1;', 'const b = 2;'], type: 'text/javascript' } }],
+        },
+        {
+          name: 'Without Script',
+          request: { method: 'GET', url: 'https://api.example.com/other' },
+        },
+      ],
+    });
+    const result = parsePostmanV21(json);
+    const withScript = result.requests.find((r) => r.name === 'With Script');
+    const withoutScript = result.requests.find((r) => r.name === 'Without Script');
+    expect(withScript?.pre_request_script).toBe('const a = 1;\nconst b = 2;');
+    expect(withoutScript?.pre_request_script).toBe('');
   });
 });

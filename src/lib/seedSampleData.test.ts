@@ -18,6 +18,7 @@ vi.mock('@/lib/db', () => ({
 // ─── Store mocks ──────────────────────────────────────────────────────────────
 
 const addCollectionMock = vi.fn();
+const addFolderMock = vi.fn();
 const addRequestMock = vi.fn();
 let collectionStoreMockCollections: { id: string }[] = [];
 
@@ -26,6 +27,7 @@ vi.mock('@/stores/collectionStore', () => ({
         getState: () => ({
             collections: collectionStoreMockCollections,
             addCollection: addCollectionMock,
+            addFolder: addFolderMock,
             addRequest: addRequestMock,
         }),
     },
@@ -73,13 +75,13 @@ describe('seedSampleDataIfNeeded', () => {
         expect(addCollectionMock).toHaveBeenCalledOnce();
         const addedCollection = addCollectionMock.mock.calls[0][0] as { id: string; name: string };
         expect(addedCollection.id).toBe('sample-getting-started');
-        expect(addedCollection.name).toBe('Getting Started');
+        expect(addedCollection.name).toBe('Example Requests');
     });
 
-    it('creates 6 sample requests', async () => {
+    it('creates 19 sample requests', async () => {
         await seedSampleDataIfNeeded();
 
-        expect(addRequestMock).toHaveBeenCalledTimes(6);
+        expect(addRequestMock).toHaveBeenCalledTimes(19);
     });
 
     it('sets hasSeededSampleData to true after seeding', async () => {
@@ -109,14 +111,14 @@ describe('seedSampleDataIfNeeded', () => {
         expect(insertCollectionCall).toBeDefined();
     });
 
-    it('writes 6 requests to DB when seeding', async () => {
+    it('writes 19 requests to DB when seeding', async () => {
         await seedSampleDataIfNeeded();
 
         const insertRequestCalls = mockDb.execute.mock.calls.filter(
             (call: unknown[]) =>
                 typeof call[0] === 'string' && call[0].includes('INSERT INTO requests'),
         );
-        expect(insertRequestCalls).toHaveLength(6);
+        expect(insertRequestCalls).toHaveLength(19);
     });
 
     it('persists has_seeded_sample_data flag to DB', async () => {

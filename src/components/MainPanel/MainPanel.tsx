@@ -66,7 +66,7 @@ export function MainPanel(): React.ReactElement {
   const { state: req, update: updateReq } = useActiveRequestState();
   const { state: res, update: updateRes } = useActiveResponseState();
 
-  const { method, url, headers, queryParams, body, auth, activeTab, timeout } = req;
+  const { method, url, headers, queryParams, body, auth, activeTab, timeout, preRequestScript, preRequestScriptEnabled } = req;
   const { isSending, responseData, requestError, sentUrl, verboseLogs, requestBodyLanguage, wasCancelled, wasTimedOut, timedOutAfterSec } = res;
 
   const setMethod = (m: HttpMethod): void => updateReq({ method: m, isDirty: true });
@@ -92,6 +92,7 @@ export function MainPanel(): React.ReactElement {
     url, method, headers, queryParams, body, auth,
     syncQueryParams, applyEnv, timeout, sslVerify, activeTabId,
     abortControllerRef, updateRes, setRequestDetailsOpen,
+    preRequestScript, preRequestScriptEnabled,
   });
 
   useSendRequestKeyboardShortcut(handleSendRequest);
@@ -229,6 +230,10 @@ export function MainPanel(): React.ReactElement {
             setRequestTimeout={setRequestTimeout}
             setAuth={setAuth}
             setBodyRaw={setBodyRaw}
+            preRequestScript={preRequestScript}
+            preRequestScriptEnabled={preRequestScriptEnabled}
+            onScriptChange={(script) => updateReq({ preRequestScript: script, isDirty: true })}
+            onScriptEnabledChange={(enabled) => updateReq({ preRequestScriptEnabled: enabled, isDirty: true })}
             activeVariables={activeVariables}
             banner={bannerTabId === activeTabId ? (
               <span className="flex items-center gap-1.5 rounded bg-blue-500/15 px-2 py-0.5 text-xs text-blue-400 font-normal animate-pulse" onClick={(e) => e.preventDefault()}>

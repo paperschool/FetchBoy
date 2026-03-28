@@ -54,8 +54,8 @@ export async function persistImportResult(result: ImportResult): Promise<{
 
   for (const r of requests) {
     await db.execute(
-      'INSERT INTO requests (id, collection_id, folder_id, name, method, url, headers, query_params, body_type, body_content, auth_type, auth_config, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [r.id, r.collection_id, r.folder_id, r.name, r.method, r.url, JSON.stringify(r.headers), JSON.stringify(r.query_params), r.body_type, r.body_content, r.auth_type, JSON.stringify(r.auth_config), r.sort_order, r.created_at, r.updated_at],
+      'INSERT INTO requests (id, collection_id, folder_id, name, method, url, headers, query_params, body_type, body_content, auth_type, auth_config, pre_request_script, pre_request_script_enabled, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [r.id, r.collection_id, r.folder_id, r.name, r.method, r.url, JSON.stringify(r.headers), JSON.stringify(r.query_params), r.body_type, r.body_content, r.auth_type, JSON.stringify(r.auth_config), r.pre_request_script, r.pre_request_script_enabled ? 1 : 0, r.sort_order, r.created_at, r.updated_at],
     );
   }
 

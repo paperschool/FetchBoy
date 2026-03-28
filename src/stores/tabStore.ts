@@ -17,6 +17,8 @@ export interface RequestSnapshot {
     activeTab: RequestTab;
     isDirty: boolean;
     timeout: number; // milliseconds; 0 = no timeout
+    preRequestScript: string;
+    preRequestScriptEnabled: boolean;
 }
 
 export interface ResponseSnapshot {
@@ -42,6 +44,8 @@ export function createDefaultRequestSnapshot(): RequestSnapshot {
         activeTab: 'headers',
         isDirty: false,
         timeout: useUiSettingsStore.getState().requestTimeoutMs,
+        preRequestScript: '',
+        preRequestScriptEnabled: true,
     };
 }
 

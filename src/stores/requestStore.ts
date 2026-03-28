@@ -3,7 +3,7 @@ import { immer } from 'zustand/middleware/immer';
 import type { Request } from '@/lib/db';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS';
-export type RequestTab = 'headers' | 'query' | 'body' | 'auth' | 'options';
+export type RequestTab = 'headers' | 'query' | 'body' | 'auth' | 'options' | 'scripts';
 
 export type AuthState =
     | { type: 'none' }
