@@ -14,4 +14,11 @@ export default defineConfig({
         strictPort: true,
     },
     envPrefix: ['VITE_', 'TAURI_'],
+    // QuickJS WASM must not be bundled by esbuild — let the browser fetch .wasm natively
+    optimizeDeps: {
+        exclude: ['quickjs-emscripten', 'quickjs-emscripten-core',
+            '@jitl/quickjs-wasmfile-release-sync', '@jitl/quickjs-wasmfile-release-asyncify',
+            '@jitl/quickjs-wasmfile-debug-sync', '@jitl/quickjs-wasmfile-debug-asyncify'],
+    },
+    assetsInclude: ['**/*.wasm'],
 });
