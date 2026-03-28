@@ -1,4 +1,5 @@
 import { getQuickJS, type QuickJSContext, type QuickJSHandle } from 'quickjs-emscripten';
+import { sha256 } from 'js-sha256';
 import type { KeyValuePair } from '@/lib/db';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -124,15 +125,13 @@ function injectFbApi(ctx: QuickJSContext, input: ScriptContext): void {
 
     registerUtil(ctx, utils, 'sha256', (strHandle) => {
         const str = ctx.getString(strHandle);
-        const hash = sha256Sync(str);
-        return ctx.newString(hash);
+        return ctx.newString(sha256(str));
     });
 
     registerUtil(ctx, utils, 'hmacSha256', (keyHandle, strHandle) => {
         const key = ctx.getString(keyHandle);
         const str = ctx.getString(strHandle);
-        const hash = hmacSha256Sync(key, str);
-        return ctx.newString(hash);
+        return ctx.newString(sha256.hmac(key, str));
     });
 
     ctx.setProp(fb, 'utils', utils);
@@ -154,21 +153,6 @@ function registerUtil(
     const handle = ctx.newFunction(name, fn);
     ctx.setProp(parent, name, handle);
     handle.dispose();
-}
-
-// ─── Crypto Helpers ──────────────────────────────────────────────────────────
-// Tauri apps run in a webview backed by a real browser engine on desktop,
-// but the jsdom test environment lacks SubtleCrypto. Node's built-in `crypto`
-// module is available in both environments and provides synchronous hashing.
-
-import { createHash, createHmac } from 'crypto';
-
-function sha256Sync(input: string): string {
-    return createHash('sha256').update(input).digest('hex');
-}
-
-function hmacSha256Sync(key: string, message: string): string {
-    return createHmac('sha256', key).update(message).digest('hex');
 }
 
 // ─── Extract Results from Sandbox ────────────────────────────────────────────
