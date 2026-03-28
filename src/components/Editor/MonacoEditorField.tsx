@@ -1,7 +1,7 @@
 import Editor from '@monaco-editor/react';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 
-type EditorLanguage = 'json' | 'html' | 'xml' | 'plaintext';
+type EditorLanguage = 'json' | 'html' | 'xml' | 'plaintext' | 'javascript';
 
 interface MonacoEditorFieldProps {
   value: string;
