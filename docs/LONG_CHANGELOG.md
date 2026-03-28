@@ -1,6 +1,17 @@
 # Long Changelog
 
-## [0.17.0] - 2026-03-28
+## [0.17.1] - 2026-03-28
+
+### Features
+
+- **Story 15.1**: Pre-request script system — JavaScript scripts execute in a QuickJS WASM sandbox before each request, with `fb.env`, `fb.request`, and `fb.utils` API surface
+  - New "Scripts" tab in Request Details with Monaco JS editor and enable/disable toggle
+  - Postman v2.1 and v1 importers now extract pre-request scripts instead of skipping them
+  - FetchBoy export/import includes script fields; DB migration adds script columns to requests table
+  - 19 new unit tests for script engine; importer tests for script extraction
+  - Breaking changes: no
+
+## [0.17.0] - 2026-03-27
 
 ### Epic 14: Bug Fixes, UX Refinements & Collection Import
 
@@ -9,13 +20,6 @@
 - Environment variable validation indicators (green/red ring) on header and query param inputs, plus clickable quick-add for unresolved `{{variables}}` from the URL bar
 - "Open in Fetch" info banner in Request Details, cursor-pointer audit across intercept sidebar, and reorganised collection header actions
 - DB migration: `default_environment_id` on collections — auto-switches environment when loading requests from a bound collection
-
-### Epic 15: Pre-request Scripts
-
-- QuickJS WASM sandbox executes JavaScript before each request with `fb.env`, `fb.request`, and `fb.utils` API (uuid, timestamps, base64, sha256, hmacSha256)
-- New "Scripts" tab in Request Details with Monaco JS editor, enable/disable toggle, and inline API cheatsheet
-- Postman v2.1/v1 importers now extract pre-request scripts; FetchBoy export/import round-trips script fields
-- DB migration `009`: `pre_request_script` and `pre_request_script_enabled` columns on requests
 
 ## [0.16.0] - 2026-03-27
 
