@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.17.7] - 2026-03-31
+
+- feat: small tweaks and visual improvements to splash screen.
+
 ## [0.17.6] - 2026-03-30
 
 - feat: Breakpoint editor shows contextual match type descriptions that update when switching between exact, partial, wildcard, and regex modes

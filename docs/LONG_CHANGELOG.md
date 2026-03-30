@@ -1,5 +1,9 @@
 # Long Changelog
 
+## [0.17.7] - 2026-03-31
+
+- feat: small tweaks and visual improvements to splash screen.
+
 ## [0.17.6] - 2026-03-30
 
 ### Improvements
