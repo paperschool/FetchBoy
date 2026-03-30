@@ -106,6 +106,27 @@ describe('exportCollectionToJson', () => {
         expect(parsed.environment!.variables).toHaveLength(1);
     });
 
+    it('redacts secret variable values on export', async () => {
+        const { exportCollectionToJson } = await import('./importExport');
+        const col = makeCollection({ default_environment_id: 'env-1' });
+        const env = makeEnvironment({
+            id: 'env-1',
+            variables: [
+                { key: 'BASE_URL', value: 'https://api.example.com', enabled: true },
+                { key: 'API_KEY', value: 'super-secret-key', enabled: true, secret: true },
+            ],
+        });
+        const store = { collections: [col], folders: [], requests: [] };
+
+        const json = exportCollectionToJson('col-original-id', store, [env]);
+        const parsed = JSON.parse(json) as { environment: { variables: Array<{ key: string; value: string; secret?: boolean }> } };
+
+        const baseUrl = parsed.environment.variables.find((v) => v.key === 'BASE_URL')!;
+        const apiKey = parsed.environment.variables.find((v) => v.key === 'API_KEY')!;
+        expect(baseUrl.value).toBe('https://api.example.com');
+        expect(apiKey.value).toBe('<REDACTED>');
+    });
+
     it('omits environment when collection has no default environment', async () => {
         const { exportCollectionToJson } = await import('./importExport');
         const col = makeCollection({ default_environment_id: null });

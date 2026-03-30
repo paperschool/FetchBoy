@@ -117,7 +117,7 @@ Requests are stored as a **flat array**. Each request belongs to the collection 
 | `folder_id`                  | string/null | `null` if at collection root, or the `id` of the containing folder. |
 | `name`                       | string  | Display name of the request.                                     |
 | `method`                     | string  | HTTP method: `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`. |
-| `url`                        | string  | The full URL. May contain `{{variable}}` placeholders.           |
+| `url`                        | string  | The request URL. May contain `{{variable}}` placeholders. FetchBoy automatically prepends `https://` if no protocol is present after variable interpolation, so omit the protocol from URLs that use a `{{base_url}}` variable whose value already includes one. |
 | `headers`                    | array   | Request headers (see KeyValuePair below).                        |
 | `query_params`               | array   | Query parameters (see KeyValuePair below).                       |
 | `body_type`                  | string  | One of: `none`, `raw`, `json`, `form-data`, `urlencoded`.       |
@@ -191,7 +191,7 @@ If any request uses `{{variable}}` placeholders in its URL, headers, or body, in
   "environment": {
     "variables": [
       { "key": "base_url", "value": "https://api.example.com", "enabled": true },
-      { "key": "auth_token", "value": "changeme", "enabled": true }
+      { "key": "auth_token", "value": "changeme", "enabled": true, "secret": true }
     ]
   }
 }
@@ -208,8 +208,9 @@ Each variable:
 | `key`     | string  | The variable name (referenced as `{{key}}` in requests). |
 | `value`   | string  | The default value for this variable.                 |
 | `enabled` | boolean | `true` to activate the variable, `false` to skip it. |
+| `secret`  | boolean | Optional. If `true`, the value is treated as sensitive — it is masked in the UI and replaced with `<REDACTED>` on export. Use this for API keys, tokens, and passwords. |
 
-Only include variables that are actually referenced by requests in the collection. Do not include empty or unused variables.
+Only include variables that are actually referenced by requests in the collection. Do not include empty or unused variables. Mark credentials and tokens as `secret: true`.
 
 ---
 
@@ -318,7 +319,7 @@ Only include variables that are actually referenced by requests in the collectio
   "environment": {
     "variables": [
       { "key": "base_url", "value": "https://api.example.com", "enabled": true },
-      { "key": "auth_token", "value": "changeme", "enabled": true }
+      { "key": "auth_token", "value": "changeme", "enabled": true, "secret": true }
     ]
   }
 }
@@ -334,7 +335,8 @@ Only include variables that are actually referenced by requests in the collectio
 6. All `parent_id` references in folders must match another folder's `id` (or be `null` for top-level folders).
 7. Use `{{variable}}` syntax in URLs, headers, and body content for values the user should configure per-environment.
 8. If any `{{variable}}` placeholders are used, include an `environment` object with all referenced variables and sensible default values.
-9. Organise related requests into folders for clarity.
-10. Include realistic placeholder values rather than empty strings.
-11. Set appropriate `Content-Type` headers when a body is present.
-12. Use `sort_order` to control the display order of folders and requests (0-based, sequential within their parent).
+9. FetchBoy automatically prepends `https://` when no protocol is present after variable interpolation. Do not hardcode a protocol in request URLs when a `{{base_url}}` variable already includes one — write `{{base_url}}/path`, not `https://{{base_url}}/path`. Only include an explicit protocol for non-HTTPS endpoints (e.g. `http://`).
+10. Organise related requests into folders for clarity.
+11. Include realistic placeholder values rather than empty strings.
+12. Set appropriate `Content-Type` headers when a body is present.
+13. Use `sort_order` to control the display order of folders and requests (0-based, sequential within their parent).

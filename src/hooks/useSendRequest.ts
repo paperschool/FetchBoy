@@ -105,12 +105,11 @@ export function useSendRequest(params: UseSendRequestParams): {
       return;
     }
 
-    const normalizedUrl = /^https?:\/\//i.test(rawUrl)
-      ? rawUrl
-      : `https://${rawUrl}`;
-    appendLog(`Normalized URL: ${normalizedUrl}`);
-
-    const sendUrl = applyEnv(normalizedUrl);
+    const interpolatedUrl = applyEnv(rawUrl);
+    const sendUrl = /^https?:\/\//i.test(interpolatedUrl)
+      ? interpolatedUrl
+      : `https://${interpolatedUrl}`;
+    appendLog(`Resolved URL: ${sendUrl}`);
     const sendUrlBase = stripQueryFromUrl(sendUrl);
     let sendUrlForRequest = syncQueryParams ? sendUrlBase : sendUrl;
     if (

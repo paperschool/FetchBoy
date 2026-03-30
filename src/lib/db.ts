@@ -8,6 +8,7 @@ export interface KeyValuePair {
     key: string;
     value: string;
     enabled: boolean;
+    secret?: boolean;
 }
 
 export interface Collection {
