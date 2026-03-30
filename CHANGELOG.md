@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.18.1] - 2026-03-31
+
+- feat: Free-drag node canvas with pan, zoom, node creation, inline label editing, selection, deletion, and type-specific visual styling
+
 ## [0.18.0] - 2026-03-31
 
 - feat: Stitch tab — node-based request chain builder foundation with SQLite data model (chains, nodes, connections), Zustand store, and placeholder canvas view

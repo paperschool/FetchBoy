@@ -1,5 +1,17 @@
 # Long Changelog
 
+## [0.18.1] - 2026-03-31
+
+### Story 15.2: Node Canvas with Drag & Positioning
+
+- CSS transform-based canvas with pan (click-drag) and zoom (scroll wheel, 25%–200%) for spatial node arrangement
+- `StitchNode` component with type-specific icons and colour coding, inline label editing (double-click), selection highlight, and port indicators
+- Node dragging via pointer events on title bar with zoom-corrected position math and SQLite persistence
+- `AddNodeMenu` dropdown for creating Request, JS Snippet, JSON Object, and Sleep nodes with auto-incremented labels
+- Node deletion via right-click context menu or Delete/Backspace key
+- Canvas toolbar with Add Node button and zoom in/out/reset controls
+- Chain sidebar now loads and highlights the active chain; selecting a chain renders its canvas
+
 ## [0.18.0] - 2026-03-31
 
 ### Story 15.1: Stitch Data Model, Store & Tab Shell
