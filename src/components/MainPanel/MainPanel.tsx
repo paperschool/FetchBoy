@@ -143,6 +143,7 @@ export function MainPanel(): React.ReactElement {
         method, url, headers, query_params: queryParams,
         body_type: body.mode, body_content: body.raw,
         auth_type: auth.type, auth_config: authStateToConfig(auth),
+        pre_request_script: '', pre_request_script_enabled: true,
         sort_order: 0,
       });
       collectionStore.addRequest(saved);
