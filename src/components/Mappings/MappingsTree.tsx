@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Route, FolderPlus, Plus } from 'lucide-react';
+import { Route, FolderInput, FolderPlus, Plus } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { MappingFolderRow } from './MappingFolderRow';
 import { MappingRow } from './MappingRow';
@@ -86,17 +86,29 @@ export function MappingsTree() {
 
     const header = (
         <div className="flex items-center justify-between mb-2 px-1">
-            <span className="text-app-muted text-xs font-semibold uppercase tracking-widest">Mappings</span>
             <div className="flex items-center gap-1">
-                <button onClick={() => handleAddMapping(null)} aria-label="New Mapping" title="New Mapping"
-                    className="text-gray-300 hover:text-white p-1 rounded cursor-pointer">
-                    <Plus size={16} />
+                <span className="text-app-muted text-[10px]">Create:</span>
+                <button onClick={() => handleAddMapping(null)} aria-label="New Mapping" title="New mapping"
+                    className="text-green-400 hover:text-green-300 p-1 rounded cursor-pointer">
+                    <Plus size={14} />
                 </button>
-                <button onClick={handleStartCreateFolder} aria-label="Add Folder" title="Add Folder"
-                    className="text-gray-300 hover:text-white p-1 rounded cursor-pointer">
-                    <FolderPlus size={16} />
+                <button onClick={handleStartCreateFolder} aria-label="Add Folder" title="New folder"
+                    className="text-green-400 hover:text-green-300 p-1 rounded cursor-pointer">
+                    <FolderPlus size={14} />
                 </button>
             </div>
+            {/* TODO: Import mappings — uncomment when import is implemented
+            <div className="flex items-center gap-1">
+                <span className="text-app-muted text-[10px]">Import:</span>
+                <button
+                    aria-label="Import mappings"
+                    title="Import mappings"
+                    className="text-orange-400 hover:text-orange-300 p-1 rounded cursor-pointer"
+                >
+                    <FolderInput size={14} />
+                </button>
+            </div>
+            */}
         </div>
     );
 

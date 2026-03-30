@@ -13,6 +13,17 @@ import type { AuthState, HttpMethod } from "@/stores/requestStore";
 import { useTabStore } from "@/stores/tabStore";
 import { useHistoryStore } from "@/stores/historyStore";
 import { useEnvironmentStore } from "@/stores/environmentStore";
+import { useDebugStore } from "@/stores/debugStore";
+
+function emitDebug(level: 'info' | 'warn' | 'error', message: string): void {
+  useDebugStore.getState().addInternalEvent({
+    id: `fetch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    timestamp: Date.now(),
+    level,
+    source: 'fetch',
+    message,
+  });
+}
 
 interface UseSendRequestParams {
   url: string;
@@ -92,6 +103,7 @@ export function useSendRequest(params: UseSendRequestParams): {
 
   const handleSendRequest = useCallback(async () => {
     const rawUrl = url.trim();
+    emitDebug('info', `${method} ${rawUrl || '<empty>'} — send initiated`);
     appendLog(
       `Send clicked with method=${method}, rawUrl=${rawUrl || "<empty>"}`,
     );
@@ -101,6 +113,7 @@ export function useSendRequest(params: UseSendRequestParams): {
         requestError: "Please enter a URL first.",
         responseData: null,
       });
+      emitDebug('warn', 'Send aborted — URL is empty');
       appendLog("Validation failed: URL is empty.");
       return;
     }
@@ -109,6 +122,7 @@ export function useSendRequest(params: UseSendRequestParams): {
     const sendUrl = /^https?:\/\//i.test(interpolatedUrl)
       ? interpolatedUrl
       : `https://${interpolatedUrl}`;
+    emitDebug('info', `Resolved URL: ${sendUrl}`);
     appendLog(`Resolved URL: ${sendUrl}`);
     const sendUrlBase = stripQueryFromUrl(sendUrl);
     let sendUrlForRequest = syncQueryParams ? sendUrlBase : sendUrl;
@@ -131,8 +145,17 @@ export function useSendRequest(params: UseSendRequestParams): {
     }));
     let sendBody = { ...body, raw: applyEnv(body.raw) };
 
+    // Interpolate environment variables in auth fields.
+    const sendAuth = { ...auth } as Record<string, string>;
+    for (const key of Object.keys(sendAuth)) {
+      if (typeof sendAuth[key] === 'string') {
+        sendAuth[key] = applyEnv(sendAuth[key]);
+      }
+    };
+
     // Pre-request script execution
     if (preRequestScript.trim() && preRequestScriptEnabled) {
+      emitDebug('info', 'Executing pre-request script');
       appendLog("Executing pre-request script...");
       try {
         const envStore = useEnvironmentStore.getState();
@@ -178,11 +201,13 @@ export function useSendRequest(params: UseSendRequestParams): {
           appendLog(`Pre-request script set ${Object.keys(scriptResult.envMutations).length} env var(s).`);
         }
 
+        emitDebug('info', 'Pre-request script completed');
         appendLog("Pre-request script completed successfully.");
       } catch (scriptError) {
         const err = scriptError as ScriptError;
         const lineInfo = err.lineNumber ? ` (line ${err.lineNumber})` : '';
         const message = `Pre-request script error${lineInfo}: ${err.message}`;
+        emitDebug('error', message);
         updateRes({
           requestError: message,
           responseData: null,
@@ -196,7 +221,7 @@ export function useSendRequest(params: UseSendRequestParams): {
     const requestedUrlForDisplay = buildRequestedUrlForDisplay(
       sendUrlForRequest,
       sendQueryParams,
-      auth,
+      sendAuth as AuthState,
     );
 
     const controller = new AbortController();
@@ -242,6 +267,7 @@ export function useSendRequest(params: UseSendRequestParams): {
     });
 
     try {
+      emitDebug('info', `${method} ${sendUrlForRequest} — sending (timeout: ${timeout}ms, auth: ${auth.type})`);
       appendLog("Invoking Rust command: send_request");
       const invokePromise = invoke<ResponseData>("send_request", {
         request: {
@@ -250,7 +276,7 @@ export function useSendRequest(params: UseSendRequestParams): {
           headers: sendHeaders,
           queryParams: sendQueryParams,
           body: sendBody,
-          auth,
+          auth: sendAuth,
           timeoutMs: timeout,
           sslVerify: sslVerify,
           requestId: activeTabId,
@@ -262,6 +288,7 @@ export function useSendRequest(params: UseSendRequestParams): {
           : invokePromise;
       const response = await Promise.race([timedInvoke, abortPromise]);
 
+      emitDebug('info', `${method} ${sendUrlForRequest} — ${response.status} in ${response.responseTimeMs}ms (${response.responseSizeBytes} bytes)`);
       appendLog(
         `Rust response received: status=${response.status}, time=${response.responseTimeMs}ms, size=${response.responseSizeBytes}bytes`,
       );
@@ -279,6 +306,7 @@ export function useSendRequest(params: UseSendRequestParams): {
       appendLog("History persisted for successful response.");
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
+        emitDebug('warn', `${method} ${sendUrlForRequest} — cancelled by user`);
         updateRes({
           isSending: false,
           wasCancelled: true,
@@ -291,6 +319,7 @@ export function useSendRequest(params: UseSendRequestParams): {
 
       const reason = extractErrorReason(error);
       if (reason === "__CANCELLED__") {
+        emitDebug('warn', `${method} ${sendUrlForRequest} — cancelled by user`);
         updateRes({
           isSending: false,
           wasCancelled: true,
@@ -303,6 +332,7 @@ export function useSendRequest(params: UseSendRequestParams): {
 
       if (reason === "__TIMEOUT__") {
         const sec = timeout > 0 ? timeout / 1000 : 0;
+        emitDebug('warn', `${method} ${sendUrlForRequest} — timed out after ${sec}s`);
         updateRes({
           isSending: false,
           wasTimedOut: true,
@@ -315,6 +345,7 @@ export function useSendRequest(params: UseSendRequestParams): {
       }
 
       const message = `Request failed: ${reason}`;
+      emitDebug('error', `${method} ${sendUrlForRequest} — ${reason}`);
       updateRes({ requestError: message });
       appendLog(`Send failed: ${reason}`);
 

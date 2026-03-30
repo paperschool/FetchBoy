@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.17.5] - 2026-03-30
+
+- feat: GitHub release version check — "Check for Updates" button fetches latest release and shows green/white state; WhatsNewModal displays an update banner with download link when a newer version exists
+- fix: Auth environment variable interpolation — bearer tokens, basic credentials, and API keys containing `{{variables}}` are now resolved before sending, fixing 401s with environment-sourced credentials
+- feat: Fetch request debug events — send initiation, URL resolution, pre-request script execution, response status/timing, cancellations, timeouts, and errors now appear in the Debug tab
+- refactor: Breakpoints and mappings tree headers restyled to match fetch tab — green "Create:" icons at 14px with consistent spacing; import buttons commented out pending implementation
+- feat: Collection generation prompt updated with API reference requirement, protocol handling guidance, and secret variable documentation
+
 ## [0.17.4] - 2026-03-30
 
 - feat: Secret environment variables — new checkbox per variable that masks the value in the UI and replaces it with `<REDACTED>` on collection and environment export

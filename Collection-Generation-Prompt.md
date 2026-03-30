@@ -1,6 +1,10 @@
 # FetchBoy Collection Generation Prompt
 
+IMPORTANT: If the user has not provided an API reference, documentation URL, or OpenAPI/Swagger spec alongside their request, ask them for one before generating.
+
 You are generating an API collection for FetchBoy, a desktop API client. Output a single valid JSON object that conforms exactly to the FetchBoy native collection format described below. The user will save this JSON as a `.fetchboy` file and import it directly into the application, so strict adherence to the schema is required.
+
+A reference ensures accurate endpoints, methods, parameters, and auth requirements. If the user explicitly declines, generate based on your best knowledge but note that endpoints may need verification.
 
 ## Top-Level Envelope
 
@@ -9,21 +13,29 @@ You are generating an API collection for FetchBoy, a desktop API client. Output 
   "fetch_boy_version": "1.0",
   "type": "collection",
   "exported_at": "2025-01-01T00:00:00.000Z",
-  "collection": { /* Collection object */ },
-  "folders": [ /* Folder objects */ ],
-  "requests": [ /* Request objects */ ],
-  "environment": { /* optional — Environment object */ }
+  "collection": {
+    /* Collection object */
+  },
+  "folders": [
+    /* Folder objects */
+  ],
+  "requests": [
+    /* Request objects */
+  ],
+  "environment": {
+    /* optional — Environment object */
+  }
 }
 ```
 
-| Field               | Type   | Description                                                      |
-|---------------------|--------|------------------------------------------------------------------|
-| `fetch_boy_version` | string | Must be `"1.0"`.                                                |
-| `type`              | string | Must be `"collection"`.                                         |
-| `exported_at`       | string | ISO 8601 timestamp of when the file was generated.              |
-| `collection`        | object | The collection metadata.                                        |
-| `folders`           | array  | All folders in the collection (flat list, hierarchy via `parent_id`). |
-| `requests`          | array  | All requests in the collection (flat list, placed via `folder_id`).  |
+| Field               | Type   | Description                                                                                                                    |
+| ------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| `fetch_boy_version` | string | Must be `"1.0"`.                                                                                                               |
+| `type`              | string | Must be `"collection"`.                                                                                                        |
+| `exported_at`       | string | ISO 8601 timestamp of when the file was generated.                                                                             |
+| `collection`        | object | The collection metadata.                                                                                                       |
+| `folders`           | array  | All folders in the collection (flat list, hierarchy via `parent_id`).                                                          |
+| `requests`          | array  | All requests in the collection (flat list, placed via `folder_id`).                                                            |
 | `environment`       | object | Optional. If any `{{variable}}` placeholders are used, include this with the variables so an environment is created on import. |
 
 ---
@@ -41,14 +53,14 @@ You are generating an API collection for FetchBoy, a desktop API client. Output 
 }
 ```
 
-| Field                    | Type        | Description                                         |
-|--------------------------|-------------|-----------------------------------------------------|
+| Field                    | Type        | Description                                                                               |
+| ------------------------ | ----------- | ----------------------------------------------------------------------------------------- |
 | `id`                     | string      | Unique identifier. Use any unique string (e.g. UUID or slug). IDs are remapped on import. |
-| `name`                   | string      | Display name of the collection.                     |
-| `description`            | string      | Optional description. Use `""` if none.             |
-| `default_environment_id` | string/null | Set to `null`. Environments are managed separately. |
-| `created_at`             | string      | ISO 8601 timestamp.                                 |
-| `updated_at`             | string      | ISO 8601 timestamp.                                 |
+| `name`                   | string      | Display name of the collection.                                                           |
+| `description`            | string      | Optional description. Use `""` if none.                                                   |
+| `default_environment_id` | string/null | Set to `null`. Environments are managed separately.                                       |
+| `created_at`             | string      | ISO 8601 timestamp.                                                                       |
+| `updated_at`             | string      | ISO 8601 timestamp.                                                                       |
 
 ---
 
@@ -68,15 +80,15 @@ Folders are stored as a **flat array**. Nesting is expressed via `parent_id` ref
 }
 ```
 
-| Field           | Type        | Description                                                   |
-|-----------------|-------------|---------------------------------------------------------------|
-| `id`            | string      | Unique identifier. Remapped on import.                       |
-| `collection_id` | string      | Must match the collection's `id`.                            |
+| Field           | Type        | Description                                                     |
+| --------------- | ----------- | --------------------------------------------------------------- |
+| `id`            | string      | Unique identifier. Remapped on import.                          |
+| `collection_id` | string      | Must match the collection's `id`.                               |
 | `parent_id`     | string/null | `null` for top-level folders, or the `id` of the parent folder. |
-| `name`          | string      | Display name of the folder.                                  |
-| `sort_order`    | number      | Integer controlling display order within the parent (0-based). |
-| `created_at`    | string      | ISO 8601 timestamp.                                          |
-| `updated_at`    | string      | ISO 8601 timestamp.                                          |
+| `name`          | string      | Display name of the folder.                                     |
+| `sort_order`    | number      | Integer controlling display order within the parent (0-based).  |
+| `created_at`    | string      | ISO 8601 timestamp.                                             |
+| `updated_at`    | string      | ISO 8601 timestamp.                                             |
 
 ---
 
@@ -110,25 +122,25 @@ Requests are stored as a **flat array**. Each request belongs to the collection 
 
 ### Field Reference
 
-| Field                        | Type    | Description                                                       |
-|------------------------------|---------|-------------------------------------------------------------------|
-| `id`                         | string  | Unique identifier. Remapped on import.                           |
-| `collection_id`              | string  | Must match the collection's `id`.                                |
-| `folder_id`                  | string/null | `null` if at collection root, or the `id` of the containing folder. |
-| `name`                       | string  | Display name of the request.                                     |
-| `method`                     | string  | HTTP method: `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`. |
-| `url`                        | string  | The request URL. May contain `{{variable}}` placeholders. FetchBoy automatically prepends `https://` if no protocol is present after variable interpolation, so omit the protocol from URLs that use a `{{base_url}}` variable whose value already includes one. |
-| `headers`                    | array   | Request headers (see KeyValuePair below).                        |
-| `query_params`               | array   | Query parameters (see KeyValuePair below).                       |
-| `body_type`                  | string  | One of: `none`, `raw`, `json`, `form-data`, `urlencoded`.       |
-| `body_content`               | string  | The body as a string. For JSON bodies, this is the JSON string.  |
-| `auth_type`                  | string  | One of: `none`, `bearer`, `basic`, `api-key`.                   |
-| `auth_config`                | object  | Key-value object for auth configuration (see Auth below).        |
-| `pre_request_script`         | string  | JavaScript code to run before the request. Use `""` if none.    |
-| `pre_request_script_enabled` | boolean | Whether the pre-request script is active.                        |
-| `sort_order`                 | number  | Integer controlling display order within the folder (0-based).   |
-| `created_at`                 | string  | ISO 8601 timestamp.                                             |
-| `updated_at`                 | string  | ISO 8601 timestamp.                                             |
+| Field                        | Type        | Description                                                                                                                                                                                                                                                      |
+| ---------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                         | string      | Unique identifier. Remapped on import.                                                                                                                                                                                                                           |
+| `collection_id`              | string      | Must match the collection's `id`.                                                                                                                                                                                                                                |
+| `folder_id`                  | string/null | `null` if at collection root, or the `id` of the containing folder.                                                                                                                                                                                              |
+| `name`                       | string      | Display name of the request.                                                                                                                                                                                                                                     |
+| `method`                     | string      | HTTP method: `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`.                                                                                                                                                                                         |
+| `url`                        | string      | The request URL. May contain `{{variable}}` placeholders. FetchBoy automatically prepends `https://` if no protocol is present after variable interpolation, so omit the protocol from URLs that use a `{{base_url}}` variable whose value already includes one. |
+| `headers`                    | array       | Request headers (see KeyValuePair below).                                                                                                                                                                                                                        |
+| `query_params`               | array       | Query parameters (see KeyValuePair below).                                                                                                                                                                                                                       |
+| `body_type`                  | string      | One of: `none`, `raw`, `json`, `form-data`, `urlencoded`.                                                                                                                                                                                                        |
+| `body_content`               | string      | The body as a string. For JSON bodies, this is the JSON string.                                                                                                                                                                                                  |
+| `auth_type`                  | string      | One of: `none`, `bearer`, `basic`, `api-key`.                                                                                                                                                                                                                    |
+| `auth_config`                | object      | Key-value object for auth configuration (see Auth below).                                                                                                                                                                                                        |
+| `pre_request_script`         | string      | JavaScript code to run before the request. Use `""` if none.                                                                                                                                                                                                     |
+| `pre_request_script_enabled` | boolean     | Whether the pre-request script is active.                                                                                                                                                                                                                        |
+| `sort_order`                 | number      | Integer controlling display order within the folder (0-based).                                                                                                                                                                                                   |
+| `created_at`                 | string      | ISO 8601 timestamp.                                                                                                                                                                                                                                              |
+| `updated_at`                 | string      | ISO 8601 timestamp.                                                                                                                                                                                                                                              |
 
 ### KeyValuePair
 
@@ -138,10 +150,10 @@ Used for `headers` and `query_params`:
 { "key": "Accept", "value": "application/json", "enabled": true }
 ```
 
-| Field     | Type    | Description                                |
-|-----------|---------|--------------------------------------------|
-| `key`     | string  | The header or parameter name.              |
-| `value`   | string  | The header or parameter value.             |
+| Field     | Type    | Description                                      |
+| --------- | ------- | ------------------------------------------------ |
+| `key`     | string  | The header or parameter name.                    |
+| `value`   | string  | The header or parameter value.                   |
 | `enabled` | boolean | `true` to include when sending, `false` to skip. |
 
 ### Auth Configuration
@@ -149,34 +161,44 @@ Used for `headers` and `query_params`:
 The `auth_config` object varies by `auth_type`:
 
 **`"none"`** — empty object:
+
 ```json
 { "auth_type": "none", "auth_config": {} }
 ```
 
 **`"bearer"`** — token-based:
+
 ```json
 { "auth_type": "bearer", "auth_config": { "token": "my-bearer-token" } }
 ```
 
 **`"basic"`** — username/password:
+
 ```json
-{ "auth_type": "basic", "auth_config": { "username": "user", "password": "pass" } }
+{
+  "auth_type": "basic",
+  "auth_config": { "username": "user", "password": "pass" }
+}
 ```
 
 **`"api-key"`** — key/value pair:
+
 ```json
-{ "auth_type": "api-key", "auth_config": { "key": "X-API-Key", "value": "my-api-key" } }
+{
+  "auth_type": "api-key",
+  "auth_config": { "key": "X-API-Key", "value": "my-api-key" }
+}
 ```
 
 ### Body Types
 
-| `body_type`   | `body_content`                                      |
-|---------------|-----------------------------------------------------|
-| `none`        | `""` (empty string)                                 |
-| `raw`         | Plain text body content.                            |
-| `json`        | JSON string (e.g. `"{\"name\": \"Alice\"}"`).       |
-| `form-data`   | Form data as a string.                              |
-| `urlencoded`  | URL-encoded form body as a string.                  |
+| `body_type`  | `body_content`                                |
+| ------------ | --------------------------------------------- |
+| `none`       | `""` (empty string)                           |
+| `raw`        | Plain text body content.                      |
+| `json`       | JSON string (e.g. `"{\"name\": \"Alice\"}"`). |
+| `form-data`  | Form data as a string.                        |
+| `urlencoded` | URL-encoded form body as a string.            |
 
 For JSON bodies, set `body_type` to `"json"` and include a `Content-Type: application/json` header.
 
@@ -190,24 +212,33 @@ If any request uses `{{variable}}` placeholders in its URL, headers, or body, in
 {
   "environment": {
     "variables": [
-      { "key": "base_url", "value": "https://api.example.com", "enabled": true },
-      { "key": "auth_token", "value": "changeme", "enabled": true, "secret": true }
+      {
+        "key": "base_url",
+        "value": "https://api.example.com",
+        "enabled": true
+      },
+      {
+        "key": "auth_token",
+        "value": "changeme",
+        "enabled": true,
+        "secret": true
+      }
     ]
   }
 }
 ```
 
-| Field       | Type  | Description                                                     |
-|-------------|-------|-----------------------------------------------------------------|
+| Field       | Type  | Description                                                          |
+| ----------- | ----- | -------------------------------------------------------------------- |
 | `variables` | array | Array of KeyValuePair objects (same format as headers/query_params). |
 
 Each variable:
 
-| Field     | Type    | Description                                          |
-|-----------|---------|------------------------------------------------------|
-| `key`     | string  | The variable name (referenced as `{{key}}` in requests). |
-| `value`   | string  | The default value for this variable.                 |
-| `enabled` | boolean | `true` to activate the variable, `false` to skip it. |
+| Field     | Type    | Description                                                                                                                                                             |
+| --------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `key`     | string  | The variable name (referenced as `{{key}}` in requests).                                                                                                                |
+| `value`   | string  | The default value for this variable.                                                                                                                                    |
+| `enabled` | boolean | `true` to activate the variable, `false` to skip it.                                                                                                                    |
 | `secret`  | boolean | Optional. If `true`, the value is treated as sensitive — it is masked in the UI and replaced with `<REDACTED>` on export. Use this for API keys, tokens, and passwords. |
 
 Only include variables that are actually referenced by requests in the collection. Do not include empty or unused variables. Mark credentials and tokens as `secret: true`.
@@ -281,9 +312,7 @@ Only include variables that are actually referenced by requests in the collectio
       "headers": [
         { "key": "Accept", "value": "application/json", "enabled": true }
       ],
-      "query_params": [
-        { "key": "limit", "value": "10", "enabled": true }
-      ],
+      "query_params": [{ "key": "limit", "value": "10", "enabled": true }],
       "body_type": "none",
       "body_content": "",
       "auth_type": "bearer",
@@ -318,8 +347,17 @@ Only include variables that are actually referenced by requests in the collectio
   ],
   "environment": {
     "variables": [
-      { "key": "base_url", "value": "https://api.example.com", "enabled": true },
-      { "key": "auth_token", "value": "changeme", "enabled": true, "secret": true }
+      {
+        "key": "base_url",
+        "value": "https://api.example.com",
+        "enabled": true
+      },
+      {
+        "key": "auth_token",
+        "value": "changeme",
+        "enabled": true,
+        "secret": true
+      }
     ]
   }
 }

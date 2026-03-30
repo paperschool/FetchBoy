@@ -4,6 +4,7 @@ import { useTourStore } from '@/stores/tourStore'
 import { saveSetting } from '@/lib/settings'
 import { getDb } from '@/lib/db'
 import { open } from '@tauri-apps/plugin-shell'
+import { getCurrentVersion, fetchLatestRelease, compareSemver, type LatestReleaseInfo } from '@/lib/appVersion'
 
 export function GeneralSettings(): React.ReactElement {
     const theme = useUiSettingsStore((s) => s.theme)
@@ -41,8 +42,19 @@ export function GeneralSettings(): React.ReactElement {
         window.location.reload()
     }
 
-    function handleCheckForUpdates(): void {
-        void open('https://github.com/paperschool/FetchBoy/releases')
+    const [updateState, setUpdateState] = useState<'idle' | 'checking' | 'up-to-date' | 'available' | 'error'>('idle')
+    const [latestRelease, setLatestRelease] = useState<LatestReleaseInfo | null>(null)
+
+    async function handleCheckForUpdates(): Promise<void> {
+        setUpdateState('checking')
+        const release = await fetchLatestRelease()
+        if (!release) {
+            setUpdateState('error')
+            return
+        }
+        setLatestRelease(release)
+        const current = getCurrentVersion()
+        setUpdateState(compareSemver(release.version, current) > 0 ? 'available' : 'up-to-date')
     }
 
     return (
@@ -131,13 +143,33 @@ export function GeneralSettings(): React.ReactElement {
             </button>
 
             {/* Check for Updates */}
-            <button
-                type="button"
-                onClick={handleCheckForUpdates}
-                className="w-full text-left px-2 py-1 text-xs border border-gray-700 rounded text-app-muted hover:bg-gray-700 cursor-pointer transition-colors"
-            >
-                Check for Updates
-            </button>
+            {updateState === 'available' && latestRelease ? (
+                <button
+                    type="button"
+                    onClick={() => void open(latestRelease.url)}
+                    className="w-full text-left px-2 py-1 text-xs border border-green-600 rounded text-green-400 hover:bg-green-600/10 cursor-pointer transition-colors"
+                >
+                    Update available: v{latestRelease.version} — click to download
+                </button>
+            ) : (
+                <button
+                    type="button"
+                    onClick={() => void handleCheckForUpdates()}
+                    disabled={updateState === 'checking'}
+                    className={`w-full text-left px-2 py-1 text-xs border border-gray-700 rounded cursor-pointer transition-colors ${
+                        updateState === 'up-to-date'
+                            ? 'text-white border-white/30'
+                            : updateState === 'error'
+                              ? 'text-red-400 border-red-600/30'
+                              : 'text-app-muted hover:bg-gray-700'
+                    }`}
+                >
+                    {updateState === 'checking' ? 'Checking...'
+                        : updateState === 'up-to-date' ? `Up to date (v${getCurrentVersion()})`
+                        : updateState === 'error' ? 'Failed to check — click to retry'
+                        : 'Check for Updates'}
+                </button>
+            )}
         </div>
     )
 }

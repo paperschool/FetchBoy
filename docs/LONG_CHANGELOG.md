@@ -1,5 +1,17 @@
 # Long Changelog
 
+## [0.17.5] - 2026-03-30
+
+### Improvements
+
+- GitHub release version check via `fetchLatestRelease()` in `appVersion.ts` — semver comparison drives button state in GeneralSettings (idle/checking/up-to-date/available/error) and update banner in WhatsNewModal
+- Auth fields (`token`, `username`, `password`, `key`, `value`) now interpolated through `applyEnv()` in `useSendRequest.ts` before being sent to Rust, fixing 401s when credentials use `{{variable}}` placeholders
+- Debug events emitted from `useSendRequest.ts` at every stage of the fetch lifecycle (send, resolve, pre-request script, response, cancel, timeout, error) with source `"fetch"`
+- Breakpoints and mappings tree headers (`BreakpointsTree.tsx`, `MappingsTree.tsx`) restyled to match collection tree — green Create icons, import section commented out with TODO
+- `Collection-Generation-Prompt.md` updated: asks for API reference before generating, documents `secret` field, protocol auto-prepend behaviour, and environment round-tripping
+  - Files changed: `appVersion.ts`, `GeneralSettings.tsx`, `WhatsNewModal.tsx`, `useSendRequest.ts`, `BreakpointsTree.tsx`, `MappingsTree.tsx`, `ImportWizard.tsx`, `Collection-Generation-Prompt.md`
+  - Breaking changes: no
+
 ## [0.17.2] - 2026-03-28
 
 ### Epic 15: Pre-request Scripts

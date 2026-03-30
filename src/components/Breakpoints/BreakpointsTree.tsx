@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Bug, FolderPlus, Plus } from 'lucide-react';
+import { Bug, FolderInput, FolderPlus, Plus } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FolderRow } from './FolderRow';
 import { BreakpointRow } from './BreakpointRow';
@@ -101,27 +101,37 @@ export function BreakpointsTree() {
 
     const header = (
         <div className="flex items-center justify-between mb-2 px-1">
-            <span className="text-app-muted text-xs font-semibold uppercase tracking-widest">
-                Breakpoints
-            </span>
             <div className="flex items-center gap-1">
+                <span className="text-app-muted text-[10px]">Create:</span>
                 <button
                     onClick={() => handleAddBreakpoint(null)}
                     aria-label="New Breakpoint"
-                    title="New Breakpoint"
-                    className="text-gray-300 hover:text-white p-1 rounded cursor-pointer"
+                    title="New breakpoint"
+                    className="text-green-400 hover:text-green-300 p-1 rounded cursor-pointer"
                 >
-                    <Plus size={16} />
+                    <Plus size={14} />
                 </button>
                 <button
                     onClick={handleStartCreateFolder}
                     aria-label="Add Folder"
-                    title="Add Folder"
-                    className="text-gray-300 hover:text-white p-1 rounded cursor-pointer"
+                    title="New folder"
+                    className="text-green-400 hover:text-green-300 p-1 rounded cursor-pointer"
                 >
-                    <FolderPlus size={16} />
+                    <FolderPlus size={14} />
                 </button>
             </div>
+            {/* TODO: Import breakpoints — uncomment when import is implemented
+            <div className="flex items-center gap-1">
+                <span className="text-app-muted text-[10px]">Import:</span>
+                <button
+                    aria-label="Import breakpoints"
+                    title="Import breakpoints"
+                    className="text-orange-400 hover:text-orange-300 p-1 rounded cursor-pointer"
+                >
+                    <FolderInput size={14} />
+                </button>
+            </div>
+            */}
         </div>
     );
 

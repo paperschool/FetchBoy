@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Sparkles, ChevronDown } from 'lucide-react';
+import { Sparkles, ChevronDown, ArrowUpCircle } from 'lucide-react';
+import { fetchLatestRelease, compareSemver, type LatestReleaseInfo } from '@/lib/appVersion';
 
 export interface ChangelogEntry {
     version: string;
@@ -15,6 +16,8 @@ interface WhatsNewModalProps {
 
 export function WhatsNewModal({ version, changelog, onDismiss }: WhatsNewModalProps) {
     const [openVersion, setOpenVersion] = useState<string | null>(changelog[0]?.version ?? null);
+    const [latestRelease, setLatestRelease] = useState<LatestReleaseInfo | null>(null);
+    const hasUpdate = latestRelease && compareSemver(latestRelease.version, version) > 0;
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -23,6 +26,12 @@ export function WhatsNewModal({ version, changelog, onDismiss }: WhatsNewModalPr
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [onDismiss]);
+
+    useEffect(() => {
+        void fetchLatestRelease().then((release) => {
+            if (release) setLatestRelease(release);
+        });
+    }, []);
 
     return (
         <div
@@ -42,6 +51,18 @@ export function WhatsNewModal({ version, changelog, onDismiss }: WhatsNewModalPr
                         v{version}
                     </span>
                 </div>
+
+                {hasUpdate && latestRelease && (
+                    <a
+                        href={latestRelease.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mb-3 flex items-center gap-2 rounded-md border border-green-600/40 bg-green-600/10 px-3 py-2 text-sm text-green-400 hover:bg-green-600/20 transition-colors shrink-0"
+                    >
+                        <ArrowUpCircle size={16} className="shrink-0" />
+                        <span>Update available: <strong>v{latestRelease.version}</strong> — click to download</span>
+                    </a>
+                )}
 
                 <div className="overflow-y-auto flex-1 space-y-1 pr-1" data-testid="changelog-list">
                     {changelog.map((entry) => {
