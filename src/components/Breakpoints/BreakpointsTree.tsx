@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Bug, FolderInput, FolderPlus, Plus } from 'lucide-react';
+import { Bug, FolderPlus, Plus } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FolderRow } from './FolderRow';
 import { BreakpointRow } from './BreakpointRow';

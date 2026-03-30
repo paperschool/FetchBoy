@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Route, FolderInput, FolderPlus, Plus } from 'lucide-react';
+import { Route, FolderPlus, Plus } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { MappingFolderRow } from './MappingFolderRow';
 import { MappingRow } from './MappingRow';
