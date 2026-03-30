@@ -201,6 +201,8 @@ describe('collections lib', () => {
                 body_content: '{"name":"test"}',
                 auth_type: 'none',
                 auth_config: {},
+                pre_request_script: '',
+                pre_request_script_enabled: true,
                 sort_order: 0,
             });
             expect(result.name).toBe('Full Request');

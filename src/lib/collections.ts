@@ -263,9 +263,14 @@ export async function updateSavedRequest(
 }
 
 export async function createFullSavedRequest(
-    request: Omit<Request, 'id' | 'created_at' | 'updated_at'>,
+    request: Omit<Request, 'id' | 'created_at' | 'updated_at' | 'pre_request_script' | 'pre_request_script_enabled'> & {
+        pre_request_script?: string;
+        pre_request_script_enabled?: boolean;
+    },
 ): Promise<Request> {
     const full: Request = {
+        pre_request_script: '',
+        pre_request_script_enabled: true,
         ...request,
         id: crypto.randomUUID(),
         created_at: now(),
