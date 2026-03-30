@@ -1,5 +1,16 @@
 # Long Changelog
 
+## [0.18.0] - 2026-03-31
+
+### Story 15.1: Stitch Data Model, Store & Tab Shell
+
+- SQLite migration `010_stitch.sql` creates `stitch_chains`, `stitch_nodes`, and `stitch_connections` tables with cascade deletes
+- TypeScript types and raw DB row interfaces in `src/types/stitch.ts`
+- DB helper functions (`loadChains`, `loadChainWithNodes`, CRUD for chains/nodes/connections) in `src/lib/stitch.ts`
+- Zustand + Immer store (`useStitchStore`) with full chain/node/connection state management and SQLite persistence
+- "Stitch" tab added to top-level tab bar between Intercept and Debug, rendering a placeholder canvas view with chain list sidebar
+- Chains load from SQLite on StitchView mount
+
 ## [0.17.7] - 2026-03-31
 
 - feat: small tweaks and visual improvements to splash screen.

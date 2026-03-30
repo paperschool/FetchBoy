@@ -59,5 +59,11 @@ pub fn migrations() -> Vec<Migration> {
             sql: include_str!("../migrations/009_pre_request_scripts.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 10,
+            description: "create_stitch_tables",
+            sql: include_str!("../migrations/010_stitch.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }

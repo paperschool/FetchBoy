@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.18.0] - 2026-03-31
+
+- feat: Stitch tab — node-based request chain builder foundation with SQLite data model (chains, nodes, connections), Zustand store, and placeholder canvas view
+
 ## [0.17.7] - 2026-03-31
 
 - feat: small tweaks and visual improvements to splash screen.
