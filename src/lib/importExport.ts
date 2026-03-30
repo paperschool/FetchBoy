@@ -22,6 +22,16 @@ export interface EnvironmentExport {
     environment: Environment;
 }
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const SECRET_PLACEHOLDER = '<REDACTED>';
+
+function redactSecrets(variables: KeyValuePair[]): KeyValuePair[] {
+    return variables.map((v) =>
+        v.secret ? { ...v, value: SECRET_PLACEHOLDER } : v,
+    );
+}
+
 // ─── Export Functions (pure — no DB) ─────────────────────────────────────────
 
 export function exportCollectionToJson(
@@ -48,7 +58,7 @@ export function exportCollectionToJson(
     if (collection.default_environment_id) {
         const env = environments.find((e) => e.id === collection.default_environment_id);
         if (env && env.variables.length > 0) {
-            envelope.environment = { variables: env.variables };
+            envelope.environment = { variables: redactSecrets(env.variables) };
         }
     }
 
@@ -63,7 +73,10 @@ export function exportEnvironmentToJson(environmentId: string, environments: Env
         fetch_boy_version: '1.0',
         type: 'environment',
         exported_at: new Date().toISOString(),
-        environment,
+        environment: {
+            ...environment,
+            variables: redactSecrets(environment.variables),
+        },
     };
 
     return JSON.stringify(envelope, null, 2);

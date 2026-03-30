@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.17.4] - 2026-03-30
+
+- feat: Secret environment variables — new checkbox per variable that masks the value in the UI and replaces it with `<REDACTED>` on collection and environment export
+- fix: Environment variable interpolation now runs before protocol detection, preventing double-protocol URLs (`https://https://...`) when `{{base_url}}` includes a scheme
+- feat: Updated AI collection generation prompt with secret variable support, protocol handling guidance, and environment examples
+- fix: Environment variable editor layout rebuilt with flexbox — headers now align with columns and the delete icon is no longer clipped
+- fix: Key input border styling corrected in the environment variable editor
+
 ## [0.17.3] - 2026-03-30
 
 - feat: Unified import wizard — FetchBoy native (v1), Postman, and Insomnia formats selectable from a single three-column dialog with AI-assisted collection generation prompt; removed secondary sidebar import button

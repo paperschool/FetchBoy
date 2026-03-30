@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Download, Globe, Trash2, Upload } from 'lucide-react';
+import { Download, Globe, Lock, Trash2, Upload } from 'lucide-react';
 import { save, open as openDialog } from '@tauri-apps/plugin-dialog';
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
 import {
@@ -283,20 +283,21 @@ export function EnvironmentPanel({ open, onClose }: EnvironmentPanelProps) {
                                 </div>
                                 <div className="flex-1 overflow-y-auto">
                                     {/* Table header */}
-                                    <div className="mb-1 grid grid-cols-[1fr_1fr_28px_24px] gap-1">
-                                        <span className="text-app-secondary text-xs">Key</span>
-                                        <span className="text-app-secondary text-xs">Value</span>
-                                        <span className="text-app-secondary text-xs text-center">On</span>
-                                        <span />
+                                    <div className="mb-1 flex items-center gap-1 text-app-muted">
+                                        <span className="flex-1 min-w-0 text-xs px-2">Key</span>
+                                        <span className="flex-1 min-w-0 text-xs px-2">Value</span>
+                                        <span className="w-7 text-[9px] text-center shrink-0" title="Enabled">ON</span>
+                                        <span className="w-7 flex justify-center shrink-0" title="Secret — value is masked on export"><Lock size={10} /></span>
+                                        <span className="w-7 shrink-0" />
                                     </div>
                                     {selectedEnv.variables.map((variable, i) => (
                                         <div
                                             key={i}
-                                            className="mb-1 grid grid-cols-[1fr_1fr_28px_24px] items-center gap-1"
+                                            className="mb-1 flex items-center gap-1"
                                         >
                                             <input
                                                 aria-label={`Variable key ${i}`}
-                                                className="-app-subtle text-app-primary h-7 rounded border bg-transparent px-2 text-xs"
+                                                className="flex-1 min-w-0 border-app-subtle text-app-primary h-7 rounded border bg-transparent px-2 text-xs"
                                                 value={variable.key}
                                                 onChange={(e) =>
                                                     handleVariableChange(i, 'key', e.target.value)
@@ -304,29 +305,45 @@ export function EnvironmentPanel({ open, onClose }: EnvironmentPanelProps) {
                                             />
                                             <input
                                                 aria-label={`Variable value ${i}`}
-                                                className="border-app-subtle text-app-primary h-7 rounded border bg-transparent px-2 text-xs"
+                                                type={variable.secret ? 'password' : 'text'}
+                                                className="flex-1 min-w-0 border-app-subtle text-app-primary h-7 rounded border bg-transparent px-2 text-xs"
                                                 value={variable.value}
                                                 onChange={(e) =>
                                                     handleVariableChange(i, 'value', e.target.value)
                                                 }
                                             />
-                                            <input
-                                                type="checkbox"
-                                                aria-label={`Variable enabled ${i}`}
-                                                checked={variable.enabled}
-                                                className="mx-auto h-5 w-5 cursor-pointer"
-                                                onChange={(e) =>
-                                                    handleVariableChange(i, 'enabled', e.target.checked)
-                                                }
-                                            />
-                                            <button
-                                                type="button"
-                                                aria-label={`Delete variable ${i}`}
-                                                className="p-1 text-app-muted hover:text-red-400 rounded cursor-pointer"
-                                                onClick={() => handleDeleteVariable(i)}
-                                            >
-                                                <Trash2 size={14} />
-                                            </button>
+                                            <div className="w-7 shrink-0 flex justify-center">
+                                                <input
+                                                    type="checkbox"
+                                                    aria-label={`Variable enabled ${i}`}
+                                                    checked={variable.enabled}
+                                                    className="h-3.5 w-3.5 cursor-pointer"
+                                                    onChange={(e) =>
+                                                        handleVariableChange(i, 'enabled', e.target.checked)
+                                                    }
+                                                />
+                                            </div>
+                                            <div className="w-7 shrink-0 flex justify-center">
+                                                <input
+                                                    type="checkbox"
+                                                    aria-label={`Variable secret ${i}`}
+                                                    checked={variable.secret ?? false}
+                                                    className="h-3.5 w-3.5 cursor-pointer"
+                                                    onChange={(e) =>
+                                                        handleVariableChange(i, 'secret', e.target.checked)
+                                                    }
+                                                />
+                                            </div>
+                                            <div className="w-7 shrink-0 flex justify-center">
+                                                <button
+                                                    type="button"
+                                                    aria-label={`Delete variable ${i}`}
+                                                    className="text-app-muted hover:text-red-400 cursor-pointer"
+                                                    onClick={() => handleDeleteVariable(i)}
+                                                >
+                                                    <Trash2 size={13} />
+                                                </button>
+                                            </div>
                                         </div>
                                     ))}
                                     {selectedEnv.variables.length === 0 && (
