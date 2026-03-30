@@ -166,6 +166,8 @@ let _db: Database | null = null;
 export async function getDb(): Promise<Database> {
     if (_db === null) {
         _db = await Database.load(DB_PATH);
+        await _db.execute('PRAGMA journal_mode = WAL');
+        await _db.execute('PRAGMA busy_timeout = 5000');
     }
     return _db;
 }

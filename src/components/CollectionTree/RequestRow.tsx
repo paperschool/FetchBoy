@@ -92,7 +92,7 @@ export function RequestRow({
                 {...attributes}
                 {...listeners}
             >
-                <span className="text-xs font-mono text-blue-300 w-8 flex-shrink-0">
+                <span className="text-[10px] font-mono text-blue-300 w-10 flex-shrink-0 truncate" title={method}>
                     {method}
                 </span>
 

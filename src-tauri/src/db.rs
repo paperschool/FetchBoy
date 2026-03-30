@@ -53,5 +53,11 @@ pub fn migrations() -> Vec<Migration> {
             sql: include_str!("../migrations/008_collection_default_environment.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 9,
+            description: "add_pre_request_scripts_to_requests",
+            sql: include_str!("../migrations/009_pre_request_scripts.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }

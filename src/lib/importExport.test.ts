@@ -80,7 +80,7 @@ describe('exportCollectionToJson', () => {
         const req3 = makeRequest({ id: 'r3' });
         const store = { collections: [col], folders: [folder], requests: [req1, req2, req3] };
 
-        const json = exportCollectionToJson('col-original-id', store);
+        const json = exportCollectionToJson('col-original-id', store, []);
         const parsed = JSON.parse(json) as Record<string, unknown>;
 
         expect(parsed.fetch_boy_version).toBe('1.0');
@@ -93,6 +93,30 @@ describe('exportCollectionToJson', () => {
         expect((parsed.requests as unknown[]).length).toBe(3);
     });
 
+    it('includes environment variables when collection has a default environment', async () => {
+        const { exportCollectionToJson } = await import('./importExport');
+        const col = makeCollection({ default_environment_id: 'env-1' });
+        const env = makeEnvironment({ id: 'env-1' });
+        const store = { collections: [col], folders: [], requests: [] };
+
+        const json = exportCollectionToJson('col-original-id', store, [env]);
+        const parsed = JSON.parse(json) as { environment?: { variables: unknown[] } };
+
+        expect(parsed.environment).toBeDefined();
+        expect(parsed.environment!.variables).toHaveLength(1);
+    });
+
+    it('omits environment when collection has no default environment', async () => {
+        const { exportCollectionToJson } = await import('./importExport');
+        const col = makeCollection({ default_environment_id: null });
+        const store = { collections: [col], folders: [], requests: [] };
+
+        const json = exportCollectionToJson('col-original-id', store, []);
+        const parsed = JSON.parse(json) as { environment?: unknown };
+
+        expect(parsed.environment).toBeUndefined();
+    });
+
     it('filters to only the requested collection folders and requests', async () => {
         const { exportCollectionToJson } = await import('./importExport');
         const col1 = makeCollection({ id: 'c1' });
@@ -103,7 +127,7 @@ describe('exportCollectionToJson', () => {
         const req2 = makeRequest({ id: 'r2', collection_id: 'c2', folder_id: 'f2' });
         const store = { collections: [col1, col2], folders: [folder1, folder2], requests: [req1, req2] };
 
-        const json = exportCollectionToJson('c1', store);
+        const json = exportCollectionToJson('c1', store, []);
         const parsed = JSON.parse(json) as { folders: Folder[]; requests: Request[] };
 
         expect(parsed.folders).toHaveLength(1);
@@ -115,7 +139,7 @@ describe('exportCollectionToJson', () => {
     it('throws if collectionId not found in store', async () => {
         const { exportCollectionToJson } = await import('./importExport');
         const store = { collections: [], folders: [], requests: [] };
-        expect(() => exportCollectionToJson('missing-id', store)).toThrow('Collection not found');
+        expect(() => exportCollectionToJson('missing-id', store, [])).toThrow('Collection not found');
     });
 });
 
@@ -205,24 +229,44 @@ describe('importCollectionFromJson', () => {
         expect(newChild!.parent_id).toBe(newParent!.id);
     });
 
-    it('calls DB execute: SAVEPOINT + 1 collection + N folders + M requests + RELEASE', async () => {
+    it('calls DB execute: 1 collection + 1 batch folders + 1 batch requests', async () => {
         const { importCollectionFromJson } = await import('./importExport');
         await importCollectionFromJson(buildCollectionJson());
 
-        // SAVEPOINT + 1 collection + 1 folder + 1 request + RELEASE = 5 calls
-        expect(mockExecute).toHaveBeenCalledTimes(5);
-        expect(mockExecute.mock.calls[0][0]).toMatch(/^SAVEPOINT /);
-        expect(mockExecute.mock.calls[4][0]).toMatch(/^RELEASE SAVEPOINT /);
+        // 1 collection + 1 batch folder insert + 1 batch request insert = 3 calls
+        expect(mockExecute).toHaveBeenCalledTimes(3);
     });
 
     it('collection INSERT includes the new collection ID', async () => {
         const { importCollectionFromJson } = await import('./importExport');
         const { collection } = await importCollectionFromJson(buildCollectionJson());
 
-        // Call index 1 is the collection insert (after SAVEPOINT)
-        const collectionCall = mockExecute.mock.calls[1] as [string, unknown[]];
+        const collectionCall = mockExecute.mock.calls[0] as [string, unknown[]];
         expect(collectionCall[0]).toContain('INSERT INTO collections');
         expect(collectionCall[1]).toContain(collection.id);
+    });
+
+    it('creates environment and links it when envelope has variables', async () => {
+        const { importCollectionFromJson } = await import('./importExport');
+        const json = buildCollectionJson({
+            environment: {
+                variables: [{ key: 'base_url', value: 'https://api.example.com', enabled: true }],
+            },
+        });
+        const { collection, environment } = await importCollectionFromJson(json);
+
+        expect(environment).not.toBeNull();
+        expect(environment!.name).toBe('My API Variables');
+        expect(environment!.variables).toHaveLength(1);
+        expect(collection.default_environment_id).toBe(environment!.id);
+        // Extra DB call for environment insert
+        expect(mockExecute).toHaveBeenCalledTimes(4);
+    });
+
+    it('returns null environment when envelope has no variables', async () => {
+        const { importCollectionFromJson } = await import('./importExport');
+        const { environment } = await importCollectionFromJson(buildCollectionJson());
+        expect(environment).toBeNull();
     });
 
     it('throws "Invalid JSON" if json is malformed', async () => {

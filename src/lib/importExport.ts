@@ -1,5 +1,5 @@
-import type { Collection, Environment, Folder, Request } from '@/lib/db';
-import { insertOne, withTransaction } from '@/lib/dbHelpers';
+import type { Collection, Environment, Folder, KeyValuePair, Request } from '@/lib/db';
+import { insertOne, insertMany } from '@/lib/dbHelpers';
 
 // ─── Export Envelope Interfaces ───────────────────────────────────────────────
 
@@ -10,6 +10,9 @@ export interface CollectionExport {
     collection: Collection;
     folders: Folder[];
     requests: Request[];
+    environment?: {
+        variables: KeyValuePair[];
+    };
 }
 
 export interface EnvironmentExport {
@@ -24,6 +27,7 @@ export interface EnvironmentExport {
 export function exportCollectionToJson(
     collectionId: string,
     store: { collections: Collection[]; folders: Folder[]; requests: Request[] },
+    environments: Environment[],
 ): string {
     const collection = store.collections.find((c) => c.id === collectionId);
     if (!collection) throw new Error('Collection not found');
@@ -39,6 +43,14 @@ export function exportCollectionToJson(
         folders,
         requests,
     };
+
+    // Include the collection's default environment variables if one is linked.
+    if (collection.default_environment_id) {
+        const env = environments.find((e) => e.id === collection.default_environment_id);
+        if (env && env.variables.length > 0) {
+            envelope.environment = { variables: env.variables };
+        }
+    }
 
     return JSON.stringify(envelope, null, 2);
 }
@@ -61,7 +73,7 @@ export function exportEnvironmentToJson(environmentId: string, environments: Env
 
 export async function importCollectionFromJson(
     json: string,
-): Promise<{ collection: Collection; folders: Folder[]; requests: Request[] }> {
+): Promise<{ collection: Collection; folders: Folder[]; requests: Request[]; environment: Environment | null }> {
     // Parse
     let envelope: CollectionExport;
     try {
@@ -91,10 +103,22 @@ export async function importCollectionFromJson(
         folderIdMap.set(f.id, crypto.randomUUID());
     }
 
+    // Create environment from embedded variables if present.
+    let environment: Environment | null = null;
+    if (envelope.environment?.variables?.length) {
+        environment = {
+            id: crypto.randomUUID(),
+            name: `${envelope.collection.name} Variables`,
+            variables: envelope.environment.variables,
+            is_active: false,
+            created_at: now,
+        };
+    }
+
     const collection: Collection = {
         ...envelope.collection,
         id: newCollectionId,
-        default_environment_id: envelope.collection.default_environment_id ?? null,
+        default_environment_id: environment?.id ?? null,
         created_at: now,
         updated_at: now,
     };
@@ -117,32 +141,34 @@ export async function importCollectionFromJson(
         updated_at: now,
     }));
 
-    // Write to DB inside a transaction — partial failure rolls back cleanly.
-    await withTransaction(async () => {
-        await insertOne('collections', ['id', 'name', 'description', 'default_environment_id', 'created_at', 'updated_at'],
-            [collection.id, collection.name, collection.description, collection.default_environment_id, collection.created_at, collection.updated_at]);
+    // Write to DB — environment first (foreign key target), then collection, folders, requests.
+    if (environment) {
+        await insertOne('environments', ['id', 'name', 'variables', 'is_active', 'created_at'],
+            [environment.id, environment.name, JSON.stringify(environment.variables), 0, environment.created_at]);
+    }
 
-        for (const f of folders) {
-            await insertOne('folders', ['id', 'collection_id', 'parent_id', 'name', 'sort_order', 'created_at', 'updated_at'],
-                [f.id, f.collection_id, f.parent_id, f.name, f.sort_order, f.created_at, f.updated_at]);
-        }
+    await insertOne('collections', ['id', 'name', 'description', 'default_environment_id', 'created_at', 'updated_at'],
+        [collection.id, collection.name, collection.description, collection.default_environment_id, collection.created_at, collection.updated_at]);
 
-        for (const r of requests) {
-            await insertOne('requests', [
-                'id', 'collection_id', 'folder_id', 'name', 'method', 'url', 'headers', 'query_params',
-                'body_type', 'body_content', 'auth_type', 'auth_config', 'pre_request_script',
-                'pre_request_script_enabled', 'sort_order', 'created_at', 'updated_at',
-            ], [
-                r.id, r.collection_id, r.folder_id, r.name, r.method, r.url,
-                JSON.stringify(r.headers), JSON.stringify(r.query_params),
-                r.body_type, r.body_content, r.auth_type, JSON.stringify(r.auth_config),
-                r.pre_request_script ?? '', (r.pre_request_script_enabled ?? true) ? 1 : 0,
-                r.sort_order, r.created_at, r.updated_at,
-            ]);
-        }
-    });
+    const folderFields = ['id', 'collection_id', 'parent_id', 'name', 'sort_order', 'created_at', 'updated_at'] as const;
+    await insertMany('folders', [...folderFields],
+        folders.map((f) => [f.id, f.collection_id, f.parent_id, f.name, f.sort_order, f.created_at, f.updated_at]));
 
-    return { collection, folders, requests };
+    const requestFields = [
+        'id', 'collection_id', 'folder_id', 'name', 'method', 'url', 'headers', 'query_params',
+        'body_type', 'body_content', 'auth_type', 'auth_config', 'pre_request_script',
+        'pre_request_script_enabled', 'sort_order', 'created_at', 'updated_at',
+    ] as const;
+    await insertMany('requests', [...requestFields],
+        requests.map((r) => [
+            r.id, r.collection_id, r.folder_id, r.name, r.method, r.url,
+            JSON.stringify(r.headers), JSON.stringify(r.query_params),
+            r.body_type, r.body_content, r.auth_type, JSON.stringify(r.auth_config),
+            r.pre_request_script ?? '', (r.pre_request_script_enabled ?? true) ? 1 : 0,
+            r.sort_order, r.created_at, r.updated_at,
+        ]));
+
+    return { collection, folders, requests, environment };
 }
 
 export async function importEnvironmentFromJson(json: string): Promise<Environment> {

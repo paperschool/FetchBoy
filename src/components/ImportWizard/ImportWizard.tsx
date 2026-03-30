@@ -1,23 +1,38 @@
 import { useState } from 'react';
-import { X, FileUp, AlertTriangle, CheckCircle2, Loader2, Globe } from 'lucide-react';
+import { X, FileUp, AlertTriangle, CheckCircle2, Loader2, Globe, Bot, Check, ClipboardCopy } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { readTextFile } from '@tauri-apps/plugin-fs';
 import { parsePostmanV21 } from '@/lib/importers/postmanV21';
 import { parsePostmanV1 } from '@/lib/importers/postmanV1';
 import { parseInsomniaV4 } from '@/lib/importers/insomniaV4';
 import { persistImportResult } from '@/lib/importers/persist';
+import { importCollectionFromJson } from '@/lib/importExport';
 import { useCollectionStore } from '@/stores/collectionStore';
 import { useEnvironmentStore } from '@/stores/environmentStore';
+import { useDebugStore } from '@/stores/debugStore';
 import type { ImportFormat, ImportResult } from '@/lib/importers/types';
+import collectionPrompt from '../../../Collection-Generation-Prompt.md?raw';
+
+function emitDebug(level: 'info' | 'warn' | 'error', source: string, message: string): void {
+  useDebugStore.getState().addInternalEvent({
+    id: `${source}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    timestamp: Date.now(),
+    level,
+    source,
+    message,
+  });
+}
 
 type WizardStep = 'format' | 'file' | 'preview' | 'importing' | 'done' | 'error';
+type SelectedFormat = ImportFormat | 'fetchboy-v1';
 
 interface ImportWizardProps { isOpen: boolean; onClose: () => void }
 
-const FORMAT_LABEL: Record<ImportFormat, string> = {
+const FORMAT_LABEL: Record<SelectedFormat, string> = {
   'postman-v1': 'v1 (Legacy)',
   'postman-v2': 'v2.0 / v2.1',
   'insomnia-v4': 'v4',
+  'fetchboy-v1': 'v1',
 };
 
 function parseByFormat(text: string, format: ImportFormat): ImportResult {
@@ -28,9 +43,37 @@ function parseByFormat(text: string, format: ImportFormat): ImportResult {
   }
 }
 
+function CopyPromptFooter(): React.ReactElement {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async (): Promise<void> => {
+    await navigator.clipboard.writeText(collectionPrompt);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="flex items-start gap-3">
+      <Bot size={20} className="text-blue-400 shrink-0 mt-0.5" />
+      <div className="flex-1 min-w-0">
+        <p className="text-xs text-app-muted">
+          Use an AI assistant to generate a collection. Copy a prompt that describes the native FetchBoy format so an LLM can produce a ready-to-import <span className="text-app-secondary">.fetchboy</span> file.
+        </p>
+        <button
+          onClick={() => void handleCopy()}
+          className="mt-2 inline-flex items-center gap-1.5 rounded border border-blue-500/30 px-3 py-1.5 text-xs font-medium text-blue-400 hover:bg-blue-500/10 hover:border-blue-500/60 cursor-pointer transition-colors"
+        >
+          {copied ? <Check size={14} /> : <ClipboardCopy size={14} />}
+          {copied ? 'Copied!' : 'Copy Generation Prompt'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function ImportWizard({ isOpen, onClose }: ImportWizardProps): React.ReactElement | null {
   const [step, setStep] = useState<WizardStep>('format');
-  const [format, setFormat] = useState<ImportFormat | null>(null);
+  const [format, setFormat] = useState<SelectedFormat | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [importedCount, setImportedCount] = useState({ folders: 0, requests: 0, environments: 0 });
@@ -47,25 +90,70 @@ export function ImportWizard({ isOpen, onClose }: ImportWizardProps): React.Reac
     onClose();
   };
 
-  const selectFormat = (f: ImportFormat): void => {
+  const selectFormat = (f: SelectedFormat): void => {
     setFormat(f);
     setStep('file');
   };
 
   const handleFileSelect = async (): Promise<void> => {
     if (!format) return;
+    emitDebug('info', 'import-wizard', `Selecting file for format: ${format}`);
+
+    // FetchBoy native import — skips preview, imports directly
+    if (format === 'fetchboy-v1') {
+      try {
+        const selected = await open({
+          multiple: false,
+          filters: [{ name: 'FetchBoy Collection', extensions: ['fetchboy'] }, { name: 'All Files', extensions: ['*'] }],
+        });
+        if (!selected) {
+          emitDebug('info', 'import-wizard', 'File dialog cancelled');
+          return;
+        }
+        const path = typeof selected === 'string' ? selected : selected[0];
+        emitDebug('info', 'import-wizard', `File selected: ${path}`);
+        const text = await readTextFile(path);
+        emitDebug('info', 'import-wizard', `File read OK (${text.length} chars) — importing as FetchBoy v1`);
+        setStep('importing');
+        const { collection, folders, requests, environment } = await importCollectionFromJson(text);
+        emitDebug('info', 'import-wizard', `Persisted to DB — updating stores`);
+        collectionStore.addCollection(collection);
+        for (const f of folders) collectionStore.addFolder(f);
+        for (const r of requests) collectionStore.addRequest(r);
+        if (environment) envStore.addEnvironment(environment);
+        setImportedCount({ folders: folders.length, requests: requests.length, environments: environment ? 1 : 0 });
+        emitDebug('info', 'import-wizard', `Import complete — ${folders.length} folder(s), ${requests.length} request(s)${environment ? ', 1 environment' : ''}`);
+        setStep('done');
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        emitDebug('error', 'import-wizard', `FetchBoy import failed: ${msg}`);
+        setError(msg);
+        setStep('error');
+      }
+      return;
+    }
+
+    // Postman / Insomnia import — parse then preview
     try {
       const selected = await open({
         multiple: false,
-        filters: [{ name: 'JSON', extensions: ['json'] }],
+        filters: [{ name: 'JSON', extensions: ['json'] }, { name: 'All Files', extensions: ['*'] }],
       });
-      if (!selected) return;
+      if (!selected) {
+        emitDebug('info', 'import-wizard', 'File dialog cancelled');
+        return;
+      }
       const path = typeof selected === 'string' ? selected : selected[0];
+      emitDebug('info', 'import-wizard', `File selected: ${path}`);
       const text = await readTextFile(path);
+      emitDebug('info', 'import-wizard', `File read OK (${text.length} chars) — parsing as ${format}`);
       setResult(parseByFormat(text, format));
+      emitDebug('info', 'import-wizard', 'Parse successful — showing preview');
       setStep('preview');
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      const msg = err instanceof Error ? err.message : String(err);
+      emitDebug('error', 'import-wizard', `File select/parse failed: ${msg}`);
+      setError(msg);
       setStep('error');
     }
   };
@@ -73,16 +161,21 @@ export function ImportWizard({ isOpen, onClose }: ImportWizardProps): React.Reac
   const handleImport = async (): Promise<void> => {
     if (!result) return;
     setStep('importing');
+    emitDebug('info', 'import-wizard', `Importing collection "${result.collection.name}" — ${result.folders.length} folder(s), ${result.requests.length} request(s)`);
     try {
       const { collection, folders, requests, environments } = await persistImportResult(result);
+      emitDebug('info', 'import-wizard', `Persisted to DB — updating stores`);
       collectionStore.addCollection(collection);
       for (const f of folders) collectionStore.addFolder(f);
       for (const r of requests) collectionStore.addRequest(r);
       for (const env of environments) envStore.addEnvironment(env);
       setImportedCount({ folders: folders.length, requests: requests.length, environments: environments.length });
+      emitDebug('info', 'import-wizard', `Import complete — ${folders.length} folder(s), ${requests.length} request(s), ${environments.length} environment(s)`);
       setStep('done');
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      const msg = err instanceof Error ? err.message : String(err);
+      emitDebug('error', 'import-wizard', `Import failed: ${msg}`);
+      setError(msg);
       setStep('error');
     }
   };
@@ -119,8 +212,17 @@ export function ImportWizard({ isOpen, onClose }: ImportWizardProps): React.Reac
           {/* Step 1: Format select */}
           {step === 'format' && (
             <>
-              <p className="text-xs text-app-muted">Select the tool you exported from:</p>
-              <div className="grid grid-cols-2 gap-4">
+              <p className="text-xs text-app-muted">Select the format to import:</p>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-app-primary">FetchBoy</p>
+                  <div className="flex flex-col gap-1.5">
+                    <button onClick={() => selectFormat('fetchboy-v1')}
+                      className="rounded border border-white/30 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/10 hover:border-white/60 cursor-pointer transition-colors">
+                      v1
+                    </button>
+                  </div>
+                </div>
                 <div className="space-y-2">
                   <p className="text-xs font-semibold text-app-primary">Postman</p>
                   <div className="flex flex-col gap-1.5">
@@ -135,6 +237,14 @@ export function ImportWizard({ isOpen, onClose }: ImportWizardProps): React.Reac
                   </div>
                 </div>
               </div>
+
+              {/* Horizontal divider — padded from left/right */}
+              <div className="px-4 mt-2">
+                <div className="h-px bg-app-subtle" />
+              </div>
+
+              {/* AI prompt generation section */}
+              <CopyPromptFooter />
             </>
           )}
 
@@ -142,7 +252,7 @@ export function ImportWizard({ isOpen, onClose }: ImportWizardProps): React.Reac
           {step === 'file' && format && (
             <>
               <p className="text-xs text-app-muted">
-                Select the exported JSON file <span className="text-app-secondary">({FORMAT_LABEL[format]})</span>:
+                Select the {format === 'fetchboy-v1' ? '.fetchboy' : 'exported JSON'} file <span className="text-app-secondary">({FORMAT_LABEL[format]})</span>:
               </p>
               <button onClick={() => void handleFileSelect()} className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-app-subtle py-6 text-sm text-app-muted hover:text-app-primary hover:border-blue-500/50 cursor-pointer transition-colors">
                 <FileUp size={18} /> Choose File...

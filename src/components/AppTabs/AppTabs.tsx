@@ -1,21 +1,23 @@
 import { type ReactNode } from "react";
 import type React from "react";
-import { Send, Wifi, Bug } from "lucide-react";
+import { Send, Wifi, Bug, Settings } from "lucide-react";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { ToastContainer } from "@/components/ui/ToastContainer";
 import { useAppTabStore } from "@/stores/appTabStore";
 import { useUiSettingsStore } from "@/stores/uiSettingsStore";
 import { InterceptView } from "@/components/Intercept view/InterceptView";
 import { DebugView } from "@/components/Debug/DebugView";
+import { SettingsView } from "@/components/SettingsView/SettingsView";
 import { FetchTabActions } from "@/components/TopBar/TopBar";
 import { InterceptTabActions } from "@/components/Intercept view/InterceptTopBar";
 
-type AppTab = "fetch" | "intercept" | "debug";
+type AppTab = "fetch" | "intercept" | "debug" | "settings";
 
 const TAB_CONFIG: Record<AppTab, { label: string; icon: React.ReactNode }> = {
   fetch: { label: "Fetch", icon: <Send size={13} /> },
   intercept: { label: "Intercept", icon: <Wifi size={13} /> },
   debug: { label: "", icon: <Bug size={13} /> },
+  settings: { label: "", icon: <Settings size={13} /> },
 };
 
 interface AppTabsProps {
@@ -99,6 +101,16 @@ export function AppTabs({ children }: AppTabsProps) {
         >
           <ErrorBoundary fallbackLabel="Debug">
             <DebugView />
+          </ErrorBoundary>
+        </div>
+
+        {/* Settings panel */}
+        <div
+          className={activeTab === "settings" ? "h-full" : "hidden"}
+          data-testid="settings-panel"
+        >
+          <ErrorBoundary fallbackLabel="Settings">
+            <SettingsView />
           </ErrorBoundary>
         </div>
       </div>

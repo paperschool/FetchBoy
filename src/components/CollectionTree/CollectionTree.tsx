@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Upload, ChevronRight, FolderInput } from 'lucide-react';
+import { Plus, ChevronRight, FolderInput } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Folder } from 'lucide-react';
 import { CollectionRow } from './CollectionRow';
@@ -33,7 +33,6 @@ export function CollectionTree() {
         handleAddCollection,
         handleDeleteCollection,
         handleExportCollection,
-        handleImportCollection,
         handleAddFolder,
         handleDeleteFolder,
         handleLoadRequest,
@@ -113,19 +112,11 @@ export function CollectionTree() {
                         <span className="text-app-muted text-[10px]">Import:</span>
                         <button
                             onClick={() => setImportWizardOpen(true)}
-                            aria-label="Import from Postman/Insomnia"
-                            title="Import from Postman/Insomnia"
+                            aria-label="Import collection"
+                            title="Import collection"
                             className="text-orange-400 hover:text-orange-300 p-1 rounded cursor-pointer"
                         >
                             <FolderInput size={14} />
-                        </button>
-                        <button
-                            onClick={() => void handleImportCollection()}
-                            aria-label="Import FetchBoy collection"
-                            title="Import FetchBoy collection"
-                            className="text-gray-300 hover:text-white p-1 rounded cursor-pointer"
-                        >
-                            <Upload size={14} />
                         </button>
                     </div>
                 </div>
@@ -196,7 +187,7 @@ export function CollectionTree() {
                 )}
                 {draggingRequest && (
                     <div className="flex items-center gap-1 py-0.5 px-2 rounded bg-gray-600 border border-blue-400 shadow-lg text-sm text-app-inverse select-none opacity-90">
-                        <span className="text-xs font-mono text-blue-300 w-8 flex-shrink-0">
+                        <span className="text-[10px] font-mono text-blue-300 w-10 flex-shrink-0 truncate">
                             {draggingRequest.method}
                         </span>
                         <span className="truncate">{draggingRequest.name}</span>

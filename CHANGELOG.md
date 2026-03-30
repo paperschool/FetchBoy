@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.17.3] - 2026-03-30
+
+- feat: Unified import wizard — FetchBoy native (v1), Postman, and Insomnia formats selectable from a single three-column dialog with AI-assisted collection generation prompt; removed secondary sidebar import button
+- feat: Settings promoted to a top-level tab (gear icon) alongside Fetch, Intercept, and Debug
+- feat: Environment round-tripping — exported `.fetchboy` files now embed the collection's default environment variables; importing recreates and links the environment automatically
+- fix: SQLite WAL mode, busy timeout, and batch inserts prevent "database locked" errors during large collection imports; registered missing migration 009 for pre-request script columns
+- fix: Request method badge in collection tree widened with truncation and tooltip for long method names; added `reset-db.sh` script for clean database resets
+
 ## [0.17.0] - 2026-03-27
 
 - feat: Import wizard for Postman (v1, v2.0, v2.1) and Insomnia (v4) collections with environment extraction and collection-environment binding

@@ -20,7 +20,18 @@ import { save, open } from "@tauri-apps/plugin-dialog";
 import { writeTextFile, readTextFile } from "@tauri-apps/plugin-fs";
 import { useEnvironmentStore } from "@/stores/environmentStore";
 import { setActiveEnvironment } from "@/lib/environments";
+import { useDebugStore } from "@/stores/debugStore";
 import type { EditingType } from "./useCollectionInlineEdit";
+
+function emitDebug(level: 'info' | 'warn' | 'error', source: string, message: string): void {
+  useDebugStore.getState().addInternalEvent({
+    id: `${source}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    timestamp: Date.now(),
+    level,
+    source,
+    message,
+  });
+}
 
 interface UseCollectionCrudReturn {
   handleAddCollection: () => Promise<void>;
@@ -160,10 +171,10 @@ export function useCollectionCrud(
   const handleExportCollection = useCallback(
     async (id: string, name: string) => {
       try {
-        const json = exportCollectionToJson(id, useCollectionStore.getState());
+        const json = exportCollectionToJson(id, useCollectionStore.getState(), useEnvironmentStore.getState().environments);
         const path = await save({
           defaultPath: `${name.replace(/[^a-z0-9]/gi, "_")}.fetchboy`,
-          filters: [{ name: "Fetchboy Collection", extensions: ["fetchboy"] }],
+          filters: [{ name: "Fetchboy Collection", extensions: ["fetchboy"] }, { name: "All Files", extensions: ["*"] }],
         });
         if (path) await writeTextFile(path, json);
       } catch (err) {
@@ -174,21 +185,35 @@ export function useCollectionCrud(
   );
 
   const handleImportCollection = useCallback(async () => {
+    emitDebug('info', 'import', 'FetchBoy collection import started — opening file dialog');
     try {
       const selected = await open({
         multiple: false,
-        filters: [{ name: "Fetchboy Collection", extensions: ["fetchboy"] }],
+        filters: [{ name: "Fetchboy Collection", extensions: ["fetchboy"] }, { name: "All Files", extensions: ["*"] }],
       });
-      if (!selected) return;
+      if (!selected) {
+        emitDebug('info', 'import', 'File dialog cancelled — no file selected');
+        return;
+      }
       const path = typeof selected === "string" ? selected : selected[0];
+      emitDebug('info', 'import', `File selected: ${path}`);
       const text = await readTextFile(path);
-      const { collection, folders, requests } = await importCollectionFromJson(text);
+      emitDebug('info', 'import', `File read OK (${text.length} chars) — parsing collection`);
+      const { collection, folders, requests, environment } = await importCollectionFromJson(text);
+      emitDebug('info', 'import', `Persisted to DB — collection "${collection.name}", ${folders.length} folder(s), ${requests.length} request(s)${environment ? ', 1 environment' : ''}`);
       store.addCollection(collection);
       for (const f of folders) store.addFolder(f);
       for (const r of requests) store.addRequest(r);
+      if (environment) {
+        const envStore = useEnvironmentStore.getState();
+        envStore.addEnvironment(environment);
+      }
+      emitDebug('info', 'import', `Store updated — import complete`);
       window.alert(`Imported '${collection.name}' — ${folders.length} folder(s), ${requests.length} request(s).`);
     } catch (err) {
-      window.alert(`Import failed: ${err instanceof Error ? err.message : String(err)}`);
+      const msg = err instanceof Error ? err.message : String(err);
+      emitDebug('error', 'import', `Import failed: ${msg}`);
+      window.alert(`Import failed: ${msg}`);
     }
   }, [store]);
 

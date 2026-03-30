@@ -27,6 +27,23 @@ export async function insertOne(
   );
 }
 
+/** Batch INSERT helper — inserts multiple rows in a single statement. */
+export async function insertMany(
+  table: string,
+  fields: string[],
+  rows: unknown[][],
+): Promise<void> {
+  if (rows.length === 0) return;
+  const db = await getDb();
+  const rowPlaceholder = `(${fields.map(() => '?').join(', ')})`;
+  const placeholders = rows.map(() => rowPlaceholder).join(', ');
+  const values = rows.flat();
+  await db.execute(
+    `INSERT INTO ${table} (${fields.join(', ')}) VALUES ${placeholders}`,
+    values,
+  );
+}
+
 /**
  * Build a dynamic UPDATE statement from a changes map.
  * Returns null if no changes — caller should return early.
