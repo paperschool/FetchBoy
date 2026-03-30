@@ -18,6 +18,8 @@
     <style>
       html,
       body {
+        margin: 0;
+        padding: 0;
         background-color: #ffffff;
       }
       @media (prefers-color-scheme: dark) {
@@ -26,10 +28,44 @@
           background-color: #111827;
         }
       }
+      #static-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #ffffff;
+      }
+      @media (prefers-color-scheme: dark) {
+        #static-splash {
+          background-color: #111827;
+        }
+      }
+      #static-splash.hidden {
+        display: none;
+      }
     </style>
   </head>
 
   <body>
+    <div id="static-splash">
+      <div style="opacity: 0; animation: splash-static-fade-in 0.5s ease-out forwards;">
+        <img
+          src="/src-tauri/icons/fetch-boi-logo.svg"
+          alt="FetchBoy"
+          width="512"
+          height="512"
+          style="display: block; object-fit: contain;"
+        />
+      </div>
+      <style>
+        @keyframes splash-static-fade-in {
+          from { opacity: 0; transform: scale(0.9); }
+          to { opacity: 1; transform: scale(1); }
+        }
+      </style>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
