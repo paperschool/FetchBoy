@@ -1,7 +1,8 @@
-import React, { useState, useCallback, useRef, type PointerEvent, type KeyboardEvent } from 'react';
-import { Send, Code, Braces, Timer, Eye } from 'lucide-react';
+import React, { useState, useCallback, useRef, useMemo, type PointerEvent, type KeyboardEvent } from 'react';
+import { Send, Code, Braces, Timer, Eye, AlertCircle } from 'lucide-react';
 import type { StitchNode as StitchNodeType } from '@/types/stitch';
 import type { StitchNodeType as NodeType } from '@/types/stitch';
+import { extractJsonKeys } from '../utils/jsonKeyExtractor';
 
 const NODE_ICONS: Record<NodeType, React.ReactNode> = {
   'request': <Send size={12} />,
@@ -106,6 +107,15 @@ export const StitchNode = React.memo(function StitchNode({
 
   const displayLabel = node.label || `${node.type}`;
 
+  const jsonPorts = useMemo(() => {
+    if (node.type !== 'json-object') return null;
+    const jsonStr = (node.config as { json?: string }).json ?? '';
+    return extractJsonKeys(jsonStr);
+  }, [node.type, node.config]);
+
+  const outputKeys = jsonPorts?.keys ?? [];
+  const hasError = jsonPorts !== null && jsonPorts.error !== null;
+
   return (
     <div
       data-stitch-node
@@ -160,13 +170,46 @@ export const StitchNode = React.memo(function StitchNode({
         </button>
       </div>
 
-      {/* Body placeholder */}
+      {/* Body */}
       <div className="px-2 py-1.5">
-        <span className="text-[10px] text-app-muted">{node.type}</span>
+        {hasError ? (
+          <span className="flex items-center gap-1 text-[10px] text-red-500" title={jsonPorts?.error ?? ''} data-testid="node-json-error">
+            <AlertCircle size={10} />
+            Invalid JSON
+          </span>
+        ) : node.type === 'json-object' && outputKeys.length > 0 ? (
+          <div className="flex flex-wrap gap-1">
+            {outputKeys.map((key) => (
+              <span key={key} className="rounded bg-green-500/15 px-1 py-0.5 text-[9px] text-green-700 dark:text-green-400" data-testid={`port-${key}`}>
+                {key}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <span className="text-[10px] text-app-muted">{node.type}</span>
+        )}
       </div>
 
-      {/* Output port indicator (bottom) */}
-      <div className="absolute -bottom-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full border-2 border-app-subtle bg-app-main" />
+      {/* Output ports */}
+      {node.type === 'json-object' && !hasError && outputKeys.length > 0 ? (
+        <div className="relative h-3">
+          {outputKeys.map((key, i) => {
+            const offset = outputKeys.length === 1 ? 0.5 : i / (outputKeys.length - 1);
+            const leftPercent = 10 + offset * 80;
+            return (
+              <div
+                key={key}
+                className="absolute -bottom-1.5 h-3 w-3 rounded-full border-2 border-green-500/50 bg-app-main"
+                style={{ left: `${leftPercent}%`, transform: 'translateX(-50%)' }}
+                title={key}
+                data-testid={`output-port-${key}`}
+              />
+            );
+          })}
+        </div>
+      ) : (
+        <div className="absolute -bottom-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full border-2 border-app-subtle bg-app-main" />
+      )}
     </div>
   );
 });

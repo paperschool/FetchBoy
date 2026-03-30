@@ -4,6 +4,16 @@ export type StitchNodeType = 'request' | 'json-object' | 'js-snippet' | 'sleep';
 
 export type StitchExecutionState = 'idle' | 'running' | 'paused' | 'completed' | 'error';
 
+// ─── Node Config Shapes ─────────────────────────────────────────────────────
+
+export interface JsonObjectNodeConfig {
+  json: string;
+}
+
+export const DEFAULT_JSON_OBJECT_CONFIG: JsonObjectNodeConfig = {
+  json: '{\n  "key": "value"\n}',
+};
+
 // ─── Domain Interfaces ──────────────────────────────────────────────────────
 
 export interface StitchChain {

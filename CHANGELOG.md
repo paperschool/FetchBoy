@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.18.2] - 2026-03-31
+
+- feat: JSON Object seed node with real-time key extraction, labelled output ports, Monaco editor panel, and live exports summary
+
 ## [0.18.1] - 2026-03-31
 
 - feat: Free-drag node canvas with pan, zoom, node creation, inline label editing, selection, deletion, and type-specific visual styling

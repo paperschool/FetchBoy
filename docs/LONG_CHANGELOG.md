@@ -1,5 +1,17 @@
 # Long Changelog
 
+## [0.18.2] - 2026-03-31
+
+### Story 15.3: JSON Object Seed Node
+
+- `JsonObjectNodeConfig` type with default `{ json: '{\n  "key": "value"\n}' }` seed content
+- `extractJsonKeys()` utility parses JSON and extracts top-level object keys with error reporting
+- JSON Object nodes display extracted keys as labelled output port indicators with green-tinted badges
+- Invalid JSON shows an inline red error indicator on the node; ports clear until JSON is valid
+- `JsonObjectEditor` panel with Monaco JSON editor (debounced 300ms), live "Exports" key summary
+- Bottom editor panel split in StitchView — appears when a JSON Object node is selected
+- 15 new tests (key extractor, editor panel, node port rendering)
+
 ## [0.18.1] - 2026-03-31
 
 ### Story 15.2: Node Canvas with Drag & Positioning
