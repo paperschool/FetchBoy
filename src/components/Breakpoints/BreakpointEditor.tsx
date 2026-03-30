@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { Check, AlertCircle, Play, Pause } from 'lucide-react';
 import { useBreakpointsStore, validateUrlPattern } from '@/stores/breakpointsStore';
 import type { MatchType, EditForm } from '@/stores/breakpointsStore';
+import { useInterceptStore } from '@/stores/interceptStore';
 import { ViewerShell } from '@/components/ui/ViewerShell';
 
 interface Props {
@@ -15,6 +17,13 @@ const PLACEHOLDERS: Record<MatchType, string> = {
     partial: 'api/users',
     wildcard: '*/api/users/*',
     regex: '^/api/users/\\d+$',
+};
+
+const MATCH_DESCRIPTIONS: Record<MatchType, string> = {
+    exact: 'The full URL must match the pattern character-for-character, including protocol and query string.',
+    partial: 'The pattern can appear anywhere in the URL as a substring.',
+    wildcard: 'Use * as a wildcard to match any characters. e.g. *api.example.com/v2/* matches any path under /v2/.',
+    regex: 'A regular expression evaluated against the full URL. e.g. /users/\\d+ matches numeric user IDs.',
 };
 
 export function BreakpointEditor({ onClose }: Props) {
@@ -32,10 +41,39 @@ export function BreakpointEditor({ onClose }: Props) {
     const enabled = storeEnabled ?? localEnabled;
     const [urlError, setUrlError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
+    const [matchCount, setMatchCount] = useState<number | null>(null);
+    const interceptRequests = useInterceptStore((s) => s.requests);
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         setUrlError(validateUrlPattern(urlPattern, matchType));
     }, [urlPattern, matchType]);
+
+    const computeMatchCount = useCallback(async () => {
+        if (!urlPattern.trim()) {
+            setMatchCount(null);
+            return;
+        }
+        let count = 0;
+        for (const req of interceptRequests) {
+            const fullUrl = `https://${req.host}${req.path}`;
+            try {
+                const result = await invoke<{ matches: boolean }>('match_breakpoint_url', {
+                    url: fullUrl, pattern: urlPattern, matchType,
+                });
+                if (result.matches) count++;
+            } catch {
+                // pattern invalid — skip
+            }
+        }
+        setMatchCount(count);
+    }, [urlPattern, matchType, interceptRequests]);
+
+    useEffect(() => {
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => { void computeMatchCount(); }, 300);
+        return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+    }, [computeMatchCount]);
 
     const canSave = !urlError && !!urlPattern && !saving;
 
@@ -91,6 +129,11 @@ export function BreakpointEditor({ onClose }: Props) {
                                 <AlertCircle size={12} /> {urlError}
                             </p>
                         )}
+                        {matchCount !== null && !urlError && urlPattern.trim() && (
+                            <p className="text-app-muted text-xs mt-1">
+                                History matches: <span className={matchCount > 0 ? 'text-green-400' : 'text-app-muted'}>{matchCount}</span>
+                            </p>
+                        )}
                     </div>
 
                     <div>
@@ -119,6 +162,7 @@ export function BreakpointEditor({ onClose }: Props) {
                                 </button>
                             ))}
                         </div>
+                        <p className="text-app-muted text-[11px] mt-1.5 leading-snug">{MATCH_DESCRIPTIONS[matchType]}</p>
                     </div>
 
                     <button

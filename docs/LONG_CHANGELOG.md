@@ -1,5 +1,15 @@
 # Long Changelog
 
+## [0.17.6] - 2026-03-30
+
+### Improvements
+
+- Breakpoint editor: contextual match type descriptions below the selector buttons; debounced history match counter invokes Rust `match_breakpoint_url` against intercepted requests
+- Urgency progress bar fixed — `!editMode` guard removed so the bar appears during pauses; bar now fills left-to-right with a thicker 6px track
+- "Add Breakpoint" button conditionally hidden in `RequestDetailView` when `pauseState !== 'idle'`; paused container uses `rounded` + `overflow-hidden` instead of `rounded-lg`
+  - Files changed: `BreakpointEditor.tsx`, `PausedRequestDetail.tsx`, `RequestDetailView.tsx`, `InterceptView.tsx`
+  - Breaking changes: no
+
 ## [0.17.5] - 2026-03-30
 
 ### Improvements

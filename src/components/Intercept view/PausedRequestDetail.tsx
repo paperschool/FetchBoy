@@ -23,21 +23,21 @@ function useCountdown(timeoutAt: number): number {
 }
 
 function UrgencyBar({ paused }: { paused: boolean }) {
-  const [collapsed, setCollapsed] = useState(false)
+  const [filled, setFilled] = useState(false)
   const frameRef = useRef(0)
 
   useEffect(() => {
-    if (!paused) { setCollapsed(false); return }
-    frameRef.current = requestAnimationFrame(() => setCollapsed(true))
+    if (!paused) { setFilled(false); return }
+    frameRef.current = requestAnimationFrame(() => setFilled(true))
     return () => cancelAnimationFrame(frameRef.current)
   }, [paused])
 
   if (!paused) return null
 
   return (
-    <div className="w-full h-1 rounded-full overflow-hidden mb-1" data-testid="urgency-bar">
+    <div className="w-full h-1.5 rounded-full overflow-hidden mb-2 bg-amber-500/20" data-testid="urgency-bar">
       <div
-        className={`h-full bg-amber-500 rounded-full transition-all duration-[5000ms] ease-linear ${collapsed ? 'w-0' : 'w-full'}`}
+        className={`h-full bg-amber-500 rounded-full transition-all duration-[5000ms] ease-linear ${filled ? 'w-full' : 'w-0'}`}
       />
     </div>
   )
@@ -60,10 +60,9 @@ export function PausedRequestDetail() {
 
   if (editMode) {
     return (
-      <div
-        className="flex items-center justify-between px-3 py-2 border-b border-amber-500/40 mb-2"
-        data-testid="paused-request-detail"
-      >
+      <div data-testid="paused-request-detail">
+        <UrgencyBar paused={pauseState === 'paused'} />
+        <div className="flex items-center justify-between px-3 py-2 border-b border-amber-500/40 mb-2">
         <span className="text-amber-400 text-xs font-medium flex items-center gap-1.5">
           <Pencil size={12} />
           Editing response — changes will be sent to client
@@ -90,13 +89,14 @@ export function PausedRequestDetail() {
             Continue
           </button>
         </div>
+        </div>
       </div>
     )
   }
 
   return (
     <div data-testid="paused-request-detail">
-      <UrgencyBar paused={pauseState === 'paused' && !editMode} />
+      <UrgencyBar paused={pauseState === 'paused'} />
       <div className="flex items-center justify-between px-3 py-2 border-b border-amber-500/40 mb-2">
       <div className="flex items-center gap-2 text-amber-400 text-xs">
         <Clock size={13} />

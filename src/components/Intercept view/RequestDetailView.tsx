@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react'
 import type { InterceptRequest, BreakpointModifications } from '@/stores/interceptStore'
+import { useInterceptStore } from '@/stores/interceptStore'
 import { useUiSettingsStore } from '@/stores/uiSettingsStore'
 import { useBreakpointsStore } from '@/stores/breakpointsStore'
 import { useMappingsStore } from '@/stores/mappingsStore'
@@ -38,6 +39,7 @@ export function RequestDetailView({ selectedRequest, editMode = false, pendingMo
   const [newHeaderValue, setNewHeaderValue] = useState('')
   const [breakDialogOpen, setBreakDialogOpen] = useState(false)
   const [mapDialogOpen, setMapDialogOpen] = useState(false)
+  const isPaused = useInterceptStore((s) => s.pauseState !== 'idle')
   const { addBreakpoint, startEditing: startBpEditing } = useBreakpointsStore()
   const { startEditing: startMapEditing } = useMappingsStore()
 
@@ -88,7 +90,9 @@ export function RequestDetailView({ selectedRequest, editMode = false, pendingMo
         <CopyButton text={fullUrl} />
         <button type="button" onClick={() => openInFetch(selectedRequest)} className="shrink-0 rounded px-2 py-0.5 text-xs font-medium bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors cursor-pointer" title="Open in Fetch tab">Open in Fetch</button>
         <button type="button" onClick={() => setMapDialogOpen(true)} className="shrink-0 rounded px-2 py-0.5 text-xs font-medium bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 transition-colors cursor-pointer" title="Add mapping for this URL">Add Mapping</button>
-        <button type="button" onClick={() => setBreakDialogOpen(true)} className="shrink-0 rounded px-2 py-0.5 text-xs font-medium bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors cursor-pointer" title="Add breakpoint for this URL">Add Breakpoint</button>
+        {!isPaused && (
+          <button type="button" onClick={() => setBreakDialogOpen(true)} className="shrink-0 rounded px-2 py-0.5 text-xs font-medium bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors cursor-pointer" title="Add breakpoint for this URL">Add Breakpoint</button>
+        )}
       </div>
       <div className="flex flex-wrap items-center gap-3 text-xs">
         <span className={`px-2 py-0.5 rounded font-medium ${methodColor}`}>{selectedRequest.method}</span>

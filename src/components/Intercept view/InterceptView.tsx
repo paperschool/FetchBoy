@@ -85,7 +85,7 @@ export function InterceptView() {
         ) : isMappingEditing ? (
           <MappingEditor key={mappingEditForm.id ?? 'new-mapping'} onClose={cancelMappingEditing} />
         ) : (
-          <div className={`flex-1 min-h-0 flex flex-col p-2 overflow-y-auto ${pauseState !== 'idle' ? 'ring-1 ring-amber-500/40 bg-amber-900/10 rounded-lg' : ''}`}>
+          <div className={`flex-1 min-h-0 flex flex-col p-2 overflow-y-auto ${pauseState !== 'idle' ? 'ring-1 ring-amber-500/40 bg-amber-900/10 rounded overflow-hidden' : ''}`}>
             {pauseState !== 'idle' && <PausedRequestDetail />}
             <RequestDetailView
               selectedRequest={selectedRequest}

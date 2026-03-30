@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.17.6] - 2026-03-30
+
+- feat: Breakpoint editor shows contextual match type descriptions that update when switching between exact, partial, wildcard, and regex modes
+- feat: Debounced "History matches" counter in breakpoint editor tests the current pattern against intercepted requests via the Rust `match_breakpoint_url` command
+- fix: Urgency progress bar now visible during breakpoint pauses — removed `!editMode` guard that suppressed it; bar renders in both pause and edit mode as a left-to-right fill
+- fix: "Add Breakpoint" button hidden in request detail view during active breakpoint pauses to reduce clutter
+- fix: Paused request container border radius reduced from `rounded-lg` to `rounded` with `overflow-hidden` to prevent clipping outside parent bounds
+
 ## [0.17.5] - 2026-03-30
 
 - feat: GitHub release version check — "Check for Updates" button fetches latest release and shows green/white state; WhatsNewModal displays an update banner with download link when a newer version exists
