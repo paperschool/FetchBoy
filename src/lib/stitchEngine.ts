@@ -348,7 +348,6 @@ async function executeLoopNode(
       for (const childNode of sortedChildren) {
         if (cancelledRef.current) break;
 
-        console.log('[stitch-loop] iter', i, 'node', childNode.label ?? childNode.type, childNode.id.slice(0, 6));
         callbacks.onNodeStart(childNode.id, loopCtx);
         const childStart = Date.now();
 
@@ -357,7 +356,13 @@ async function executeLoopNode(
         // Inject element and index for the first node(s) with no incoming connections
         const incomingCount = childConnections.filter((c) => c.targetNodeId === childNode.id).length;
         if (incomingCount === 0) {
-          Object.assign(childInput, typeof element === 'object' && element !== null ? element : { element }, { index: i });
+          // Always provide `element` (raw item) and `index`
+          // If element is an object, also spread its keys for convenience
+          childInput.element = element;
+          childInput.index = i;
+          if (typeof element === 'object' && element !== null && !Array.isArray(element)) {
+            Object.assign(childInput, element as Record<string, unknown>);
+          }
         }
 
         let output: Record<string, unknown>;
