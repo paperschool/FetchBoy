@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useRef, useEffect } from 'react';
 import { ZoomIn, ZoomOut, Maximize, Play, Square, ScrollText, FileOutput, Send, Code, Braces, Timer } from 'lucide-react';
 import { useStitchStore } from '@/stores/stitchStore';
 import { useCanvasTransform } from './StitchCanvas.hooks';
@@ -38,7 +38,8 @@ function StitchCanvasInner(): React.ReactElement {
   const executionNodeOutputs = useStitchStore((s) => s.executionNodeOutputs);
   const executionError = useStitchStore((s) => s.executionError);
   const executionLogs = useStitchStore((s) => s.executionLogs);
-  const { drag } = useConnectionDrag();
+  const { drag, consumeDroppedDrag } = useConnectionDrag();
+  const connectionMadeRef = useRef(false);
 
   const { transform, canvasRef, onPointerDown, onPointerMove, onPointerUp, zoomIn, zoomOut, zoomReset } =
     useCanvasTransform();
@@ -85,6 +86,7 @@ function StitchCanvasInner(): React.ReactElement {
       const sourceKey = drag.sourceKey === '__output__' ? null : drag.sourceKey;
       const result = validateConnection(drag.sourceNodeId, sourceKey, targetNodeId, connections);
       if (!result.valid) return;
+      connectionMadeRef.current = true;
       addConnection({
         chainId: activeChainId,
         sourceNodeId: drag.sourceNodeId,
@@ -152,7 +154,36 @@ function StitchCanvasInner(): React.ReactElement {
   );
 
   // ─── Canvas context menu ───────────────────────────────────────────
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; canvasX: number; canvasY: number } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{
+    x: number; y: number; canvasX: number; canvasY: number;
+    pendingSource?: { nodeId: string; sourceKey: string | null };
+  } | null>(null);
+
+  // Detect drag-drop on empty space → show context menu to create + connect
+  useEffect(() => {
+    if (drag !== null) {
+      connectionMadeRef.current = false;
+      return;
+    }
+    // drag just became null — check if it was dropped on empty space
+    const dropped = consumeDroppedDrag();
+    if (!dropped || connectionMadeRef.current) return;
+
+    // Convert cursor canvas coords to screen coords for the menu position
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const screenX = rect.left + dropped.cursorX * transform.zoom + transform.panX;
+    const screenY = rect.top + dropped.cursorY * transform.zoom + transform.panY;
+    const sourceKey = dropped.sourceKey === '__output__' ? null : dropped.sourceKey;
+
+    setContextMenu({
+      x: screenX,
+      y: screenY,
+      canvasX: dropped.cursorX,
+      canvasY: dropped.cursorY,
+      pendingSource: { nodeId: dropped.sourceNodeId, sourceKey },
+    });
+  }, [drag, consumeDroppedDrag, transform, canvasRef]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent): void => {
     // Only show on empty canvas, not on nodes
@@ -174,6 +205,7 @@ function StitchCanvasInner(): React.ReactElement {
       : type === 'request' ? { ...DEFAULT_REQUEST_NODE_CONFIG }
       : type === 'sleep' ? { ...DEFAULT_SLEEP_NODE_CONFIG }
       : {};
+    const pending = contextMenu.pendingSource;
     addNode({
       chainId: activeChainId,
       type,
@@ -181,9 +213,19 @@ function StitchCanvasInner(): React.ReactElement {
       positionY: contextMenu.canvasY,
       config,
       label,
+    }).then((newNode) => {
+      if (pending) {
+        addConnection({
+          chainId: activeChainId,
+          sourceNodeId: pending.nodeId,
+          sourceKey: pending.sourceKey,
+          targetNodeId: newNode.id,
+          targetSlot: 'input',
+        }).catch(() => {});
+      }
     }).catch(() => {});
     setContextMenu(null);
-  }, [activeChainId, nodes, addNode, contextMenu]);
+  }, [activeChainId, nodes, addNode, addConnection, contextMenu]);
 
   const handleCanvasPointerDown = useCallback((e: React.PointerEvent): void => {
     setContextMenu(null);
