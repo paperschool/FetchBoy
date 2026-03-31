@@ -110,22 +110,7 @@ function StitchCanvasInner(): React.ReactElement {
     [selectedConnectionId, removeConnection],
   );
 
-  const handleUpdatePosition = useCallback(
-    (id: string, x: number, y: number): void => {
-      const movedNode = nodes.find((n) => n.id === id);
-      if (movedNode?.type === 'loop') {
-        // Move children by the same delta
-        const dx = x - movedNode.positionX;
-        const dy = y - movedNode.positionY;
-        const children = nodes.filter((n) => n.parentNodeId === id);
-        for (const child of children) {
-          updateNode(child.id, { positionX: child.positionX + dx, positionY: child.positionY + dy }).catch(() => {});
-        }
-      }
-      updateNode(id, { positionX: x, positionY: y }).catch(() => {});
-    },
-    [updateNode, nodes],
-  );
+  const rebalanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const rebalanceLoop = useCallback(
     (loopNodeId: string): void => {
@@ -140,6 +125,18 @@ function StitchCanvasInner(): React.ReactElement {
       }
     },
     [updateNode],
+  );
+
+  const handleUpdatePosition = useCallback(
+    (id: string, x: number, y: number): void => {
+      updateNode(id, { positionX: x, positionY: y }).catch(() => {});
+
+      if (nodes.find((n) => n.id === id)?.type === 'loop') {
+        if (rebalanceTimerRef.current) clearTimeout(rebalanceTimerRef.current);
+        rebalanceTimerRef.current = setTimeout(() => rebalanceLoop(id), 150);
+      }
+    },
+    [updateNode, nodes, rebalanceLoop],
   );
 
   // Check loop containment after a node drag ends
