@@ -129,14 +129,25 @@ function StitchCanvasInner(): React.ReactElement {
 
   const handleUpdatePosition = useCallback(
     (id: string, x: number, y: number): void => {
-      updateNode(id, { positionX: x, positionY: y }).catch(() => {});
+      // Read fresh state so children move correctly on every tick
+      const freshNodes = useStitchStore.getState().nodes;
+      const movedNode = freshNodes.find((n) => n.id === id);
 
-      if (nodes.find((n) => n.id === id)?.type === 'loop') {
+      if (movedNode?.type === 'loop') {
+        const dx = x - movedNode.positionX;
+        const dy = y - movedNode.positionY;
+        const children = freshNodes.filter((n) => n.parentNodeId === id);
+        for (const child of children) {
+          updateNode(child.id, { positionX: child.positionX + dx, positionY: child.positionY + dy }).catch(() => {});
+        }
+        // Debounced rebalance to fix any drift after drag settles
         if (rebalanceTimerRef.current) clearTimeout(rebalanceTimerRef.current);
-        rebalanceTimerRef.current = setTimeout(() => rebalanceLoop(id), 150);
+        rebalanceTimerRef.current = setTimeout(() => rebalanceLoop(id), 200);
       }
+
+      updateNode(id, { positionX: x, positionY: y }).catch(() => {});
     },
-    [updateNode, nodes, rebalanceLoop],
+    [updateNode, rebalanceLoop],
   );
 
   // Check loop containment after a node drag ends
