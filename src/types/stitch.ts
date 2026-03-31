@@ -1,6 +1,6 @@
 // ─── Stitch Node Types ──────────────────────────────────────────────────────
 
-export type StitchNodeType = 'request' | 'json-object' | 'js-snippet' | 'sleep' | 'loop' | 'merge' | 'condition';
+export type StitchNodeType = 'request' | 'json-object' | 'js-snippet' | 'sleep' | 'loop' | 'merge' | 'condition' | 'mapping' | 'mapping-entry' | 'mapping-exit';
 
 export type StitchExecutionState = 'idle' | 'running' | 'paused' | 'completed' | 'error';
 
@@ -93,6 +93,40 @@ export interface ConditionNodeConfig {
 
 export const DEFAULT_CONDITION_NODE_CONFIG: ConditionNodeConfig = {
   expression: 'input.status === 200',
+};
+
+export interface MappingNodeConfig {
+  urlPattern: string;
+  matchType: 'exact' | 'partial' | 'wildcard' | 'regex';
+}
+
+export const DEFAULT_MAPPING_CONFIG: MappingNodeConfig = {
+  urlPattern: '',
+  matchType: 'partial',
+};
+
+export interface MappingEntryNodeConfig {
+  isEntryNode: true;
+}
+
+export const DEFAULT_MAPPING_ENTRY_CONFIG: MappingEntryNodeConfig = {
+  isEntryNode: true,
+};
+
+export interface MappingExitNodeConfig {
+  isExitNode: true;
+  status: number;
+  headers: Array<{ key: string; value: string }>;
+  body: string;
+  bodyContentType: string;
+}
+
+export const DEFAULT_MAPPING_EXIT_CONFIG: MappingExitNodeConfig = {
+  isExitNode: true,
+  status: 200,
+  headers: [],
+  body: '',
+  bodyContentType: 'application/json',
 };
 
 // ─── Domain Interfaces ──────────────────────────────────────────────────────

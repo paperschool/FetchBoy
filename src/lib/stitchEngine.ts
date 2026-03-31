@@ -10,6 +10,7 @@ import type {
   StitchKeyValuePair,
   LoopNodeConfig,
   MergeNodeConfig,
+  MappingExitNodeConfig,
 } from '@/types/stitch';
 
 // ─── Topological Sort (Kahn's Algorithm) ────────────────────────────────────
@@ -375,6 +376,124 @@ export function executeMergeNode(
   return merged;
 }
 
+// ─── Mapping Node Executors ────────────────────────────────────────────────
+
+export function executeMappingEntryNode(
+  _node: StitchNode,
+  input: Record<string, unknown>,
+): Record<string, unknown> {
+  // Entry node outputs the incoming request data (or sample data for manual runs)
+  return {
+    status: input.status ?? 200,
+    headers: input.headers ?? {},
+    body: input.body ?? {},
+  };
+}
+
+export function executeMappingExitNode(
+  node: StitchNode,
+  input: Record<string, unknown>,
+): Record<string, unknown> {
+  const config = node.config as unknown as MappingExitNodeConfig;
+
+  const interpolate = (str: string): string =>
+    str.replace(/\{\{(\w+)\}\}/g, (_, key: string) => {
+      if (key in input) return String(input[key]);
+      return `{{${key}}}`;
+    });
+
+  const headers: Record<string, string> = {};
+  for (const h of config.headers ?? []) {
+    if (h.key) headers[interpolate(h.key)] = interpolate(h.value);
+  }
+
+  return {
+    status: config.status ?? 200,
+    headers,
+    body: interpolate(config.body ?? ''),
+    bodyContentType: config.bodyContentType ?? 'application/json',
+  };
+}
+
+export async function executeMappingNode(
+  mappingNode: StitchNode,
+  input: Record<string, unknown>,
+  allNodes: StitchNode[],
+  allConnections: StitchConnection[],
+  envVariables: Record<string, string>,
+  callbacks: ExecutionCallbacks,
+  cancelledRef: { current: boolean },
+): Promise<Record<string, unknown>> {
+  const childNodes = allNodes.filter((n) => n.parentNodeId === mappingNode.id);
+  const childNodeIds = new Set(childNodes.map((n) => n.id));
+  const childConnections = allConnections.filter(
+    (c) => childNodeIds.has(c.sourceNodeId) && childNodeIds.has(c.targetNodeId),
+  );
+
+  if (childNodes.length === 0) return {};
+
+  let sortedChildren: StitchNode[];
+  try {
+    sortedChildren = topologicalSort(childNodes, childConnections);
+  } catch (err) {
+    throw new Error(`Mapping node "${mappingNode.label ?? mappingNode.id}": ${(err as Error).message}`);
+  }
+
+  // Find exit node to capture its output
+  const exitNode = sortedChildren.find((n) => n.type === 'mapping-exit');
+  const exitNodeId = exitNode?.id ?? sortedChildren[sortedChildren.length - 1].id;
+
+  const ctx = createExecutionContext();
+
+  for (const childNode of sortedChildren) {
+    if (cancelledRef.current) break;
+
+    callbacks.onNodeStart(childNode.id);
+    const childStart = Date.now();
+
+    const childInput = resolveNodeInputs(childNode.id, childConnections, ctx);
+
+    // Entry node gets the mapping input (intercepted request data)
+    if (childNode.type === 'mapping-entry') {
+      Object.assign(childInput, input);
+    }
+
+    let output: unknown;
+    let consoleLogs: Array<{ level: 'log' | 'warn' | 'error'; args: string }> | undefined;
+
+    switch (childNode.type) {
+      case 'mapping-entry':
+        output = executeMappingEntryNode(childNode, childInput);
+        break;
+      case 'mapping-exit':
+        output = executeMappingExitNode(childNode, childInput);
+        break;
+      case 'json-object':
+        output = executeJsonObjectNode(childNode);
+        break;
+      case 'js-snippet': {
+        const jsResult = executeJsSnippetNode(childNode, childInput);
+        output = jsResult.output;
+        consoleLogs = jsResult.consoleLogs.length > 0 ? jsResult.consoleLogs : undefined;
+        break;
+      }
+      case 'request':
+        output = await executeRequestNode(childNode, childInput, envVariables);
+        break;
+      case 'sleep':
+        output = await executeSleepNode(childNode, childInput, callbacks, cancelledRef);
+        break;
+      default:
+        throw new Error(`Unsupported node type in mapping: ${childNode.type}`);
+    }
+
+    ctx.nodeOutputs[childNode.id] = output;
+    callbacks.onNodeComplete(childNode.id, output, Date.now() - childStart, undefined, consoleLogs);
+  }
+
+  return (ctx.nodeOutputs[exitNodeId] ?? {}) as Record<string, unknown>;
+}
+
 // ─── Topological Depth Grouping ────────────────────────────────────────────
 
 export function groupByDepth(
@@ -642,11 +761,19 @@ export async function executeChain(
             const condResult = executeConditionNode(node, input);
             output = condResult.output;
             conditionResult = condResult.result;
-            // Compute which downstream nodes to skip
             const toSkip = computeSkippedNodes(node.id, condResult.result, topLevelConnections, topLevelNodeIds);
             for (const id of toSkip) skippedNodeIds.add(id);
             break;
           }
+          case 'mapping':
+            output = await executeMappingNode(node, input, nodes, connections, envVariables, callbacks, cancelledRef);
+            break;
+          case 'mapping-entry':
+            output = executeMappingEntryNode(node, input);
+            break;
+          case 'mapping-exit':
+            output = executeMappingExitNode(node, input);
+            break;
           default:
             throw new Error(`Unknown node type: ${node.type}`);
         }

@@ -14,6 +14,8 @@ import {
   executeSleepNode,
   executeMergeNode,
   executeConditionNode,
+  executeMappingEntryNode,
+  executeMappingExitNode,
   computeSkippedNodes,
   groupByDepth,
   executeChain,
@@ -757,5 +759,104 @@ describe('computeSkippedNodes', () => {
     const skipped = computeSkippedNodes('cond', true, conns, allIds);
     expect(skipped.has('b')).toBe(true);
     expect(skipped.has('merge')).toBe(false);
+  });
+});
+
+// ─── Mapping Node Tests ────────────────────────────────────────────────────
+
+describe('executeMappingEntryNode', () => {
+  it('passes through status, headers, body from input', () => {
+    const node = makeNode({ id: 'e', type: 'mapping-entry', config: { isEntryNode: true } });
+    const result = executeMappingEntryNode(node, { status: 404, headers: { 'x-foo': 'bar' }, body: { err: true } });
+    expect(result.status).toBe(404);
+    expect(result.headers).toEqual({ 'x-foo': 'bar' });
+    expect(result.body).toEqual({ err: true });
+  });
+
+  it('provides defaults when input is empty', () => {
+    const node = makeNode({ id: 'e', type: 'mapping-entry', config: { isEntryNode: true } });
+    const result = executeMappingEntryNode(node, {});
+    expect(result.status).toBe(200);
+    expect(result.headers).toEqual({});
+    expect(result.body).toEqual({});
+  });
+});
+
+describe('executeMappingExitNode', () => {
+  it('returns configured response with interpolation', () => {
+    const node = makeNode({
+      id: 'x', type: 'mapping-exit',
+      config: {
+        isExitNode: true, status: 201,
+        headers: [{ key: 'X-Id', value: '{{id}}' }],
+        body: '{"created": "{{name}}"}',
+        bodyContentType: 'application/json',
+      },
+    });
+    const result = executeMappingExitNode(node, { id: '42', name: 'test' });
+    expect(result.status).toBe(201);
+    expect(result.headers).toEqual({ 'X-Id': '42' });
+    expect(result.body).toBe('{"created": "test"}');
+    expect(result.bodyContentType).toBe('application/json');
+  });
+});
+
+describe('mapping container execution', () => {
+  it('executes a mapping container with entry → js → exit', async () => {
+    const nodes = [
+      makeNode({ id: 'map', positionY: 0, type: 'mapping', config: { urlPattern: '/api/*', matchType: 'wildcard' } }),
+      makeNode({ id: 'entry', positionY: 50, type: 'mapping-entry', parentNodeId: 'map', config: { isEntryNode: true } }),
+      makeNode({
+        id: 'transform', positionY: 50, positionX: 200, type: 'js-snippet', parentNodeId: 'map',
+        config: { code: 'return { message: "Hello " + input.body.name }' },
+      }),
+      makeNode({
+        id: 'exit', positionY: 50, positionX: 400, type: 'mapping-exit', parentNodeId: 'map',
+        config: { isExitNode: true, status: 200, headers: [], body: '{{message}}', bodyContentType: 'text/plain' },
+      }),
+    ];
+    const conns = [
+      makeConn({ sourceNodeId: 'entry', targetNodeId: 'transform' }),
+      makeConn({ sourceNodeId: 'transform', targetNodeId: 'exit' }),
+    ];
+    const callbacks = makeCallbacks();
+    const cancelledRef = { current: false };
+
+    const ctx = await executeChain(nodes, conns, {}, callbacks, cancelledRef);
+
+    expect(ctx.status).toBe('completed');
+    const output = ctx.nodeOutputs['map'] as Record<string, unknown>;
+    expect(output.status).toBe(200);
+    expect(output.body).toBe('Hello undefined'); // body.name not set in empty input
+    expect(output.bodyContentType).toBe('text/plain');
+  });
+
+  it('mapping entry receives input data from parent', async () => {
+    const nodes = [
+      makeNode({ id: 'data', positionY: 0, config: { json: '{"status": 200, "headers": {}, "body": {"name": "World"}}' } }),
+      makeNode({ id: 'map', positionY: 100, type: 'mapping', config: { urlPattern: '/test', matchType: 'exact' } }),
+      makeNode({ id: 'entry', positionY: 150, type: 'mapping-entry', parentNodeId: 'map', config: { isEntryNode: true } }),
+      makeNode({
+        id: 'js', positionY: 150, positionX: 200, type: 'js-snippet', parentNodeId: 'map',
+        config: { code: 'return { greeting: "Hi " + input.body.name }' },
+      }),
+      makeNode({
+        id: 'exit', positionY: 150, positionX: 400, type: 'mapping-exit', parentNodeId: 'map',
+        config: { isExitNode: true, status: 200, headers: [], body: '{{greeting}}', bodyContentType: 'text/plain' },
+      }),
+    ];
+    const conns = [
+      makeConn({ sourceNodeId: 'data', targetNodeId: 'map' }),
+      makeConn({ sourceNodeId: 'entry', targetNodeId: 'js' }),
+      makeConn({ sourceNodeId: 'js', targetNodeId: 'exit' }),
+    ];
+    const callbacks = makeCallbacks();
+    const cancelledRef = { current: false };
+
+    const ctx = await executeChain(nodes, conns, {}, callbacks, cancelledRef);
+
+    expect(ctx.status).toBe('completed');
+    const output = ctx.nodeOutputs['map'] as Record<string, unknown>;
+    expect(output.body).toBe('Hi World');
   });
 });

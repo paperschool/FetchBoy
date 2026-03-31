@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { Send, Code, Braces, Timer, Repeat, GitMerge, GitBranch, X } from 'lucide-react';
+import { Send, Code, Braces, Timer, Repeat, GitMerge, GitBranch, Globe, ArrowDownToLine, ArrowUpFromLine, X } from 'lucide-react';
 import { useStitchStore } from '@/stores/stitchStore';
 import { JsonObjectEditor } from './JsonObjectEditor';
 import { JsSnippetEditor } from './JsSnippetEditor';
@@ -8,6 +8,8 @@ import { SleepNodeEditor } from './SleepNodeEditor';
 import { LoopNodeEditor } from './LoopNodeEditor';
 import { MergeNodeEditor } from './MergeNodeEditor';
 import { ConditionNodeEditor } from './ConditionNodeEditor';
+import { MappingNodeEditor } from './MappingNodeEditor';
+import { MappingExitNodeEditor } from './MappingExitNodeEditor';
 import type { StitchNode, StitchNodeType } from '@/types/stitch';
 
 const TYPE_ICONS: Record<StitchNodeType, React.ReactNode> = {
@@ -18,6 +20,9 @@ const TYPE_ICONS: Record<StitchNodeType, React.ReactNode> = {
   'loop': <Repeat size={12} />,
   'merge': <GitMerge size={12} />,
   'condition': <GitBranch size={12} />,
+  'mapping': <Globe size={12} />,
+  'mapping-entry': <ArrowDownToLine size={12} />,
+  'mapping-exit': <ArrowUpFromLine size={12} />,
 };
 
 const TYPE_LABELS: Record<StitchNodeType, string> = {
@@ -28,6 +33,9 @@ const TYPE_LABELS: Record<StitchNodeType, string> = {
   'loop': 'Loop',
   'merge': 'Merge',
   'condition': 'Condition',
+  'mapping': 'Mapping',
+  'mapping-entry': 'Entry',
+  'mapping-exit': 'Exit',
 };
 
 interface StitchEditorPanelProps {
@@ -70,6 +78,8 @@ export function StitchEditorPanel({ node }: StitchEditorPanelProps): React.React
         {node.type === 'loop' && <LoopNodeEditor node={node} />}
         {node.type === 'merge' && <MergeNodeEditor node={node} />}
         {node.type === 'condition' && <ConditionNodeEditor node={node} />}
+        {node.type === 'mapping' && <MappingNodeEditor node={node} />}
+        {node.type === 'mapping-exit' && <MappingExitNodeEditor node={node} />}
       </div>
     </div>
   );

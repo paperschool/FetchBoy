@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useMemo, type PointerEvent, type KeyboardEvent } from 'react';
-import { Send, Code, Braces, Timer, Eye, AlertCircle, Repeat, GitMerge, GitBranch } from 'lucide-react';
+import { Send, Code, Braces, Timer, Eye, AlertCircle, Repeat, GitMerge, GitBranch, Globe, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
 import type { StitchNode as StitchNodeType, StitchConnection } from '@/types/stitch';
 import type { StitchNodeType as NodeType } from '@/types/stitch';
 import { useStitchStore } from '@/stores/stitchStore';
@@ -27,6 +27,9 @@ const NODE_ICONS: Record<NodeType, React.ReactNode> = {
   'loop': <Repeat size={12} />,
   'merge': <GitMerge size={12} />,
   'condition': <GitBranch size={12} />,
+  'mapping': <Globe size={12} />,
+  'mapping-entry': <ArrowDownToLine size={12} />,
+  'mapping-exit': <ArrowUpFromLine size={12} />,
 };
 
 const NODE_COLORS: Record<NodeType, string> = {
@@ -37,6 +40,9 @@ const NODE_COLORS: Record<NodeType, string> = {
   'loop': 'bg-app-main/95 border-cyan-500/40',
   'merge': 'bg-app-main/95 border-indigo-500/40',
   'condition': 'bg-app-main/95 border-orange-500/40',
+  'mapping': 'bg-app-main/95 border-teal-500/40',
+  'mapping-entry': 'bg-app-main/95 border-teal-500/40',
+  'mapping-exit': 'bg-app-main/95 border-teal-500/40',
 };
 
 const NODE_HEADER_COLORS: Record<NodeType, string> = {
@@ -47,6 +53,9 @@ const NODE_HEADER_COLORS: Record<NodeType, string> = {
   'loop': 'bg-cyan-500/15',
   'merge': 'bg-indigo-500/15',
   'condition': 'bg-orange-500/15',
+  'mapping': 'bg-teal-500/15',
+  'mapping-entry': 'bg-teal-500/15',
+  'mapping-exit': 'bg-teal-500/15',
 };
 
 import type { ExecutionNodeStatus } from '@/types/stitch';
@@ -164,6 +173,9 @@ export const StitchNode = React.memo(function StitchNode({
     if (node.type === 'condition') {
       return { keys: ['true', 'false'], error: null };
     }
+    if (node.type === 'mapping-entry') {
+      return { keys: ['status', 'headers', 'body'], error: null };
+    }
     return null;
   }, [node.type, node.config, node.id, connections, allNodes]);
 
@@ -172,7 +184,7 @@ export const StitchNode = React.memo(function StitchNode({
   // JSON Object, JS Snippet, and Sleep use a single output port (full payload); Request keeps per-key ports
   const useSinglePort = node.type === 'json-object' || node.type === 'js-snippet' || node.type === 'sleep';
   const hasDynamicPorts = !useSinglePort && outputKeys.length > 0;
-  const portColor = node.type === 'js-snippet' ? 'amber' : node.type === 'request' ? 'blue' : node.type === 'sleep' ? 'purple' : node.type === 'condition' ? 'amber' : 'green';
+  const portColor = node.type === 'js-snippet' ? 'amber' : node.type === 'request' ? 'blue' : node.type === 'sleep' ? 'purple' : node.type === 'condition' ? 'amber' : node.type === 'mapping-entry' ? 'blue' : 'green';
 
   const requestConfig = node.type === 'request' ? node.config as { method?: string; url?: string } : null;
 

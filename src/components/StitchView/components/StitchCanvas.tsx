@@ -1,16 +1,18 @@
 import { useCallback, useState, useRef, useEffect } from 'react';
-import { ZoomIn, ZoomOut, Maximize, Play, Square, ScrollText, FileOutput, Send, Code, Braces, Timer, Repeat, GitMerge, GitBranch } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize, Play, Square, ScrollText, FileOutput, Send, Code, Braces, Timer, Repeat, GitMerge, GitBranch, Globe } from 'lucide-react';
 import { useStitchStore } from '@/stores/stitchStore';
 import { useCanvasTransform } from './StitchCanvas.hooks';
 import { StitchNode } from './StitchNode';
 import { StitchLoopNode, LOOP_MAX_CHILDREN } from './StitchLoopNode';
+import { StitchMappingNode } from './StitchMappingNode';
 import { AddNodeMenu } from './AddNodeMenu';
 import { ConnectionLayer } from './ConnectionLayer';
 import { StitchConnectionDragProvider, useConnectionDrag } from './StitchConnectionDragContext';
 import { validateConnection } from '../utils/connectionValidator';
 import { computeLoopChildPositions } from '../utils/loopLayout';
 import type { StitchNodeType } from '@/types/stitch';
-import { DEFAULT_JSON_OBJECT_CONFIG, DEFAULT_JS_SNIPPET_CONFIG, DEFAULT_REQUEST_NODE_CONFIG, DEFAULT_SLEEP_NODE_CONFIG, DEFAULT_LOOP_NODE_CONFIG, DEFAULT_MERGE_NODE_CONFIG, DEFAULT_CONDITION_NODE_CONFIG } from '@/types/stitch';
+import { DEFAULT_JSON_OBJECT_CONFIG, DEFAULT_JS_SNIPPET_CONFIG, DEFAULT_REQUEST_NODE_CONFIG, DEFAULT_SLEEP_NODE_CONFIG, DEFAULT_LOOP_NODE_CONFIG, DEFAULT_MERGE_NODE_CONFIG, DEFAULT_CONDITION_NODE_CONFIG, DEFAULT_MAPPING_CONFIG, DEFAULT_MAPPING_ENTRY_CONFIG, DEFAULT_MAPPING_EXIT_CONFIG } from '@/types/stitch';
+import { computeMappingChildPositions } from '../utils/mappingLayout';
 
 export function StitchCanvas(): React.ReactElement {
   return (
@@ -132,62 +134,85 @@ function StitchCanvasInner(): React.ReactElement {
     [updateNode],
   );
 
+  const rebalanceMapping = useCallback(
+    (mappingNodeId: string): void => {
+      const freshNodes = useStitchStore.getState().nodes;
+      const freshConns = useStitchStore.getState().connections;
+      const mappingNode = freshNodes.find((n) => n.id === mappingNodeId);
+      if (!mappingNode) return;
+      const children = freshNodes.filter((n) => n.parentNodeId === mappingNodeId);
+      const positions = computeMappingChildPositions(mappingNode, children, freshConns);
+      for (const [childId, pos] of positions) {
+        updateNode(childId, { positionX: pos.x, positionY: pos.y }).catch(() => {});
+      }
+    },
+    [updateNode],
+  );
+
   const handleUpdatePosition = useCallback(
     (id: string, x: number, y: number): void => {
       // Read fresh state so children move correctly on every tick
       const freshNodes = useStitchStore.getState().nodes;
       const movedNode = freshNodes.find((n) => n.id === id);
 
-      if (movedNode?.type === 'loop') {
+      if (movedNode?.type === 'loop' || movedNode?.type === 'mapping') {
         const dx = x - movedNode.positionX;
         const dy = y - movedNode.positionY;
         const children = freshNodes.filter((n) => n.parentNodeId === id);
         for (const child of children) {
           updateNode(child.id, { positionX: child.positionX + dx, positionY: child.positionY + dy }).catch(() => {});
         }
-        // Debounced rebalance to fix any drift after drag settles
         if (rebalanceTimerRef.current) clearTimeout(rebalanceTimerRef.current);
-        rebalanceTimerRef.current = setTimeout(() => rebalanceLoop(id), 200);
+        const rebalanceFn = movedNode.type === 'mapping' ? rebalanceMapping : rebalanceLoop;
+        rebalanceTimerRef.current = setTimeout(() => rebalanceFn(id), 200);
       }
 
       updateNode(id, { positionX: x, positionY: y }).catch(() => {});
     },
-    [updateNode, rebalanceLoop],
+    [updateNode, rebalanceLoop, rebalanceMapping],
   );
 
-  // Check loop containment after a node drag ends
+  // Check loop/mapping containment after a node drag ends
   const handleNodeDragEnd = useCallback(
     (id: string): void => {
       const movedNode = nodes.find((n) => n.id === id);
-      if (!movedNode || movedNode.type === 'loop') return;
+      if (!movedNode || movedNode.type === 'loop' || movedNode.type === 'mapping') return;
 
-      const loopNodes = nodes.filter((n) => n.type === 'loop' && n.id !== id);
+      const containerNodes = nodes.filter((n) => (n.type === 'loop' || n.type === 'mapping') && n.id !== id);
       let newParent: string | null = null;
-      for (const loop of loopNodes) {
-        const childCount = nodes.filter((n) => n.parentNodeId === loop.id && n.id !== id).length;
-        if (childCount >= LOOP_MAX_CHILDREN) continue;
+      for (const container of containerNodes) {
+        // Loop has child limit, mapping doesn't
+        if (container.type === 'loop') {
+          const childCount = nodes.filter((n) => n.parentNodeId === container.id && n.id !== id).length;
+          if (childCount >= LOOP_MAX_CHILDREN) continue;
+        }
 
-        const loopEl = document.querySelector(`[data-node-id="${loop.id}"]`) as HTMLElement | null;
-        const loopW = loopEl?.offsetWidth ?? 240;
-        const loopH = loopEl?.offsetHeight ?? 152;
-        if (movedNode.positionX >= loop.positionX &&
-            movedNode.positionX + 180 <= loop.positionX + loopW &&
-            movedNode.positionY >= loop.positionY + 32 &&
-            movedNode.positionY + 70 <= loop.positionY + loopH) {
-          newParent = loop.id;
+        const el = document.querySelector(`[data-node-id="${container.id}"]`) as HTMLElement | null;
+        const cW = el?.offsetWidth ?? 240;
+        const cH = el?.offsetHeight ?? 152;
+        if (movedNode.positionX >= container.positionX &&
+            movedNode.positionX + 180 <= container.positionX + cW &&
+            movedNode.positionY >= container.positionY + 32 &&
+            movedNode.positionY + 70 <= container.positionY + cH) {
+          newParent = container.id;
           break;
         }
       }
 
       if (newParent !== movedNode.parentNodeId) {
         updateNode(id, { parentNodeId: newParent }).then(() => {
-          // Rebalance the loop we joined or left
-          if (newParent) rebalanceLoop(newParent);
-          if (movedNode.parentNodeId) rebalanceLoop(movedNode.parentNodeId);
+          const parentNode = nodes.find((n) => n.id === newParent);
+          const rebalanceFn = parentNode?.type === 'mapping' ? rebalanceMapping : rebalanceLoop;
+          if (newParent) rebalanceFn(newParent);
+          if (movedNode.parentNodeId) {
+            const oldParent = nodes.find((n) => n.id === movedNode.parentNodeId);
+            const oldRebalance = oldParent?.type === 'mapping' ? rebalanceMapping : rebalanceLoop;
+            oldRebalance(movedNode.parentNodeId);
+          }
         }).catch(() => {});
       }
     },
-    [updateNode, nodes, rebalanceLoop],
+    [updateNode, nodes, rebalanceLoop, rebalanceMapping],
   );
 
   const handleUpdateLabel = useCallback(
@@ -204,8 +229,10 @@ function StitchCanvasInner(): React.ReactElement {
         const cfg = nodeToDelete.config as { isLoopEntry?: boolean };
         if (cfg.isLoopEntry) return; // Can't delete loop entry snippet
       }
-      // Delete children first if deleting a loop node
-      if (nodeToDelete?.type === 'loop') {
+      // Can't delete mapping entry/exit nodes individually
+      if (nodeToDelete?.type === 'mapping-entry' || nodeToDelete?.type === 'mapping-exit') return;
+      // Delete children first if deleting a container node (loop or mapping)
+      if (nodeToDelete?.type === 'loop' || nodeToDelete?.type === 'mapping') {
         const children = nodes.filter((n) => n.parentNodeId === id);
         for (const child of children) {
           removeNode(child.id).catch(() => {});
@@ -214,6 +241,41 @@ function StitchCanvasInner(): React.ReactElement {
       removeNode(id).catch(() => {});
     },
     [removeNode, nodes],
+  );
+
+  const createMappingChildren = useCallback(
+    (mappingNodeId: string): void => {
+      if (!activeChainId) return;
+      const entryPromise = addNode({
+        chainId: activeChainId,
+        type: 'mapping-entry',
+        positionX: 0,
+        positionY: 0,
+        config: { ...DEFAULT_MAPPING_ENTRY_CONFIG },
+        label: 'Entry',
+        parentNodeId: mappingNodeId,
+      });
+      const exitPromise = addNode({
+        chainId: activeChainId,
+        type: 'mapping-exit',
+        positionX: 0,
+        positionY: 0,
+        config: { ...DEFAULT_MAPPING_EXIT_CONFIG },
+        label: 'Exit',
+        parentNodeId: mappingNodeId,
+      });
+      Promise.all([entryPromise, exitPromise]).then(async ([entry, exit]) => {
+        await addConnection({
+          chainId: activeChainId,
+          sourceNodeId: entry.id,
+          sourceKey: null,
+          targetNodeId: exit.id,
+          targetSlot: 'input',
+        }).catch(() => {});
+        rebalanceMapping(mappingNodeId);
+      }).catch(() => {});
+    },
+    [activeChainId, addNode, addConnection, rebalanceMapping],
   );
 
   const createLoopEntrySnippet = useCallback(
@@ -239,7 +301,7 @@ function StitchCanvasInner(): React.ReactElement {
     (type: StitchNodeType): void => {
       if (!activeChainId) return;
       const existingOfType = nodes.filter((n) => n.type === type).length;
-      const labelMap: Record<string, string> = { 'js-snippet': 'Snippet', 'json-object': 'JSON', sleep: 'Sleep', loop: 'Loop', request: 'Request', merge: 'Merge', condition: 'Condition' };
+      const labelMap: Record<string, string> = { 'js-snippet': 'Snippet', 'json-object': 'JSON', sleep: 'Sleep', loop: 'Loop', request: 'Request', merge: 'Merge', condition: 'Condition', mapping: 'Mapping' };
       const label = `${labelMap[type] ?? type} ${existingOfType + 1}`;
       const centerX = (-transform.panX + 300) / transform.zoom;
       const centerY = (-transform.panY + 200) / transform.zoom;
@@ -250,6 +312,7 @@ function StitchCanvasInner(): React.ReactElement {
         : type === 'loop' ? { ...DEFAULT_LOOP_NODE_CONFIG }
         : type === 'merge' ? { ...DEFAULT_MERGE_NODE_CONFIG }
         : type === 'condition' ? { ...DEFAULT_CONDITION_NODE_CONFIG }
+        : type === 'mapping' ? { ...DEFAULT_MAPPING_CONFIG }
         : {};
       addNode({
         chainId: activeChainId,
@@ -261,9 +324,10 @@ function StitchCanvasInner(): React.ReactElement {
         parentNodeId: null,
       }).then((newNode) => {
         if (type === 'loop') createLoopEntrySnippet(newNode.id);
+        if (type === 'mapping') createMappingChildren(newNode.id);
       }).catch((err) => { console.error('[stitch] addNode failed:', err); });
     },
-    [activeChainId, nodes, addNode, transform, createLoopEntrySnippet],
+    [activeChainId, nodes, addNode, transform, createLoopEntrySnippet, createMappingChildren],
   );
 
   // ─── Canvas context menu ───────────────────────────────────────────
@@ -313,7 +377,7 @@ function StitchCanvasInner(): React.ReactElement {
   const handleContextAdd = useCallback((type: StitchNodeType): void => {
     if (!activeChainId || !contextMenu) return;
     const existingOfType = nodes.filter((n) => n.type === type).length;
-    const ctxLabelMap: Record<string, string> = { 'js-snippet': 'Snippet', 'json-object': 'JSON', sleep: 'Sleep', loop: 'Loop', request: 'Request', merge: 'Merge', condition: 'Condition' };
+    const ctxLabelMap: Record<string, string> = { 'js-snippet': 'Snippet', 'json-object': 'JSON', sleep: 'Sleep', loop: 'Loop', request: 'Request', merge: 'Merge', condition: 'Condition', mapping: 'Mapping' };
     const label = `${ctxLabelMap[type] ?? type} ${existingOfType + 1}`;
     const config = type === 'json-object' ? { ...DEFAULT_JSON_OBJECT_CONFIG }
       : type === 'js-snippet' ? { ...DEFAULT_JS_SNIPPET_CONFIG }
@@ -322,11 +386,12 @@ function StitchCanvasInner(): React.ReactElement {
       : type === 'loop' ? { ...DEFAULT_LOOP_NODE_CONFIG }
       : type === 'merge' ? { ...DEFAULT_MERGE_NODE_CONFIG }
       : type === 'condition' ? { ...DEFAULT_CONDITION_NODE_CONFIG }
+      : type === 'mapping' ? { ...DEFAULT_MAPPING_CONFIG }
       : {};
     const pending = contextMenu.pendingSource;
     const inheritedParent = pending?.parentNodeId ?? null;
-    // Don't allow creating loop nodes inside loops
-    if (type === 'loop' && inheritedParent) return;
+    // Don't allow creating container nodes inside other containers
+    if ((type === 'loop' || type === 'mapping') && inheritedParent) return;
     addNode({
       chainId: activeChainId,
       type,
@@ -346,10 +411,11 @@ function StitchCanvasInner(): React.ReactElement {
         }).catch(() => {});
       }
       if (type === 'loop') createLoopEntrySnippet(newNode.id);
+      if (type === 'mapping') createMappingChildren(newNode.id);
       if (inheritedParent) rebalanceLoop(inheritedParent);
     }).catch(() => {});
     setContextMenu(null);
-  }, [activeChainId, nodes, addNode, addConnection, contextMenu, createLoopEntrySnippet, rebalanceLoop]);
+  }, [activeChainId, nodes, addNode, addConnection, contextMenu, createLoopEntrySnippet, createMappingChildren, rebalanceLoop]);
 
   const handleCanvasPointerDown = useCallback((e: React.PointerEvent): void => {
     setContextMenu(null);
@@ -485,8 +551,35 @@ function StitchCanvasInner(): React.ReactElement {
               />
             );
           })}
-          {/* Render regular nodes (non-loop) */}
-          {nodes.filter((n) => n.type !== 'loop').map((node) => {
+          {/* Render mapping container nodes */}
+          {nodes.filter((n) => n.type === 'mapping').map((node) => {
+            const nodeExecStatus = executionError?.nodeId === node.id
+              ? 'error' as const
+              : executionCurrentNodeId === node.id
+                ? 'running' as const
+                : node.id in executionNodeOutputs
+                  ? 'success' as const
+                  : null;
+            const children = nodes.filter((n) => n.parentNodeId === node.id);
+            return (
+              <StitchMappingNode
+                key={node.id}
+                node={node}
+                childNodes={children}
+                selected={node.id === selectedNodeId}
+                zoom={transform.zoom}
+                onSelect={selectNode}
+                onUpdatePosition={handleUpdatePosition}
+                onUpdateLabel={handleUpdateLabel}
+                onDelete={handleDelete}
+                onConnectionDrop={handleConnectionDrop}
+                executionStatus={nodeExecStatus}
+                connections={connections}
+              />
+            );
+          })}
+          {/* Render regular nodes (non-container) */}
+          {nodes.filter((n) => n.type !== 'loop' && n.type !== 'mapping').map((node) => {
             const nodeExecStatus = executionError?.nodeId === node.id
               ? 'error' as const
               : executionCurrentNodeId === node.id
@@ -541,6 +634,7 @@ function StitchCanvasInner(): React.ReactElement {
               { type: 'loop' as const, label: 'Loop', icon: <Repeat size={14} /> },
               { type: 'merge' as const, label: 'Merge', icon: <GitMerge size={14} /> },
               { type: 'condition' as const, label: 'Condition', icon: <GitBranch size={14} /> },
+              { type: 'mapping' as const, label: 'Mapping', icon: <Globe size={14} /> },
             ]).map((opt) => (
               <button
                 key={opt.type}

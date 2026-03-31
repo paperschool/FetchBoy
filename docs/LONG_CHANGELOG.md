@@ -1,5 +1,20 @@
 # Long Changelog
 
+## [0.18.15] - 2026-03-31
+
+### Story 15.15: Mapping Chain Node
+
+- New container-style "Mapping" node (teal color, `Globe` icon) with enforced Entry and Exit child nodes
+- Entry node outputs `status`, `headers`, `body` from intercepted request data (keyed output ports)
+- Exit node editor: status code, headers KV list, body with `{{key}}` interpolation, content type
+- Mapping container editor: URL pattern input with match type selector (exact/partial/wildcard/regex)
+- `StitchMappingNode` container component following `StitchLoopNode` pattern — dynamic bounds, no child limit
+- `computeMappingChildPositions` layout utility: entry pinned left, exit pinned right, user nodes between
+- `executeMappingNode` engine: sorts children topologically, runs entry → chain → exit, returns exit output
+- Entry/exit nodes undeletable; deleting container removes all children
+- Container drag moves all children; containment check supports both loop and mapping containers
+- 5 new engine tests: entry passthrough, exit interpolation, container execution, input propagation
+
 ## [0.18.14] - 2026-03-31
 
 ### Story 15.14: Conditional Branching Node

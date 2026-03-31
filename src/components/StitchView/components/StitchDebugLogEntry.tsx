@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { ChevronRight, ChevronDown, Send, Code, Braces, Timer, Repeat, GitMerge, GitBranch } from 'lucide-react';
+import { ChevronRight, ChevronDown, Send, Code, Braces, Timer, Repeat, GitMerge, GitBranch, Globe, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
 import { MonacoEditorField } from '@/components/Editor/MonacoEditorField';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import type { ExecutionLogEntry, StitchNodeType } from '@/types/stitch';
@@ -12,6 +12,9 @@ const NODE_ICONS: Record<StitchNodeType, React.ReactNode> = {
   'loop': <Repeat size={11} />,
   'merge': <GitMerge size={11} />,
   'condition': <GitBranch size={11} />,
+  'mapping': <Globe size={11} />,
+  'mapping-entry': <ArrowDownToLine size={11} />,
+  'mapping-exit': <ArrowUpFromLine size={11} />,
 };
 
 const STATUS_COLORS: Record<string, string> = {

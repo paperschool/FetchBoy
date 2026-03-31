@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Plus, Send, Code, Braces, Timer, Repeat, GitMerge, GitBranch } from 'lucide-react';
+import { Plus, Send, Code, Braces, Timer, Repeat, GitMerge, GitBranch, Globe } from 'lucide-react';
 import type { StitchNodeType } from '@/types/stitch';
 
 const NODE_TYPE_OPTIONS: { type: StitchNodeType; label: string; icon: React.ReactNode }[] = [
@@ -10,6 +10,7 @@ const NODE_TYPE_OPTIONS: { type: StitchNodeType; label: string; icon: React.Reac
   { type: 'loop', label: 'Loop', icon: <Repeat size={14} /> },
   { type: 'merge', label: 'Merge', icon: <GitMerge size={14} /> },
   { type: 'condition', label: 'Condition', icon: <GitBranch size={14} /> },
+  { type: 'mapping', label: 'Mapping', icon: <Globe size={14} /> },
 ];
 
 interface AddNodeMenuProps {

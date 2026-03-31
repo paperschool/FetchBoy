@@ -27,6 +27,8 @@ export function getNodeOutputKeys(node: StitchNode, connections?: StitchConnecti
       return [];
     case 'condition':
       return ['true', 'false'];
+    case 'mapping-entry':
+      return ['status', 'headers', 'body'];
     default:
       return [];
   }
