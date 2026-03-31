@@ -169,12 +169,18 @@ export const StitchNode = React.memo(function StitchNode({
   const handlePortPointerDown = useCallback((key: string, e: PointerEvent<HTMLDivElement>): void => {
     e.stopPropagation();
     e.preventDefault();
-    const allKeys = portResult?.keys ?? [];
-    const idx = allKeys.indexOf(key);
-    const count = allKeys.length;
-    const offset = count === 1 ? 0.5 : idx / (count - 1);
-    const leftPercent = (10 + offset * 80) / 100;
-    const portX = node.positionX + NODE_WIDTH * leftPercent;
+    let portX: number;
+    if (key === '__output__') {
+      // Single centered port
+      portX = node.positionX + NODE_WIDTH / 2;
+    } else {
+      const allKeys = portResult?.keys ?? [];
+      const idx = allKeys.indexOf(key);
+      const count = allKeys.length;
+      const offset = count === 1 ? 0.5 : idx / (count - 1);
+      const leftPercent = (10 + offset * 80) / 100;
+      portX = node.positionX + NODE_WIDTH * leftPercent;
+    }
     const measuredHeight = nodeRef.current?.offsetHeight ?? 82;
     const portY = node.positionY + measuredHeight;
     startDrag(node.id, key, portX, portY);
