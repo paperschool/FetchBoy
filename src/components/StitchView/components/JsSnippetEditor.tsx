@@ -25,24 +25,24 @@ export function JsSnippetEditor({ node }: JsSnippetEditorProps): React.ReactElem
     [node.id, connections],
   );
 
-  const inputHint = useMemo((): string => {
-    if (inputKeys.length === 0) return '';
-    const destructured = inputKeys.join(', ');
-    return `// Available: const { ${destructured} } = input;\n`;
-  }, [inputKeys]);
-
-  const displayValue = inputHint + codeValue;
-
   const handleChange = useCallback(
     (value: string): void => {
-      // Strip the injected hint before saving
-      const raw = inputHint ? value.replace(inputHint, '') : value;
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
-        updateNode(node.id, { config: { ...node.config, code: raw } }).catch(() => {});
+        updateNode(node.id, { config: { ...node.config, code: value } }).catch(() => {});
       }, 300);
     },
-    [node.id, node.config, updateNode, inputHint],
+    [node.id, node.config, updateNode],
+  );
+
+  const handleInjectKey = useCallback(
+    (key: string): void => {
+      const line = `const ${key} = input.${key};\n`;
+      if (codeValue.includes(line.trim())) return; // already present
+      const newCode = line + codeValue;
+      updateNode(node.id, { config: { ...node.config, code: newCode } }).catch(() => {});
+    },
+    [codeValue, node.id, node.config, updateNode],
   );
 
   return (
@@ -61,13 +61,15 @@ export function JsSnippetEditor({ node }: JsSnippetEditorProps): React.ReactElem
                 <span className="text-[10px] text-app-muted">No input connected</span>
               ) : (
                 inputKeys.map((key) => (
-                  <span
+                  <button
                     key={key}
-                    className="rounded bg-blue-500/15 px-1.5 py-0.5 text-[10px] text-blue-700 dark:text-blue-400"
+                    className="cursor-pointer rounded bg-blue-500/15 px-1.5 py-0.5 text-[10px] text-blue-700 hover:bg-blue-500/30 dark:text-blue-400"
                     data-testid={`input-key-${key}`}
+                    onClick={() => handleInjectKey(key)}
+                    title={`Insert const ${key} = input.${key};`}
                   >
                     {key}
-                  </span>
+                  </button>
                 ))
               )}
             </div>
@@ -101,7 +103,7 @@ export function JsSnippetEditor({ node }: JsSnippetEditorProps): React.ReactElem
         {/* Monaco editor */}
         <div className="min-h-0 min-w-0 flex-1">
           <MonacoEditorField
-            value={displayValue}
+            value={codeValue}
             language="javascript"
             fontSize={fontSize}
             path={`stitch-js-${node.id}`}
