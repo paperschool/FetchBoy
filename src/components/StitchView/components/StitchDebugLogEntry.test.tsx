@@ -32,7 +32,7 @@ describe('StitchDebugLogEntry', () => {
     expect(screen.getByTestId('log-error-message')).toHaveTextContent('Something went wrong');
   });
 
-  it('toggles input and output JSON', async () => {
+  it('toggles input and output editors', async () => {
     const entry: ExecutionLogEntry = {
       ...baseEntry,
       input: { foo: 'bar' },
@@ -40,16 +40,17 @@ describe('StitchDebugLogEntry', () => {
     };
     render(<StitchDebugLogEntry entry={entry} isError={false} />);
 
-    // Input should be collapsed by default
-    expect(screen.queryByText(/"foo": "bar"/)).not.toBeInTheDocument();
+    // Editors should be collapsed by default
+    expect(screen.queryByTestId('debug-input-editor-n1')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('debug-output-editor-n1')).not.toBeInTheDocument();
 
     // Expand input
     await userEvent.click(screen.getByText('Input'));
-    expect(screen.getByText(/"foo": "bar"/)).toBeInTheDocument();
+    expect(screen.getByTestId('debug-input-editor-n1')).toBeInTheDocument();
 
     // Expand output
     await userEvent.click(screen.getByText('Output'));
-    expect(screen.getByText(/"result": 42/)).toBeInTheDocument();
+    expect(screen.getByTestId('debug-output-editor-n1')).toBeInTheDocument();
   });
 
   it('does not show input/output buttons when data is empty', () => {

@@ -1,5 +1,5 @@
-import { useCallback } from 'react';
-import { ZoomIn, ZoomOut, Maximize, Play, Square, ScrollText } from 'lucide-react';
+import { useCallback, useState } from 'react';
+import { ZoomIn, ZoomOut, Maximize, Play, Square, ScrollText, Send, Code, Braces, Timer } from 'lucide-react';
 import { useStitchStore } from '@/stores/stitchStore';
 import { useCanvasTransform } from './StitchCanvas.hooks';
 import { StitchNode } from './StitchNode';
@@ -44,11 +44,12 @@ function StitchCanvasInner(): React.ReactElement {
     useCanvasTransform();
 
   const handlePlay = useCallback((): void => {
-    console.log('[stitch] Play clicked, canPlay:', nodes.length > 0 && executionState !== 'running');
+    // Deselect node so the debug log panel is visible
+    selectNode(null);
     startExecution().catch((err) => {
       console.error('[stitch] Execution failed:', err);
     });
-  }, [startExecution, nodes.length, executionState]);
+  }, [startExecution, selectNode]);
 
   const handleStop = useCallback((): void => {
     cancelExecution();
@@ -144,6 +145,43 @@ function StitchCanvasInner(): React.ReactElement {
     [activeChainId, nodes, addNode, transform],
   );
 
+  // ─── Canvas context menu ───────────────────────────────────────────
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; canvasX: number; canvasY: number } | null>(null);
+
+  const handleContextMenu = useCallback((e: React.MouseEvent): void => {
+    // Only show on empty canvas, not on nodes
+    if ((e.target as HTMLElement).closest('[data-stitch-node]')) return;
+    e.preventDefault();
+    const canvasX = (e.nativeEvent.offsetX - transform.panX) / transform.zoom;
+    const canvasY = (e.nativeEvent.offsetY - transform.panY) / transform.zoom;
+    setContextMenu({ x: e.clientX, y: e.clientY, canvasX, canvasY });
+  }, [transform]);
+
+  const handleContextAdd = useCallback((type: StitchNodeType): void => {
+    if (!activeChainId || !contextMenu) return;
+    const existingOfType = nodes.filter((n) => n.type === type).length;
+    const label = `${type === 'js-snippet' ? 'Snippet' : type === 'json-object' ? 'JSON' : type === 'sleep' ? 'Sleep' : 'Request'} ${existingOfType + 1}`;
+    const config = type === 'json-object' ? { ...DEFAULT_JSON_OBJECT_CONFIG }
+      : type === 'js-snippet' ? { ...DEFAULT_JS_SNIPPET_CONFIG }
+      : type === 'request' ? { ...DEFAULT_REQUEST_NODE_CONFIG }
+      : type === 'sleep' ? { ...DEFAULT_SLEEP_NODE_CONFIG }
+      : {};
+    addNode({
+      chainId: activeChainId,
+      type,
+      positionX: contextMenu.canvasX,
+      positionY: contextMenu.canvasY,
+      config,
+      label,
+    }).catch(() => {});
+    setContextMenu(null);
+  }, [activeChainId, nodes, addNode, contextMenu]);
+
+  const handleCanvasPointerDown = useCallback((e: React.PointerEvent): void => {
+    setContextMenu(null);
+    onPointerDown(e);
+  }, [onPointerDown]);
+
   const zoomPercent = Math.round(transform.zoom * 100);
 
   return (
@@ -221,10 +259,11 @@ function StitchCanvasInner(): React.ReactElement {
           backgroundSize: '20px 20px',
         }}
         data-testid="stitch-canvas"
-        onPointerDown={onPointerDown}
+        onPointerDown={handleCanvasPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onClick={handleCanvasClick}
+        onContextMenu={handleContextMenu}
       >
         <div
           style={{
@@ -266,9 +305,35 @@ function StitchCanvasInner(): React.ReactElement {
             <div className="text-center">
               <p className="text-sm text-app-muted">Empty canvas</p>
               <p className="mt-1 text-xs text-app-muted">
-                Use "Add Node" to start building your chain
+                Right-click or use "Add Node" to get started
               </p>
             </div>
+          </div>
+        )}
+
+        {/* Context menu */}
+        {contextMenu && (
+          <div
+            className="fixed z-50 min-w-[140px] rounded border border-app-subtle bg-app-main shadow-lg"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+            data-testid="canvas-context-menu"
+          >
+            {([
+              { type: 'request' as const, label: 'Request', icon: <Send size={14} /> },
+              { type: 'js-snippet' as const, label: 'JS Snippet', icon: <Code size={14} /> },
+              { type: 'json-object' as const, label: 'JSON Object', icon: <Braces size={14} /> },
+              { type: 'sleep' as const, label: 'Sleep', icon: <Timer size={14} /> },
+            ]).map((opt) => (
+              <button
+                key={opt.type}
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-app-secondary hover:bg-app-hover"
+                onClick={() => handleContextAdd(opt.type)}
+                data-testid={`context-add-${opt.type}`}
+              >
+                <span className="text-app-muted">{opt.icon}</span>
+                {opt.label}
+              </button>
+            ))}
           </div>
         )}
       </div>

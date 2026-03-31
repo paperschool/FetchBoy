@@ -1,5 +1,7 @@
 import { useState, useCallback } from 'react';
 import { ChevronRight, ChevronDown, Send, Code, Braces, Timer } from 'lucide-react';
+import { MonacoEditorField } from '@/components/Editor/MonacoEditorField';
+import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import type { ExecutionLogEntry, StitchNodeType } from '@/types/stitch';
 
 const NODE_ICONS: Record<StitchNodeType, React.ReactNode> = {
@@ -33,6 +35,7 @@ function formatDuration(ms: number): string {
 export function StitchDebugLogEntry({ entry, isError }: StitchDebugLogEntryProps): React.ReactElement {
   const [inputExpanded, setInputExpanded] = useState(false);
   const [outputExpanded, setOutputExpanded] = useState(false);
+  const fontSize = useUiSettingsStore((s) => s.editorFontSize);
 
   const toggleInput = useCallback((): void => setInputExpanded((p) => !p), []);
   const toggleOutput = useCallback((): void => setOutputExpanded((p) => !p), []);
@@ -75,9 +78,17 @@ export function StitchDebugLogEntry({ entry, isError }: StitchDebugLogEntryProps
             Input
           </button>
           {inputExpanded && (
-            <pre className="mt-0.5 max-h-[120px] overflow-auto rounded bg-app-sidebar p-2 text-[10px] text-app-secondary">
-              {JSON.stringify(entry.input, null, 2)}
-            </pre>
+            <div className="mt-0.5">
+              <MonacoEditorField
+                value={JSON.stringify(entry.input, null, 2)}
+                language="json"
+                readOnly
+                fontSize={fontSize - 2}
+                path={`debug-input-${entry.nodeId}-${entry.timestamp}`}
+                testId={`debug-input-editor-${entry.nodeId}`}
+                height="120px"
+              />
+            </div>
           )}
         </div>
       )}
@@ -89,9 +100,17 @@ export function StitchDebugLogEntry({ entry, isError }: StitchDebugLogEntryProps
             Output
           </button>
           {outputExpanded && (
-            <pre className="mt-0.5 max-h-[120px] overflow-auto rounded bg-app-sidebar p-2 text-[10px] text-app-secondary">
-              {JSON.stringify(entry.output, null, 2)}
-            </pre>
+            <div className="mt-0.5">
+              <MonacoEditorField
+                value={JSON.stringify(entry.output, null, 2)}
+                language="json"
+                readOnly
+                fontSize={fontSize - 2}
+                path={`debug-output-${entry.nodeId}-${entry.timestamp}`}
+                testId={`debug-output-editor-${entry.nodeId}`}
+                height="120px"
+              />
+            </div>
           )}
         </div>
       )}
