@@ -6,6 +6,7 @@ import type {
   ExecutionCallbacks,
   SleepNodeConfig,
   RequestNodeConfig,
+  StitchAuthConfig,
   StitchKeyValuePair,
 } from '@/types/stitch';
 
@@ -140,6 +141,25 @@ export function executeJsSnippetNode(
   }
 }
 
+function buildAuthPayload(
+  auth: StitchAuthConfig | undefined,
+  interpolate: (s: string) => string,
+): Record<string, string> {
+  if (!auth || auth.type === 'none') {
+    return { type: 'none', token: '', username: '', password: '', key: '', value: '', in: 'header' };
+  }
+  switch (auth.type) {
+    case 'bearer':
+      return { type: 'bearer', token: interpolate(auth.token), username: '', password: '', key: '', value: '', in: 'header' };
+    case 'basic':
+      return { type: 'basic', token: '', username: interpolate(auth.username), password: interpolate(auth.password), key: '', value: '', in: 'header' };
+    case 'api-key':
+      return { type: 'api-key', token: '', username: '', password: '', key: interpolate(auth.key), value: interpolate(auth.value), in: auth.in };
+    default:
+      return { type: 'none', token: '', username: '', password: '', key: '', value: '', in: 'header' };
+  }
+}
+
 export async function executeRequestNode(
   node: StitchNode,
   input: Record<string, unknown>,
@@ -165,7 +185,7 @@ export async function executeRequestNode(
     headers: mapKvPairs(config.headers ?? []),
     queryParams: mapKvPairs(config.queryParams ?? []),
     body: { mode: config.bodyType === 'none' ? 'none' : 'raw', raw: interpolate(config.body ?? '') },
-    auth: { type: 'none', token: '', username: '', password: '', key: '', value: '', in: 'header' },
+    auth: buildAuthPayload(config.auth, interpolate),
     timeoutMs: 30000,
     sslVerify: true,
     requestId: null,

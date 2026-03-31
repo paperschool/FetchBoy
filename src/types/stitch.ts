@@ -28,6 +28,12 @@ export interface StitchKeyValuePair {
   enabled: boolean;
 }
 
+export type StitchAuthConfig =
+  | { type: 'none' }
+  | { type: 'bearer'; token: string }
+  | { type: 'basic'; username: string; password: string }
+  | { type: 'api-key'; key: string; value: string; in: 'header' | 'query' };
+
 export interface RequestNodeConfig {
   method: string;
   url: string;
@@ -35,6 +41,7 @@ export interface RequestNodeConfig {
   queryParams: StitchKeyValuePair[];
   body: string;
   bodyType: 'none' | 'json' | 'text' | 'xml';
+  auth?: StitchAuthConfig;
 }
 
 export const DEFAULT_REQUEST_NODE_CONFIG: RequestNodeConfig = {
@@ -44,6 +51,7 @@ export const DEFAULT_REQUEST_NODE_CONFIG: RequestNodeConfig = {
   queryParams: [],
   body: '',
   bodyType: 'none',
+  auth: { type: 'none' },
 };
 
 export const REQUEST_OUTPUT_PORTS = ['status', 'headers', 'body'] as const;

@@ -8,13 +8,14 @@ import { useStitchStore } from '@/stores/stitchStore';
 import { useEnvironmentStore } from '@/stores/environmentStore';
 import { resolveInputShape } from '../utils/inputShapeResolver';
 import { RequestSearchPalette } from './RequestSearchPalette';
-import type { StitchNode, RequestNodeConfig } from '@/types/stitch';
+import type { StitchNode, RequestNodeConfig, StitchAuthConfig } from '@/types/stitch';
 import type { KeyValueRow } from '@/stores/requestStore';
 import type { KeyValuePair, Request } from '@/lib/db';
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'] as const;
 const BODY_TYPES = ['none', 'json', 'text', 'xml'] as const;
-type EditorTab = 'headers' | 'params' | 'body';
+const AUTH_TYPES = ['none', 'bearer', 'basic', 'api-key'] as const;
+type EditorTab = 'headers' | 'params' | 'body' | 'auth';
 
 interface RequestNodeEditorProps {
   node: StitchNode;
@@ -24,6 +25,15 @@ function mapBodyType(bt: string): RequestNodeConfig['bodyType'] {
   if (bt === 'json' || bt === 'xml') return bt;
   if (bt === 'raw') return 'text';
   return 'none';
+}
+
+function mapAuth(authType: string, authConfig: Record<string, string>): StitchAuthConfig {
+  switch (authType) {
+    case 'bearer': return { type: 'bearer', token: authConfig['token'] ?? '' };
+    case 'basic': return { type: 'basic', username: authConfig['username'] ?? '', password: authConfig['password'] ?? '' };
+    case 'api-key': return { type: 'api-key', key: authConfig['key'] ?? '', value: authConfig['value'] ?? '', in: (authConfig['in'] as 'header' | 'query') ?? 'header' };
+    default: return { type: 'none' };
+  }
 }
 
 export function RequestNodeEditor({ node }: RequestNodeEditorProps): React.ReactElement {
@@ -47,6 +57,7 @@ export function RequestNodeEditor({ node }: RequestNodeEditorProps): React.React
   const queryParams: KeyValueRow[] = cfg.queryParams ?? [];
   const body = cfg.body ?? '';
   const bodyType = cfg.bodyType ?? 'none';
+  const auth: StitchAuthConfig = cfg.auth ?? { type: 'none' };
 
   // Combine env variables + connected input keys for variable highlighting
   const activeEnv = environments.find((e) => e.is_active);
@@ -83,6 +94,7 @@ export function RequestNodeEditor({ node }: RequestNodeEditorProps): React.React
         queryParams: req.query_params.map((q) => ({ key: q.key, value: q.value, enabled: q.enabled })),
         body: req.body_content,
         bodyType: mapBodyType(req.body_type),
+        auth: mapAuth(req.auth_type, req.auth_config),
       });
       updateNode(node.id, { label: req.name }).catch(() => {});
       setShowSearch(false);
@@ -177,7 +189,7 @@ export function RequestNodeEditor({ node }: RequestNodeEditorProps): React.React
       {/* Tabs — matches Fetch tab styling */}
       <div className="shrink-0 border-b border-app-subtle">
         <div className="flex gap-2 px-2">
-          {(['headers', 'params', 'body'] as const).map((tab) => {
+          {(['headers', 'params', 'body', 'auth'] as const).map((tab) => {
             const isActive = activeTab === tab;
             const label = tab === 'params' ? 'Query Params' : tab.charAt(0).toUpperCase() + tab.slice(1);
             return (
@@ -251,6 +263,111 @@ export function RequestNodeEditor({ node }: RequestNodeEditorProps): React.React
                 height="100%"
                 onChange={(v) => persist({ body: v })}
               />
+            )}
+          </div>
+        )}
+        {activeTab === 'auth' && (
+          <div className="space-y-3">
+            <div>
+              <label className="text-app-secondary mb-1 block text-xs font-medium">Auth Type</label>
+              <select
+                className="select-flat border-app-subtle bg-app-main text-app-primary h-8 w-48 rounded-md border pl-2 pr-7 text-xs"
+                value={auth.type}
+                onChange={(e) => {
+                  const t = e.target.value as StitchAuthConfig['type'];
+                  if (t === 'none') persistImmediate({ auth: { type: 'none' } });
+                  else if (t === 'bearer') persistImmediate({ auth: { type: 'bearer', token: '' } });
+                  else if (t === 'basic') persistImmediate({ auth: { type: 'basic', username: '', password: '' } });
+                  else if (t === 'api-key') persistImmediate({ auth: { type: 'api-key', key: '', value: '', in: 'header' } });
+                }}
+                data-testid="auth-type-select"
+              >
+                {AUTH_TYPES.map((t) => (
+                  <option key={t} value={t}>{t === 'none' ? 'None' : t === 'bearer' ? 'Bearer Token' : t === 'basic' ? 'Basic Auth' : 'API Key'}</option>
+                ))}
+              </select>
+            </div>
+
+            {auth.type === 'bearer' && (
+              <div>
+                <label className="text-app-secondary mb-1 block text-xs font-medium">Token</label>
+                <input
+                  type="text"
+                  className="h-8 w-full rounded-md border border-app-subtle bg-app-main px-2 text-sm text-app-primary"
+                  value={auth.token}
+                  onChange={(e) => persistImmediate({ auth: { ...auth, token: e.target.value } })}
+                  placeholder="{{token}}"
+                  data-testid="auth-bearer-token"
+                />
+              </div>
+            )}
+
+            {auth.type === 'basic' && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-app-secondary mb-1 block text-xs font-medium">Username</label>
+                  <input
+                    type="text"
+                    className="h-8 w-full rounded-md border border-app-subtle bg-app-main px-2 text-sm text-app-primary"
+                    value={auth.username}
+                    onChange={(e) => persistImmediate({ auth: { ...auth, username: e.target.value } })}
+                    placeholder="{{username}}"
+                    data-testid="auth-basic-username"
+                  />
+                </div>
+                <div>
+                  <label className="text-app-secondary mb-1 block text-xs font-medium">Password</label>
+                  <input
+                    type="password"
+                    className="h-8 w-full rounded-md border border-app-subtle bg-app-main px-2 text-sm text-app-primary"
+                    value={auth.password}
+                    onChange={(e) => persistImmediate({ auth: { ...auth, password: e.target.value } })}
+                    placeholder="{{password}}"
+                    data-testid="auth-basic-password"
+                  />
+                </div>
+              </div>
+            )}
+
+            {auth.type === 'api-key' && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-app-secondary mb-1 block text-xs font-medium">Key</label>
+                    <input
+                      type="text"
+                      className="h-8 w-full rounded-md border border-app-subtle bg-app-main px-2 text-sm text-app-primary"
+                      value={auth.key}
+                      onChange={(e) => persistImmediate({ auth: { ...auth, key: e.target.value } })}
+                      placeholder="X-API-Key"
+                      data-testid="auth-apikey-key"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-app-secondary mb-1 block text-xs font-medium">Value</label>
+                    <input
+                      type="text"
+                      className="h-8 w-full rounded-md border border-app-subtle bg-app-main px-2 text-sm text-app-primary"
+                      value={auth.value}
+                      onChange={(e) => persistImmediate({ auth: { ...auth, value: e.target.value } })}
+                      placeholder="{{api_key}}"
+                      data-testid="auth-apikey-value"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-app-secondary mb-1 block text-xs font-medium">Send In</label>
+                  <select
+                    className="select-flat border-app-subtle bg-app-main text-app-primary h-8 w-32 rounded-md border pl-2 pr-7 text-xs"
+                    value={auth.in}
+                    onChange={(e) => persistImmediate({ auth: { ...auth, in: e.target.value as 'header' | 'query' } })}
+                    data-testid="auth-apikey-in"
+                  >
+                    <option value="header">Header</option>
+                    <option value="query">Query Param</option>
+                  </select>
+                </div>
+              </div>
             )}
           </div>
         )}
