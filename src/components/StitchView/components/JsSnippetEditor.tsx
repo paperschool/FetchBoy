@@ -23,20 +23,34 @@ export function JsSnippetEditor({ node }: JsSnippetEditorProps): React.ReactElem
 
   const inputEntries = useMemo((): Array<{ key: string; type: string }> => {
     const incoming = connections.filter(
-      (c: StitchConnection) => c.targetNodeId === node.id && c.sourceKey !== null,
+      (c: StitchConnection) => c.targetNodeId === node.id,
     );
-    return incoming.map((c) => {
-      const key = c.sourceKey as string;
+    const entries: Array<{ key: string; type: string }> = [];
+    for (const c of incoming) {
       const sourceOutput = executionNodeOutputs[c.sourceNodeId];
-      let type = '?';
-      if (sourceOutput && key in sourceOutput) {
-        const val = sourceOutput[key];
-        if (val === null) type = 'null';
-        else if (Array.isArray(val)) type = 'array';
-        else type = typeof val;  // "string", "number", "object", "boolean"
+      if (c.sourceKey !== null) {
+        // Keyed connection — single key
+        let type = '?';
+        if (sourceOutput && c.sourceKey in sourceOutput) {
+          const val = sourceOutput[c.sourceKey];
+          if (val === null) type = 'null';
+          else if (Array.isArray(val)) type = 'array';
+          else type = typeof val;
+        }
+        entries.push({ key: c.sourceKey, type });
+      } else if (sourceOutput) {
+        // Null key — spread all keys from source output
+        for (const key of Object.keys(sourceOutput)) {
+          const val = sourceOutput[key];
+          let type = '?';
+          if (val === null) type = 'null';
+          else if (Array.isArray(val)) type = 'array';
+          else type = typeof val;
+          entries.push({ key, type });
+        }
       }
-      return { key, type };
-    });
+    }
+    return entries;
   }, [node.id, connections, executionNodeOutputs]);
 
   const handleChange = useCallback(

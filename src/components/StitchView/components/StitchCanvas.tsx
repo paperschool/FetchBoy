@@ -77,12 +77,13 @@ function StitchCanvasInner(): React.ReactElement {
   const handleConnectionDrop = useCallback(
     (targetNodeId: string): void => {
       if (!drag || !activeChainId) return;
-      const result = validateConnection(drag.sourceNodeId, drag.sourceKey, targetNodeId, connections);
+      const sourceKey = drag.sourceKey === '__output__' ? null : drag.sourceKey;
+      const result = validateConnection(drag.sourceNodeId, sourceKey, targetNodeId, connections);
       if (!result.valid) return;
       addConnection({
         chainId: activeChainId,
         sourceNodeId: drag.sourceNodeId,
-        sourceKey: drag.sourceKey,
+        sourceKey,
         targetNodeId,
         targetSlot: 'input',
       }).catch(() => {});
@@ -152,10 +153,12 @@ function StitchCanvasInner(): React.ReactElement {
     // Only show on empty canvas, not on nodes
     if ((e.target as HTMLElement).closest('[data-stitch-node]')) return;
     e.preventDefault();
-    const canvasX = (e.nativeEvent.offsetX - transform.panX) / transform.zoom;
-    const canvasY = (e.nativeEvent.offsetY - transform.panY) / transform.zoom;
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const canvasX = (e.clientX - rect.left - transform.panX) / transform.zoom;
+    const canvasY = (e.clientY - rect.top - transform.panY) / transform.zoom;
     setContextMenu({ x: e.clientX, y: e.clientY, canvasX, canvasY });
-  }, [transform]);
+  }, [transform, canvasRef]);
 
   const handleContextAdd = useCallback((type: StitchNodeType): void => {
     if (!activeChainId || !contextMenu) return;
@@ -314,9 +317,11 @@ function StitchCanvasInner(): React.ReactElement {
         {/* Context menu */}
         {contextMenu && (
           <div
-            className="fixed z-50 min-w-[140px] rounded border border-app-subtle bg-app-main shadow-lg"
+            className="fixed z-50 min-w-[140px] rounded border border-app-subtle bg-app-main py-1 shadow-lg"
             style={{ left: contextMenu.x, top: contextMenu.y }}
             data-testid="canvas-context-menu"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
           >
             {([
               { type: 'request' as const, label: 'Request', icon: <Send size={14} /> },
@@ -326,7 +331,7 @@ function StitchCanvasInner(): React.ReactElement {
             ]).map((opt) => (
               <button
                 key={opt.type}
-                className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-app-secondary hover:bg-app-hover"
+                className="flex w-full cursor-pointer items-center gap-2 px-3 py-1.5 text-left text-xs text-app-secondary hover:bg-app-hover"
                 onClick={() => handleContextAdd(opt.type)}
                 data-testid={`context-add-${opt.type}`}
               >

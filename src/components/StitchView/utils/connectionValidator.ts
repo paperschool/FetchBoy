@@ -7,7 +7,7 @@ export interface ValidationResult {
 
 export function validateConnection(
   sourceNodeId: string,
-  sourceKey: string,
+  sourceKey: string | null,
   targetNodeId: string,
   connections: StitchConnection[],
 ): ValidationResult {

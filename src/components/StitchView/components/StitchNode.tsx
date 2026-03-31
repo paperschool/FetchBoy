@@ -150,7 +150,9 @@ export const StitchNode = React.memo(function StitchNode({
 
   const outputKeys = portResult?.keys ?? [];
   const hasError = portResult !== null && portResult.error !== null;
-  const hasDynamicPorts = outputKeys.length > 0;
+  // JSON Object and JS Snippet use a single output port (full payload); Request and Sleep keep per-key ports
+  const useSinglePort = node.type === 'json-object' || node.type === 'js-snippet';
+  const hasDynamicPorts = !useSinglePort && outputKeys.length > 0;
   const portColor = node.type === 'js-snippet' ? 'amber' : node.type === 'request' ? 'blue' : node.type === 'sleep' ? 'purple' : 'green';
 
   const requestConfig = node.type === 'request' ? node.config as { method?: string; url?: string } : null;
@@ -289,7 +291,7 @@ export const StitchNode = React.memo(function StitchNode({
           </div>
         ) : sleepSummary ? (
           <span className="text-[10px] font-mono text-purple-500" data-testid="sleep-summary">{sleepSummary}</span>
-        ) : hasDynamicPorts && outputKeys.length > 0 ? (
+        ) : outputKeys.length > 0 ? (
           <div className="flex flex-wrap gap-1">
             {outputKeys.map((key) => (
               <span key={key} className={`rounded px-1 py-0.5 text-[9px] ${portColor === 'amber' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400' : portColor === 'blue' ? 'bg-blue-500/15 text-blue-700 dark:text-blue-400' : portColor === 'purple' ? 'bg-purple-500/15 text-purple-700 dark:text-purple-400' : 'bg-green-500/15 text-green-700 dark:text-green-400'}`} data-testid={`port-${key}`}>
@@ -330,7 +332,15 @@ export const StitchNode = React.memo(function StitchNode({
           })}
         </div>
       ) : (
-        <div className="absolute -bottom-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full border-2 border-app-subtle bg-app-main" />
+        <div
+          className={`absolute -bottom-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full border-2 bg-app-main transition-transform ${
+            useSinglePort && !hasError
+              ? `cursor-crosshair ${portColor === 'amber' ? 'border-amber-500/50' : portColor === 'green' ? 'border-green-500/50' : 'border-app-subtle'} hover:scale-150 hover:border-blue-500`
+              : 'border-app-subtle'
+          }`}
+          data-testid="output-port-single"
+          onPointerDown={useSinglePort && !hasError ? (e) => handlePortPointerDown('__output__', e) : undefined}
+        />
       )}
     </div>
   );
