@@ -348,6 +348,7 @@ async function executeLoopNode(
       for (const childNode of sortedChildren) {
         if (cancelledRef.current) break;
 
+        console.log('[stitch-loop] iter', i, 'node', childNode.label ?? childNode.type, childNode.id.slice(0, 6));
         callbacks.onNodeStart(childNode.id, loopCtx);
         const childStart = Date.now();
 

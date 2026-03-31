@@ -80,6 +80,7 @@ export const useStitchStore = create<StitchState>()(
 
     loadChain: async (chainId: string) => {
       const { chain, nodes, connections } = await stitchDb.loadChainWithNodes(chainId);
+      console.log('[stitch] loadChain:', nodes.map((n) => ({ id: n.id.slice(0, 6), type: n.type, parent: n.parentNodeId?.slice(0, 6) ?? null })));
       set((state) => {
         const idx = state.chains.findIndex((c) => c.id === chain.id);
         if (idx >= 0) state.chains[idx] = chain;

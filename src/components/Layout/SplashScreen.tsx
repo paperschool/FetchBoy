@@ -3,9 +3,9 @@ import { useTheme } from "@/hooks/useTheme";
 import { useUiSettingsStore } from "@/stores/uiSettingsStore";
 import logoUrl from "../../../src-tauri/icons/fetch-boi-logo.svg";
 
-const NODE_COUNT = 100;
+const NODE_COUNT = 250;
 const NODE_RADIUS = 5;
-const MAX_LINK_DIST = 200;
+const MAX_LINK_DIST = 120;
 const NODE_SPEED = 0.2;
 const PADDING = 30;
 
@@ -14,6 +14,7 @@ interface Node {
   y: number;
   vx: number;
   vy: number;
+  radius: number;
 }
 
 function createNodes(w: number, h: number): Node[] {
@@ -24,6 +25,7 @@ function createNodes(w: number, h: number): Node[] {
       y: PADDING + Math.random() * (h - PADDING * 2),
       vx: Math.cos(angle) * NODE_SPEED,
       vy: Math.sin(angle) * NODE_SPEED,
+      radius: NODE_RADIUS * (0.5 + Math.random() * 1.5),
     };
   });
 }
@@ -97,11 +99,11 @@ export function SplashScreen({
       }
     }
 
-    // Draw nodes
+    // Draw nodes (varying size mimics depth)
     ctx.fillStyle = "rgba(100, 140, 210, 0.6)";
     for (const node of nodes) {
       ctx.beginPath();
-      ctx.arc(node.x, node.y, NODE_RADIUS, 0, Math.PI * 2);
+      ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
       ctx.fill();
     }
 

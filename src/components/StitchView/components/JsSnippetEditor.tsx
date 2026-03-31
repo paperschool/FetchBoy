@@ -50,8 +50,16 @@ export function JsSnippetEditor({ node }: JsSnippetEditorProps): React.ReactElem
         }
       }
     }
+
+    // Loop entry snippets always receive { element, index } from the loop
+    const cfg = node.config as { isLoopEntry?: boolean };
+    if (cfg.isLoopEntry && entries.length === 0) {
+      entries.push({ key: 'element', type: '?' });
+      entries.push({ key: 'index', type: 'number' });
+    }
+
     return entries;
-  }, [node.id, connections, executionNodeOutputs]);
+  }, [node.id, node.config, connections, executionNodeOutputs]);
 
   const handleChange = useCallback(
     (value: string): void => {
