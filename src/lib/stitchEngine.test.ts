@@ -244,7 +244,7 @@ describe('executeRequestNode', () => {
 
     expect(result.status).toBe(200);
     expect(result.id).toBe(1); // Spread from JSON body
-    expect(result.body).toBe('{"id":1}');
+    expect(result.body).toEqual({ id: 1 }); // Parsed JSON body
   });
 
   it('throws on network error', async () => {

@@ -186,20 +186,23 @@ export async function executeRequestNode(
       throw new Error('No response received — is the Tauri backend running?');
     }
 
+    // Parse body as JSON when possible, otherwise keep as string
+    let parsedBody: unknown = response.body;
+    try {
+      parsedBody = JSON.parse(response.body);
+    } catch {
+      // Body is not JSON — keep as raw string
+    }
+
     const output: Record<string, unknown> = {
       status: response.status,
       headers: Object.fromEntries(response.headers.map((h) => [h.key, h.value])),
-      body: response.body,
+      body: parsedBody,
     };
 
     // Spread parsed JSON body keys for downstream access
-    try {
-      const parsed: unknown = JSON.parse(response.body);
-      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
-        Object.assign(output, parsed as Record<string, unknown>);
-      }
-    } catch {
-      // Body is not JSON — that's fine
+    if (typeof parsedBody === 'object' && parsedBody !== null && !Array.isArray(parsedBody)) {
+      Object.assign(output, parsedBody as Record<string, unknown>);
     }
 
     return output;

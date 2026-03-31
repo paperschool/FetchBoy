@@ -3,8 +3,7 @@ import { MonacoEditorField } from '@/components/Editor/MonacoEditorField';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import { useStitchStore } from '@/stores/stitchStore';
 import { extractReturnKeys } from '../utils/jsKeyExtractor';
-import { resolveInputShape } from '../utils/inputShapeResolver';
-import type { StitchNode } from '@/types/stitch';
+import type { StitchNode, StitchConnection } from '@/types/stitch';
 
 interface JsSnippetEditorProps {
   node: StitchNode;
@@ -20,10 +19,25 @@ export function JsSnippetEditor({ node }: JsSnippetEditorProps): React.ReactElem
 
   const { keys, error } = useMemo(() => extractReturnKeys(codeValue), [codeValue]);
 
-  const inputKeys = useMemo(
-    () => resolveInputShape(node.id, connections),
-    [node.id, connections],
-  );
+  const executionNodeOutputs = useStitchStore((s) => s.executionNodeOutputs);
+
+  const inputEntries = useMemo((): Array<{ key: string; type: string }> => {
+    const incoming = connections.filter(
+      (c: StitchConnection) => c.targetNodeId === node.id && c.sourceKey !== null,
+    );
+    return incoming.map((c) => {
+      const key = c.sourceKey as string;
+      const sourceOutput = executionNodeOutputs[c.sourceNodeId];
+      let type = '?';
+      if (sourceOutput && key in sourceOutput) {
+        const val = sourceOutput[key];
+        if (val === null) type = 'null';
+        else if (Array.isArray(val)) type = 'array';
+        else type = typeof val;  // "string", "number", "object", "boolean"
+      }
+      return { key, type };
+    });
+  }, [node.id, connections, executionNodeOutputs]);
 
   const handleChange = useCallback(
     (value: string): void => {
@@ -57,18 +71,30 @@ export function JsSnippetEditor({ node }: JsSnippetEditorProps): React.ReactElem
               Inputs
             </span>
             <div className="mt-1 flex flex-wrap gap-1">
-              {inputKeys.length === 0 ? (
+              {inputEntries.length === 0 ? (
                 <span className="text-[10px] text-app-muted">No input connected</span>
               ) : (
-                inputKeys.map((key) => (
+                inputEntries.map(({ key, type }) => (
                   <button
                     key={key}
-                    className="cursor-pointer rounded bg-blue-500/15 px-1.5 py-0.5 text-[10px] text-blue-700 hover:bg-blue-500/30 dark:text-blue-400"
+                    className="flex cursor-pointer items-center gap-0.5 rounded bg-blue-500/15 px-1.5 py-0.5 text-[10px] text-blue-700 hover:bg-blue-500/30 dark:text-blue-400"
                     data-testid={`input-key-${key}`}
                     onClick={() => handleInjectKey(key)}
                     title={`Insert const ${key} = input.${key};`}
                   >
                     {key}
+                    {type !== '?' && (
+                      <span className={`ml-0.5 rounded px-0.5 text-[8px] font-medium ${
+                        type === 'object' ? 'bg-purple-500/20 text-purple-400'
+                        : type === 'array' ? 'bg-purple-500/20 text-purple-400'
+                        : type === 'string' ? 'bg-green-500/20 text-green-400'
+                        : type === 'number' ? 'bg-orange-500/20 text-orange-400'
+                        : type === 'boolean' ? 'bg-yellow-500/20 text-yellow-400'
+                        : 'bg-gray-500/20 text-gray-400'
+                      }`}>
+                        {type === 'object' ? 'json' : type}
+                      </span>
+                    )}
                   </button>
                 ))
               )}
