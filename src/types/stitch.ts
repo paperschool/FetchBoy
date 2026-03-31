@@ -14,6 +14,14 @@ export const DEFAULT_JSON_OBJECT_CONFIG: JsonObjectNodeConfig = {
   json: '{\n  "key": "value"\n}',
 };
 
+export interface JsSnippetNodeConfig {
+  code: string;
+}
+
+export const DEFAULT_JS_SNIPPET_CONFIG: JsSnippetNodeConfig = {
+  code: '// Transform input data\n// Return an object — its keys become output ports\nreturn {\n  result: input.key\n};\n',
+};
+
 // ─── Domain Interfaces ──────────────────────────────────────────────────────
 
 export interface StitchChain {

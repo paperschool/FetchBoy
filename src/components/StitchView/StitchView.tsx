@@ -4,6 +4,7 @@ import { TabLayout } from '@/components/Layout/TabLayout';
 import { useStitchStore } from '@/stores/stitchStore';
 import { StitchCanvas } from './components/StitchCanvas';
 import { JsonObjectEditor } from './components/JsonObjectEditor';
+import { JsSnippetEditor } from './components/JsSnippetEditor';
 
 export function StitchView(): React.ReactElement {
   const [sidebarCollapsed] = useState(false);
@@ -16,7 +17,7 @@ export function StitchView(): React.ReactElement {
   const createChain = useStitchStore((s) => s.createChain);
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId) ?? null;
-  const showEditor = selectedNode?.type === 'json-object';
+  const showEditor = selectedNode?.type === 'json-object' || selectedNode?.type === 'js-snippet';
 
   useEffect(() => {
     loadChains().catch(() => {});
@@ -83,7 +84,8 @@ export function StitchView(): React.ReactElement {
             </div>
             {showEditor && selectedNode && (
               <div className="h-[260px] shrink-0 border-t border-app-subtle" data-testid="node-editor-panel">
-                <JsonObjectEditor node={selectedNode} />
+                {selectedNode.type === 'json-object' && <JsonObjectEditor node={selectedNode} />}
+                {selectedNode.type === 'js-snippet' && <JsSnippetEditor node={selectedNode} />}
               </div>
             )}
           </div>

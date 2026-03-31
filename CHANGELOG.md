@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.18.3] - 2026-03-31
+
+- feat: JS Snippet node with static return-key analysis, input shape resolver, Monaco JS editor, and amber-tinted output ports
+
 ## [0.18.2] - 2026-03-31
 
 - feat: JSON Object seed node with real-time key extraction, labelled output ports, Monaco editor panel, and live exports summary

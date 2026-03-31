@@ -3,6 +3,7 @@ import { Send, Code, Braces, Timer, Eye, AlertCircle } from 'lucide-react';
 import type { StitchNode as StitchNodeType } from '@/types/stitch';
 import type { StitchNodeType as NodeType } from '@/types/stitch';
 import { extractJsonKeys } from '../utils/jsonKeyExtractor';
+import { extractReturnKeys } from '../utils/jsKeyExtractor';
 
 const NODE_ICONS: Record<NodeType, React.ReactNode> = {
   'request': <Send size={12} />,
@@ -107,14 +108,22 @@ export const StitchNode = React.memo(function StitchNode({
 
   const displayLabel = node.label || `${node.type}`;
 
-  const jsonPorts = useMemo(() => {
-    if (node.type !== 'json-object') return null;
-    const jsonStr = (node.config as { json?: string }).json ?? '';
-    return extractJsonKeys(jsonStr);
+  const portResult = useMemo(() => {
+    if (node.type === 'json-object') {
+      const jsonStr = (node.config as { json?: string }).json ?? '';
+      return extractJsonKeys(jsonStr);
+    }
+    if (node.type === 'js-snippet') {
+      const code = (node.config as { code?: string }).code ?? '';
+      return extractReturnKeys(code);
+    }
+    return null;
   }, [node.type, node.config]);
 
-  const outputKeys = jsonPorts?.keys ?? [];
-  const hasError = jsonPorts !== null && jsonPorts.error !== null;
+  const outputKeys = portResult?.keys ?? [];
+  const hasError = portResult !== null && portResult.error !== null;
+  const hasDynamicPorts = node.type === 'json-object' || node.type === 'js-snippet';
+  const portColor = node.type === 'js-snippet' ? 'amber' : 'green';
 
   return (
     <div
@@ -173,14 +182,14 @@ export const StitchNode = React.memo(function StitchNode({
       {/* Body */}
       <div className="px-2 py-1.5">
         {hasError ? (
-          <span className="flex items-center gap-1 text-[10px] text-red-500" title={jsonPorts?.error ?? ''} data-testid="node-json-error">
+          <span className="flex items-center gap-1 text-[10px] text-red-500" title={portResult?.error ?? ''} data-testid="node-error">
             <AlertCircle size={10} />
-            Invalid JSON
+            {node.type === 'json-object' ? 'Invalid JSON' : 'Syntax error'}
           </span>
-        ) : node.type === 'json-object' && outputKeys.length > 0 ? (
+        ) : hasDynamicPorts && outputKeys.length > 0 ? (
           <div className="flex flex-wrap gap-1">
             {outputKeys.map((key) => (
-              <span key={key} className="rounded bg-green-500/15 px-1 py-0.5 text-[9px] text-green-700 dark:text-green-400" data-testid={`port-${key}`}>
+              <span key={key} className={`rounded px-1 py-0.5 text-[9px] ${portColor === 'amber' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400' : 'bg-green-500/15 text-green-700 dark:text-green-400'}`} data-testid={`port-${key}`}>
                 {key}
               </span>
             ))}
@@ -191,7 +200,7 @@ export const StitchNode = React.memo(function StitchNode({
       </div>
 
       {/* Output ports */}
-      {node.type === 'json-object' && !hasError && outputKeys.length > 0 ? (
+      {hasDynamicPorts && !hasError && outputKeys.length > 0 ? (
         <div className="relative h-3">
           {outputKeys.map((key, i) => {
             const offset = outputKeys.length === 1 ? 0.5 : i / (outputKeys.length - 1);
@@ -199,7 +208,7 @@ export const StitchNode = React.memo(function StitchNode({
             return (
               <div
                 key={key}
-                className="absolute -bottom-1.5 h-3 w-3 rounded-full border-2 border-green-500/50 bg-app-main"
+                className={`absolute -bottom-1.5 h-3 w-3 rounded-full border-2 bg-app-main ${portColor === 'amber' ? 'border-amber-500/50' : 'border-green-500/50'}`}
                 style={{ left: `${leftPercent}%`, transform: 'translateX(-50%)' }}
                 title={key}
                 data-testid={`output-port-${key}`}

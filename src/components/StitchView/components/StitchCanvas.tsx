@@ -5,7 +5,7 @@ import { useCanvasTransform } from './StitchCanvas.hooks';
 import { StitchNode } from './StitchNode';
 import { AddNodeMenu } from './AddNodeMenu';
 import type { StitchNodeType } from '@/types/stitch';
-import { DEFAULT_JSON_OBJECT_CONFIG } from '@/types/stitch';
+import { DEFAULT_JSON_OBJECT_CONFIG, DEFAULT_JS_SNIPPET_CONFIG } from '@/types/stitch';
 
 export function StitchCanvas(): React.ReactElement {
   const nodes = useStitchStore((s) => s.nodes);
@@ -19,7 +19,8 @@ export function StitchCanvas(): React.ReactElement {
   const { transform, onWheel, onPointerDown, onPointerMove, onPointerUp, zoomIn, zoomOut, zoomReset } =
     useCanvasTransform();
 
-  const handleCanvasClick = useCallback((): void => {
+  const handleCanvasClick = useCallback((e: React.MouseEvent): void => {
+    if ((e.target as HTMLElement).closest('[data-stitch-node]')) return;
     selectNode(null);
   }, [selectNode]);
 
@@ -51,7 +52,9 @@ export function StitchCanvas(): React.ReactElement {
       const label = `${type === 'js-snippet' ? 'Snippet' : type === 'json-object' ? 'JSON' : type === 'sleep' ? 'Sleep' : 'Request'} ${existingOfType + 1}`;
       const centerX = (-transform.panX + 300) / transform.zoom;
       const centerY = (-transform.panY + 200) / transform.zoom;
-      const config = type === 'json-object' ? { ...DEFAULT_JSON_OBJECT_CONFIG } : {};
+      const config = type === 'json-object' ? { ...DEFAULT_JSON_OBJECT_CONFIG }
+        : type === 'js-snippet' ? { ...DEFAULT_JS_SNIPPET_CONFIG }
+        : {};
       addNode({
         chainId: activeChainId,
         type,

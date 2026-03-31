@@ -1,5 +1,18 @@
 # Long Changelog
 
+## [0.18.3] - 2026-03-31
+
+### Story 15.4: JS Snippet Node with Real-Time Key Export
+
+- `JsSnippetNodeConfig` type with default transform template code
+- `extractReturnKeys()` static analysis — regex-based extraction of top-level keys from `return { ... }` statements (handles shorthand, spread, nested, quoted keys)
+- `resolveInputShape()` utility derives available input keys from incoming connections (shared infra for all node types)
+- JS Snippet nodes display extracted return keys as amber-tinted output port indicators
+- `JsSnippetEditor` panel with input shape bar, Monaco JS editor (debounced 300ms), and live exports summary
+- Editor panel routing in StitchView — type-based switch renders `JsonObjectEditor` or `JsSnippetEditor`
+- StitchNode body/port rendering generalised — both json-object and js-snippet use unified dynamic port logic with type-specific colours
+- 24 new tests (key extractor, input shape resolver, editor panel)
+
 ## [0.18.2] - 2026-03-31
 
 ### Story 15.3: JSON Object Seed Node
