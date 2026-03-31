@@ -331,7 +331,7 @@ function StitchCanvasInner(): React.ReactElement {
             ]).map((opt) => (
               <button
                 key={opt.type}
-                className="flex w-full cursor-pointer items-center gap-2 px-3 py-1.5 text-left text-xs text-app-secondary hover:bg-app-hover"
+                className="flex w-full cursor-pointer items-center gap-2 px-3 py-1.5 text-left text-xs text-app-secondary transition-colors hover:bg-blue-500/15 hover:text-app-primary"
                 onClick={() => handleContextAdd(opt.type)}
                 data-testid={`context-add-${opt.type}`}
               >
