@@ -182,6 +182,10 @@ export async function executeRequestNode(
       content_type: string | null;
     }>('send_request', { request });
 
+    if (!response) {
+      throw new Error('No response received — is the Tauri backend running?');
+    }
+
     const output: Record<string, unknown> = {
       status: response.status,
       headers: Object.fromEntries(response.headers.map((h) => [h.key, h.value])),
@@ -200,7 +204,8 @@ export async function executeRequestNode(
 
     return output;
   } catch (err) {
-    throw new Error(`Request node "${node.label ?? node.id}": ${(err as Error).message}`);
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`Request node "${node.label ?? node.id}": ${msg}`);
   }
 }
 
