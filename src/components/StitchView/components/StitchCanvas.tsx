@@ -224,10 +224,6 @@ function StitchCanvasInner(): React.ReactElement {
           </button>
         )}
         <div className="flex-1" />
-        <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-          Beta
-        </span>
-        <div className="mx-1 h-4 w-px bg-app-subtle" />
         <button
           className="rounded p-1 text-app-muted hover:bg-app-hover hover:text-app-secondary"
           onClick={zoomOut}

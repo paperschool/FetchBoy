@@ -119,7 +119,7 @@ export function StitchView(): React.ReactElement {
           </div>
         ) : (
           <div className="flex h-full flex-col bg-app-sidebar p-3">
-            <div className="mb-3 flex items-center justify-between">
+            <div className="mb-3 flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setSidebarCollapsed(true)}
@@ -129,6 +129,9 @@ export function StitchView(): React.ReactElement {
               >
                 <ChevronLeft size={18} className="text-app-muted" />
               </button>
+              <span className="rounded bg-amber-500/15 px-2 py-0.5 text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                Beta
+              </span>
             </div>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-xs font-semibold uppercase tracking-wider text-app-muted">
