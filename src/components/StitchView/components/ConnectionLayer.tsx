@@ -27,8 +27,14 @@ function getOutputPortPosition(
   return { x: node.positionX + NODE_WIDTH * leftPercent, y: node.positionY + nodeHeight };
 }
 
+function measureNodeWidth(nodeId: string): number {
+  const el = document.querySelector(`[data-node-id="${nodeId}"]`);
+  return el ? (el as HTMLElement).offsetWidth : NODE_WIDTH;
+}
+
 function getInputSlotPosition(node: StitchNode): { x: number; y: number } {
-  return { x: node.positionX + NODE_WIDTH / 2, y: node.positionY + INPUT_SLOT_OFFSET_Y };
+  const width = node.type === 'loop' ? measureNodeWidth(node.id) : NODE_WIDTH;
+  return { x: node.positionX + width / 2, y: node.positionY + INPUT_SLOT_OFFSET_Y };
 }
 
 export function ConnectionLayer(): React.ReactElement {
@@ -70,7 +76,7 @@ export function ConnectionLayer(): React.ReactElement {
 
       const from = conn.sourceKey
         ? getOutputPortPosition(sourceNode, conn.sourceKey, sourceKeys)
-        : { x: sourceNode.positionX + NODE_WIDTH / 2, y: sourceNode.positionY + measureNodeHeight(sourceNode.id) };
+        : { x: sourceNode.positionX + measureNodeWidth(sourceNode.id) / 2, y: sourceNode.positionY + measureNodeHeight(sourceNode.id) };
       const to = getInputSlotPosition(targetNode);
 
       const status = conn.id === selectedConnectionId
