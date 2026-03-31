@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState, useEffect } from 'react';
 import { useStitchStore } from '@/stores/stitchStore';
 import { ConnectionLine } from './ConnectionLine';
 import { useConnectionDrag } from './StitchConnectionDragContext';
@@ -44,6 +44,13 @@ export function ConnectionLayer(): React.ReactElement {
   const selectedConnectionId = useStitchStore((s) => s.selectedConnectionId);
   const selectConnection = useStitchStore((s) => s.selectConnection);
   const { drag } = useConnectionDrag();
+
+  // Force recalculation after DOM paints (node heights not available during initial render)
+  const [calibrated, setCalibrated] = useState(0);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setCalibrated((c) => c + 1));
+    return () => cancelAnimationFrame(id);
+  }, [nodes]);
 
   const nodeMap = useMemo(() => {
     const map = new Map<string, StitchNode>();
@@ -99,7 +106,7 @@ export function ConnectionLayer(): React.ReactElement {
       id: string; fromX: number; fromY: number; toX: number; toY: number;
       status: 'active' | 'selected' | 'broken'; isBroken: boolean; sourceKey: string | null;
     }>;
-  }, [connections, nodeMap, nodes, selectedConnectionId]);
+  }, [connections, nodeMap, nodes, selectedConnectionId, calibrated]);
 
   return (
     <svg

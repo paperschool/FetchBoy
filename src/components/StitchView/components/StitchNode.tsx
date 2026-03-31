@@ -75,6 +75,7 @@ export const StitchNode = React.memo(function StitchNode({
   executionStatus = null,
 }: StitchNodeProps): React.ReactElement {
   const allNodes = useStitchStore((s) => s.nodes);
+  const isLoopEntry = node.type === 'js-snippet' && (node.config as { isLoopEntry?: boolean }).isLoopEntry === true;
   const { drag, startDrag, updateCursor, endDrag } = useConnectionDrag();
   const nodeRef = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState(false);
@@ -222,7 +223,7 @@ export const StitchNode = React.memo(function StitchNode({
       data-testid={`stitch-node-${node.id}`}
       data-node-id={node.id}
       tabIndex={0}
-      className={`absolute select-none rounded-lg border shadow-sm transition-shadow ${NODE_COLORS[node.type]} ${
+      className={`absolute select-none rounded-lg border shadow-sm transition-shadow ${isLoopEntry ? NODE_COLORS['loop'] : NODE_COLORS[node.type]} ${
         selected ? 'ring-2 ring-blue-500 shadow-md' : ''
       } ${dragging ? 'opacity-75' : ''} ${
         executionStatus === 'running' ? 'stitch-node-running' : ''
@@ -249,7 +250,7 @@ export const StitchNode = React.memo(function StitchNode({
 
       {/* Title bar — drag handle */}
       <div
-        className={`flex cursor-grab items-center gap-1.5 rounded-t-lg px-2 py-1.5 ${NODE_HEADER_COLORS[node.type]} ${dragging ? 'cursor-grabbing' : ''}`}
+        className={`flex cursor-grab items-center gap-1.5 rounded-t-lg px-2 py-1.5 ${isLoopEntry ? NODE_HEADER_COLORS['loop'] : NODE_HEADER_COLORS[node.type]} ${dragging ? 'cursor-grabbing' : ''}`}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
