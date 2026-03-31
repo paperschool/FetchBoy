@@ -179,13 +179,24 @@ describe('executeJsSnippetNode', () => {
     expect(executeJsSnippetNode(node, { x: 5 })).toEqual({ doubled: 10 });
   });
 
-  it('throws if return value is not an object', () => {
-    const node = makeNode({
-      id: 'js',
-      type: 'js-snippet',
-      config: { code: 'return 42' },
-    });
-    expect(() => executeJsSnippetNode(node, {})).toThrow(/plain object/);
+  it('wraps non-object return in { value }', () => {
+    expect(executeJsSnippetNode(
+      makeNode({ id: 'js', type: 'js-snippet', config: { code: 'return 42' } }), {},
+    )).toEqual({ value: 42 });
+
+    expect(executeJsSnippetNode(
+      makeNode({ id: 'js', type: 'js-snippet', config: { code: 'return "hello"' } }), {},
+    )).toEqual({ value: 'hello' });
+
+    expect(executeJsSnippetNode(
+      makeNode({ id: 'js', type: 'js-snippet', config: { code: 'return [1, 2, 3]' } }), {},
+    )).toEqual({ value: [1, 2, 3] });
+  });
+
+  it('returns empty object for null/undefined return', () => {
+    expect(executeJsSnippetNode(
+      makeNode({ id: 'js', type: 'js-snippet', config: { code: '' } }), {},
+    )).toEqual({});
   });
 
   it('throws on syntax error', () => {

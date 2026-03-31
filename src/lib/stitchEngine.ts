@@ -133,8 +133,12 @@ export function executeJsSnippetNode(
     // For a desktop app this is acceptable — the user is running their own code.
     const fn = new Function('input', code);
     const result: unknown = fn(input);
-    if (typeof result !== 'object' || result === null || Array.isArray(result)) {
-      throw new Error('JS Snippet must return a plain object');
+    if (result === undefined || result === null) {
+      return {};
+    }
+    if (typeof result !== 'object' || Array.isArray(result)) {
+      // Wrap primitives and arrays so they flow through as { value: ... }
+      return { value: result };
     }
     return result as Record<string, unknown>;
   } catch (err) {
