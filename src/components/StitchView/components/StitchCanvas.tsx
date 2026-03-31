@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { ZoomIn, ZoomOut, Maximize, Play, Square, ScrollText, Send, Code, Braces, Timer } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize, Play, Square, ScrollText, FileOutput, Send, Code, Braces, Timer } from 'lucide-react';
 import { useStitchStore } from '@/stores/stitchStore';
 import { useCanvasTransform } from './StitchCanvas.hooks';
 import { StitchNode } from './StitchNode';
@@ -55,15 +55,20 @@ function StitchCanvasInner(): React.ReactElement {
     cancelExecution();
   }, [cancelExecution]);
 
+  const bottomPanel = useStitchStore((s) => s.bottomPanel);
   const canPlay = nodes.length > 0 && executionState !== 'running';
   const isRunning = executionState === 'running';
   const hasLogs = executionLogs.length > 0;
-  // Show the "open log" button when there are results but the debug panel isn't visible
-  // (because a node is selected, showing the editor instead)
-  const showOpenLog = hasLogs && !isRunning && selectedNodeId !== null;
+  const hasOutputs = Object.keys(useStitchStore.getState().executionNodeOutputs).length > 0;
 
   const handleOpenLog = useCallback((): void => {
     selectNode(null);
+    useStitchStore.setState({ bottomPanel: 'debug' });
+  }, [selectNode]);
+
+  const handleOpenOutput = useCallback((): void => {
+    selectNode(null);
+    useStitchStore.setState({ bottomPanel: 'output' });
   }, [selectNode]);
 
   const handleCanvasClick = useCallback((e: React.MouseEvent): void => {
@@ -216,14 +221,24 @@ function StitchCanvasInner(): React.ReactElement {
             <Play size={14} />
           </button>
         )}
-        {showOpenLog && (
+        {hasLogs && !isRunning && (
           <button
-            className="rounded p-1 text-blue-400 hover:bg-blue-500/20"
+            className={`rounded p-1 ${bottomPanel === 'debug' ? 'bg-blue-500/20 text-blue-400' : 'text-app-muted hover:bg-blue-500/20 hover:text-blue-400'}`}
             onClick={handleOpenLog}
-            title="Show debug log"
+            title="Debug log"
             data-testid="stitch-open-log-btn"
           >
             <ScrollText size={14} />
+          </button>
+        )}
+        {hasOutputs && !isRunning && (
+          <button
+            className={`rounded p-1 ${bottomPanel === 'output' ? 'bg-blue-500/20 text-blue-400' : 'text-app-muted hover:bg-blue-500/20 hover:text-blue-400'}`}
+            onClick={handleOpenOutput}
+            title="Chain output"
+            data-testid="stitch-open-output-btn"
+          >
+            <FileOutput size={14} />
           </button>
         )}
         <div className="flex-1" />

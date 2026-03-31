@@ -24,6 +24,7 @@ interface StitchState {
   executionLogs: ExecutionLogEntry[];
   executionStartTime: number;
   sleepCountdown: { nodeId: string; durationMs: number } | null;
+  bottomPanel: 'none' | 'debug' | 'output';
 
   // Chain actions
   loadChains: () => Promise<void>;
@@ -66,6 +67,7 @@ export const useStitchStore = create<StitchState>()(
     executionLogs: [],
     executionStartTime: 0,
     sleepCountdown: null,
+    bottomPanel: 'none',
 
     loadChains: async () => {
       const chains = await stitchDb.loadChains();
@@ -211,6 +213,7 @@ export const useStitchStore = create<StitchState>()(
         state.executionLogs = [];
         state.executionStartTime = startTime;
         state.sleepCountdown = null;
+        state.bottomPanel = 'debug';
       });
 
       // Resolve environment variables

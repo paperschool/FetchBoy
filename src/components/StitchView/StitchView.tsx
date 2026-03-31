@@ -5,6 +5,7 @@ import { useStitchStore } from '@/stores/stitchStore';
 import { StitchCanvas } from './components/StitchCanvas';
 import { StitchEditorPanel } from './components/StitchEditorPanel';
 import { StitchDebugLog } from './components/StitchDebugLog';
+import { StitchChainOutput } from './components/StitchChainOutput';
 
 export function StitchView(): React.ReactElement {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -15,25 +16,25 @@ export function StitchView(): React.ReactElement {
   const loadChains = useStitchStore((s) => s.loadChains);
   const loadChain = useStitchStore((s) => s.loadChain);
   const createChain = useStitchStore((s) => s.createChain);
-
-  const executionState = useStitchStore((s) => s.executionState);
-  const executionLogs = useStitchStore((s) => s.executionLogs);
+  const bottomPanel = useStitchStore((s) => s.bottomPanel);
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId) ?? null;
   const showEditor = selectedNode !== null && selectedNode.type !== undefined;
+  const showDebugLog = !showEditor && bottomPanel === 'debug';
+  const showOutput = !showEditor && bottomPanel === 'output';
 
-  // Show debug log when running, or when there are results and no node is selected
-  const hasExecutionResults = executionLogs.length > 0;
-  const showDebugLog = !showEditor && hasExecutionResults && (executionState === 'running' || executionState === 'completed' || executionState === 'error');
+  const handleClosePanel = useCallback((): void => {
+    useStitchStore.setState({ bottomPanel: 'none' });
+  }, []);
 
-  const handleCloseDebugLog = useCallback((): void => {
-    // Clear execution logs to dismiss the debug log
+  const handleCloseAndClear = useCallback((): void => {
     useStitchStore.setState({
       executionLogs: [],
       executionNodeOutputs: {},
       executionError: null,
       executionCurrentNodeId: null,
       executionState: 'idle' as const,
+      bottomPanel: 'none',
     });
   }, []);
 
@@ -173,34 +174,22 @@ export function StitchView(): React.ReactElement {
       mainContent={
         activeChainId ? (
           <div className="flex h-full flex-col">
-            <div className={(showEditor || showDebugLog) ? 'min-h-0 flex-1' : 'h-full'}>
+            <div className={(showEditor || showDebugLog || showOutput) ? 'min-h-0 flex-1' : 'h-full'}>
               <StitchCanvas />
             </div>
-            {showEditor && selectedNode && (
+            {(showEditor || showDebugLog || showOutput) && (
               <>
                 <div
                   className="shrink-0 cursor-row-resize border-t border-app-subtle bg-app-sidebar hover:bg-blue-500/20 active:bg-blue-500/30"
                   style={{ height: 5 }}
                   onPointerDown={handleResizePointerDown}
                   title="Drag to resize"
-                  data-testid="editor-resize-handle"
+                  data-testid="panel-resize-handle"
                 />
                 <div className="shrink-0 overflow-hidden transition-[height] duration-150" style={{ height: editorHeight }}>
-                  <StitchEditorPanel node={selectedNode} />
-                </div>
-              </>
-            )}
-            {showDebugLog && !showEditor && (
-              <>
-                <div
-                  className="shrink-0 cursor-row-resize border-t border-app-subtle bg-app-sidebar hover:bg-blue-500/20 active:bg-blue-500/30"
-                  style={{ height: 5 }}
-                  onPointerDown={handleResizePointerDown}
-                  title="Drag to resize"
-                  data-testid="debug-log-resize-handle"
-                />
-                <div className="shrink-0 overflow-hidden transition-[height] duration-150" style={{ height: editorHeight }}>
-                  <StitchDebugLog onClose={handleCloseDebugLog} />
+                  {showEditor && selectedNode && <StitchEditorPanel node={selectedNode} />}
+                  {showDebugLog && <StitchDebugLog onClose={handleCloseAndClear} />}
+                  {showOutput && <StitchChainOutput onClose={handleClosePanel} />}
                 </div>
               </>
             )}

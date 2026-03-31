@@ -1,8 +1,0 @@
-Session conversation summary - Stitch Stories 15.9 & 15.10
-
-Note: Claude Code session IDs are not accessible from within the session.
-To find this session, search your Claude Code history for commits made today.
-
-Latest commit: 42fd672 fix(stitch): correct drag wire position for single-port nodes
-Branch: main
-Date: Tue Mar 31 15:13:55 BST 2026

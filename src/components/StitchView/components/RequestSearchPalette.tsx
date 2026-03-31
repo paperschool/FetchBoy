@@ -97,12 +97,10 @@ export function RequestSearchPalette({ onSelect, onClose }: RequestSearchPalette
               <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold ${METHOD_COLORS[entry.request.method] ?? METHOD_COLORS.GET}`}>
                 {entry.request.method}
               </span>
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm text-app-primary">{entry.request.name}</div>
-                {entry.path && (
-                  <div className="truncate text-xs text-app-muted">{entry.path}</div>
-                )}
-              </div>
+              <span className="min-w-0 flex-1 truncate text-sm text-app-primary">{entry.request.name}</span>
+              {entry.path && (
+                <span className="shrink-0 truncate text-xs text-app-muted">{entry.path}</span>
+              )}
             </button>
           ))
         )}

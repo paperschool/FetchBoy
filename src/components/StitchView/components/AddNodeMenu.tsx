@@ -40,7 +40,7 @@ export function AddNodeMenu({ onAddNode }: AddNodeMenuProps): React.ReactElement
   return (
     <div className="relative" ref={menuRef} data-stitch-toolbar>
       <button
-        className="flex items-center gap-1 rounded bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700"
+        className="flex items-center gap-1 rounded border border-green-500 bg-transparent px-2 py-1 text-xs font-medium text-green-500 transition-colors hover:bg-green-500/15"
         onClick={handleToggle}
         data-testid="add-node-button"
       >
