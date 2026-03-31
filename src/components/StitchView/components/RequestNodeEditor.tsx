@@ -134,10 +134,22 @@ export function RequestNodeEditor({ node }: RequestNodeEditorProps): React.React
         </div>
       )}
 
-      {/* Method + URL row */}
-      <div className="grid shrink-0 grid-cols-[8rem_1fr_auto] items-start gap-3 border-b border-app-subtle px-3 py-2">
+      {/* Collections + Method + URL row */}
+      <div className="grid shrink-0 grid-cols-[auto_7rem_1fr] items-end gap-3 border-b border-app-subtle px-3 py-2">
         <div>
-          <label htmlFor={`stitch-method-${node.id}`} className="text-app-secondary mb-1 block text-xs font-medium">HTTP Method</label>
+          <label className="text-app-secondary mb-1 block text-xs font-medium">Collections</label>
+          <button
+            className="flex h-9 cursor-pointer items-center gap-1.5 rounded-md border border-app-subtle px-3 text-xs text-app-muted transition-colors hover:bg-blue-500/15 hover:text-app-primary"
+            onClick={() => setShowSearch(true)}
+            title="Import from collection"
+            data-testid="import-request-btn"
+          >
+            <Import size={13} />
+            Import
+          </button>
+        </div>
+        <div>
+          <label htmlFor={`stitch-method-${node.id}`} className="text-app-secondary mb-1 block text-xs font-medium">Method</label>
           <select
             id={`stitch-method-${node.id}`}
             className="select-flat border-app-subtle bg-app-main text-app-primary h-9 w-full rounded-md border pl-2 pr-7 text-sm"
@@ -151,7 +163,7 @@ export function RequestNodeEditor({ node }: RequestNodeEditorProps): React.React
           </select>
         </div>
         <div>
-          <label htmlFor={`stitch-url-${node.id}`} className="text-app-secondary mb-1 block text-xs font-medium">Request URL</label>
+          <label htmlFor={`stitch-url-${node.id}`} className="text-app-secondary mb-1 block text-xs font-medium">URL</label>
           <HighlightedUrlInput
             id={`stitch-url-${node.id}`}
             value={localUrl}
@@ -159,17 +171,6 @@ export function RequestNodeEditor({ node }: RequestNodeEditorProps): React.React
             placeholder="https://api.example.com/{{path}}"
             variables={availableVariables}
           />
-        </div>
-        <div className="flex items-end pb-0.5">
-          <button
-            className="flex h-9 cursor-pointer items-center gap-1.5 rounded-md border border-app-subtle px-3 text-xs text-app-muted transition-colors hover:bg-blue-500/15 hover:text-app-primary"
-            onClick={() => setShowSearch(true)}
-            title="Import from collection"
-            data-testid="import-request-btn"
-          >
-            <Import size={13} />
-            Import
-          </button>
         </div>
       </div>
 
