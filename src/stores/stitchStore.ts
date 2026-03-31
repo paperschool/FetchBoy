@@ -247,7 +247,7 @@ export const useStitchStore = create<StitchState>()(
             });
           });
         },
-        onNodeComplete: (nodeId: string, output: Record<string, unknown>, durationMs: number, loopCtx?: { loopNodeId: string; iteration: number }): void => {
+        onNodeComplete: (nodeId: string, output: Record<string, unknown>, durationMs: number, loopCtx?: { loopNodeId: string; iteration: number }, consoleLogs?: Array<{ level: 'log' | 'warn' | 'error'; args: string }>): void => {
           set((state) => {
             state.executionNodeOutputs[nodeId] = output;
             state.sleepCountdown = null;
@@ -261,6 +261,7 @@ export const useStitchStore = create<StitchState>()(
               output,
               loopIteration: loopCtx?.iteration,
               loopNodeId: loopCtx?.loopNodeId,
+              consoleLogs,
             });
           });
         },

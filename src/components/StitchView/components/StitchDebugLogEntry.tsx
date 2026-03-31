@@ -79,6 +79,26 @@ export function StitchDebugLogEntry({ entry, isError }: StitchDebugLogEntryProps
         </div>
       )}
 
+      {entry.consoleLogs && entry.consoleLogs.length > 0 && (
+        <div className="mt-1 space-y-0.5" data-testid="console-logs">
+          {entry.consoleLogs.map((log, i) => (
+            <div
+              key={i}
+              className={`flex items-start gap-1.5 rounded px-2 py-0.5 font-mono text-[10px] ${
+                log.level === 'error' ? 'bg-red-500/10 text-red-400'
+                : log.level === 'warn' ? 'bg-yellow-500/10 text-yellow-400'
+                : 'bg-app-sidebar text-app-secondary'
+              }`}
+            >
+              <span className="shrink-0 text-[9px] text-app-muted">
+                {log.level === 'error' ? '✕' : log.level === 'warn' ? '⚠' : '›'}
+              </span>
+              <span className="whitespace-pre-wrap break-all">{log.args}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {entry.input && Object.keys(entry.input).length > 0 && (
         <div className="mt-1">
           <button className="flex items-center gap-1 text-[10px] text-app-muted hover:text-app-secondary" onClick={toggleInput}>

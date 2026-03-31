@@ -122,27 +122,50 @@ export function executeJsonObjectNode(
   }
 }
 
+export interface JsSnippetResult {
+  output: Record<string, unknown>;
+  consoleLogs: Array<{ level: 'log' | 'warn' | 'error'; args: string }>;
+}
+
 export function executeJsSnippetNode(
   node: StitchNode,
   input: Record<string, unknown>,
-): Record<string, unknown> {
+): JsSnippetResult {
   const config = node.config as { code?: string };
   const code = config.code ?? '';
+  const captured: Array<{ level: 'log' | 'warn' | 'error'; args: string }> = [];
+
+  // Intercept console during execution
+  const origLog = console.log;
+  const origWarn = console.warn;
+  const origError = console.error;
+  const capture = (level: 'log' | 'warn' | 'error') => (...args: unknown[]): void => {
+    captured.push({ level, args: args.map((a) => typeof a === 'string' ? a : JSON.stringify(a)).join(' ') });
+  };
+  console.log = capture('log');
+  console.warn = capture('warn');
+  console.error = capture('error');
+
   try {
     // new Function() is sandboxed from local scope but has access to globals.
     // For a desktop app this is acceptable — the user is running their own code.
     const fn = new Function('input', code);
     const result: unknown = fn(input);
+    let output: Record<string, unknown>;
     if (result === undefined || result === null) {
-      return {};
+      output = {};
+    } else if (typeof result !== 'object' || Array.isArray(result)) {
+      output = { value: result };
+    } else {
+      output = result as Record<string, unknown>;
     }
-    if (typeof result !== 'object' || Array.isArray(result)) {
-      // Wrap primitives and arrays so they flow through as { value: ... }
-      return { value: result };
-    }
-    return result as Record<string, unknown>;
+    return { output, consoleLogs: captured };
   } catch (err) {
     throw new Error(`JS Snippet node "${node.label ?? node.id}": ${(err as Error).message}`);
+  } finally {
+    console.log = origLog;
+    console.warn = origWarn;
+    console.error = origError;
   }
 }
 
@@ -337,13 +360,17 @@ async function executeLoopNode(
         }
 
         let output: Record<string, unknown>;
+        let childConsoleLogs: Array<{ level: 'log' | 'warn' | 'error'; args: string }> | undefined;
         switch (childNode.type) {
           case 'json-object':
             output = executeJsonObjectNode(childNode);
             break;
-          case 'js-snippet':
-            output = executeJsSnippetNode(childNode, childInput);
+          case 'js-snippet': {
+            const jsResult = executeJsSnippetNode(childNode, childInput);
+            output = jsResult.output;
+            childConsoleLogs = jsResult.consoleLogs.length > 0 ? jsResult.consoleLogs : undefined;
             break;
+          }
           case 'request':
             output = await executeRequestNode(childNode, childInput, envVariables);
             break;
@@ -355,7 +382,7 @@ async function executeLoopNode(
         }
 
         iterCtx.nodeOutputs[childNode.id] = output;
-        callbacks.onNodeComplete(childNode.id, output, Date.now() - childStart, loopCtx);
+        callbacks.onNodeComplete(childNode.id, output, Date.now() - childStart, loopCtx, childConsoleLogs);
       }
 
       // Collect terminal node output
@@ -428,14 +455,18 @@ export async function executeChain(
     try {
       const input = resolveNodeInputs(node.id, topLevelConnections, ctx);
       let output: Record<string, unknown>;
+      let consoleLogs: Array<{ level: 'log' | 'warn' | 'error'; args: string }> | undefined;
 
       switch (node.type) {
         case 'json-object':
           output = executeJsonObjectNode(node);
           break;
-        case 'js-snippet':
-          output = executeJsSnippetNode(node, input);
+        case 'js-snippet': {
+          const jsResult = executeJsSnippetNode(node, input);
+          output = jsResult.output;
+          consoleLogs = jsResult.consoleLogs.length > 0 ? jsResult.consoleLogs : undefined;
           break;
+        }
         case 'request':
           output = await executeRequestNode(node, input, envVariables);
           break;
@@ -461,9 +492,10 @@ export async function executeChain(
         durationMs,
         input,
         output,
+        consoleLogs,
       });
 
-      callbacks.onNodeComplete(node.id, output, durationMs);
+      callbacks.onNodeComplete(node.id, output, durationMs, undefined, consoleLogs);
     } catch (err) {
       const message = (err as Error).message;
       ctx.status = 'error';

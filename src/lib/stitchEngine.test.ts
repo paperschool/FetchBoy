@@ -176,27 +176,40 @@ describe('executeJsSnippetNode', () => {
       type: 'js-snippet',
       config: { code: 'return { doubled: input.x * 2 }' },
     });
-    expect(executeJsSnippetNode(node, { x: 5 })).toEqual({ doubled: 10 });
+    const result = executeJsSnippetNode(node, { x: 5 });
+    expect(result.output).toEqual({ doubled: 10 });
+    expect(result.consoleLogs).toEqual([]);
   });
 
   it('wraps non-object return in { value }', () => {
     expect(executeJsSnippetNode(
       makeNode({ id: 'js', type: 'js-snippet', config: { code: 'return 42' } }), {},
-    )).toEqual({ value: 42 });
+    ).output).toEqual({ value: 42 });
 
     expect(executeJsSnippetNode(
       makeNode({ id: 'js', type: 'js-snippet', config: { code: 'return "hello"' } }), {},
-    )).toEqual({ value: 'hello' });
+    ).output).toEqual({ value: 'hello' });
 
     expect(executeJsSnippetNode(
       makeNode({ id: 'js', type: 'js-snippet', config: { code: 'return [1, 2, 3]' } }), {},
-    )).toEqual({ value: [1, 2, 3] });
+    ).output).toEqual({ value: [1, 2, 3] });
   });
 
   it('returns empty object for null/undefined return', () => {
     expect(executeJsSnippetNode(
       makeNode({ id: 'js', type: 'js-snippet', config: { code: '' } }), {},
-    )).toEqual({});
+    ).output).toEqual({});
+  });
+
+  it('captures console.log/warn/error', () => {
+    const result = executeJsSnippetNode(
+      makeNode({ id: 'js', type: 'js-snippet', config: { code: 'console.log("hello"); console.warn("careful"); console.error("oops"); return {}' } }), {},
+    );
+    expect(result.consoleLogs).toEqual([
+      { level: 'log', args: 'hello' },
+      { level: 'warn', args: 'careful' },
+      { level: 'error', args: 'oops' },
+    ]);
   });
 
   it('throws on syntax error', () => {
