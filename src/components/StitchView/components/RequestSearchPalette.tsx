@@ -27,15 +27,20 @@ export function RequestSearchPalette({ onSelect, onClose }: RequestSearchPalette
 
   useEffect(() => { inputRef.current?.focus(); }, []);
 
-  // Build searchable entries with path info
+  // Build searchable entries with path info (deduplicated by ID)
   const entries = useMemo(() => {
-    return requests.map((r) => {
+    const seen = new Set<string>();
+    const result: Array<{ request: Request; path: string; searchText: string }> = [];
+    for (const r of requests) {
+      if (seen.has(r.id)) continue;
+      seen.add(r.id);
       const col = collections.find((c) => c.id === r.collection_id);
       const folder = folders.find((f) => f.id === r.folder_id);
       const path = [col?.name, folder?.name].filter(Boolean).join(' / ');
       const searchText = `${r.method} ${r.name} ${r.url} ${path}`.toLowerCase();
-      return { request: r, path, searchText };
-    });
+      result.push({ request: r, path, searchText });
+    }
+    return result;
   }, [requests, collections, folders]);
 
   const filtered = useMemo(() => {
