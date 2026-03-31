@@ -1,5 +1,5 @@
 import { useCallback, useState, useRef, useEffect } from 'react';
-import { ZoomIn, ZoomOut, Maximize, Play, Square, ScrollText, FileOutput, Send, Code, Braces, Timer, Repeat, GitMerge, GitBranch, Globe } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize, Play, Square, ScrollText, FileOutput, Send, Code, Braces, Timer, Repeat, GitMerge, GitBranch } from 'lucide-react';
 import { useStitchStore } from '@/stores/stitchStore';
 import { useCanvasTransform } from './StitchCanvas.hooks';
 import { StitchNode } from './StitchNode';
@@ -634,7 +634,6 @@ function StitchCanvasInner(): React.ReactElement {
               { type: 'loop' as const, label: 'Loop', icon: <Repeat size={14} /> },
               { type: 'merge' as const, label: 'Merge', icon: <GitMerge size={14} /> },
               { type: 'condition' as const, label: 'Condition', icon: <GitBranch size={14} /> },
-              { type: 'mapping' as const, label: 'Mapping', icon: <Globe size={14} /> },
             ]).map((opt) => (
               <button
                 key={opt.type}

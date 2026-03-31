@@ -72,6 +72,8 @@ export function mappingFormToDb(form: {
   responseBodyFilePath: string;
   urlRemapEnabled: boolean;
   urlRemapTarget: string;
+  useChain?: boolean;
+  chainId?: string | null;
 }): Record<string, unknown> {
   return {
     name: form.name,
@@ -87,5 +89,7 @@ export function mappingFormToDb(form: {
     response_body_file_path: form.responseBodyFilePath,
     url_remap_enabled: form.urlRemapEnabled,
     url_remap_target: form.urlRemapTarget,
+    use_chain: form.useChain ?? false,
+    chain_id: form.chainId ?? null,
   };
 }

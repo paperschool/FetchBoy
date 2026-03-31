@@ -27,6 +27,8 @@ export interface MappingEditForm {
     responseBodyFilePath: string;
     urlRemapEnabled: boolean;
     urlRemapTarget: string;
+    useChain: boolean;
+    chainId: string | null;
 }
 
 const defaultEditForm: MappingEditForm = {
@@ -36,6 +38,7 @@ const defaultEditForm: MappingEditForm = {
     responseBodyEnabled: false, responseBody: '', responseBodyContentType: 'application/json',
     responseBodyFilePath: '',
     urlRemapEnabled: false, urlRemapTarget: '',
+    useChain: false, chainId: null,
 };
 
 /** Map DB entity → edit form. */
@@ -47,6 +50,7 @@ function entityToForm(m: Mapping): MappingEditForm {
         responseBodyEnabled: m.response_body_enabled, responseBody: m.response_body,
         responseBodyContentType: m.response_body_content_type, responseBodyFilePath: m.response_body_file_path,
         urlRemapEnabled: m.url_remap_enabled, urlRemapTarget: m.url_remap_target,
+        useChain: m.use_chain, chainId: m.chain_id,
     };
 }
 

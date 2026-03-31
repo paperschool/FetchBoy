@@ -49,7 +49,7 @@ export function MappingExitNodeEditor({ node }: MappingExitNodeEditorProps): Rea
         <label className="mb-1 block text-xs font-medium text-app-muted">Status Code</label>
         <input
           type="number"
-          className="w-24 rounded border border-app-subtle bg-app-main px-2 py-1 text-xs text-app-primary outline-none focus:border-teal-500"
+          className="w-24 rounded border border-app-subtle bg-app-main px-2 py-1 text-xs text-app-primary outline-none focus:border-yellow-500"
           value={config.status ?? 200}
           onChange={(e) => update({ status: parseInt(e.target.value, 10) || 200 })}
           data-testid="exit-status-input"
@@ -61,7 +61,7 @@ export function MappingExitNodeEditor({ node }: MappingExitNodeEditorProps): Rea
         <div className="mb-1 flex items-center justify-between">
           <label className="text-xs font-medium text-app-muted">Response Headers</label>
           <button
-            className="rounded p-0.5 text-teal-500 hover:bg-app-hover"
+            className="rounded p-0.5 text-yellow-500 hover:bg-app-hover"
             onClick={handleAddHeader}
             title="Add header"
           >
@@ -107,7 +107,7 @@ export function MappingExitNodeEditor({ node }: MappingExitNodeEditorProps): Rea
       {/* Body */}
       <div className="min-h-0 flex-1 px-3 py-2">
         <label className="mb-1 block text-xs font-medium text-app-muted">Response Body</label>
-        <p className="mb-1 text-[9px] text-app-muted">Supports <code className="text-teal-400">{'{{key}}'}</code> interpolation from input</p>
+        <p className="mb-1 text-[9px] text-app-muted">Supports <code className="text-yellow-400">{'{{key}}'}</code> interpolation from input</p>
         <MonacoEditorField
           value={config.body ?? ''}
           language="json"

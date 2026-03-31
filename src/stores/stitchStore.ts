@@ -31,7 +31,7 @@ interface StitchState {
   // Chain actions
   loadChains: () => Promise<void>;
   loadChain: (chainId: string) => Promise<void>;
-  createChain: (name: string) => Promise<StitchChain>;
+  createChain: (name: string, mappingId?: string | null) => Promise<StitchChain>;
   renameChain: (id: string, name: string) => Promise<void>;
   deleteChain: (id: string) => Promise<void>;
   duplicateChain: (id: string) => Promise<StitchChain>;
@@ -98,8 +98,8 @@ export const useStitchStore = create<StitchState>()(
       });
     },
 
-    createChain: async (name: string) => {
-      const chain = await stitchDb.insertChain(name);
+    createChain: async (name: string, mappingId?: string | null) => {
+      const chain = await stitchDb.insertChain(name, mappingId);
       set((state) => {
         state.chains.push(chain);
       });

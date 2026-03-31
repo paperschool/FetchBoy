@@ -1,4 +1,4 @@
-import { ListPlus, Cookie, FileCode, ArrowRight, Pencil, Trash2, Play, Pause, Route } from 'lucide-react';
+import { ListPlus, Cookie, FileCode, ArrowRight, Pencil, Trash2, Play, Pause, Route, Workflow } from 'lucide-react';
 import type { Mapping } from '@/lib/db';
 import { useMappingsStore } from '@/stores/mappingsStore';
 
@@ -55,6 +55,11 @@ export function MappingRow({ mapping, onEdit, onDelete }: MappingRowProps) {
                 {mapping.url_remap_enabled && (
                     <span title={`URL remap → ${mapping.url_remap_target}`} className="flex-shrink-0 text-blue-400" data-testid="remap-indicator">
                         <ArrowRight size={10} />
+                    </span>
+                )}
+                {mapping.use_chain && (
+                    <span title="Chain mode — response driven by Stitch chain" className="flex-shrink-0 text-yellow-400" data-testid="chain-indicator">
+                        <Workflow size={10} />
                     </span>
                 )}
                 <div className="hidden group-hover:flex items-center gap-0.5">

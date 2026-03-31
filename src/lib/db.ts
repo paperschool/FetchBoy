@@ -143,6 +143,8 @@ export interface Mapping {
     response_body_file_path: string;
     url_remap_enabled: boolean;
     url_remap_target: string;
+    use_chain: boolean;
+    chain_id: string | null;
     created_at: string;
     updated_at: string;
 }
@@ -175,6 +177,14 @@ export async function getDb(): Promise<Database> {
             await _db.execute('ALTER TABLE stitch_nodes ADD COLUMN parent_node_id TEXT REFERENCES stitch_nodes(id) ON DELETE CASCADE');
         } catch {
             // Column already exists — safe to ignore
+        }
+        // Ensure mapping chain columns exist (migration 012)
+        try {
+            await _db.execute('ALTER TABLE mappings ADD COLUMN use_chain INTEGER NOT NULL DEFAULT 0');
+            await _db.execute('ALTER TABLE mappings ADD COLUMN chain_id TEXT REFERENCES stitch_chains(id) ON DELETE SET NULL');
+            await _db.execute('ALTER TABLE stitch_chains ADD COLUMN mapping_id TEXT REFERENCES mappings(id) ON DELETE SET NULL');
+        } catch {
+            // Columns already exist — safe to ignore
         }
     }
     return _db;

@@ -31,7 +31,7 @@ export function MappingNodeEditor({ node }: MappingNodeEditorProps): React.React
       <div>
         <label className="mb-1 block text-xs font-medium text-app-muted">URL Pattern</label>
         <input
-          className="w-full rounded border border-app-subtle bg-app-main px-2 py-1.5 text-xs text-app-primary outline-none focus:border-teal-500"
+          className="w-full rounded border border-app-subtle bg-app-main px-2 py-1.5 text-xs text-app-primary outline-none focus:border-yellow-500"
           value={config.urlPattern ?? ''}
           onChange={handleUrlChange}
           placeholder="e.g. /api/users/*"
@@ -46,7 +46,7 @@ export function MappingNodeEditor({ node }: MappingNodeEditorProps): React.React
               key={mt}
               className={`rounded px-2.5 py-1 text-[10px] font-medium ${
                 (config.matchType ?? 'partial') === mt
-                  ? 'bg-teal-500/20 text-teal-400'
+                  ? 'bg-yellow-500/20 text-yellow-400'
                   : 'text-app-muted hover:bg-app-hover'
               }`}
               onClick={() => handleMatchType(mt)}

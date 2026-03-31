@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Check, AlertCircle, Play, Pause } from 'lucide-react';
+import { Check, AlertCircle, Play, Pause, Workflow } from 'lucide-react';
 import { useMappingsStore } from '@/stores/mappingsStore';
 import type { MatchType, MappingEditForm } from '@/stores/mappingsStore';
+import { useStitchStore } from '@/stores/stitchStore';
+import { DEFAULT_MAPPING_CONFIG, DEFAULT_MAPPING_ENTRY_CONFIG, DEFAULT_MAPPING_EXIT_CONFIG } from '@/types/stitch';
 import type { MappingHeader, MappingCookie } from '@/lib/db';
 import { ViewerShell } from '@/components/ui/ViewerShell';
 import { validateUrlPattern, MATCH_TYPES, PLACEHOLDERS } from './MappingEditor.utils';
@@ -74,6 +76,8 @@ export function MappingEditor({ onClose }: Props) {
     const [responseBodyFilePath, setResponseBodyFilePath] = useState(editForm.responseBodyFilePath);
     const [urlRemapEnabled, setUrlRemapEnabled] = useState(editForm.urlRemapEnabled);
     const [urlRemapTarget, setUrlRemapTarget] = useState(editForm.urlRemapTarget);
+    const [useChain, setUseChain] = useState(editForm.useChain ?? false);
+    const [chainId, setChainId] = useState<string | null>(editForm.chainId ?? null);
     const [urlError, setUrlError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
 
@@ -102,6 +106,8 @@ export function MappingEditor({ onClose }: Props) {
             responseBodyFilePath,
             urlRemapEnabled,
             urlRemapTarget,
+            useChain,
+            chainId,
         };
         try {
             await saveMapping(form);
@@ -177,6 +183,45 @@ export function MappingEditor({ onClose }: Props) {
                             >
                                 {enabled ? <Pause size={13} /> : <Play size={13} />}
                                 {enabled ? 'Enabled' : 'Disabled'}
+                            </button>
+                            <button type="button"
+                                onClick={async () => {
+                                    if (!useChain) {
+                                        // Create a bound chain with entry/exit nodes
+                                        const stitchStore = useStitchStore.getState();
+                                        const chain = await stitchStore.createChain(`Mapping: ${name}`, editForm.id);
+                                        await stitchStore.loadChain(chain.id);
+                                        // Create the mapping container with entry/exit
+                                        const mappingNode = await stitchStore.addNode({
+                                            chainId: chain.id, type: 'mapping', positionX: 100, positionY: 100,
+                                            config: { ...DEFAULT_MAPPING_CONFIG, urlPattern, matchType }, label: name, parentNodeId: null,
+                                        });
+                                        const entry = await stitchStore.addNode({
+                                            chainId: chain.id, type: 'mapping-entry', positionX: 130, positionY: 150,
+                                            config: { ...DEFAULT_MAPPING_ENTRY_CONFIG }, label: 'Entry', parentNodeId: mappingNode.id,
+                                        });
+                                        const exit = await stitchStore.addNode({
+                                            chainId: chain.id, type: 'mapping-exit', positionX: 340, positionY: 150,
+                                            config: { ...DEFAULT_MAPPING_EXIT_CONFIG }, label: 'Exit', parentNodeId: mappingNode.id,
+                                        });
+                                        await stitchStore.addConnection({
+                                            chainId: chain.id, sourceNodeId: entry.id, sourceKey: null, targetNodeId: exit.id, targetSlot: 'input',
+                                        });
+                                        setChainId(chain.id);
+                                        setUseChain(true);
+                                    } else {
+                                        setUseChain(false);
+                                        // Chain remains but is no longer active
+                                    }
+                                }}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                                    useChain ? 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30' : 'bg-gray-500/20 text-app-muted hover:bg-gray-500/30'
+                                }`}
+                                title={useChain ? 'Chain mode active — responses driven by Stitch chain' : 'Click to enable chain mode'}
+                                data-testid="use-chain-toggle"
+                            >
+                                <Workflow size={13} />
+                                {useChain ? 'Chain Active' : 'Use Chain'}
                             </button>
                         </>
                     )}

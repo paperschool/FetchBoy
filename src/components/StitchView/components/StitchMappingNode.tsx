@@ -149,8 +149,8 @@ export const StitchMappingNode = React.memo(function StitchMappingNode({
       data-testid={`stitch-mapping-${node.id}`}
       data-node-id={node.id}
       tabIndex={0}
-      className={`absolute select-none rounded-lg border-2 border-dashed shadow-sm transition-shadow border-teal-500/40 bg-teal-500/5 ${
-        selected ? 'ring-2 ring-teal-400 shadow-md' : ''
+      className={`absolute select-none rounded-lg border-2 border-dashed shadow-sm transition-shadow border-yellow-500/40 bg-yellow-500/5 ${
+        selected ? 'ring-2 ring-yellow-400 shadow-md' : ''
       } ${dragging ? 'opacity-75' : ''} ${
         executionStatus === 'running' ? 'stitch-node-running' : ''
       } ${executionStatus === 'success' ? 'stitch-node-success' : ''} ${
@@ -168,7 +168,7 @@ export const StitchMappingNode = React.memo(function StitchMappingNode({
       {/* Input port */}
       <div
         className={`absolute -top-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full border-2 bg-app-main transition-colors ${
-          isDragTarget ? 'border-green-500 scale-150' : 'border-teal-500/50'
+          isDragTarget ? 'border-green-500 scale-150' : 'border-yellow-500/50'
         }`}
         onPointerUp={handleInputSlotPointerUp}
         data-testid="mapping-input-slot"
@@ -176,12 +176,12 @@ export const StitchMappingNode = React.memo(function StitchMappingNode({
 
       {/* Header */}
       <div
-        className={`flex cursor-grab items-center gap-1.5 rounded-t-lg px-2 py-1.5 bg-teal-500/15 ${dragging ? 'cursor-grabbing' : ''}`}
+        className={`flex cursor-grab items-center gap-1.5 rounded-t-lg px-2 py-1.5 bg-yellow-500/15 ${dragging ? 'cursor-grabbing' : ''}`}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
       >
-        <span className="text-teal-600 dark:text-teal-400"><Globe size={12} /></span>
+        <span className="text-yellow-600 dark:text-yellow-400"><Globe size={12} /></span>
         {editing ? (
           <input
             autoFocus
@@ -200,7 +200,7 @@ export const StitchMappingNode = React.memo(function StitchMappingNode({
           </span>
         )}
         {urlHint && (
-          <span className="max-w-[10rem] truncate text-[9px] font-mono text-teal-600 dark:text-teal-400" title={urlHint}>
+          <span className="max-w-[10rem] truncate text-[9px] font-mono text-yellow-600 dark:text-yellow-400" title={urlHint}>
             {urlHint}
           </span>
         )}
@@ -237,7 +237,7 @@ export const StitchMappingNode = React.memo(function StitchMappingNode({
 
       {/* Output port */}
       <div
-        className="absolute -bottom-1.5 left-1/2 h-3 w-3 -translate-x-1/2 cursor-crosshair rounded-full border-2 border-teal-500/50 bg-app-main transition-transform hover:scale-150 hover:border-blue-500"
+        className="absolute -bottom-1.5 left-1/2 h-3 w-3 -translate-x-1/2 cursor-crosshair rounded-full border-2 border-yellow-500/50 bg-app-main transition-transform hover:scale-150 hover:border-blue-500"
         data-testid="mapping-output-port"
         onPointerDown={handleOutputPortDown}
       />

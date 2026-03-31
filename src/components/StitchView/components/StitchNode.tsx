@@ -40,9 +40,9 @@ const NODE_COLORS: Record<NodeType, string> = {
   'loop': 'bg-app-main/95 border-cyan-500/40',
   'merge': 'bg-app-main/95 border-indigo-500/40',
   'condition': 'bg-app-main/95 border-orange-500/40',
-  'mapping': 'bg-app-main/95 border-teal-500/40',
-  'mapping-entry': 'bg-app-main/95 border-teal-500/40',
-  'mapping-exit': 'bg-app-main/95 border-teal-500/40',
+  'mapping': 'bg-app-main/95 border-yellow-500/40',
+  'mapping-entry': 'bg-app-main/95 border-yellow-500/40',
+  'mapping-exit': 'bg-app-main/95 border-yellow-500/40',
 };
 
 const NODE_HEADER_COLORS: Record<NodeType, string> = {
@@ -53,9 +53,9 @@ const NODE_HEADER_COLORS: Record<NodeType, string> = {
   'loop': 'bg-cyan-500/15',
   'merge': 'bg-indigo-500/15',
   'condition': 'bg-orange-500/15',
-  'mapping': 'bg-teal-500/15',
-  'mapping-entry': 'bg-teal-500/15',
-  'mapping-exit': 'bg-teal-500/15',
+  'mapping': 'bg-yellow-500/15',
+  'mapping-entry': 'bg-yellow-500/15',
+  'mapping-exit': 'bg-yellow-500/15',
 };
 
 import type { ExecutionNodeStatus } from '@/types/stitch';

@@ -134,6 +134,7 @@ export const DEFAULT_MAPPING_EXIT_CONFIG: MappingExitNodeConfig = {
 export interface StitchChain {
   id: string;
   name: string;
+  mappingId: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -166,6 +167,7 @@ export interface StitchConnection {
 export interface RawStitchChain {
   id: string;
   name: string;
+  mapping_id: string | null;
   created_at: string;
   updated_at: string;
 }

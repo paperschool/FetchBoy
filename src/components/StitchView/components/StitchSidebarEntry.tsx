@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { Copy, Pencil, Trash2, MoreVertical } from 'lucide-react';
+import { Copy, Pencil, Trash2, MoreVertical, Workflow } from 'lucide-react';
 import type { StitchChain } from '@/types/stitch';
 
 interface StitchSidebarEntryProps {
@@ -88,6 +88,9 @@ export function StitchSidebarEntry({
         />
       ) : (
         <>
+          {chain.mappingId && (
+            <span className="shrink-0 text-yellow-400" data-testid="mapper-badge"><Workflow size={10} /></span>
+          )}
           <span
             className="min-w-0 flex-1 truncate"
             onDoubleClick={(e) => {

@@ -1,5 +1,19 @@
 # Long Changelog
 
+## [0.18.16] - 2026-03-31
+
+### Story 15.15: Mapping Chain Node (Revised — Mapper-Bound)
+
+- Mapping chains are created from the mapper editor via "Use Chain" toggle, not from Add Node menu
+- Removed mapping from AddNodeMenu and canvas context menu
+- Changed mapping node colors from teal to yellow
+- "Use Chain" toggle in mapper editor Match tab creates bound Stitch chain with mapping container + entry/exit nodes
+- `use_chain` and `chain_id` fields added to Mapping DB/type; `mapping_id` added to StitchChain
+- DB migration 012: adds use_chain, chain_id to mappings table and mapping_id to stitch_chains
+- Mapper-bound chains show Workflow badge in Stitch sidebar entries
+- MappingRow shows Workflow icon when use_chain is active
+- Chain 1:1 bound to mapper via mappingId
+
 ## [0.18.15] - 2026-03-31
 
 ### Story 15.15: Mapping Chain Node

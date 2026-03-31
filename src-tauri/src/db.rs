@@ -71,5 +71,11 @@ pub fn migrations() -> Vec<Migration> {
             sql: include_str!("../migrations/011_stitch_loop_node.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 12,
+            description: "add_mapping_chain_binding",
+            sql: include_str!("../migrations/012_mapping_chain.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }

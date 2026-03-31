@@ -18,6 +18,8 @@ interface RawMapping {
     response_body_file_path: string;
     url_remap_enabled: number;
     url_remap_target: string;
+    use_chain: number;
+    chain_id: string | null;
     created_at: string;
     updated_at: string;
 }
@@ -39,6 +41,8 @@ function deserializeMapping(raw: RawMapping): Mapping {
         response_body_file_path: raw.response_body_file_path ?? '',
         url_remap_enabled: raw.url_remap_enabled === 1,
         url_remap_target: raw.url_remap_target ?? '',
+        use_chain: raw.use_chain === 1,
+        chain_id: raw.chain_id ?? null,
     };
 }
 
@@ -92,8 +96,9 @@ export async function createMapping(
         'headers_add', 'headers_remove', 'cookies',
         'response_body_enabled', 'response_body', 'response_body_content_type', 'response_body_file_path',
         'url_remap_enabled', 'url_remap_target',
+        'use_chain', 'chain_id',
         'created_at', 'updated_at',
-    ], [id, folderId, name, urlPattern, matchType, 1, '[]', '[]', '[]', 0, '', 'application/json', '', 0, '', ts, ts]);
+    ], [id, folderId, name, urlPattern, matchType, 1, '[]', '[]', '[]', 0, '', 'application/json', '', 0, '', 0, null, ts, ts]);
     return {
         id, folder_id: folderId, name, url_pattern: urlPattern,
         match_type: matchType, enabled: true,
@@ -101,6 +106,7 @@ export async function createMapping(
         response_body_enabled: false, response_body: '',
         response_body_content_type: 'application/json', response_body_file_path: '',
         url_remap_enabled: false, url_remap_target: '',
+        use_chain: false, chain_id: null,
         created_at: ts, updated_at: ts,
     };
 }

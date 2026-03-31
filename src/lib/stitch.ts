@@ -16,6 +16,7 @@ function deserializeChain(raw: RawStitchChain): StitchChain {
   return {
     id: raw.id,
     name: raw.name,
+    mappingId: raw.mapping_id ?? null,
     createdAt: raw.created_at,
     updatedAt: raw.updated_at,
   };
@@ -84,16 +85,18 @@ export async function loadChainWithNodes(
   };
 }
 
-export async function insertChain(name: string): Promise<StitchChain> {
+export async function insertChain(name: string, mappingId?: string | null): Promise<StitchChain> {
   const chain: StitchChain = {
     id: crypto.randomUUID(),
     name,
+    mappingId: mappingId ?? null,
     createdAt: now(),
     updatedAt: now(),
   };
-  await insertOne('stitch_chains', ['id', 'name', 'created_at', 'updated_at'], [
+  await insertOne('stitch_chains', ['id', 'name', 'mapping_id', 'created_at', 'updated_at'], [
     chain.id,
     chain.name,
+    chain.mappingId,
     chain.createdAt,
     chain.updatedAt,
   ]);
@@ -124,6 +127,7 @@ export async function duplicateChain(
   const newChain: StitchChain = {
     id: crypto.randomUUID(),
     name: newName,
+    mappingId: null,
     createdAt: now(),
     updatedAt: now(),
   };
@@ -153,8 +157,8 @@ export async function duplicateChain(
   }));
 
   await withTransaction(async () => {
-    await insertOne('stitch_chains', ['id', 'name', 'created_at', 'updated_at'], [
-      newChain.id, newChain.name, newChain.createdAt, newChain.updatedAt,
+    await insertOne('stitch_chains', ['id', 'name', 'mapping_id', 'created_at', 'updated_at'], [
+      newChain.id, newChain.name, newChain.mappingId, newChain.createdAt, newChain.updatedAt,
     ]);
     for (const n of newNodes) {
       await insertOne(
