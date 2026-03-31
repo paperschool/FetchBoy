@@ -28,7 +28,13 @@ export function StitchView(): React.ReactElement {
 
   const handleCloseDebugLog = useCallback((): void => {
     // Clear execution logs to dismiss the debug log
-    useStitchStore.setState({ executionLogs: [], executionContext: null, executionState: 'idle' as const });
+    useStitchStore.setState({
+      executionLogs: [],
+      executionNodeOutputs: {},
+      executionError: null,
+      executionCurrentNodeId: null,
+      executionState: 'idle' as const,
+    });
   }, []);
 
 

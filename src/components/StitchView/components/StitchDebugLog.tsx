@@ -9,7 +9,7 @@ interface StitchDebugLogProps {
 
 export function StitchDebugLog({ onClose }: StitchDebugLogProps): React.ReactElement {
   const logs = useStitchStore((s) => s.executionLogs);
-  const executionContext = useStitchStore((s) => s.executionContext);
+  const executionError = useStitchStore((s) => s.executionError);
   const executionState = useStitchStore((s) => s.executionState);
   const scrollRef = useRef<HTMLDivElement>(null);
   const userScrolledRef = useRef(false);
@@ -30,14 +30,14 @@ export function StitchDebugLog({ onClose }: StitchDebugLogProps): React.ReactEle
 
   // Scroll to error entry on error
   useEffect(() => {
-    if (executionContext?.error && scrollRef.current) {
+    if (executionError && scrollRef.current) {
       userScrolledRef.current = false;
       const el = scrollRef.current;
       el.scrollTop = el.scrollHeight;
     }
-  }, [executionContext?.error]);
+  }, [executionError]);
 
-  const errorNodeId = executionContext?.error?.nodeId ?? null;
+  const errorNodeId = executionError?.nodeId ?? null;
 
   return (
     <div className="flex h-full flex-col overflow-hidden" data-testid="stitch-debug-log">

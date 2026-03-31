@@ -3,19 +3,19 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StitchDebugLog } from './StitchDebugLog';
 import { useStitchStore } from '@/stores/stitchStore';
-import type { ExecutionLogEntry, StitchExecutionState, ExecutionContext } from '@/types/stitch';
+import type { ExecutionLogEntry, StitchExecutionState } from '@/types/stitch';
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }));
 
 function setStoreState(overrides: {
   executionLogs?: ExecutionLogEntry[];
   executionState?: StitchExecutionState;
-  executionContext?: ExecutionContext | null;
+  executionError?: { nodeId: string; message: string } | null;
 }): void {
   useStitchStore.setState({
     executionLogs: overrides.executionLogs ?? [],
     executionState: overrides.executionState ?? 'idle',
-    executionContext: overrides.executionContext ?? null,
+    executionError: overrides.executionError ?? null,
   });
 }
 
@@ -24,7 +24,7 @@ beforeEach(() => {
   useStitchStore.setState({
     executionLogs: [],
     executionState: 'idle',
-    executionContext: null,
+    executionError: null,
   });
 });
 
@@ -71,15 +71,11 @@ describe('StitchDebugLog', () => {
         error: 'Parse failed',
       },
     ];
-    const ctx: ExecutionContext = {
-      nodeOutputs: {},
-      logs,
-      status: 'error',
-      currentNodeId: null,
-      error: { nodeId: 'n1', message: 'Parse failed' },
-      startTime: Date.now(),
-    };
-    setStoreState({ executionLogs: logs, executionState: 'error', executionContext: ctx });
+    setStoreState({
+      executionLogs: logs,
+      executionState: 'error',
+      executionError: { nodeId: 'n1', message: 'Parse failed' },
+    });
 
     render(<StitchDebugLog onClose={vi.fn()} />);
     expect(screen.getByTestId('log-error-message')).toHaveTextContent('Parse failed');

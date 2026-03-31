@@ -34,17 +34,20 @@ function StitchCanvasInner(): React.ReactElement {
   const executionState = useStitchStore((s) => s.executionState);
   const startExecution = useStitchStore((s) => s.startExecution);
   const cancelExecution = useStitchStore((s) => s.cancelExecution);
-  const executionContext = useStitchStore((s) => s.executionContext);
+  const executionCurrentNodeId = useStitchStore((s) => s.executionCurrentNodeId);
+  const executionNodeOutputs = useStitchStore((s) => s.executionNodeOutputs);
+  const executionError = useStitchStore((s) => s.executionError);
   const { drag } = useConnectionDrag();
 
   const { transform, canvasRef, onPointerDown, onPointerMove, onPointerUp, zoomIn, zoomOut, zoomReset } =
     useCanvasTransform();
 
   const handlePlay = useCallback((): void => {
+    console.log('[stitch] Play clicked, canPlay:', nodes.length > 0 && executionState !== 'running');
     startExecution().catch((err) => {
-      console.error('Execution failed:', err);
+      console.error('[stitch] Execution failed:', err);
     });
-  }, [startExecution]);
+  }, [startExecution, nodes.length, executionState]);
 
   const handleStop = useCallback((): void => {
     cancelExecution();
@@ -214,11 +217,11 @@ function StitchCanvasInner(): React.ReactElement {
         >
           <ConnectionLayer />
           {nodes.map((node) => {
-            const nodeExecStatus = executionContext?.error?.nodeId === node.id
+            const nodeExecStatus = executionError?.nodeId === node.id
               ? 'error' as const
-              : executionContext?.currentNodeId === node.id
+              : executionCurrentNodeId === node.id
                 ? 'running' as const
-                : node.id in (executionContext?.nodeOutputs ?? {})
+                : node.id in executionNodeOutputs
                   ? 'success' as const
                   : null;
             return (

@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import type { StitchChain, StitchNode, StitchConnection, StitchExecutionState, ExecutionContext, ExecutionLogEntry } from '@/types/stitch';
+import type { StitchChain, StitchNode, StitchConnection, StitchExecutionState, ExecutionLogEntry } from '@/types/stitch';
 import * as stitchDb from '@/lib/stitch';
-import { executeChain, createExecutionContext } from '@/lib/stitchEngine';
+import { executeChain } from '@/lib/stitchEngine';
 import { useEnvironmentStore } from '@/stores/environmentStore';
 
 // ─── State ──────────────────────────────────────────────────────────────────
@@ -15,8 +15,11 @@ interface StitchState {
   selectedNodeId: string | null;
   selectedConnectionId: string | null;
   executionState: StitchExecutionState;
-  executionContext: ExecutionContext | null;
+  executionCurrentNodeId: string | null;
+  executionNodeOutputs: Record<string, Record<string, unknown>>;
+  executionError: { nodeId: string; message: string } | null;
   executionLogs: ExecutionLogEntry[];
+  executionStartTime: number;
   sleepCountdown: { nodeId: string; durationMs: number } | null;
   cancelledRef: { current: boolean };
 
@@ -55,8 +58,11 @@ export const useStitchStore = create<StitchState>()(
     selectedNodeId: null,
     selectedConnectionId: null,
     executionState: 'idle' as StitchExecutionState,
-    executionContext: null,
+    executionCurrentNodeId: null,
+    executionNodeOutputs: {},
+    executionError: null,
     executionLogs: [],
+    executionStartTime: 0,
     sleepCountdown: null,
     cancelledRef: { current: false },
 
@@ -194,12 +200,15 @@ export const useStitchStore = create<StitchState>()(
     startExecution: async () => {
       const { nodes, connections, cancelledRef } = useStitchStore.getState();
       cancelledRef.current = false;
+      const startTime = Date.now();
 
-      const initialCtx = createExecutionContext();
       set((state) => {
         state.executionState = 'running';
-        state.executionContext = initialCtx;
+        state.executionCurrentNodeId = null;
+        state.executionNodeOutputs = {};
+        state.executionError = null;
         state.executionLogs = [];
+        state.executionStartTime = startTime;
         state.sleepCountdown = null;
       });
 
@@ -216,28 +225,26 @@ export const useStitchStore = create<StitchState>()(
       const callbacks = {
         onNodeStart: (nodeId: string): void => {
           set((state) => {
-            if (state.executionContext) state.executionContext.currentNodeId = nodeId;
+            state.executionCurrentNodeId = nodeId;
             state.executionLogs.push({
               nodeId,
               nodeLabel: nodes.find((n) => n.id === nodeId)?.label ?? '',
               nodeType: nodes.find((n) => n.id === nodeId)?.type ?? 'json-object',
               status: 'started',
-              timestamp: Date.now() - (state.executionContext?.startTime ?? Date.now()),
+              timestamp: Date.now() - startTime,
             });
           });
         },
         onNodeComplete: (nodeId: string, output: Record<string, unknown>, durationMs: number): void => {
           set((state) => {
-            if (state.executionContext) {
-              state.executionContext.nodeOutputs[nodeId] = output;
-            }
+            state.executionNodeOutputs[nodeId] = output;
             state.sleepCountdown = null;
             state.executionLogs.push({
               nodeId,
               nodeLabel: nodes.find((n) => n.id === nodeId)?.label ?? '',
               nodeType: nodes.find((n) => n.id === nodeId)?.type ?? 'json-object',
               status: 'completed',
-              timestamp: Date.now() - (state.executionContext?.startTime ?? Date.now()),
+              timestamp: Date.now() - startTime,
               durationMs,
               output,
             });
@@ -246,12 +253,14 @@ export const useStitchStore = create<StitchState>()(
         onError: (nodeId: string, error: string): void => {
           set((state) => {
             state.executionState = 'error';
+            state.executionError = { nodeId, message: error };
+            state.executionCurrentNodeId = null;
             state.executionLogs.push({
               nodeId,
               nodeLabel: nodes.find((n) => n.id === nodeId)?.label ?? nodeId,
               nodeType: nodes.find((n) => n.id === nodeId)?.type ?? 'json-object',
               status: 'error',
-              timestamp: Date.now() - (state.executionContext?.startTime ?? Date.now()),
+              timestamp: Date.now() - startTime,
               error,
             });
           });
@@ -264,13 +273,14 @@ export const useStitchStore = create<StitchState>()(
               nodeLabel: nodes.find((n) => n.id === nodeId)?.label ?? '',
               nodeType: 'sleep',
               status: 'sleeping',
-              timestamp: Date.now() - (state.executionContext?.startTime ?? Date.now()),
+              timestamp: Date.now() - startTime,
             });
           });
         },
         onChainComplete: (): void => {
           set((state) => {
             state.executionState = 'completed';
+            state.executionCurrentNodeId = null;
             state.sleepCountdown = null;
           });
         },
@@ -278,17 +288,16 @@ export const useStitchStore = create<StitchState>()(
 
       try {
         const ctx = await executeChain(nodes, connections, envVariables, callbacks, cancelledRef);
-        set((state) => {
-          state.executionContext = ctx;
-          if (ctx.status === 'cancelled') {
+        if (ctx.status === 'cancelled') {
+          set((state) => {
             state.executionState = 'idle';
-          }
-        });
+          });
+        }
       } catch (err) {
+        console.error('Chain execution failed:', err);
         set((state) => {
           state.executionState = 'error';
         });
-        console.error('Chain execution failed:', err);
       }
     },
 
