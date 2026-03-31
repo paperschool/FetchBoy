@@ -5,7 +5,7 @@ import { getRequestOutputPorts } from './requestOutputResolver';
 import { resolveInputShape } from './inputShapeResolver';
 
 /** Returns the current output keys for any node type. */
-export function getNodeOutputKeys(node: StitchNode, connections?: StitchConnection[]): string[] {
+export function getNodeOutputKeys(node: StitchNode, connections?: StitchConnection[], nodes?: StitchNode[]): string[] {
   switch (node.type) {
     case 'json-object': {
       const json = (node.config as { json?: string }).json ?? '';
@@ -21,7 +21,7 @@ export function getNodeOutputKeys(node: StitchNode, connections?: StitchConnecti
       return getRequestOutputPorts();
     case 'sleep':
       // Pass-through: forward all incoming connection keys
-      return connections ? resolveInputShape(node.id, connections) : [];
+      return connections ? resolveInputShape(node.id, connections, nodes) : [];
     default:
       return [];
   }

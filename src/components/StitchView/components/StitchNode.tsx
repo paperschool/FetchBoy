@@ -2,6 +2,7 @@ import React, { useState, useCallback, useRef, useMemo, type PointerEvent, type 
 import { Send, Code, Braces, Timer, Eye, AlertCircle } from 'lucide-react';
 import type { StitchNode as StitchNodeType, StitchConnection } from '@/types/stitch';
 import type { StitchNodeType as NodeType } from '@/types/stitch';
+import { useStitchStore } from '@/stores/stitchStore';
 import { extractJsonKeys } from '../utils/jsonKeyExtractor';
 import { extractReturnKeys } from '../utils/jsKeyExtractor';
 import { getRequestOutputPorts } from '../utils/requestOutputResolver';
@@ -68,6 +69,7 @@ export const StitchNode = React.memo(function StitchNode({
   connections = [],
   executionStatus = null,
 }: StitchNodeProps): React.ReactElement {
+  const allNodes = useStitchStore((s) => s.nodes);
   const { drag, startDrag, updateCursor, endDrag } = useConnectionDrag();
   const nodeRef = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState(false);
@@ -142,11 +144,11 @@ export const StitchNode = React.memo(function StitchNode({
       return { keys: getRequestOutputPorts(), error: null };
     }
     if (node.type === 'sleep') {
-      const inputKeys = resolveInputShape(node.id, connections);
+      const inputKeys = resolveInputShape(node.id, connections, allNodes);
       return inputKeys.length > 0 ? { keys: inputKeys, error: null } : null;
     }
     return null;
-  }, [node.type, node.config, node.id, connections]);
+  }, [node.type, node.config, node.id, connections, allNodes]);
 
   const outputKeys = portResult?.keys ?? [];
   const hasError = portResult !== null && portResult.error !== null;
@@ -282,9 +284,11 @@ export const StitchNode = React.memo(function StitchNode({
               </span>
             </div>
             {requestConfig.url ? (
-              <span className="truncate text-[9px] text-app-muted" title={requestConfig.url} data-testid="url-preview">
-                {requestConfig.url.slice(0, 40)}{requestConfig.url.length > 40 ? '...' : ''}
-              </span>
+              <div className="stitch-marquee-container overflow-hidden" title={requestConfig.url} data-testid="url-preview">
+                <span className={`inline-block whitespace-nowrap text-[9px] text-app-muted ${requestConfig.url.length > 24 ? 'stitch-marquee' : ''}`}>
+                  {requestConfig.url}
+                </span>
+              </div>
             ) : (
               <span className="text-[9px] text-app-muted italic">No URL set</span>
             )}

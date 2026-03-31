@@ -1,12 +1,13 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
+import { Import } from 'lucide-react';
 import { MonacoEditorField } from '@/components/Editor/MonacoEditorField';
 import { HighlightedUrlInput } from '@/components/MainPanel/HighlightedUrlInput';
 import { KeyValueRows } from '@/components/RequestBuilder/KeyValueRows';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import { useStitchStore } from '@/stores/stitchStore';
 import { useEnvironmentStore } from '@/stores/environmentStore';
-import { useCollectionStore } from '@/stores/collectionStore';
 import { resolveInputShape } from '../utils/inputShapeResolver';
+import { RequestSearchPalette } from './RequestSearchPalette';
 import type { StitchNode, RequestNodeConfig } from '@/types/stitch';
 import type { KeyValueRow } from '@/stores/requestStore';
 import type { KeyValuePair, Request } from '@/lib/db';
@@ -30,10 +31,8 @@ export function RequestNodeEditor({ node }: RequestNodeEditorProps): React.React
   const connections = useStitchStore((s) => s.connections);
   const fontSize = useUiSettingsStore((s) => s.editorFontSize);
   const environments = useEnvironmentStore((s) => s.environments);
-  const collections = useCollectionStore((s) => s.collections);
-  const folders = useCollectionStore((s) => s.folders);
-  const savedRequests = useCollectionStore((s) => s.requests);
   const [activeTab, setActiveTab] = useState<EditorTab>('headers');
+  const [showSearch, setShowSearch] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Clean up debounce on unmount
@@ -75,10 +74,8 @@ export function RequestNodeEditor({ node }: RequestNodeEditorProps): React.React
     [node.id, node.config, updateNode],
   );
 
-  const handleLoadFromCollection = useCallback(
-    (requestId: string): void => {
-      const req: Request | undefined = savedRequests.find((r) => r.id === requestId);
-      if (!req) return;
+  const handleImportRequest = useCallback(
+    (req: Request): void => {
       persistImmediate({
         method: req.method,
         url: req.url,
@@ -88,8 +85,9 @@ export function RequestNodeEditor({ node }: RequestNodeEditorProps): React.React
         bodyType: mapBodyType(req.body_type),
       });
       updateNode(node.id, { label: req.name }).catch(() => {});
+      setShowSearch(false);
     },
-    [savedRequests, persistImmediate, updateNode, node.id],
+    [persistImmediate, updateNode, node.id],
   );
 
   // KeyValueRows callbacks for headers
@@ -126,36 +124,24 @@ export function RequestNodeEditor({ node }: RequestNodeEditorProps): React.React
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      {/* Collection loader bar */}
-      {savedRequests.length > 0 && (
+      {/* Import bar */}
+      {showSearch ? (
+        <div className="shrink-0 border-b border-app-subtle">
+          <RequestSearchPalette
+            onSelect={handleImportRequest}
+            onClose={() => setShowSearch(false)}
+          />
+        </div>
+      ) : (
         <div className="flex shrink-0 items-center justify-end border-b border-app-subtle bg-app-sidebar px-3 py-1">
-          <select
-            className="select-flat border-app-subtle bg-app-main text-app-muted h-6 max-w-[14rem] rounded border pl-1.5 pr-5 text-[10px]"
-            value=""
-            onChange={(e) => { if (e.target.value) handleLoadFromCollection(e.target.value); }}
-            data-testid="load-from-collection"
+          <button
+            className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-[10px] text-app-muted transition-colors hover:bg-blue-500/15 hover:text-app-primary"
+            onClick={() => setShowSearch(true)}
+            data-testid="import-request-btn"
           >
-            <option value="">Load from collection...</option>
-            {collections.map((col) => {
-              const colFolders = folders.filter((f) => f.collection_id === col.id);
-              const rootRequests = savedRequests.filter((r) => r.collection_id === col.id && !r.folder_id);
-              const hasContent = rootRequests.length > 0 || colFolders.some((f) => savedRequests.some((r) => r.folder_id === f.id));
-              if (!hasContent) return null;
-              return (
-                <optgroup key={col.id} label={col.name}>
-                  {rootRequests.map((r) => (
-                    <option key={r.id} value={r.id}>{r.method} {r.name}</option>
-                  ))}
-                  {colFolders.map((f) => {
-                    const folderReqs = savedRequests.filter((r) => r.folder_id === f.id);
-                    return folderReqs.map((r) => (
-                      <option key={r.id} value={r.id}>{r.method} {f.name} / {r.name}</option>
-                    ));
-                  })}
-                </optgroup>
-              );
-            })}
-          </select>
+            <Import size={11} />
+            Import from collection
+          </button>
         </div>
       )}
 

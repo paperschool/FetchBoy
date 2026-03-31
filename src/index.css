@@ -179,3 +179,17 @@
   border-color: rgb(239, 68, 68) !important;
   box-shadow: 0 0 4px 1px rgba(239, 68, 68, 0.3);
 }
+
+/* Slow marquee for long URLs in request nodes */
+@keyframes stitch-marquee-scroll {
+  0%, 15% { transform: translateX(0); }
+  85%, 100% { transform: translateX(calc(-100% + 150px)); }
+}
+
+.stitch-marquee-container {
+  width: 100%;
+}
+
+.stitch-marquee {
+  animation: stitch-marquee-scroll 8s linear infinite alternate;
+}

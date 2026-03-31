@@ -65,7 +65,7 @@ export function ConnectionLayer(): React.ReactElement {
       const targetNode = nodeMap.get(conn.targetNodeId);
       if (!sourceNode || !targetNode) return null;
 
-      const sourceKeys = getNodeOutputKeys(sourceNode, connections);
+      const sourceKeys = getNodeOutputKeys(sourceNode, connections, nodes);
       const isBroken = conn.sourceKey !== null && !sourceKeys.includes(conn.sourceKey);
 
       const from = conn.sourceKey
