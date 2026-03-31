@@ -65,7 +65,8 @@ export function RequestNodeEditor({ node }: RequestNodeEditorProps): React.React
 
   // Combine env variables + connected input keys for variable highlighting
   const activeEnv = environments.find((e) => e.is_active);
-  const inputKeys = useMemo(() => resolveInputShape(node.id, connections), [node.id, connections]);
+  const allNodes = useStitchStore((s) => s.nodes);
+  const inputKeys = useMemo(() => resolveInputShape(node.id, connections, allNodes), [node.id, connections, allNodes]);
   const availableVariables: KeyValuePair[] = useMemo(() => {
     const envVars: KeyValuePair[] = activeEnv?.variables ?? [];
     const inputVars: KeyValuePair[] = inputKeys.map((k) => ({ key: k, value: '{{connected}}', enabled: true }));
