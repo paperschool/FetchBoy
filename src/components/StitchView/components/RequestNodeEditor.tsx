@@ -124,29 +124,18 @@ export function RequestNodeEditor({ node }: RequestNodeEditorProps): React.React
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      {/* Import bar */}
-      {showSearch ? (
+      {/* Search palette overlay */}
+      {showSearch && (
         <div className="shrink-0 border-b border-app-subtle">
           <RequestSearchPalette
             onSelect={handleImportRequest}
             onClose={() => setShowSearch(false)}
           />
         </div>
-      ) : (
-        <div className="flex shrink-0 items-center justify-end border-b border-app-subtle bg-app-sidebar px-3 py-1">
-          <button
-            className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-[10px] text-app-muted transition-colors hover:bg-blue-500/15 hover:text-app-primary"
-            onClick={() => setShowSearch(true)}
-            data-testid="import-request-btn"
-          >
-            <Import size={11} />
-            Import from collection
-          </button>
-        </div>
       )}
 
-      {/* Method + URL row — matches Fetch tab layout */}
-      <div className="grid shrink-0 grid-cols-[8rem_1fr] items-start gap-3 border-b border-app-subtle px-3 py-2">
+      {/* Method + URL row */}
+      <div className="grid shrink-0 grid-cols-[8rem_1fr_auto] items-start gap-3 border-b border-app-subtle px-3 py-2">
         <div>
           <label htmlFor={`stitch-method-${node.id}`} className="text-app-secondary mb-1 block text-xs font-medium">HTTP Method</label>
           <select
@@ -170,6 +159,17 @@ export function RequestNodeEditor({ node }: RequestNodeEditorProps): React.React
             placeholder="https://api.example.com/{{path}}"
             variables={availableVariables}
           />
+        </div>
+        <div className="flex items-end pb-0.5">
+          <button
+            className="flex h-9 cursor-pointer items-center gap-1.5 rounded-md border border-app-subtle px-3 text-xs text-app-muted transition-colors hover:bg-blue-500/15 hover:text-app-primary"
+            onClick={() => setShowSearch(true)}
+            title="Import from collection"
+            data-testid="import-request-btn"
+          >
+            <Import size={13} />
+            Import
+          </button>
         </div>
       </div>
 

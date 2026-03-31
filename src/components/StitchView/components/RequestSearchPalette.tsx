@@ -60,13 +60,13 @@ export function RequestSearchPalette({ onSelect, onClose }: RequestSearchPalette
       data-testid="request-search-palette"
     >
       {/* Search input */}
-      <div className="flex items-center gap-2 border-b border-app-subtle px-3 py-2">
-        <Search size={14} className="shrink-0 text-app-muted" />
+      <div className="flex items-center gap-2 border-b border-app-subtle px-3 py-2.5">
+        <Search size={16} className="shrink-0 text-app-muted" />
         <input
           ref={inputRef}
           type="text"
           className="min-w-0 flex-1 bg-transparent text-sm text-app-primary outline-none placeholder:text-app-muted"
-          placeholder="Search requests..."
+          placeholder="Search requests by name, URL, or collection..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           data-testid="request-search-input"
@@ -81,9 +81,9 @@ export function RequestSearchPalette({ onSelect, onClose }: RequestSearchPalette
       </div>
 
       {/* Results */}
-      <div className="max-h-[240px] overflow-y-auto">
+      <div className="max-h-[280px] overflow-y-auto">
         {filtered.length === 0 ? (
-          <div className="px-3 py-4 text-center text-xs text-app-muted">
+          <div className="px-3 py-6 text-center text-sm text-app-muted">
             {requests.length === 0 ? 'No saved requests' : 'No matches'}
           </div>
         ) : (
@@ -94,13 +94,13 @@ export function RequestSearchPalette({ onSelect, onClose }: RequestSearchPalette
               onClick={() => handleSelect(entry.request)}
               data-testid={`search-result-${entry.request.id}`}
             >
-              <span className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-bold ${METHOD_COLORS[entry.request.method] ?? METHOD_COLORS.GET}`}>
+              <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold ${METHOD_COLORS[entry.request.method] ?? METHOD_COLORS.GET}`}>
                 {entry.request.method}
               </span>
               <div className="min-w-0 flex-1">
-                <div className="truncate text-xs text-app-primary">{entry.request.name}</div>
+                <div className="truncate text-sm text-app-primary">{entry.request.name}</div>
                 {entry.path && (
-                  <div className="truncate text-[10px] text-app-muted">{entry.path}</div>
+                  <div className="truncate text-xs text-app-muted">{entry.path}</div>
                 )}
               </div>
             </button>
