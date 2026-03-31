@@ -41,7 +41,9 @@ function StitchCanvasInner(): React.ReactElement {
     useCanvasTransform();
 
   const handlePlay = useCallback((): void => {
-    startExecution().catch(() => {});
+    startExecution().catch((err) => {
+      console.error('Execution failed:', err);
+    });
   }, [startExecution]);
 
   const handleStop = useCallback((): void => {
@@ -216,7 +218,7 @@ function StitchCanvasInner(): React.ReactElement {
               ? 'error' as const
               : executionContext?.currentNodeId === node.id
                 ? 'running' as const
-                : executionContext?.nodeOutputs.has(node.id)
+                : node.id in (executionContext?.nodeOutputs ?? {})
                   ? 'success' as const
                   : null;
             return (

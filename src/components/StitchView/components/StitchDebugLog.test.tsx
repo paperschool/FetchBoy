@@ -72,7 +72,7 @@ describe('StitchDebugLog', () => {
       },
     ];
     const ctx: ExecutionContext = {
-      nodeOutputs: new Map(),
+      nodeOutputs: {},
       logs,
       status: 'error',
       currentNodeId: null,

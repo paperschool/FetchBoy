@@ -229,7 +229,7 @@ export const useStitchStore = create<StitchState>()(
         onNodeComplete: (nodeId: string, output: Record<string, unknown>, durationMs: number): void => {
           set((state) => {
             if (state.executionContext) {
-              state.executionContext.nodeOutputs.set(nodeId, output);
+              state.executionContext.nodeOutputs[nodeId] = output;
             }
             state.sleepCountdown = null;
             state.executionLogs.push({

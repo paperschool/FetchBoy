@@ -131,7 +131,7 @@ export interface ExecutionLogEntry {
 }
 
 export interface ExecutionContext {
-  nodeOutputs: Map<string, Record<string, unknown>>;
+  nodeOutputs: Record<string, Record<string, unknown>>;
   logs: ExecutionLogEntry[];
   status: 'running' | 'completed' | 'error' | 'cancelled';
   currentNodeId: string | null;

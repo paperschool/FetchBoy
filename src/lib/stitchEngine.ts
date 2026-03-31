@@ -84,7 +84,7 @@ export function resolveNodeInputs(
   const incoming = connections.filter((c) => c.targetNodeId === nodeId);
 
   for (const conn of incoming) {
-    const sourceOutput = context.nodeOutputs.get(conn.sourceNodeId);
+    const sourceOutput = context.nodeOutputs[conn.sourceNodeId];
     if (!sourceOutput) {
       throw new Error(`Source node ${conn.sourceNodeId} has no output (execution order error)`);
     }
@@ -232,7 +232,7 @@ export async function executeSleepNode(
 
 export function createExecutionContext(): ExecutionContext {
   return {
-    nodeOutputs: new Map(),
+    nodeOutputs: {},
     logs: [],
     status: 'running',
     currentNodeId: null,
@@ -298,7 +298,7 @@ export async function executeChain(
       }
 
       const durationMs = Date.now() - nodeStart;
-      ctx.nodeOutputs.set(node.id, output);
+      ctx.nodeOutputs[node.id] = output;
 
       ctx.logs.push({
         nodeId: node.id,

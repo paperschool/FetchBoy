@@ -122,7 +122,7 @@ describe('topologicalSort', () => {
 describe('resolveNodeInputs', () => {
   it('resolves single input with source key', () => {
     const ctx = createExecutionContext();
-    ctx.nodeOutputs.set('src', { name: 'Alice', age: 30 });
+    ctx.nodeOutputs['src'] = { name: 'Alice', age: 30 };
     const conns = [makeConn({ sourceNodeId: 'src', targetNodeId: 'tgt', sourceKey: 'name' })];
     const result = resolveNodeInputs('tgt', conns, ctx);
     expect(result).toEqual({ name: 'Alice' });
@@ -130,8 +130,8 @@ describe('resolveNodeInputs', () => {
 
   it('resolves multiple inputs from different sources', () => {
     const ctx = createExecutionContext();
-    ctx.nodeOutputs.set('s1', { foo: 1 });
-    ctx.nodeOutputs.set('s2', { bar: 2 });
+    ctx.nodeOutputs['s1'] = { foo: 1 };
+    ctx.nodeOutputs['s2'] = { bar: 2 };
     const conns = [
       makeConn({ sourceNodeId: 's1', targetNodeId: 'tgt', sourceKey: 'foo' }),
       makeConn({ sourceNodeId: 's2', targetNodeId: 'tgt', sourceKey: 'bar' }),
@@ -324,7 +324,7 @@ describe('executeChain', () => {
     const ctx = await executeChain(nodes, conns, {}, callbacks, cancelledRef);
 
     expect(ctx.status).toBe('completed');
-    expect(ctx.nodeOutputs.get('b')).toEqual({ result: 11 });
+    expect(ctx.nodeOutputs['b']).toEqual({ result: 11 });
     expect(callbacks.onNodeStart).toHaveBeenCalledTimes(2);
     expect(callbacks.onNodeComplete).toHaveBeenCalledTimes(2);
     expect(callbacks.onChainComplete).toHaveBeenCalledTimes(1);
