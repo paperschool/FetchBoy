@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { ZoomIn, ZoomOut, Maximize, Play, Square } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize, Play, Square, ScrollText } from 'lucide-react';
 import { useStitchStore } from '@/stores/stitchStore';
 import { useCanvasTransform } from './StitchCanvas.hooks';
 import { StitchNode } from './StitchNode';
@@ -37,6 +37,7 @@ function StitchCanvasInner(): React.ReactElement {
   const executionCurrentNodeId = useStitchStore((s) => s.executionCurrentNodeId);
   const executionNodeOutputs = useStitchStore((s) => s.executionNodeOutputs);
   const executionError = useStitchStore((s) => s.executionError);
+  const executionLogs = useStitchStore((s) => s.executionLogs);
   const { drag } = useConnectionDrag();
 
   const { transform, canvasRef, onPointerDown, onPointerMove, onPointerUp, zoomIn, zoomOut, zoomReset } =
@@ -55,6 +56,14 @@ function StitchCanvasInner(): React.ReactElement {
 
   const canPlay = nodes.length > 0 && executionState !== 'running';
   const isRunning = executionState === 'running';
+  const hasLogs = executionLogs.length > 0;
+  // Show the "open log" button when there are results but the debug panel isn't visible
+  // (because a node is selected, showing the editor instead)
+  const showOpenLog = hasLogs && !isRunning && selectedNodeId !== null;
+
+  const handleOpenLog = useCallback((): void => {
+    selectNode(null);
+  }, [selectNode]);
 
   const handleCanvasClick = useCallback((e: React.MouseEvent): void => {
     if ((e.target as HTMLElement).closest('[data-stitch-node]')) return;
@@ -164,6 +173,16 @@ function StitchCanvasInner(): React.ReactElement {
             data-testid="stitch-play-btn"
           >
             <Play size={14} />
+          </button>
+        )}
+        {showOpenLog && (
+          <button
+            className="rounded p-1 text-blue-400 hover:bg-blue-500/20"
+            onClick={handleOpenLog}
+            title="Show debug log"
+            data-testid="stitch-open-log-btn"
+          >
+            <ScrollText size={14} />
           </button>
         )}
         <div className="flex-1" />
