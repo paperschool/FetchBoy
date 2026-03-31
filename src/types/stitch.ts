@@ -114,6 +114,41 @@ export interface RawStitchNode {
   updated_at: string;
 }
 
+// ─── Execution Types ────────────────────────────────────────────────────────
+
+export type ExecutionNodeStatus = 'idle' | 'running' | 'success' | 'error';
+
+export interface ExecutionLogEntry {
+  nodeId: string;
+  nodeLabel: string;
+  nodeType: StitchNodeType;
+  status: 'started' | 'completed' | 'error' | 'sleeping' | 'cancelled';
+  timestamp: number;       // ms since execution start
+  durationMs?: number;
+  input?: Record<string, unknown>;
+  output?: Record<string, unknown>;
+  error?: string;
+}
+
+export interface ExecutionContext {
+  nodeOutputs: Map<string, Record<string, unknown>>;
+  logs: ExecutionLogEntry[];
+  status: 'running' | 'completed' | 'error' | 'cancelled';
+  currentNodeId: string | null;
+  error: { nodeId: string; message: string } | null;
+  startTime: number;
+}
+
+export interface ExecutionCallbacks {
+  onNodeStart: (nodeId: string) => void;
+  onNodeComplete: (nodeId: string, output: Record<string, unknown>, durationMs: number) => void;
+  onError: (nodeId: string, error: string) => void;
+  onSleepStart: (nodeId: string, durationMs: number) => void;
+  onChainComplete: () => void;
+}
+
+// ─── Raw DB Row Interfaces ──────────────────────────────────────────────────
+
 export interface RawStitchConnection {
   id: string;
   chain_id: string;

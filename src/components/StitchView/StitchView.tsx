@@ -4,6 +4,7 @@ import { TabLayout } from '@/components/Layout/TabLayout';
 import { useStitchStore } from '@/stores/stitchStore';
 import { StitchCanvas } from './components/StitchCanvas';
 import { StitchEditorPanel } from './components/StitchEditorPanel';
+import { StitchDebugLog } from './components/StitchDebugLog';
 
 export function StitchView(): React.ReactElement {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -15,8 +16,21 @@ export function StitchView(): React.ReactElement {
   const loadChain = useStitchStore((s) => s.loadChain);
   const createChain = useStitchStore((s) => s.createChain);
 
+  const executionState = useStitchStore((s) => s.executionState);
+  const executionLogs = useStitchStore((s) => s.executionLogs);
+
   const selectedNode = nodes.find((n) => n.id === selectedNodeId) ?? null;
   const showEditor = selectedNode !== null && selectedNode.type !== undefined;
+
+  // Show debug log when running, or when there are results and no node is selected
+  const hasExecutionResults = executionLogs.length > 0;
+  const showDebugLog = !showEditor && hasExecutionResults && (executionState === 'running' || executionState === 'completed' || executionState === 'error');
+
+  const handleCloseDebugLog = useCallback((): void => {
+    // Clear execution logs to dismiss the debug log
+    useStitchStore.setState({ executionLogs: [], executionContext: null, executionState: 'idle' as const });
+  }, []);
+
 
   const [editorHeight, setEditorHeight] = useState(260);
   const dragRef = useRef<{ startY: number; startH: number } | null>(null);
@@ -150,12 +164,11 @@ export function StitchView(): React.ReactElement {
       mainContent={
         activeChainId ? (
           <div className="flex h-full flex-col">
-            <div className={showEditor ? 'min-h-0 flex-1' : 'h-full'}>
+            <div className={(showEditor || showDebugLog) ? 'min-h-0 flex-1' : 'h-full'}>
               <StitchCanvas />
             </div>
             {showEditor && selectedNode && (
               <>
-                {/* Drag handle */}
                 <div
                   className="shrink-0 cursor-row-resize border-t border-app-subtle bg-app-sidebar hover:bg-blue-500/20 active:bg-blue-500/30"
                   style={{ height: 5 }}
@@ -165,6 +178,20 @@ export function StitchView(): React.ReactElement {
                 />
                 <div className="shrink-0 overflow-hidden transition-[height] duration-150" style={{ height: editorHeight }}>
                   <StitchEditorPanel node={selectedNode} />
+                </div>
+              </>
+            )}
+            {showDebugLog && !showEditor && (
+              <>
+                <div
+                  className="shrink-0 cursor-row-resize border-t border-app-subtle bg-app-sidebar hover:bg-blue-500/20 active:bg-blue-500/30"
+                  style={{ height: 5 }}
+                  onPointerDown={handleResizePointerDown}
+                  title="Drag to resize"
+                  data-testid="debug-log-resize-handle"
+                />
+                <div className="shrink-0 overflow-hidden transition-[height] duration-150" style={{ height: editorHeight }}>
+                  <StitchDebugLog onClose={handleCloseDebugLog} />
                 </div>
               </>
             )}

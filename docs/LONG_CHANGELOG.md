@@ -1,5 +1,26 @@
 # Long Changelog
 
+## [0.18.9] - 2026-03-31
+
+### Story 15.9: Chain Execution Engine
+
+- `stitchEngine.ts` execution engine with topological sort (Kahn's algorithm), cycle detection, and sequential node execution with callbacks
+- Four node executors: JSON Object (parse), JS Snippet (`new Function` sandbox), Request (Tauri `send_request` with `{{key}}` interpolation), Sleep (fixed/random delay with cancellation check)
+- Input resolution maps connection source outputs to downstream node inputs
+- `ExecutionContext` tracks per-node outputs, timestamped logs, and error state
+- Cancellation support via shared ref checked between node executions
+- Store wiring: `startExecution()` resolves env vars and runs chain, `cancelExecution()` sets flag
+- 23 unit tests covering topo sort, input resolution, all node executors, and chain integration
+
+### Story 15.10: Play Mode & Debug Interface
+
+- Play/Stop toolbar buttons in StitchCanvas with state-dependent visibility
+- Node execution highlighting: pulsing blue border (running), green border (success), red border (error) via CSS animations
+- `StitchDebugLog` panel with timestamped entries, collapsible input/output JSON, auto-scroll, and error highlighting
+- Bottom panel switches between node editor and debug log based on execution state
+- Debug log dismissible via close button or node selection
+- 9 new component tests for debug log rendering, error display, and user interactions
+
 ## [0.18.7] - 2026-03-31
 
 ### Story 15.8: Node Editor Panel

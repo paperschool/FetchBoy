@@ -39,6 +39,8 @@ const NODE_HEADER_COLORS: Record<NodeType, string> = {
   'sleep': 'bg-purple-500/15',
 };
 
+import type { ExecutionNodeStatus } from '@/types/stitch';
+
 interface StitchNodeProps {
   node: StitchNodeType;
   selected: boolean;
@@ -49,6 +51,7 @@ interface StitchNodeProps {
   onDelete: (id: string) => void;
   onConnectionDrop?: (targetNodeId: string) => void;
   connections?: StitchConnection[];
+  executionStatus?: ExecutionNodeStatus | null;
 }
 
 const NODE_WIDTH = 180;
@@ -63,6 +66,7 @@ export const StitchNode = React.memo(function StitchNode({
   onDelete,
   onConnectionDrop,
   connections = [],
+  executionStatus = null,
 }: StitchNodeProps): React.ReactElement {
   const { drag, startDrag, updateCursor, endDrag } = useConnectionDrag();
   const nodeRef = useRef<HTMLDivElement>(null);
@@ -204,7 +208,11 @@ export const StitchNode = React.memo(function StitchNode({
       tabIndex={0}
       className={`absolute select-none rounded-lg border shadow-sm transition-shadow ${NODE_COLORS[node.type]} ${
         selected ? 'ring-2 ring-blue-500 shadow-md' : ''
-      } ${dragging ? 'opacity-75' : ''}`}
+      } ${dragging ? 'opacity-75' : ''} ${
+        executionStatus === 'running' ? 'stitch-node-running' : ''
+      } ${executionStatus === 'success' ? 'stitch-node-success' : ''} ${
+        executionStatus === 'error' ? 'stitch-node-error' : ''
+      }`}
       style={{
         left: node.positionX,
         top: node.positionY,

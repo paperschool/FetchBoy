@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import type { StitchChain, StitchNode, StitchConnection, StitchExecutionState } from '@/types/stitch';
+import type { StitchChain, StitchNode, StitchConnection, StitchExecutionState, ExecutionContext, ExecutionLogEntry } from '@/types/stitch';
 import * as stitchDb from '@/lib/stitch';
+import { executeChain, createExecutionContext } from '@/lib/stitchEngine';
+import { useEnvironmentStore } from '@/stores/environmentStore';
 
 // ─── State ──────────────────────────────────────────────────────────────────
 
@@ -13,6 +15,10 @@ interface StitchState {
   selectedNodeId: string | null;
   selectedConnectionId: string | null;
   executionState: StitchExecutionState;
+  executionContext: ExecutionContext | null;
+  executionLogs: ExecutionLogEntry[];
+  sleepCountdown: { nodeId: string; durationMs: number } | null;
+  cancelledRef: { current: boolean };
 
   // Chain actions
   loadChains: () => Promise<void>;
@@ -34,6 +40,8 @@ interface StitchState {
 
   // Execution
   setExecutionState: (state: StitchExecutionState) => void;
+  startExecution: () => Promise<void>;
+  cancelExecution: () => void;
 }
 
 // ─── Store ──────────────────────────────────────────────────────────────────
@@ -47,6 +55,10 @@ export const useStitchStore = create<StitchState>()(
     selectedNodeId: null,
     selectedConnectionId: null,
     executionState: 'idle' as StitchExecutionState,
+    executionContext: null,
+    executionLogs: [],
+    sleepCountdown: null,
+    cancelledRef: { current: false },
 
     loadChains: async () => {
       const chains = await stitchDb.loadChains();
@@ -178,5 +190,115 @@ export const useStitchStore = create<StitchState>()(
       set((state) => {
         state.executionState = execState;
       }),
+
+    startExecution: async () => {
+      const { nodes, connections, cancelledRef } = useStitchStore.getState();
+      cancelledRef.current = false;
+
+      const initialCtx = createExecutionContext();
+      set((state) => {
+        state.executionState = 'running';
+        state.executionContext = initialCtx;
+        state.executionLogs = [];
+        state.sleepCountdown = null;
+      });
+
+      // Resolve environment variables
+      const envState = useEnvironmentStore.getState();
+      const activeEnv = envState.environments.find((e) => e.id === envState.activeEnvironmentId);
+      const envVariables: Record<string, string> = {};
+      if (activeEnv?.variables) {
+        for (const v of activeEnv.variables) {
+          if (v.enabled && v.key) envVariables[v.key] = v.value;
+        }
+      }
+
+      const callbacks = {
+        onNodeStart: (nodeId: string): void => {
+          set((state) => {
+            if (state.executionContext) state.executionContext.currentNodeId = nodeId;
+            state.executionLogs.push({
+              nodeId,
+              nodeLabel: nodes.find((n) => n.id === nodeId)?.label ?? '',
+              nodeType: nodes.find((n) => n.id === nodeId)?.type ?? 'json-object',
+              status: 'started',
+              timestamp: Date.now() - (state.executionContext?.startTime ?? Date.now()),
+            });
+          });
+        },
+        onNodeComplete: (nodeId: string, output: Record<string, unknown>, durationMs: number): void => {
+          set((state) => {
+            if (state.executionContext) {
+              state.executionContext.nodeOutputs.set(nodeId, output);
+            }
+            state.sleepCountdown = null;
+            state.executionLogs.push({
+              nodeId,
+              nodeLabel: nodes.find((n) => n.id === nodeId)?.label ?? '',
+              nodeType: nodes.find((n) => n.id === nodeId)?.type ?? 'json-object',
+              status: 'completed',
+              timestamp: Date.now() - (state.executionContext?.startTime ?? Date.now()),
+              durationMs,
+              output,
+            });
+          });
+        },
+        onError: (nodeId: string, error: string): void => {
+          set((state) => {
+            state.executionState = 'error';
+            state.executionLogs.push({
+              nodeId,
+              nodeLabel: nodes.find((n) => n.id === nodeId)?.label ?? nodeId,
+              nodeType: nodes.find((n) => n.id === nodeId)?.type ?? 'json-object',
+              status: 'error',
+              timestamp: Date.now() - (state.executionContext?.startTime ?? Date.now()),
+              error,
+            });
+          });
+        },
+        onSleepStart: (nodeId: string, durationMs: number): void => {
+          set((state) => {
+            state.sleepCountdown = { nodeId, durationMs };
+            state.executionLogs.push({
+              nodeId,
+              nodeLabel: nodes.find((n) => n.id === nodeId)?.label ?? '',
+              nodeType: 'sleep',
+              status: 'sleeping',
+              timestamp: Date.now() - (state.executionContext?.startTime ?? Date.now()),
+            });
+          });
+        },
+        onChainComplete: (): void => {
+          set((state) => {
+            state.executionState = 'completed';
+            state.sleepCountdown = null;
+          });
+        },
+      };
+
+      try {
+        const ctx = await executeChain(nodes, connections, envVariables, callbacks, cancelledRef);
+        set((state) => {
+          state.executionContext = ctx;
+          if (ctx.status === 'cancelled') {
+            state.executionState = 'idle';
+          }
+        });
+      } catch (err) {
+        set((state) => {
+          state.executionState = 'error';
+        });
+        console.error('Chain execution failed:', err);
+      }
+    },
+
+    cancelExecution: () => {
+      const { cancelledRef } = useStitchStore.getState();
+      cancelledRef.current = true;
+      set((state) => {
+        state.executionState = 'idle';
+        state.sleepCountdown = null;
+      });
+    },
   })),
 );

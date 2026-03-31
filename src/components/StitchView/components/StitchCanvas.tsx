@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { ZoomIn, ZoomOut, Maximize } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize, Play, Square } from 'lucide-react';
 import { useStitchStore } from '@/stores/stitchStore';
 import { useCanvasTransform } from './StitchCanvas.hooks';
 import { StitchNode } from './StitchNode';
@@ -31,10 +31,25 @@ function StitchCanvasInner(): React.ReactElement {
   const selectConnection = useStitchStore((s) => s.selectConnection);
   const selectedConnectionId = useStitchStore((s) => s.selectedConnectionId);
   const removeConnection = useStitchStore((s) => s.removeConnection);
+  const executionState = useStitchStore((s) => s.executionState);
+  const startExecution = useStitchStore((s) => s.startExecution);
+  const cancelExecution = useStitchStore((s) => s.cancelExecution);
+  const executionContext = useStitchStore((s) => s.executionContext);
   const { drag } = useConnectionDrag();
 
   const { transform, canvasRef, onPointerDown, onPointerMove, onPointerUp, zoomIn, zoomOut, zoomReset } =
     useCanvasTransform();
+
+  const handlePlay = useCallback((): void => {
+    startExecution().catch(() => {});
+  }, [startExecution]);
+
+  const handleStop = useCallback((): void => {
+    cancelExecution();
+  }, [cancelExecution]);
+
+  const canPlay = nodes.length > 0 && executionState !== 'running';
+  const isRunning = executionState === 'running';
 
   const handleCanvasClick = useCallback((e: React.MouseEvent): void => {
     if ((e.target as HTMLElement).closest('[data-stitch-node]')) return;
@@ -125,6 +140,27 @@ function StitchCanvasInner(): React.ReactElement {
         data-stitch-toolbar
       >
         <AddNodeMenu onAddNode={handleAddNode} />
+        <div className="mx-1 h-4 w-px bg-app-subtle" />
+        {isRunning ? (
+          <button
+            className="rounded p-1 text-red-400 hover:bg-red-500/20"
+            onClick={handleStop}
+            title="Stop execution"
+            data-testid="stitch-stop-btn"
+          >
+            <Square size={14} />
+          </button>
+        ) : (
+          <button
+            className={`rounded p-1 ${canPlay ? 'text-green-400 hover:bg-green-500/20' : 'cursor-not-allowed text-app-muted opacity-40'}`}
+            onClick={canPlay ? handlePlay : undefined}
+            disabled={!canPlay}
+            title="Run chain"
+            data-testid="stitch-play-btn"
+          >
+            <Play size={14} />
+          </button>
+        )}
         <div className="flex-1" />
         <button
           className="rounded p-1 text-app-muted hover:bg-app-hover hover:text-app-secondary"
@@ -175,20 +211,30 @@ function StitchCanvasInner(): React.ReactElement {
           }}
         >
           <ConnectionLayer />
-          {nodes.map((node) => (
-            <StitchNode
-              key={node.id}
-              node={node}
-              selected={node.id === selectedNodeId}
-              zoom={transform.zoom}
-              onSelect={selectNode}
-              onUpdatePosition={handleUpdatePosition}
-              onUpdateLabel={handleUpdateLabel}
-              onDelete={handleDelete}
-              onConnectionDrop={handleConnectionDrop}
-              connections={connections}
-            />
-          ))}
+          {nodes.map((node) => {
+            const nodeExecStatus = executionContext?.error?.nodeId === node.id
+              ? 'error' as const
+              : executionContext?.currentNodeId === node.id
+                ? 'running' as const
+                : executionContext?.nodeOutputs.has(node.id)
+                  ? 'success' as const
+                  : null;
+            return (
+              <StitchNode
+                key={node.id}
+                node={node}
+                selected={node.id === selectedNodeId}
+                zoom={transform.zoom}
+                onSelect={selectNode}
+                onUpdatePosition={handleUpdatePosition}
+                onUpdateLabel={handleUpdateLabel}
+                onDelete={handleDelete}
+                onConnectionDrop={handleConnectionDrop}
+                connections={connections}
+                executionStatus={nodeExecStatus}
+              />
+            );
+          })}
         </div>
 
         {nodes.length === 0 && (
