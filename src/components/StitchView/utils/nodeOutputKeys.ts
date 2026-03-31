@@ -25,6 +25,8 @@ export function getNodeOutputKeys(node: StitchNode, connections?: StitchConnecti
     case 'merge':
       // Merge node output keys are the labels/IDs of connected sources — dynamic at runtime
       return [];
+    case 'condition':
+      return ['true', 'false'];
     default:
       return [];
   }

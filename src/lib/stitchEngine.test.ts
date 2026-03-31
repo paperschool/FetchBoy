@@ -13,6 +13,8 @@ import {
   executeRequestNode,
   executeSleepNode,
   executeMergeNode,
+  executeConditionNode,
+  computeSkippedNodes,
   groupByDepth,
   executeChain,
 } from './stitchEngine';
@@ -143,10 +145,11 @@ describe('resolveNodeInputs', () => {
     expect(result).toEqual({ foo: 1, bar: 2 });
   });
 
-  it('throws if source node has no output', () => {
+  it('skips missing source node output (e.g. skipped by condition)', () => {
     const ctx = createExecutionContext();
     const conns = [makeConn({ sourceNodeId: 'missing', targetNodeId: 'tgt', sourceKey: 'x' })];
-    expect(() => resolveNodeInputs('tgt', conns, ctx)).toThrow(/no output/);
+    const result = resolveNodeInputs('tgt', conns, ctx);
+    expect(result).toEqual({});
   });
 });
 
@@ -608,5 +611,151 @@ describe('executeChain', () => {
       { half: 10 },
       { half: 15 },
     ]);
+  });
+
+  it('condition node routes to true branch and skips false branch', async () => {
+    const nodes = [
+      makeNode({ id: 'data', positionY: 0, config: { json: '{"status": 200}' } }),
+      makeNode({ id: 'cond', positionY: 100, type: 'condition', config: { expression: 'input.status === 200' } }),
+      makeNode({ id: 'true-branch', positionY: 200, type: 'js-snippet', config: { code: 'return { ok: true }' } }),
+      makeNode({ id: 'false-branch', positionY: 200, positionX: 300, type: 'js-snippet', config: { code: 'return { ok: false }' } }),
+    ];
+    const conns = [
+      makeConn({ sourceNodeId: 'data', targetNodeId: 'cond' }),
+      makeConn({ sourceNodeId: 'cond', targetNodeId: 'true-branch', sourceKey: 'true' }),
+      makeConn({ sourceNodeId: 'cond', targetNodeId: 'false-branch', sourceKey: 'false' }),
+    ];
+    const callbacks = makeCallbacks();
+    const cancelledRef = { current: false };
+
+    const ctx = await executeChain(nodes, conns, {}, callbacks, cancelledRef);
+
+    expect(ctx.status).toBe('completed');
+    expect(ctx.nodeOutputs['true-branch']).toEqual({ ok: true });
+    expect(ctx.nodeOutputs['false-branch']).toBeUndefined();
+    // false-branch should be logged as skipped
+    const skippedLogs = ctx.logs.filter((l) => l.status === 'skipped');
+    expect(skippedLogs).toHaveLength(1);
+    expect(skippedLogs[0].nodeId).toBe('false-branch');
+  });
+
+  it('condition node routes to false branch when condition is falsy', async () => {
+    const nodes = [
+      makeNode({ id: 'data', positionY: 0, config: { json: '{"status": 404}' } }),
+      makeNode({ id: 'cond', positionY: 100, type: 'condition', config: { expression: 'input.status === 200' } }),
+      makeNode({ id: 'true-branch', positionY: 200, type: 'js-snippet', config: { code: 'return { ok: true }' } }),
+      makeNode({ id: 'false-branch', positionY: 200, positionX: 300, type: 'js-snippet', config: { code: 'return { ok: false }' } }),
+    ];
+    const conns = [
+      makeConn({ sourceNodeId: 'data', targetNodeId: 'cond' }),
+      makeConn({ sourceNodeId: 'cond', targetNodeId: 'true-branch', sourceKey: 'true' }),
+      makeConn({ sourceNodeId: 'cond', targetNodeId: 'false-branch', sourceKey: 'false' }),
+    ];
+    const callbacks = makeCallbacks();
+    const cancelledRef = { current: false };
+
+    const ctx = await executeChain(nodes, conns, {}, callbacks, cancelledRef);
+
+    expect(ctx.status).toBe('completed');
+    expect(ctx.nodeOutputs['false-branch']).toEqual({ ok: false });
+    expect(ctx.nodeOutputs['true-branch']).toBeUndefined();
+  });
+
+  it('convergence node after condition executes regardless of branch', async () => {
+    const nodes = [
+      makeNode({ id: 'data', positionY: 0, config: { json: '{"status": 200}' } }),
+      makeNode({ id: 'cond', positionY: 100, type: 'condition', config: { expression: 'input.status === 200' } }),
+      makeNode({ id: 'true-branch', positionY: 200, type: 'js-snippet', config: { code: 'return { branch: "true" }' } }),
+      makeNode({ id: 'false-branch', positionY: 200, positionX: 300, type: 'js-snippet', config: { code: 'return { branch: "false" }' } }),
+      makeNode({ id: 'converge', positionY: 300, type: 'merge', label: 'Converge', config: { keyMode: 'label' } }),
+    ];
+    const conns = [
+      makeConn({ sourceNodeId: 'data', targetNodeId: 'cond' }),
+      makeConn({ sourceNodeId: 'cond', targetNodeId: 'true-branch', sourceKey: 'true' }),
+      makeConn({ sourceNodeId: 'cond', targetNodeId: 'false-branch', sourceKey: 'false' }),
+      makeConn({ sourceNodeId: 'true-branch', targetNodeId: 'converge' }),
+      makeConn({ sourceNodeId: 'false-branch', targetNodeId: 'converge' }),
+    ];
+    const callbacks = makeCallbacks();
+    const cancelledRef = { current: false };
+
+    const ctx = await executeChain(nodes, conns, {}, callbacks, cancelledRef);
+
+    expect(ctx.status).toBe('completed');
+    // Converge node should execute (reachable from both branches)
+    expect(ctx.nodeOutputs['converge']).toBeDefined();
+  });
+
+  it('chained conditions work correctly', async () => {
+    const nodes = [
+      makeNode({ id: 'data', positionY: 0, config: { json: '{"x": 5}' } }),
+      makeNode({ id: 'cond1', positionY: 100, type: 'condition', config: { expression: 'input.x > 0' } }),
+      makeNode({ id: 'cond2', positionY: 200, type: 'condition', config: { expression: 'input.x > 10' } }),
+      makeNode({ id: 'big', positionY: 300, type: 'js-snippet', config: { code: 'return { size: "big" }' } }),
+      makeNode({ id: 'small', positionY: 300, positionX: 300, type: 'js-snippet', config: { code: 'return { size: "small" }' } }),
+    ];
+    const conns = [
+      makeConn({ sourceNodeId: 'data', targetNodeId: 'cond1' }),
+      makeConn({ sourceNodeId: 'cond1', targetNodeId: 'cond2', sourceKey: 'true' }),
+      makeConn({ sourceNodeId: 'cond2', targetNodeId: 'big', sourceKey: 'true' }),
+      makeConn({ sourceNodeId: 'cond2', targetNodeId: 'small', sourceKey: 'false' }),
+    ];
+    const callbacks = makeCallbacks();
+    const cancelledRef = { current: false };
+
+    const ctx = await executeChain(nodes, conns, {}, callbacks, cancelledRef);
+
+    expect(ctx.status).toBe('completed');
+    // x=5, x>0 is true, x>10 is false → small branch taken
+    expect(ctx.nodeOutputs['small']).toEqual({ size: 'small' });
+    expect(ctx.nodeOutputs['big']).toBeUndefined();
+  });
+});
+
+// ─── Condition Node Unit Tests ─────────────────────────────────────────────
+
+describe('executeConditionNode', () => {
+  it('returns true for truthy expression', () => {
+    const node = makeNode({ id: 'c', type: 'condition', config: { expression: 'input.x > 0' } });
+    const result = executeConditionNode(node, { x: 5 });
+    expect(result.result).toBe(true);
+    expect(result.output._condition).toBe(true);
+  });
+
+  it('returns false for falsy expression', () => {
+    const node = makeNode({ id: 'c', type: 'condition', config: { expression: 'input.x > 10' } });
+    const result = executeConditionNode(node, { x: 5 });
+    expect(result.result).toBe(false);
+  });
+
+  it('throws on expression error', () => {
+    const node = makeNode({ id: 'c', type: 'condition', config: { expression: 'input.foo.bar.baz' } });
+    expect(() => executeConditionNode(node, {})).toThrow(/Condition node/);
+  });
+});
+
+describe('computeSkippedNodes', () => {
+  it('skips nodes exclusively on the false branch when result is true', () => {
+    const conns = [
+      makeConn({ sourceNodeId: 'cond', targetNodeId: 'a', sourceKey: 'true' }),
+      makeConn({ sourceNodeId: 'cond', targetNodeId: 'b', sourceKey: 'false' }),
+    ];
+    const allIds = new Set(['cond', 'a', 'b']);
+    const skipped = computeSkippedNodes('cond', true, conns, allIds);
+    expect(skipped.has('b')).toBe(true);
+    expect(skipped.has('a')).toBe(false);
+  });
+
+  it('does not skip convergence nodes reachable from both branches', () => {
+    const conns = [
+      makeConn({ sourceNodeId: 'cond', targetNodeId: 'a', sourceKey: 'true' }),
+      makeConn({ sourceNodeId: 'cond', targetNodeId: 'b', sourceKey: 'false' }),
+      makeConn({ sourceNodeId: 'a', targetNodeId: 'merge' }),
+      makeConn({ sourceNodeId: 'b', targetNodeId: 'merge' }),
+    ];
+    const allIds = new Set(['cond', 'a', 'b', 'merge']);
+    const skipped = computeSkippedNodes('cond', true, conns, allIds);
+    expect(skipped.has('b')).toBe(true);
+    expect(skipped.has('merge')).toBe(false);
   });
 });

@@ -1,6 +1,6 @@
 // ─── Stitch Node Types ──────────────────────────────────────────────────────
 
-export type StitchNodeType = 'request' | 'json-object' | 'js-snippet' | 'sleep' | 'loop' | 'merge';
+export type StitchNodeType = 'request' | 'json-object' | 'js-snippet' | 'sleep' | 'loop' | 'merge' | 'condition';
 
 export type StitchExecutionState = 'idle' | 'running' | 'paused' | 'completed' | 'error';
 
@@ -87,6 +87,14 @@ export const DEFAULT_MERGE_NODE_CONFIG: MergeNodeConfig = {
   keyMode: 'label',
 };
 
+export interface ConditionNodeConfig {
+  expression: string;
+}
+
+export const DEFAULT_CONDITION_NODE_CONFIG: ConditionNodeConfig = {
+  expression: 'input.status === 200',
+};
+
 // ─── Domain Interfaces ──────────────────────────────────────────────────────
 
 export interface StitchChain {
@@ -149,7 +157,7 @@ export interface ExecutionLogEntry {
   nodeId: string;
   nodeLabel: string;
   nodeType: StitchNodeType;
-  status: 'started' | 'completed' | 'error' | 'sleeping' | 'cancelled';
+  status: 'started' | 'completed' | 'error' | 'sleeping' | 'cancelled' | 'skipped';
   timestamp: number;       // ms since execution start
   durationMs?: number;
   input?: Record<string, unknown>;
@@ -160,6 +168,7 @@ export interface ExecutionLogEntry {
   loopNodeId?: string;     // the parent loop node ID
   consoleLogs?: Array<{ level: 'log' | 'warn' | 'error'; args: string }>;
   parallel?: boolean;
+  conditionResult?: boolean;
 }
 
 export interface ExecutionContext {

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useMemo, type PointerEvent, type KeyboardEvent } from 'react';
-import { Send, Code, Braces, Timer, Eye, AlertCircle, Repeat, GitMerge } from 'lucide-react';
+import { Send, Code, Braces, Timer, Eye, AlertCircle, Repeat, GitMerge, GitBranch } from 'lucide-react';
 import type { StitchNode as StitchNodeType, StitchConnection } from '@/types/stitch';
 import type { StitchNodeType as NodeType } from '@/types/stitch';
 import { useStitchStore } from '@/stores/stitchStore';
@@ -26,6 +26,7 @@ const NODE_ICONS: Record<NodeType, React.ReactNode> = {
   'sleep': <Timer size={12} />,
   'loop': <Repeat size={12} />,
   'merge': <GitMerge size={12} />,
+  'condition': <GitBranch size={12} />,
 };
 
 const NODE_COLORS: Record<NodeType, string> = {
@@ -35,6 +36,7 @@ const NODE_COLORS: Record<NodeType, string> = {
   'sleep': 'bg-app-main/95 border-purple-500/40',
   'loop': 'bg-app-main/95 border-cyan-500/40',
   'merge': 'bg-app-main/95 border-indigo-500/40',
+  'condition': 'bg-app-main/95 border-orange-500/40',
 };
 
 const NODE_HEADER_COLORS: Record<NodeType, string> = {
@@ -44,6 +46,7 @@ const NODE_HEADER_COLORS: Record<NodeType, string> = {
   'sleep': 'bg-purple-500/15',
   'loop': 'bg-cyan-500/15',
   'merge': 'bg-indigo-500/15',
+  'condition': 'bg-orange-500/15',
 };
 
 import type { ExecutionNodeStatus } from '@/types/stitch';
@@ -158,6 +161,9 @@ export const StitchNode = React.memo(function StitchNode({
       const inputKeys = resolveInputShape(node.id, connections, allNodes);
       return inputKeys.length > 0 ? { keys: inputKeys, error: null } : null;
     }
+    if (node.type === 'condition') {
+      return { keys: ['true', 'false'], error: null };
+    }
     return null;
   }, [node.type, node.config, node.id, connections, allNodes]);
 
@@ -166,7 +172,7 @@ export const StitchNode = React.memo(function StitchNode({
   // JSON Object, JS Snippet, and Sleep use a single output port (full payload); Request keeps per-key ports
   const useSinglePort = node.type === 'json-object' || node.type === 'js-snippet' || node.type === 'sleep';
   const hasDynamicPorts = !useSinglePort && outputKeys.length > 0;
-  const portColor = node.type === 'js-snippet' ? 'amber' : node.type === 'request' ? 'blue' : node.type === 'sleep' ? 'purple' : 'green';
+  const portColor = node.type === 'js-snippet' ? 'amber' : node.type === 'request' ? 'blue' : node.type === 'sleep' ? 'purple' : node.type === 'condition' ? 'amber' : 'green';
 
   const requestConfig = node.type === 'request' ? node.config as { method?: string; url?: string } : null;
 

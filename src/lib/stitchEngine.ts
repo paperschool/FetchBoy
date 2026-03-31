@@ -89,7 +89,8 @@ export function resolveNodeInputs(
   for (const conn of incoming) {
     const sourceOutput = context.nodeOutputs[conn.sourceNodeId];
     if (sourceOutput === undefined) {
-      throw new Error(`Source node ${conn.sourceNodeId} has no output (execution order error)`);
+      // Source node was skipped by a condition branch — skip this input
+      continue;
     }
     const key = conn.sourceKey;
     if (key) {
@@ -278,6 +279,76 @@ export async function executeSleepNode(
   }
 
   return { ...input, _delayMs: durationMs };
+}
+
+// ─── Condition Node Executor ───────────────────────────────────────────────
+
+export function executeConditionNode(
+  node: StitchNode,
+  input: Record<string, unknown>,
+): { result: boolean; output: Record<string, unknown> } {
+  const config = node.config as { expression?: string };
+  const expression = config.expression ?? 'true';
+
+  try {
+    const fn = new Function('input', `return (${expression})`);
+    const result = Boolean(fn(input));
+    return { result, output: { ...input, _condition: result } };
+  } catch (err) {
+    throw new Error(`Condition node "${node.label ?? node.id}": ${(err as Error).message}`);
+  }
+}
+
+/**
+ * Compute the set of node IDs that should be skipped based on condition results.
+ * For a condition node with result=true, skip all nodes exclusively reachable
+ * from the 'false' port (and vice versa). Nodes reachable from BOTH branches
+ * (convergence points) are NOT skipped.
+ */
+export function computeSkippedNodes(
+  conditionNodeId: string,
+  conditionResult: boolean,
+  connections: StitchConnection[],
+  allNodeIds: Set<string>,
+): Set<string> {
+  const skippedPort = conditionResult ? 'false' : 'true';
+  const activePort = conditionResult ? 'true' : 'false';
+
+  // Find direct children of each port
+  const skippedRoots = connections
+    .filter((c) => c.sourceNodeId === conditionNodeId && c.sourceKey === skippedPort)
+    .map((c) => c.targetNodeId);
+  const activeRoots = connections
+    .filter((c) => c.sourceNodeId === conditionNodeId && c.sourceKey === activePort)
+    .map((c) => c.targetNodeId);
+
+  // DFS to find all reachable nodes from a set of roots
+  const reachable = (roots: string[]): Set<string> => {
+    const visited = new Set<string>();
+    const stack = [...roots];
+    while (stack.length > 0) {
+      const id = stack.pop()!;
+      if (visited.has(id) || !allNodeIds.has(id)) continue;
+      visited.add(id);
+      for (const conn of connections) {
+        if (conn.sourceNodeId === id) stack.push(conn.targetNodeId);
+      }
+    }
+    return visited;
+  };
+
+  const skippedReachable = reachable(skippedRoots);
+  const activeReachable = reachable(activeRoots);
+
+  // Nodes reachable from BOTH branches are convergence points — don't skip them
+  const skipped = new Set<string>();
+  for (const id of skippedReachable) {
+    if (!activeReachable.has(id)) {
+      skipped.add(id);
+    }
+  }
+
+  return skipped;
 }
 
 // ─── Merge Node Executor ───────────────────────────────────────────────────
@@ -512,6 +583,7 @@ export async function executeChain(
   }
 
   const depthGroups = groupByDepth(sorted, topLevelConnections);
+  const skippedNodeIds = new Set<string>();
 
   for (const group of depthGroups) {
     if (cancelledRef.current) {
@@ -522,6 +594,18 @@ export async function executeChain(
     const isParallel = group.length > 1;
 
     const executeOne = async (node: StitchNode): Promise<void> => {
+      // Check if this node was skipped by a condition branch
+      if (skippedNodeIds.has(node.id)) {
+        ctx.logs.push({
+          nodeId: node.id,
+          nodeLabel: node.label ?? node.type,
+          nodeType: node.type,
+          status: 'skipped',
+          timestamp: Date.now() - ctx.startTime,
+        });
+        return;
+      }
+
       ctx.currentNodeId = node.id;
       callbacks.onNodeStart(node.id);
 
@@ -530,6 +614,7 @@ export async function executeChain(
         const input = resolveNodeInputs(node.id, topLevelConnections, ctx);
         let output: unknown;
         let consoleLogs: Array<{ level: 'log' | 'warn' | 'error'; args: string }> | undefined;
+        let conditionResult: boolean | undefined;
 
         switch (node.type) {
           case 'json-object':
@@ -553,6 +638,15 @@ export async function executeChain(
           case 'merge':
             output = executeMergeNode(node, topLevelConnections, topLevelNodes, ctx);
             break;
+          case 'condition': {
+            const condResult = executeConditionNode(node, input);
+            output = condResult.output;
+            conditionResult = condResult.result;
+            // Compute which downstream nodes to skip
+            const toSkip = computeSkippedNodes(node.id, condResult.result, topLevelConnections, topLevelNodeIds);
+            for (const id of toSkip) skippedNodeIds.add(id);
+            break;
+          }
           default:
             throw new Error(`Unknown node type: ${node.type}`);
         }
@@ -571,6 +665,7 @@ export async function executeChain(
           output,
           consoleLogs,
           parallel: isParallel || undefined,
+          conditionResult,
         });
 
         callbacks.onNodeComplete(node.id, output, durationMs, undefined, consoleLogs);

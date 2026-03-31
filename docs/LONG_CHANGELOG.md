@@ -1,5 +1,20 @@
 # Long Changelog
 
+## [0.18.14] - 2026-03-31
+
+### Story 15.14: Conditional Branching Node
+
+- New "Condition" node type evaluates JS expression against input, routes to `true` or `false` output port
+- `executeConditionNode` using `new Function('input', ...)` with boolean coercion
+- `computeSkippedNodes` DFS-based reachability analysis: skips nodes exclusively on the inactive branch, preserves convergence points
+- Branch skipping integrated into `executeChain` via dynamic `skippedNodeIds` set
+- Skipped nodes logged with 'skipped' status but not executed
+- `ConditionNodeEditor` with Monaco JS expression editor and input hint
+- Condition node renders with two named output ports (true/false) in orange color scheme
+- Debug log: "→ true" / "→ false" badge on condition entries, dimmed styling for skipped entries
+- `resolveNodeInputs` gracefully skips missing source outputs (from skipped branches)
+- 9 new tests: condition evaluation, branch skipping, convergence, chained conditions, computeSkippedNodes
+
 ## [0.18.13] - 2026-03-31
 
 ### Story 15.13: Parallel Branch Execution & Merge Node

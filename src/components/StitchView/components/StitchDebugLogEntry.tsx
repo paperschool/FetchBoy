@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { ChevronRight, ChevronDown, Send, Code, Braces, Timer, Repeat, GitMerge } from 'lucide-react';
+import { ChevronRight, ChevronDown, Send, Code, Braces, Timer, Repeat, GitMerge, GitBranch } from 'lucide-react';
 import { MonacoEditorField } from '@/components/Editor/MonacoEditorField';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import type { ExecutionLogEntry, StitchNodeType } from '@/types/stitch';
@@ -11,6 +11,7 @@ const NODE_ICONS: Record<StitchNodeType, React.ReactNode> = {
   'sleep': <Timer size={11} />,
   'loop': <Repeat size={11} />,
   'merge': <GitMerge size={11} />,
+  'condition': <GitBranch size={11} />,
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -19,6 +20,7 @@ const STATUS_COLORS: Record<string, string> = {
   error: 'text-red-400',
   sleeping: 'text-purple-400',
   cancelled: 'text-yellow-400',
+  skipped: 'text-gray-500',
 };
 
 interface StitchDebugLogEntryProps {
@@ -43,10 +45,11 @@ export function StitchDebugLogEntry({ entry, isError }: StitchDebugLogEntryProps
   const toggleOutput = useCallback((): void => setOutputExpanded((p) => !p), []);
 
   const isLoopChild = entry.loopNodeId !== undefined;
+  const isSkipped = entry.status === 'skipped';
 
   return (
     <div
-      className={`border-b border-app-subtle py-1.5 ${isError ? 'bg-red-500/10' : ''} ${isLoopChild ? 'pl-7 pr-3 border-l-2 border-l-cyan-500/30' : 'px-3'}`}
+      className={`border-b border-app-subtle py-1.5 ${isError ? 'bg-red-500/10' : ''} ${isSkipped ? 'opacity-40' : ''} ${isLoopChild ? 'pl-7 pr-3 border-l-2 border-l-cyan-500/30' : 'px-3'}`}
       data-testid={`debug-log-entry-${entry.nodeId}`}
     >
       <div className="flex items-center gap-2">
@@ -59,6 +62,11 @@ export function StitchDebugLogEntry({ entry, isError }: StitchDebugLogEntryProps
         {entry.parallel && (
           <span className="rounded bg-indigo-500/15 px-1 py-0.5 text-[8px] font-medium text-indigo-600 dark:text-indigo-400" data-testid="parallel-badge">
             parallel
+          </span>
+        )}
+        {entry.conditionResult !== undefined && (
+          <span className={`rounded px-1 py-0.5 text-[8px] font-medium ${entry.conditionResult ? 'bg-green-500/15 text-green-600 dark:text-green-400' : 'bg-red-500/15 text-red-600 dark:text-red-400'}`} data-testid="condition-badge">
+            → {String(entry.conditionResult)}
           </span>
         )}
         <span className="text-app-secondary">{NODE_ICONS[entry.nodeType]}</span>

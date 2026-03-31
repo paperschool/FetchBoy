@@ -1,5 +1,5 @@
 import { useCallback, useState, useRef, useEffect } from 'react';
-import { ZoomIn, ZoomOut, Maximize, Play, Square, ScrollText, FileOutput, Send, Code, Braces, Timer, Repeat, GitMerge } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize, Play, Square, ScrollText, FileOutput, Send, Code, Braces, Timer, Repeat, GitMerge, GitBranch } from 'lucide-react';
 import { useStitchStore } from '@/stores/stitchStore';
 import { useCanvasTransform } from './StitchCanvas.hooks';
 import { StitchNode } from './StitchNode';
@@ -10,7 +10,7 @@ import { StitchConnectionDragProvider, useConnectionDrag } from './StitchConnect
 import { validateConnection } from '../utils/connectionValidator';
 import { computeLoopChildPositions } from '../utils/loopLayout';
 import type { StitchNodeType } from '@/types/stitch';
-import { DEFAULT_JSON_OBJECT_CONFIG, DEFAULT_JS_SNIPPET_CONFIG, DEFAULT_REQUEST_NODE_CONFIG, DEFAULT_SLEEP_NODE_CONFIG, DEFAULT_LOOP_NODE_CONFIG, DEFAULT_MERGE_NODE_CONFIG } from '@/types/stitch';
+import { DEFAULT_JSON_OBJECT_CONFIG, DEFAULT_JS_SNIPPET_CONFIG, DEFAULT_REQUEST_NODE_CONFIG, DEFAULT_SLEEP_NODE_CONFIG, DEFAULT_LOOP_NODE_CONFIG, DEFAULT_MERGE_NODE_CONFIG, DEFAULT_CONDITION_NODE_CONFIG } from '@/types/stitch';
 
 export function StitchCanvas(): React.ReactElement {
   return (
@@ -239,7 +239,7 @@ function StitchCanvasInner(): React.ReactElement {
     (type: StitchNodeType): void => {
       if (!activeChainId) return;
       const existingOfType = nodes.filter((n) => n.type === type).length;
-      const labelMap: Record<string, string> = { 'js-snippet': 'Snippet', 'json-object': 'JSON', sleep: 'Sleep', loop: 'Loop', request: 'Request', merge: 'Merge' };
+      const labelMap: Record<string, string> = { 'js-snippet': 'Snippet', 'json-object': 'JSON', sleep: 'Sleep', loop: 'Loop', request: 'Request', merge: 'Merge', condition: 'Condition' };
       const label = `${labelMap[type] ?? type} ${existingOfType + 1}`;
       const centerX = (-transform.panX + 300) / transform.zoom;
       const centerY = (-transform.panY + 200) / transform.zoom;
@@ -249,6 +249,7 @@ function StitchCanvasInner(): React.ReactElement {
         : type === 'sleep' ? { ...DEFAULT_SLEEP_NODE_CONFIG }
         : type === 'loop' ? { ...DEFAULT_LOOP_NODE_CONFIG }
         : type === 'merge' ? { ...DEFAULT_MERGE_NODE_CONFIG }
+        : type === 'condition' ? { ...DEFAULT_CONDITION_NODE_CONFIG }
         : {};
       addNode({
         chainId: activeChainId,
@@ -312,7 +313,7 @@ function StitchCanvasInner(): React.ReactElement {
   const handleContextAdd = useCallback((type: StitchNodeType): void => {
     if (!activeChainId || !contextMenu) return;
     const existingOfType = nodes.filter((n) => n.type === type).length;
-    const ctxLabelMap: Record<string, string> = { 'js-snippet': 'Snippet', 'json-object': 'JSON', sleep: 'Sleep', loop: 'Loop', request: 'Request', merge: 'Merge' };
+    const ctxLabelMap: Record<string, string> = { 'js-snippet': 'Snippet', 'json-object': 'JSON', sleep: 'Sleep', loop: 'Loop', request: 'Request', merge: 'Merge', condition: 'Condition' };
     const label = `${ctxLabelMap[type] ?? type} ${existingOfType + 1}`;
     const config = type === 'json-object' ? { ...DEFAULT_JSON_OBJECT_CONFIG }
       : type === 'js-snippet' ? { ...DEFAULT_JS_SNIPPET_CONFIG }
@@ -320,6 +321,7 @@ function StitchCanvasInner(): React.ReactElement {
       : type === 'sleep' ? { ...DEFAULT_SLEEP_NODE_CONFIG }
       : type === 'loop' ? { ...DEFAULT_LOOP_NODE_CONFIG }
       : type === 'merge' ? { ...DEFAULT_MERGE_NODE_CONFIG }
+      : type === 'condition' ? { ...DEFAULT_CONDITION_NODE_CONFIG }
       : {};
     const pending = contextMenu.pendingSource;
     const inheritedParent = pending?.parentNodeId ?? null;
@@ -538,6 +540,7 @@ function StitchCanvasInner(): React.ReactElement {
               { type: 'sleep' as const, label: 'Sleep', icon: <Timer size={14} /> },
               { type: 'loop' as const, label: 'Loop', icon: <Repeat size={14} /> },
               { type: 'merge' as const, label: 'Merge', icon: <GitMerge size={14} /> },
+              { type: 'condition' as const, label: 'Condition', icon: <GitBranch size={14} /> },
             ]).map((opt) => (
               <button
                 key={opt.type}
