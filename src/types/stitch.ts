@@ -1,6 +1,6 @@
 // ─── Stitch Node Types ──────────────────────────────────────────────────────
 
-export type StitchNodeType = 'request' | 'json-object' | 'js-snippet' | 'sleep';
+export type StitchNodeType = 'request' | 'json-object' | 'js-snippet' | 'sleep' | 'loop';
 
 export type StitchExecutionState = 'idle' | 'running' | 'paused' | 'completed' | 'error';
 
@@ -70,6 +70,14 @@ export const DEFAULT_SLEEP_NODE_CONFIG: SleepNodeConfig = {
   maxMs: 2000,
 };
 
+export interface LoopNodeConfig {
+  delayMs: number;
+}
+
+export const DEFAULT_LOOP_NODE_CONFIG: LoopNodeConfig = {
+  delayMs: 100,
+};
+
 // ─── Domain Interfaces ──────────────────────────────────────────────────────
 
 export interface StitchChain {
@@ -87,6 +95,7 @@ export interface StitchNode {
   positionY: number;
   config: Record<string, unknown>;
   label: string | null;
+  parentNodeId: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -118,6 +127,7 @@ export interface RawStitchNode {
   position_y: number;
   config: string;
   label: string | null;
+  parent_node_id: string | null;
   created_at: string;
   updated_at: string;
 }

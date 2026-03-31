@@ -35,7 +35,7 @@ interface StitchState {
 
   // Node actions
   addNode: (node: Omit<StitchNode, 'id' | 'createdAt' | 'updatedAt'>) => Promise<StitchNode>;
-  updateNode: (id: string, changes: { positionX?: number; positionY?: number; config?: Record<string, unknown>; label?: string | null }) => Promise<void>;
+  updateNode: (id: string, changes: { positionX?: number; positionY?: number; config?: Record<string, unknown>; label?: string | null; parentNodeId?: string | null }) => Promise<void>;
   removeNode: (id: string) => Promise<void>;
   selectNode: (id: string | null) => void;
 
@@ -140,6 +140,7 @@ export const useStitchStore = create<StitchState>()(
           if (changes.positionY !== undefined) node.positionY = changes.positionY;
           if (changes.config !== undefined) node.config = changes.config;
           if (changes.label !== undefined) node.label = changes.label;
+          if (changes.parentNodeId !== undefined) node.parentNodeId = changes.parentNodeId;
           node.updatedAt = new Date().toISOString();
         }
       });

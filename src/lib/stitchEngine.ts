@@ -8,6 +8,7 @@ import type {
   RequestNodeConfig,
   StitchAuthConfig,
   StitchKeyValuePair,
+  LoopNodeConfig,
 } from '@/types/stitch';
 
 // ─── Topological Sort (Kahn's Algorithm) ────────────────────────────────────
@@ -249,6 +250,115 @@ export async function executeSleepNode(
   return { ...input, _delayMs: durationMs };
 }
 
+// ─── Loop Node Execution ────────────────────────────────────────────────────
+
+async function executeLoopNode(
+  loopNode: StitchNode,
+  input: Record<string, unknown>,
+  allNodes: StitchNode[],
+  allConnections: StitchConnection[],
+  envVariables: Record<string, string>,
+  callbacks: ExecutionCallbacks,
+  cancelledRef: { current: boolean },
+): Promise<Record<string, unknown>> {
+  const config = loopNode.config as unknown as LoopNodeConfig;
+  const delayMs = config.delayMs ?? 100;
+
+  // Resolve the input array — accept array directly or from a key
+  let inputArray: unknown[];
+  const values = Object.values(input);
+  const arrayValue = values.find((v) => Array.isArray(v));
+  if (Array.isArray(input)) {
+    inputArray = input;
+  } else if (arrayValue) {
+    inputArray = arrayValue as unknown[];
+  } else {
+    throw new Error(`Loop node "${loopNode.label ?? loopNode.id}": input must contain an array`);
+  }
+
+  // Get child nodes and their connections
+  const childNodes = allNodes.filter((n) => n.parentNodeId === loopNode.id);
+  const childNodeIds = new Set(childNodes.map((n) => n.id));
+  const childConnections = allConnections.filter(
+    (c) => childNodeIds.has(c.sourceNodeId) && childNodeIds.has(c.targetNodeId),
+  );
+
+  if (childNodes.length === 0) {
+    return { results: inputArray };
+  }
+
+  // Sort child nodes
+  let sortedChildren: StitchNode[];
+  try {
+    sortedChildren = topologicalSort(childNodes, childConnections);
+  } catch (err) {
+    throw new Error(`Loop node "${loopNode.label ?? loopNode.id}": ${(err as Error).message}`);
+  }
+
+  // Find terminal node (last in sorted order with no outgoing connections in child scope)
+  const childSourceIds = new Set(childConnections.map((c) => c.sourceNodeId));
+  const terminalNodes = sortedChildren.filter((n) => !childSourceIds.has(n.id));
+  const terminalNodeId = terminalNodes.length > 0 ? terminalNodes[terminalNodes.length - 1].id : sortedChildren[sortedChildren.length - 1].id;
+
+  const results: Record<string, unknown>[] = [];
+
+  for (let i = 0; i < inputArray.length; i++) {
+    if (cancelledRef.current) break;
+
+    // Delay between iterations (skip first)
+    if (i > 0 && delayMs > 0) {
+      await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
+    }
+
+    const element = inputArray[i];
+
+    try {
+      // Create a mini execution context for this iteration
+      const iterCtx = createExecutionContext();
+
+      for (const childNode of sortedChildren) {
+        if (cancelledRef.current) break;
+
+        // First node in chain gets { element, index } plus any connected inputs
+        const childInput = resolveNodeInputs(childNode.id, childConnections, iterCtx);
+        // Inject element and index for the first node(s) with no incoming connections
+        const incomingCount = childConnections.filter((c) => c.targetNodeId === childNode.id).length;
+        if (incomingCount === 0) {
+          Object.assign(childInput, typeof element === 'object' && element !== null ? element : { element }, { index: i });
+        }
+
+        let output: Record<string, unknown>;
+        switch (childNode.type) {
+          case 'json-object':
+            output = executeJsonObjectNode(childNode);
+            break;
+          case 'js-snippet':
+            output = executeJsSnippetNode(childNode, childInput);
+            break;
+          case 'request':
+            output = await executeRequestNode(childNode, childInput, envVariables);
+            break;
+          case 'sleep':
+            output = await executeSleepNode(childNode, childInput, callbacks, cancelledRef);
+            break;
+          default:
+            throw new Error(`Unsupported node type in loop: ${childNode.type}`);
+        }
+
+        iterCtx.nodeOutputs[childNode.id] = output;
+      }
+
+      // Collect terminal node output
+      results.push(iterCtx.nodeOutputs[terminalNodeId] ?? {});
+    } catch {
+      // Error in iteration — push empty object and continue
+      results.push({});
+    }
+  }
+
+  return { results };
+}
+
 // ─── Chain Execution ────────────────────────────────────────────────────────
 
 export function createExecutionContext(): ExecutionContext {
@@ -271,7 +381,15 @@ export async function executeChain(
 ): Promise<ExecutionContext> {
   const ctx = createExecutionContext();
 
-  if (nodes.length === 0) {
+  // Only execute top-level nodes — child nodes (inside loops) are run by their parent loop
+  const topLevelNodes = nodes.filter((n) => n.parentNodeId === null);
+  // Only include connections between top-level nodes
+  const topLevelNodeIds = new Set(topLevelNodes.map((n) => n.id));
+  const topLevelConnections = connections.filter(
+    (c) => topLevelNodeIds.has(c.sourceNodeId) && topLevelNodeIds.has(c.targetNodeId),
+  );
+
+  if (topLevelNodes.length === 0) {
     ctx.status = 'completed';
     callbacks.onChainComplete();
     return ctx;
@@ -279,7 +397,7 @@ export async function executeChain(
 
   let sorted: StitchNode[];
   try {
-    sorted = topologicalSort(nodes, connections);
+    sorted = topologicalSort(topLevelNodes, topLevelConnections);
   } catch (err) {
     ctx.status = 'error';
     ctx.error = { nodeId: '', message: (err as Error).message };
@@ -298,7 +416,7 @@ export async function executeChain(
 
     const nodeStart = Date.now();
     try {
-      const input = resolveNodeInputs(node.id, connections, ctx);
+      const input = resolveNodeInputs(node.id, topLevelConnections, ctx);
       let output: Record<string, unknown>;
 
       switch (node.type) {
@@ -313,6 +431,9 @@ export async function executeChain(
           break;
         case 'sleep':
           output = await executeSleepNode(node, input, callbacks, cancelledRef);
+          break;
+        case 'loop':
+          output = await executeLoopNode(node, input, nodes, connections, envVariables, callbacks, cancelledRef);
           break;
         default:
           throw new Error(`Unknown node type: ${node.type}`);

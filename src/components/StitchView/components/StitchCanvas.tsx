@@ -1,14 +1,15 @@
 import { useCallback, useState, useRef, useEffect } from 'react';
-import { ZoomIn, ZoomOut, Maximize, Play, Square, ScrollText, FileOutput, Send, Code, Braces, Timer } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize, Play, Square, ScrollText, FileOutput, Send, Code, Braces, Timer, Repeat } from 'lucide-react';
 import { useStitchStore } from '@/stores/stitchStore';
 import { useCanvasTransform } from './StitchCanvas.hooks';
 import { StitchNode } from './StitchNode';
+import { StitchLoopNode, LOOP_MAX_CHILDREN } from './StitchLoopNode';
 import { AddNodeMenu } from './AddNodeMenu';
 import { ConnectionLayer } from './ConnectionLayer';
 import { StitchConnectionDragProvider, useConnectionDrag } from './StitchConnectionDragContext';
 import { validateConnection } from '../utils/connectionValidator';
 import type { StitchNodeType } from '@/types/stitch';
-import { DEFAULT_JSON_OBJECT_CONFIG, DEFAULT_JS_SNIPPET_CONFIG, DEFAULT_REQUEST_NODE_CONFIG, DEFAULT_SLEEP_NODE_CONFIG } from '@/types/stitch';
+import { DEFAULT_JSON_OBJECT_CONFIG, DEFAULT_JS_SNIPPET_CONFIG, DEFAULT_REQUEST_NODE_CONFIG, DEFAULT_SLEEP_NODE_CONFIG, DEFAULT_LOOP_NODE_CONFIG } from '@/types/stitch';
 
 export function StitchCanvas(): React.ReactElement {
   return (
@@ -110,9 +111,39 @@ function StitchCanvasInner(): React.ReactElement {
 
   const handleUpdatePosition = useCallback(
     (id: string, x: number, y: number): void => {
-      updateNode(id, { positionX: x, positionY: y }).catch(() => {});
+      const movedNode = nodes.find((n) => n.id === id);
+      // Don't allow loop nodes to be parented or loops inside loops
+      if (movedNode?.type === 'loop') {
+        updateNode(id, { positionX: x, positionY: y }).catch(() => {});
+        return;
+      }
+
+      // Check if the node is inside any loop node's bounds
+      const loopNodes = nodes.filter((n) => n.type === 'loop' && n.id !== id);
+      let newParent: string | null = null;
+      for (const loop of loopNodes) {
+        const childCount = nodes.filter((n) => n.parentNodeId === loop.id).length;
+        const isAlreadyChild = movedNode?.parentNodeId === loop.id;
+        if (!isAlreadyChild && childCount >= LOOP_MAX_CHILDREN) continue;
+
+        // Measure loop bounds (header + body)
+        const loopEl = document.querySelector(`[data-node-id="${loop.id}"]`) as HTMLElement | null;
+        const loopW = loopEl?.offsetWidth ?? 240;
+        const loopH = loopEl?.offsetHeight ?? 152;
+        if (x >= loop.positionX && x + 180 <= loop.positionX + loopW &&
+            y >= loop.positionY + 32 && y + 70 <= loop.positionY + loopH) {
+          newParent = loop.id;
+          break;
+        }
+      }
+
+      const changes: { positionX: number; positionY: number; parentNodeId?: string | null } = { positionX: x, positionY: y };
+      if (movedNode && newParent !== movedNode.parentNodeId) {
+        changes.parentNodeId = newParent;
+      }
+      updateNode(id, changes).catch(() => {});
     },
-    [updateNode],
+    [updateNode, nodes],
   );
 
   const handleUpdateLabel = useCallback(
@@ -133,13 +164,14 @@ function StitchCanvasInner(): React.ReactElement {
     (type: StitchNodeType): void => {
       if (!activeChainId) return;
       const existingOfType = nodes.filter((n) => n.type === type).length;
-      const label = `${type === 'js-snippet' ? 'Snippet' : type === 'json-object' ? 'JSON' : type === 'sleep' ? 'Sleep' : 'Request'} ${existingOfType + 1}`;
+      const label = `${type === 'js-snippet' ? 'Snippet' : type === 'json-object' ? 'JSON' : type === 'sleep' ? 'Sleep' : type === 'loop' ? 'Loop' : 'Request'} ${existingOfType + 1}`;
       const centerX = (-transform.panX + 300) / transform.zoom;
       const centerY = (-transform.panY + 200) / transform.zoom;
       const config = type === 'json-object' ? { ...DEFAULT_JSON_OBJECT_CONFIG }
         : type === 'js-snippet' ? { ...DEFAULT_JS_SNIPPET_CONFIG }
         : type === 'request' ? { ...DEFAULT_REQUEST_NODE_CONFIG }
         : type === 'sleep' ? { ...DEFAULT_SLEEP_NODE_CONFIG }
+        : type === 'loop' ? { ...DEFAULT_LOOP_NODE_CONFIG }
         : {};
       addNode({
         chainId: activeChainId,
@@ -148,6 +180,7 @@ function StitchCanvasInner(): React.ReactElement {
         positionY: centerY,
         config,
         label,
+        parentNodeId: null,
       }).catch(() => {});
     },
     [activeChainId, nodes, addNode, transform],
@@ -199,11 +232,12 @@ function StitchCanvasInner(): React.ReactElement {
   const handleContextAdd = useCallback((type: StitchNodeType): void => {
     if (!activeChainId || !contextMenu) return;
     const existingOfType = nodes.filter((n) => n.type === type).length;
-    const label = `${type === 'js-snippet' ? 'Snippet' : type === 'json-object' ? 'JSON' : type === 'sleep' ? 'Sleep' : 'Request'} ${existingOfType + 1}`;
+    const label = `${type === 'js-snippet' ? 'Snippet' : type === 'json-object' ? 'JSON' : type === 'sleep' ? 'Sleep' : type === 'loop' ? 'Loop' : 'Request'} ${existingOfType + 1}`;
     const config = type === 'json-object' ? { ...DEFAULT_JSON_OBJECT_CONFIG }
       : type === 'js-snippet' ? { ...DEFAULT_JS_SNIPPET_CONFIG }
       : type === 'request' ? { ...DEFAULT_REQUEST_NODE_CONFIG }
       : type === 'sleep' ? { ...DEFAULT_SLEEP_NODE_CONFIG }
+      : type === 'loop' ? { ...DEFAULT_LOOP_NODE_CONFIG }
       : {};
     const pending = contextMenu.pendingSource;
     addNode({
@@ -213,6 +247,7 @@ function StitchCanvasInner(): React.ReactElement {
       positionY: contextMenu.canvasY,
       config,
       label,
+      parentNodeId: null,
     }).then((newNode) => {
       if (pending) {
         addConnection({
@@ -334,7 +369,34 @@ function StitchCanvasInner(): React.ReactElement {
           }}
         >
           <ConnectionLayer />
-          {nodes.map((node) => {
+          {/* Render loop nodes first (behind regular nodes) */}
+          {nodes.filter((n) => n.type === 'loop').map((node) => {
+            const nodeExecStatus = executionError?.nodeId === node.id
+              ? 'error' as const
+              : executionCurrentNodeId === node.id
+                ? 'running' as const
+                : node.id in executionNodeOutputs
+                  ? 'success' as const
+                  : null;
+            const children = nodes.filter((n) => n.parentNodeId === node.id);
+            return (
+              <StitchLoopNode
+                key={node.id}
+                node={node}
+                childNodes={children}
+                selected={node.id === selectedNodeId}
+                zoom={transform.zoom}
+                onSelect={selectNode}
+                onUpdatePosition={handleUpdatePosition}
+                onUpdateLabel={handleUpdateLabel}
+                onDelete={handleDelete}
+                executionStatus={nodeExecStatus}
+                connections={connections}
+              />
+            );
+          })}
+          {/* Render regular nodes (non-loop) */}
+          {nodes.filter((n) => n.type !== 'loop').map((node) => {
             const nodeExecStatus = executionError?.nodeId === node.id
               ? 'error' as const
               : executionCurrentNodeId === node.id
@@ -385,6 +447,7 @@ function StitchCanvasInner(): React.ReactElement {
               { type: 'js-snippet' as const, label: 'JS Snippet', icon: <Code size={14} /> },
               { type: 'json-object' as const, label: 'JSON Object', icon: <Braces size={14} /> },
               { type: 'sleep' as const, label: 'Sleep', icon: <Timer size={14} /> },
+              { type: 'loop' as const, label: 'Loop', icon: <Repeat size={14} /> },
             ]).map((opt) => (
               <button
                 key={opt.type}

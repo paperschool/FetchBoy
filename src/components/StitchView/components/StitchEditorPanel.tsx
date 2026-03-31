@@ -1,10 +1,11 @@
 import { useCallback } from 'react';
-import { Send, Code, Braces, Timer, X } from 'lucide-react';
+import { Send, Code, Braces, Timer, Repeat, X } from 'lucide-react';
 import { useStitchStore } from '@/stores/stitchStore';
 import { JsonObjectEditor } from './JsonObjectEditor';
 import { JsSnippetEditor } from './JsSnippetEditor';
 import { RequestNodeEditor } from './RequestNodeEditor';
 import { SleepNodeEditor } from './SleepNodeEditor';
+import { LoopNodeEditor } from './LoopNodeEditor';
 import type { StitchNode, StitchNodeType } from '@/types/stitch';
 
 const TYPE_ICONS: Record<StitchNodeType, React.ReactNode> = {
@@ -12,6 +13,7 @@ const TYPE_ICONS: Record<StitchNodeType, React.ReactNode> = {
   'js-snippet': <Code size={12} />,
   'json-object': <Braces size={12} />,
   'sleep': <Timer size={12} />,
+  'loop': <Repeat size={12} />,
 };
 
 const TYPE_LABELS: Record<StitchNodeType, string> = {
@@ -19,6 +21,7 @@ const TYPE_LABELS: Record<StitchNodeType, string> = {
   'js-snippet': 'JS Snippet',
   'json-object': 'JSON Object',
   'sleep': 'Sleep',
+  'loop': 'Loop',
 };
 
 interface StitchEditorPanelProps {
@@ -58,6 +61,7 @@ export function StitchEditorPanel({ node }: StitchEditorPanelProps): React.React
         {node.type === 'js-snippet' && <JsSnippetEditor node={node} />}
         {node.type === 'request' && <RequestNodeEditor node={node} />}
         {node.type === 'sleep' && <SleepNodeEditor node={node} />}
+        {node.type === 'loop' && <LoopNodeEditor node={node} />}
       </div>
     </div>
   );

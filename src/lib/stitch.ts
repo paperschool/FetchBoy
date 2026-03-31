@@ -30,6 +30,7 @@ function deserializeNode(raw: RawStitchNode): StitchNode {
     positionY: raw.position_y,
     config: parseJsonField<Record<string, unknown>>(raw.config, {}),
     label: raw.label,
+    parentNodeId: raw.parent_node_id,
     createdAt: raw.created_at,
     updatedAt: raw.updated_at,
   };
@@ -127,21 +128,22 @@ export async function insertNode(
   };
   await insertOne(
     'stitch_nodes',
-    ['id', 'chain_id', 'type', 'position_x', 'position_y', 'config', 'label', 'created_at', 'updated_at'],
-    [full.id, full.chainId, full.type, full.positionX, full.positionY, JSON.stringify(full.config), full.label, full.createdAt, full.updatedAt],
+    ['id', 'chain_id', 'type', 'position_x', 'position_y', 'config', 'label', 'parent_node_id', 'created_at', 'updated_at'],
+    [full.id, full.chainId, full.type, full.positionX, full.positionY, JSON.stringify(full.config), full.label, full.parentNodeId, full.createdAt, full.updatedAt],
   );
   return full;
 }
 
 export async function updateNode(
   id: string,
-  changes: { positionX?: number; positionY?: number; config?: Record<string, unknown>; label?: string | null },
+  changes: { positionX?: number; positionY?: number; config?: Record<string, unknown>; label?: string | null; parentNodeId?: string | null },
 ): Promise<void> {
   const mapped: Record<string, unknown> = {};
   if (changes.positionX !== undefined) mapped.position_x = changes.positionX;
   if (changes.positionY !== undefined) mapped.position_y = changes.positionY;
   if (changes.config !== undefined) mapped.config = JSON.stringify(changes.config);
   if (changes.label !== undefined) mapped.label = changes.label;
+  if (changes.parentNodeId !== undefined) mapped.parent_node_id = changes.parentNodeId;
 
   const update = buildUpdate('stitch_nodes', id, mapped);
   if (!update) return;

@@ -25,6 +25,7 @@ function makeNode(overrides: Partial<StitchNode> & { id: string }): StitchNode {
     positionY: 0,
     config: {},
     label: null,
+    parentNodeId: null,
     createdAt: '',
     updatedAt: '',
     ...overrides,
@@ -392,5 +393,58 @@ describe('executeChain', () => {
 
     expect(ctx.status).toBe('error');
     expect(callbacks.onError).toHaveBeenCalledWith('', expect.stringContaining('Cycle'));
+  });
+
+  it('executes a loop node over an array', async () => {
+    // JSON node outputs an array, loop node iterates and runs a JS snippet child
+    const nodes = [
+      makeNode({ id: 'data', positionY: 0, config: { json: '{"items": [1, 2, 3]}' } }),
+      makeNode({ id: 'loop', positionY: 100, type: 'loop', config: { delayMs: 0 } }),
+      makeNode({
+        id: 'child-js', positionY: 150, type: 'js-snippet', parentNodeId: 'loop',
+        config: { code: 'return { doubled: input.element * 2 }' },
+      }),
+    ];
+    const conns = [
+      makeConn({ sourceNodeId: 'data', targetNodeId: 'loop', sourceKey: 'items' }),
+    ];
+    const callbacks = makeCallbacks();
+    const cancelledRef = { current: false };
+
+    const ctx = await executeChain(nodes, conns, {}, callbacks, cancelledRef);
+
+    expect(ctx.status).toBe('completed');
+    const loopOutput = ctx.nodeOutputs['loop'];
+    expect(loopOutput.results).toEqual([
+      { doubled: 2 },
+      { doubled: 4 },
+      { doubled: 6 },
+    ]);
+  });
+
+  it('loop node catches errors per iteration', async () => {
+    const nodes = [
+      makeNode({ id: 'data', positionY: 0, config: { json: '{"items": [1, "bad", 3]}' } }),
+      makeNode({ id: 'loop', positionY: 100, type: 'loop', config: { delayMs: 0 } }),
+      makeNode({
+        id: 'child-js', positionY: 150, type: 'js-snippet', parentNodeId: 'loop',
+        config: { code: 'if (typeof input.element !== "number") throw new Error("nope"); return { val: input.element }' },
+      }),
+    ];
+    const conns = [
+      makeConn({ sourceNodeId: 'data', targetNodeId: 'loop', sourceKey: 'items' }),
+    ];
+    const callbacks = makeCallbacks();
+    const cancelledRef = { current: false };
+
+    const ctx = await executeChain(nodes, conns, {}, callbacks, cancelledRef);
+
+    expect(ctx.status).toBe('completed');
+    const loopOutput = ctx.nodeOutputs['loop'];
+    expect(loopOutput.results).toEqual([
+      { val: 1 },
+      {},  // error iteration → empty object
+      { val: 3 },
+    ]);
   });
 });

@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Plus, Send, Code, Braces, Timer } from 'lucide-react';
+import { Plus, Send, Code, Braces, Timer, Repeat } from 'lucide-react';
 import type { StitchNodeType } from '@/types/stitch';
 
 const NODE_TYPE_OPTIONS: { type: StitchNodeType; label: string; icon: React.ReactNode }[] = [
@@ -7,6 +7,7 @@ const NODE_TYPE_OPTIONS: { type: StitchNodeType; label: string; icon: React.Reac
   { type: 'js-snippet', label: 'JS Snippet', icon: <Code size={14} /> },
   { type: 'json-object', label: 'JSON Object', icon: <Braces size={14} /> },
   { type: 'sleep', label: 'Sleep', icon: <Timer size={14} /> },
+  { type: 'loop', label: 'Loop', icon: <Repeat size={14} /> },
 ];
 
 interface AddNodeMenuProps {

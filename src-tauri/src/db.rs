@@ -65,5 +65,11 @@ pub fn migrations() -> Vec<Migration> {
             sql: include_str!("../migrations/010_stitch.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 11,
+            description: "add_parent_node_id_for_loop_nodes",
+            sql: include_str!("../migrations/011_stitch_loop_node.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }
