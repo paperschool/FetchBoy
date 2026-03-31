@@ -1,11 +1,12 @@
 import { useCallback } from 'react';
-import { Send, Code, Braces, Timer, Repeat, X } from 'lucide-react';
+import { Send, Code, Braces, Timer, Repeat, GitMerge, X } from 'lucide-react';
 import { useStitchStore } from '@/stores/stitchStore';
 import { JsonObjectEditor } from './JsonObjectEditor';
 import { JsSnippetEditor } from './JsSnippetEditor';
 import { RequestNodeEditor } from './RequestNodeEditor';
 import { SleepNodeEditor } from './SleepNodeEditor';
 import { LoopNodeEditor } from './LoopNodeEditor';
+import { MergeNodeEditor } from './MergeNodeEditor';
 import type { StitchNode, StitchNodeType } from '@/types/stitch';
 
 const TYPE_ICONS: Record<StitchNodeType, React.ReactNode> = {
@@ -14,6 +15,7 @@ const TYPE_ICONS: Record<StitchNodeType, React.ReactNode> = {
   'json-object': <Braces size={12} />,
   'sleep': <Timer size={12} />,
   'loop': <Repeat size={12} />,
+  'merge': <GitMerge size={12} />,
 };
 
 const TYPE_LABELS: Record<StitchNodeType, string> = {
@@ -22,6 +24,7 @@ const TYPE_LABELS: Record<StitchNodeType, string> = {
   'json-object': 'JSON Object',
   'sleep': 'Sleep',
   'loop': 'Loop',
+  'merge': 'Merge',
 };
 
 interface StitchEditorPanelProps {
@@ -62,6 +65,7 @@ export function StitchEditorPanel({ node }: StitchEditorPanelProps): React.React
         {node.type === 'request' && <RequestNodeEditor node={node} />}
         {node.type === 'sleep' && <SleepNodeEditor node={node} />}
         {node.type === 'loop' && <LoopNodeEditor node={node} />}
+        {node.type === 'merge' && <MergeNodeEditor node={node} />}
       </div>
     </div>
   );

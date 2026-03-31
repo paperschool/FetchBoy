@@ -22,6 +22,9 @@ export function getNodeOutputKeys(node: StitchNode, connections?: StitchConnecti
     case 'sleep':
       // Pass-through: forward all incoming connection keys
       return connections ? resolveInputShape(node.id, connections, nodes) : [];
+    case 'merge':
+      // Merge node output keys are the labels/IDs of connected sources — dynamic at runtime
+      return [];
     default:
       return [];
   }

@@ -9,6 +9,7 @@ import type {
   StitchAuthConfig,
   StitchKeyValuePair,
   LoopNodeConfig,
+  MergeNodeConfig,
 } from '@/types/stitch';
 
 // ─── Topological Sort (Kahn's Algorithm) ────────────────────────────────────
@@ -279,6 +280,66 @@ export async function executeSleepNode(
   return { ...input, _delayMs: durationMs };
 }
 
+// ─── Merge Node Executor ───────────────────────────────────────────────────
+
+export function executeMergeNode(
+  node: StitchNode,
+  connections: StitchConnection[],
+  allNodes: StitchNode[],
+  ctx: ExecutionContext,
+): Record<string, unknown> {
+  const config = node.config as unknown as MergeNodeConfig;
+  const keyMode = config.keyMode ?? 'label';
+  const incoming = connections.filter((c) => c.targetNodeId === node.id);
+  const merged: Record<string, unknown> = {};
+
+  for (const conn of incoming) {
+    const sourceNode = allNodes.find((n) => n.id === conn.sourceNodeId);
+    const key = keyMode === 'label'
+      ? (sourceNode?.label ?? conn.sourceNodeId)
+      : conn.sourceNodeId;
+    merged[key] = ctx.nodeOutputs[conn.sourceNodeId] ?? null;
+  }
+
+  return merged;
+}
+
+// ─── Topological Depth Grouping ────────────────────────────────────────────
+
+export function groupByDepth(
+  sorted: StitchNode[],
+  connections: StitchConnection[],
+): StitchNode[][] {
+  const depth = new Map<string, number>();
+
+  for (const node of sorted) {
+    const incoming = connections.filter((c) => c.targetNodeId === node.id);
+    if (incoming.length === 0) {
+      depth.set(node.id, 0);
+    } else {
+      let maxParentDepth = 0;
+      for (const conn of incoming) {
+        maxParentDepth = Math.max(maxParentDepth, depth.get(conn.sourceNodeId) ?? 0);
+      }
+      depth.set(node.id, maxParentDepth + 1);
+    }
+  }
+
+  const groups = new Map<number, StitchNode[]>();
+  for (const node of sorted) {
+    const d = depth.get(node.id) ?? 0;
+    if (!groups.has(d)) groups.set(d, []);
+    groups.get(d)!.push(node);
+  }
+
+  const maxDepth = Math.max(...groups.keys(), 0);
+  const result: StitchNode[][] = [];
+  for (let d = 0; d <= maxDepth; d++) {
+    result.push(groups.get(d) ?? []);
+  }
+  return result;
+}
+
 // ─── Loop Node Execution ────────────────────────────────────────────────────
 
 async function executeLoopNode(
@@ -450,78 +511,117 @@ export async function executeChain(
     return ctx;
   }
 
-  for (const node of sorted) {
+  const depthGroups = groupByDepth(sorted, topLevelConnections);
+
+  for (const group of depthGroups) {
     if (cancelledRef.current) {
       ctx.status = 'cancelled';
       return ctx;
     }
 
-    ctx.currentNodeId = node.id;
-    callbacks.onNodeStart(node.id);
+    const isParallel = group.length > 1;
 
-    const nodeStart = Date.now();
-    try {
-      const input = resolveNodeInputs(node.id, topLevelConnections, ctx);
-      let output: unknown;
-      let consoleLogs: Array<{ level: 'log' | 'warn' | 'error'; args: string }> | undefined;
+    const executeOne = async (node: StitchNode): Promise<void> => {
+      ctx.currentNodeId = node.id;
+      callbacks.onNodeStart(node.id);
 
-      switch (node.type) {
-        case 'json-object':
-          output = executeJsonObjectNode(node);
-          break;
-        case 'js-snippet': {
-          const jsResult = executeJsSnippetNode(node, input);
-          output = jsResult.output;
-          consoleLogs = jsResult.consoleLogs.length > 0 ? jsResult.consoleLogs : undefined;
-          break;
+      const nodeStart = Date.now();
+      try {
+        const input = resolveNodeInputs(node.id, topLevelConnections, ctx);
+        let output: unknown;
+        let consoleLogs: Array<{ level: 'log' | 'warn' | 'error'; args: string }> | undefined;
+
+        switch (node.type) {
+          case 'json-object':
+            output = executeJsonObjectNode(node);
+            break;
+          case 'js-snippet': {
+            const jsResult = executeJsSnippetNode(node, input);
+            output = jsResult.output;
+            consoleLogs = jsResult.consoleLogs.length > 0 ? jsResult.consoleLogs : undefined;
+            break;
+          }
+          case 'request':
+            output = await executeRequestNode(node, input, envVariables);
+            break;
+          case 'sleep':
+            output = await executeSleepNode(node, input, callbacks, cancelledRef);
+            break;
+          case 'loop':
+            output = await executeLoopNode(node, input, nodes, connections, envVariables, callbacks, cancelledRef);
+            break;
+          case 'merge':
+            output = executeMergeNode(node, topLevelConnections, topLevelNodes, ctx);
+            break;
+          default:
+            throw new Error(`Unknown node type: ${node.type}`);
         }
-        case 'request':
-          output = await executeRequestNode(node, input, envVariables);
-          break;
-        case 'sleep':
-          output = await executeSleepNode(node, input, callbacks, cancelledRef);
-          break;
-        case 'loop':
-          output = await executeLoopNode(node, input, nodes, connections, envVariables, callbacks, cancelledRef);
-          break;
-        default:
-          throw new Error(`Unknown node type: ${node.type}`);
+
+        const durationMs = Date.now() - nodeStart;
+        ctx.nodeOutputs[node.id] = output;
+
+        ctx.logs.push({
+          nodeId: node.id,
+          nodeLabel: node.label ?? node.type,
+          nodeType: node.type,
+          status: 'completed',
+          timestamp: Date.now() - ctx.startTime,
+          durationMs,
+          input,
+          output,
+          consoleLogs,
+          parallel: isParallel || undefined,
+        });
+
+        callbacks.onNodeComplete(node.id, output, durationMs, undefined, consoleLogs);
+      } catch (err) {
+        const message = (err as Error).message;
+        const durationMs = Date.now() - nodeStart;
+
+        if (isParallel) {
+          // In parallel mode: don't halt — store null and log the error
+          ctx.nodeOutputs[node.id] = null;
+          ctx.logs.push({
+            nodeId: node.id,
+            nodeLabel: node.label ?? node.type,
+            nodeType: node.type,
+            status: 'error',
+            timestamp: Date.now() - ctx.startTime,
+            durationMs,
+            error: message,
+            parallel: true,
+          });
+          callbacks.onError(node.id, message);
+        } else {
+          // Sequential: halt execution
+          ctx.status = 'error';
+          ctx.error = { nodeId: node.id, message };
+          ctx.currentNodeId = null;
+
+          ctx.logs.push({
+            nodeId: node.id,
+            nodeLabel: node.label ?? node.type,
+            nodeType: node.type,
+            status: 'error',
+            timestamp: Date.now() - ctx.startTime,
+            durationMs,
+            error: message,
+          });
+
+          callbacks.onError(node.id, message);
+          throw err; // Re-throw to break out of the depth loop
+        }
       }
+    };
 
-      const durationMs = Date.now() - nodeStart;
-      ctx.nodeOutputs[node.id] = output;
-
-      ctx.logs.push({
-        nodeId: node.id,
-        nodeLabel: node.label ?? node.type,
-        nodeType: node.type,
-        status: 'completed',
-        timestamp: Date.now() - ctx.startTime,
-        durationMs,
-        input,
-        output,
-        consoleLogs,
-      });
-
-      callbacks.onNodeComplete(node.id, output, durationMs, undefined, consoleLogs);
-    } catch (err) {
-      const message = (err as Error).message;
-      ctx.status = 'error';
-      ctx.error = { nodeId: node.id, message };
-      ctx.currentNodeId = null;
-
-      ctx.logs.push({
-        nodeId: node.id,
-        nodeLabel: node.label ?? node.type,
-        nodeType: node.type,
-        status: 'error',
-        timestamp: Date.now() - ctx.startTime,
-        durationMs: Date.now() - nodeStart,
-        error: message,
-      });
-
-      callbacks.onError(node.id, message);
-      return ctx;
+    if (isParallel) {
+      await Promise.all(group.map((node) => executeOne(node)));
+    } else {
+      try {
+        await executeOne(group[0]);
+      } catch {
+        return ctx; // Error already logged in executeOne
+      }
     }
   }
 

@@ -1,5 +1,19 @@
 # Long Changelog
 
+## [0.18.13] - 2026-03-31
+
+### Story 15.13: Parallel Branch Execution & Merge Node
+
+- Parallel execution: nodes at the same topological depth with no inter-dependencies run via `Promise.all`
+- Error isolation in parallel branches: failed branch stores `null` output, other branches continue
+- `groupByDepth` function computes topological depth for parallel grouping
+- New "Merge" node type collects all incoming connections into a single keyed object (key = source label or ID)
+- `MergeNodeEditor` with key mode toggle (label vs ID naming)
+- Merge node added to all type maps, menus, and canvas context menu (indigo color scheme)
+- Debug log shows "parallel" badge on concurrent execution entries
+- `parallel` flag added to `ExecutionLogEntry` type
+- 6 new tests: groupByDepth, parallel execution, error isolation, merge node (label + ID modes)
+
 ## [0.18.12] - 2026-03-31
 
 ### Story 15.12: Chain Persistence & Management

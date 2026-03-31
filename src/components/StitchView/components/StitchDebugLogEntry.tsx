@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { ChevronRight, ChevronDown, Send, Code, Braces, Timer, Repeat } from 'lucide-react';
+import { ChevronRight, ChevronDown, Send, Code, Braces, Timer, Repeat, GitMerge } from 'lucide-react';
 import { MonacoEditorField } from '@/components/Editor/MonacoEditorField';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import type { ExecutionLogEntry, StitchNodeType } from '@/types/stitch';
@@ -10,6 +10,7 @@ const NODE_ICONS: Record<StitchNodeType, React.ReactNode> = {
   'json-object': <Braces size={11} />,
   'sleep': <Timer size={11} />,
   'loop': <Repeat size={11} />,
+  'merge': <GitMerge size={11} />,
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -53,6 +54,11 @@ export function StitchDebugLogEntry({ entry, isError }: StitchDebugLogEntryProps
         {isLoopChild && (
           <span className="rounded bg-cyan-500/15 px-1 py-0.5 text-[8px] font-medium text-cyan-600 dark:text-cyan-400">
             [{entry.loopIteration}]
+          </span>
+        )}
+        {entry.parallel && (
+          <span className="rounded bg-indigo-500/15 px-1 py-0.5 text-[8px] font-medium text-indigo-600 dark:text-indigo-400" data-testid="parallel-badge">
+            parallel
           </span>
         )}
         <span className="text-app-secondary">{NODE_ICONS[entry.nodeType]}</span>

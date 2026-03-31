@@ -1,6 +1,6 @@
 // ─── Stitch Node Types ──────────────────────────────────────────────────────
 
-export type StitchNodeType = 'request' | 'json-object' | 'js-snippet' | 'sleep' | 'loop';
+export type StitchNodeType = 'request' | 'json-object' | 'js-snippet' | 'sleep' | 'loop' | 'merge';
 
 export type StitchExecutionState = 'idle' | 'running' | 'paused' | 'completed' | 'error';
 
@@ -79,6 +79,14 @@ export const DEFAULT_LOOP_NODE_CONFIG: LoopNodeConfig = {
   delayMs: 100,
 };
 
+export interface MergeNodeConfig {
+  keyMode: 'label' | 'id';
+}
+
+export const DEFAULT_MERGE_NODE_CONFIG: MergeNodeConfig = {
+  keyMode: 'label',
+};
+
 // ─── Domain Interfaces ──────────────────────────────────────────────────────
 
 export interface StitchChain {
@@ -151,6 +159,7 @@ export interface ExecutionLogEntry {
   loopIteration?: number;  // set for child steps inside a loop
   loopNodeId?: string;     // the parent loop node ID
   consoleLogs?: Array<{ level: 'log' | 'warn' | 'error'; args: string }>;
+  parallel?: boolean;
 }
 
 export interface ExecutionContext {

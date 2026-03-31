@@ -12,6 +12,8 @@ import {
   executeJsSnippetNode,
   executeRequestNode,
   executeSleepNode,
+  executeMergeNode,
+  groupByDepth,
   executeChain,
 } from './stitchEngine';
 
@@ -231,6 +233,38 @@ describe('executeJsSnippetNode', () => {
   });
 });
 
+// ─── groupByDepth ──────────────────────────────────────────────────────────
+
+describe('groupByDepth', () => {
+  it('groups independent roots at depth 0', () => {
+    const nodes = [
+      makeNode({ id: 'a', positionY: 0 }),
+      makeNode({ id: 'b', positionY: 0, positionX: 200 }),
+    ];
+    const sorted = topologicalSort(nodes, []);
+    const groups = groupByDepth(sorted, []);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]).toHaveLength(2);
+  });
+
+  it('places downstream nodes at higher depth', () => {
+    const nodes = [
+      makeNode({ id: 'a', positionY: 0 }),
+      makeNode({ id: 'b', positionY: 100 }),
+      makeNode({ id: 'c', positionY: 200 }),
+    ];
+    const conns = [
+      makeConn({ sourceNodeId: 'a', targetNodeId: 'c' }),
+      makeConn({ sourceNodeId: 'b', targetNodeId: 'c' }),
+    ];
+    const sorted = topologicalSort(nodes, conns);
+    const groups = groupByDepth(sorted, conns);
+    expect(groups).toHaveLength(2);
+    expect(groups[0].map((n) => n.id).sort()).toEqual(['a', 'b']);
+    expect(groups[1].map((n) => n.id)).toEqual(['c']);
+  });
+});
+
 // ─── Request Node ───────────────────────────────────────────────────────────
 
 describe('executeRequestNode', () => {
@@ -373,11 +407,12 @@ describe('executeChain', () => {
   });
 
   it('handles cancellation mid-chain', async () => {
+    // Nodes must be at different depths (connected) so they execute sequentially
     const nodes = [
       makeNode({ id: 'a', positionY: 0, config: { json: '{"x":1}' } }),
-      makeNode({ id: 'b', positionY: 100, config: { json: '{"y":2}' } }),
+      makeNode({ id: 'b', positionY: 100, type: 'js-snippet', config: { code: 'return { y: 2 }' } }),
     ];
-    const conns: StitchConnection[] = [];
+    const conns = [makeConn({ sourceNodeId: 'a', targetNodeId: 'b' })];
     const callbacks = makeCallbacks();
     const cancelledRef = { current: false };
 
@@ -470,6 +505,81 @@ describe('executeChain', () => {
       {},  // error iteration → empty object
       { val: 3 },
     ]);
+  });
+
+  it('executes independent branches in parallel via Promise.all', async () => {
+    // Two independent JSON nodes at same depth → should both complete
+    const nodes = [
+      makeNode({ id: 'a', positionY: 0, config: { json: '{"x":1}' } }),
+      makeNode({ id: 'b', positionY: 0, positionX: 200, config: { json: '{"y":2}' } }),
+    ];
+    const conns: StitchConnection[] = [];
+    const callbacks = makeCallbacks();
+    const cancelledRef = { current: false };
+
+    const ctx = await executeChain(nodes, conns, {}, callbacks, cancelledRef);
+
+    expect(ctx.status).toBe('completed');
+    expect(ctx.nodeOutputs['a']).toEqual({ x: 1 });
+    expect(ctx.nodeOutputs['b']).toEqual({ y: 2 });
+    // Both should have parallel flag in logs
+    const completedLogs = ctx.logs.filter((l) => l.status === 'completed');
+    expect(completedLogs).toHaveLength(2);
+    expect(completedLogs.every((l) => l.parallel === true)).toBe(true);
+  });
+
+  it('error in one parallel branch stores null, others continue', async () => {
+    const nodes = [
+      makeNode({ id: 'a', positionY: 0, config: { json: '{bad' } }),
+      makeNode({ id: 'b', positionY: 0, positionX: 200, config: { json: '{"y":2}' } }),
+    ];
+    const conns: StitchConnection[] = [];
+    const callbacks = makeCallbacks();
+    const cancelledRef = { current: false };
+
+    const ctx = await executeChain(nodes, conns, {}, callbacks, cancelledRef);
+
+    expect(ctx.status).toBe('completed');
+    expect(ctx.nodeOutputs['a']).toBeNull();
+    expect(ctx.nodeOutputs['b']).toEqual({ y: 2 });
+  });
+
+  it('merge node combines inputs from multiple sources', async () => {
+    const nodes = [
+      makeNode({ id: 'a', positionY: 0, label: 'Alpha', config: { json: '{"x":1}' } }),
+      makeNode({ id: 'b', positionY: 0, positionX: 200, label: 'Beta', config: { json: '{"y":2}' } }),
+      makeNode({ id: 'm', positionY: 200, type: 'merge', label: 'Merge', config: { keyMode: 'label' } }),
+    ];
+    const conns = [
+      makeConn({ sourceNodeId: 'a', targetNodeId: 'm' }),
+      makeConn({ sourceNodeId: 'b', targetNodeId: 'm' }),
+    ];
+    const callbacks = makeCallbacks();
+    const cancelledRef = { current: false };
+
+    const ctx = await executeChain(nodes, conns, {}, callbacks, cancelledRef);
+
+    expect(ctx.status).toBe('completed');
+    expect(ctx.nodeOutputs['m']).toEqual({
+      Alpha: { x: 1 },
+      Beta: { y: 2 },
+    });
+  });
+
+  it('merge node uses ID keys when keyMode is id', async () => {
+    const nodes = [
+      makeNode({ id: 'a', positionY: 0, label: 'Alpha', config: { json: '{"x":1}' } }),
+      makeNode({ id: 'm', positionY: 200, type: 'merge', config: { keyMode: 'id' } }),
+    ];
+    const conns = [
+      makeConn({ sourceNodeId: 'a', targetNodeId: 'm' }),
+    ];
+    const callbacks = makeCallbacks();
+    const cancelledRef = { current: false };
+
+    const ctx = await executeChain(nodes, conns, {}, callbacks, cancelledRef);
+
+    expect(ctx.nodeOutputs['m']).toEqual({ a: { x: 1 } });
   });
 
   it('loop node accepts array from JS snippet { value: [...] } output', async () => {
