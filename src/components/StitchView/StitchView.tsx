@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { TabLayout } from '@/components/Layout/TabLayout';
 import { useStitchStore } from '@/stores/stitchStore';
 import { StitchCanvas } from './components/StitchCanvas';
@@ -7,23 +6,31 @@ import { StitchEditorPanel } from './components/StitchEditorPanel';
 import { StitchDebugLog } from './components/StitchDebugLog';
 import { StitchChainOutput } from './components/StitchChainOutput';
 import { StitchPreviewPanel } from './components/StitchPreviewPanel';
+import { StitchSidebar } from './components/StitchSidebar';
+import { StitchEmptyState } from './components/StitchEmptyState';
+import { useStitchAutoSave } from './hooks/useStitchAutoSave';
 
 export function StitchView(): React.ReactElement {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const chains = useStitchStore((s) => s.chains);
   const activeChainId = useStitchStore((s) => s.activeChainId);
   const selectedNodeId = useStitchStore((s) => s.selectedNodeId);
   const nodes = useStitchStore((s) => s.nodes);
+  const chains = useStitchStore((s) => s.chains);
   const loadChains = useStitchStore((s) => s.loadChains);
   const loadChain = useStitchStore((s) => s.loadChain);
   const createChain = useStitchStore((s) => s.createChain);
+  const renameChain = useStitchStore((s) => s.renameChain);
   const bottomPanel = useStitchStore((s) => s.bottomPanel);
+
+  const { saving } = useStitchAutoSave();
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId) ?? null;
   const showEditor = selectedNode !== null && selectedNode.type !== undefined;
   const showDebugLog = !showEditor && bottomPanel === 'debug';
   const showOutput = !showEditor && bottomPanel === 'output';
   const showPreview = !showEditor && bottomPanel === 'preview';
+
+  const activeChain = chains.find((c) => c.id === activeChainId);
 
   const handleClosePanel = useCallback((): void => {
     useStitchStore.setState({ bottomPanel: 'none' });
@@ -40,13 +47,10 @@ export function StitchView(): React.ReactElement {
     });
   }, []);
 
-
   const [editorHeight, setEditorHeight] = useState(260);
   const dragRef = useRef<{ startY: number; startH: number } | null>(null);
-
   const cleanupRef = useRef<(() => void) | null>(null);
 
-  // Clean up resize listeners if component unmounts mid-drag
   useEffect(() => () => { cleanupRef.current?.(); }, []);
 
   const handleResizePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>): void => {
@@ -71,23 +75,11 @@ export function StitchView(): React.ReactElement {
     target.addEventListener('pointerup', onUp);
   }, [editorHeight]);
 
-  const [loadError, setLoadError] = useState<string | null>(null);
-
   useEffect(() => {
     loadChains().catch((err) => {
       console.error('Failed to load stitch chains:', err);
-      setLoadError('Failed to load chains. The database may be corrupted.');
     });
   }, [loadChains]);
-
-  const handleSelectChain = useCallback(
-    (chainId: string): void => {
-      loadChain(chainId).catch((err) => {
-        console.error('Failed to load chain:', err);
-      });
-    },
-    [loadChain],
-  );
 
   const handleCreateChain = useCallback((): void => {
     const name = `Chain ${chains.length + 1}`;
@@ -96,86 +88,69 @@ export function StitchView(): React.ReactElement {
       .catch(() => {});
   }, [chains.length, createChain, loadChain]);
 
+  // Header rename state
+  const [headerEditing, setHeaderEditing] = useState(false);
+  const [headerEditValue, setHeaderEditValue] = useState('');
+  const headerInputRef = useRef<HTMLInputElement>(null);
+
+  const handleHeaderDoubleClick = useCallback((): void => {
+    if (!activeChain) return;
+    setHeaderEditValue(activeChain.name);
+    setHeaderEditing(true);
+    setTimeout(() => headerInputRef.current?.select(), 0);
+  }, [activeChain]);
+
+  const handleHeaderCommit = useCallback((): void => {
+    setHeaderEditing(false);
+    const trimmed = headerEditValue.trim();
+    if (activeChainId && trimmed && trimmed !== activeChain?.name) {
+      renameChain(activeChainId, trimmed).catch(() => {});
+    }
+  }, [headerEditValue, activeChainId, activeChain?.name, renameChain]);
+
   return (
     <TabLayout
       sidebarCollapsed={sidebarCollapsed}
       sidebar={
-        sidebarCollapsed ? (
-          <div className="flex h-full flex-col items-center gap-2 bg-app-sidebar p-2">
-            <button
-              type="button"
-              onClick={() => setSidebarCollapsed(false)}
-              className="rounded p-2 transition-colors hover:bg-gray-700"
-              aria-label="Expand sidebar"
-              title="Expand sidebar"
-            >
-              <ChevronRight size={20} className="text-app-muted" />
-            </button>
-            <button
-              className="rounded p-2 text-green-500 transition-colors hover:bg-gray-700"
-              onClick={handleCreateChain}
-              title="New chain"
-              data-testid="new-chain-button"
-            >
-              <Plus size={20} />
-            </button>
-          </div>
-        ) : (
-          <div className="flex h-full flex-col bg-app-sidebar p-3">
-            <div className="mb-3 flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setSidebarCollapsed(true)}
-                className="rounded p-1.5 transition-colors hover:bg-gray-700"
-                aria-label="Collapse sidebar"
-                title="Collapse sidebar"
-              >
-                <ChevronLeft size={18} className="text-app-muted" />
-              </button>
-              <span className="rounded bg-amber-500/15 px-2 py-0.5 text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                Beta
-              </span>
-            </div>
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-app-muted">
-                Chains
-              </h2>
-              <button
-                className="rounded p-0.5 text-green-500 hover:bg-app-hover"
-                onClick={handleCreateChain}
-                title="New chain"
-                data-testid="new-chain-button"
-              >
-                <Plus size={14} />
-              </button>
-            </div>
-            {loadError ? (
-              <p className="text-xs text-red-500">{loadError}</p>
-            ) : chains.length === 0 ? (
-              <p className="text-xs text-app-muted">No chains yet</p>
-            ) : (
-              <ul className="space-y-1">
-                {chains.map((chain) => (
-                  <li
-                    key={chain.id}
-                    className={`cursor-pointer truncate rounded px-2 py-1 text-sm ${
-                      chain.id === activeChainId
-                        ? 'bg-blue-500/10 text-app-primary'
-                        : 'text-app-secondary hover:bg-app-hover'
-                    }`}
-                    onClick={() => handleSelectChain(chain.id)}
-                  >
-                    {chain.name}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )
+        <StitchSidebar
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed((v) => !v)}
+        />
       }
       mainContent={
         activeChainId ? (
           <div className="flex h-full flex-col">
+            {/* Chain header bar */}
+            <div className="flex shrink-0 items-center gap-2 border-b border-app-subtle bg-app-sidebar px-3 py-1">
+              {headerEditing ? (
+                <input
+                  ref={headerInputRef}
+                  autoFocus
+                  className="min-w-0 flex-1 rounded border border-app-subtle bg-app-main px-1 text-xs font-medium text-app-primary outline-none"
+                  value={headerEditValue}
+                  onChange={(e) => setHeaderEditValue(e.target.value)}
+                  onBlur={handleHeaderCommit}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleHeaderCommit();
+                    if (e.key === 'Escape') setHeaderEditing(false);
+                  }}
+                  data-testid="header-rename-input"
+                />
+              ) : (
+                <span
+                  className="min-w-0 flex-1 truncate text-xs font-medium text-app-primary cursor-text"
+                  onDoubleClick={handleHeaderDoubleClick}
+                  title="Double-click to rename"
+                  data-testid="chain-header-name"
+                >
+                  {activeChain?.name ?? 'Untitled'}
+                </span>
+              )}
+              {saving && (
+                <span className="text-[10px] text-app-muted" data-testid="save-indicator">Saving...</span>
+              )}
+            </div>
+
             <div className={(showEditor || showDebugLog || showOutput || showPreview) ? 'min-h-0 flex-1' : 'h-full'}>
               <StitchCanvas />
             </div>
@@ -198,16 +173,7 @@ export function StitchView(): React.ReactElement {
             )}
           </div>
         ) : (
-          <div className="flex h-full items-center justify-center">
-            <div className="text-center">
-              <h1 className="text-lg font-semibold text-app-primary">
-                Stitch — Request Chain Builder
-              </h1>
-              <p className="mt-1 text-sm text-app-muted">
-                Select a chain or create one to get started
-              </p>
-            </div>
-          </div>
+          <StitchEmptyState hasChain={false} onCreateChain={handleCreateChain} />
         )
       }
     />

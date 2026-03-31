@@ -1,5 +1,5 @@
 import { getDb } from '@/lib/db';
-import { now, parseJsonField, insertOne, buildUpdate } from '@/lib/dbHelpers';
+import { now, parseJsonField, insertOne, buildUpdate, withTransaction } from '@/lib/dbHelpers';
 import type {
   StitchChain,
   StitchNode,
@@ -113,6 +113,66 @@ export async function updateChain(
 export async function deleteChain(id: string): Promise<void> {
   const db = await getDb();
   await db.execute('DELETE FROM stitch_chains WHERE id = ?', [id]);
+}
+
+export async function duplicateChain(
+  sourceChainId: string,
+  newName: string,
+): Promise<{ chain: StitchChain; nodes: StitchNode[]; connections: StitchConnection[] }> {
+  const { nodes: srcNodes, connections: srcConns } = await loadChainWithNodes(sourceChainId);
+
+  const newChain: StitchChain = {
+    id: crypto.randomUUID(),
+    name: newName,
+    createdAt: now(),
+    updatedAt: now(),
+  };
+
+  // Build ID mapping for nodes
+  const nodeIdMap = new Map<string, string>();
+  const newNodes: StitchNode[] = srcNodes.map((n) => {
+    const newId = crypto.randomUUID();
+    nodeIdMap.set(n.id, newId);
+    return { ...n, id: newId, chainId: newChain.id, createdAt: now(), updatedAt: now() };
+  });
+
+  // Remap parentNodeId references
+  for (const n of newNodes) {
+    if (n.parentNodeId && nodeIdMap.has(n.parentNodeId)) {
+      n.parentNodeId = nodeIdMap.get(n.parentNodeId)!;
+    }
+  }
+
+  const newConns: StitchConnection[] = srcConns.map((c) => ({
+    ...c,
+    id: crypto.randomUUID(),
+    chainId: newChain.id,
+    sourceNodeId: nodeIdMap.get(c.sourceNodeId) ?? c.sourceNodeId,
+    targetNodeId: nodeIdMap.get(c.targetNodeId) ?? c.targetNodeId,
+    createdAt: now(),
+  }));
+
+  await withTransaction(async () => {
+    await insertOne('stitch_chains', ['id', 'name', 'created_at', 'updated_at'], [
+      newChain.id, newChain.name, newChain.createdAt, newChain.updatedAt,
+    ]);
+    for (const n of newNodes) {
+      await insertOne(
+        'stitch_nodes',
+        ['id', 'chain_id', 'type', 'position_x', 'position_y', 'config', 'label', 'parent_node_id', 'created_at', 'updated_at'],
+        [n.id, n.chainId, n.type, n.positionX, n.positionY, JSON.stringify(n.config), n.label, n.parentNodeId, n.createdAt, n.updatedAt],
+      );
+    }
+    for (const c of newConns) {
+      await insertOne(
+        'stitch_connections',
+        ['id', 'chain_id', 'source_node_id', 'source_key', 'target_node_id', 'target_slot', 'created_at'],
+        [c.id, c.chainId, c.sourceNodeId, c.sourceKey, c.targetNodeId, c.targetSlot, c.createdAt],
+      );
+    }
+  });
+
+  return { chain: newChain, nodes: newNodes, connections: newConns };
 }
 
 // ─── Node Operations ────────────────────────────────────────────────────────

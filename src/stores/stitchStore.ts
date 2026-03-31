@@ -34,6 +34,7 @@ interface StitchState {
   createChain: (name: string) => Promise<StitchChain>;
   renameChain: (id: string, name: string) => Promise<void>;
   deleteChain: (id: string) => Promise<void>;
+  duplicateChain: (id: string) => Promise<StitchChain>;
 
   // Node actions
   addNode: (node: Omit<StitchNode, 'id' | 'createdAt' | 'updatedAt'>) => Promise<StitchNode>;
@@ -129,6 +130,26 @@ export const useStitchStore = create<StitchState>()(
           state.executionState = 'idle';
         }
       });
+    },
+
+    duplicateChain: async (id: string) => {
+      const source = useStitchStore.getState().chains.find((c) => c.id === id);
+      const newName = source ? `${source.name} (Copy)` : 'Chain (Copy)';
+      const { chain, nodes, connections } = await stitchDb.duplicateChain(id, newName);
+      set((state) => {
+        state.chains.push(chain);
+        state.activeChainId = chain.id;
+        state.nodes = nodes;
+        state.connections = connections;
+        state.selectedNodeId = null;
+        state.selectedConnectionId = null;
+        state.executionState = 'idle';
+        state.executionNodeOutputs = {};
+        state.executionLogs = [];
+        state.previewNodeId = null;
+        state.bottomPanel = 'none';
+      });
+      return chain;
     },
 
     addNode: async (node) => {

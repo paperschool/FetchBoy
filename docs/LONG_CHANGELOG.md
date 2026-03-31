@@ -1,5 +1,20 @@
 # Long Changelog
 
+## [0.18.12] - 2026-03-31
+
+### Story 15.12: Chain Persistence & Management
+
+- Extracted sidebar into dedicated `StitchSidebar` + `StitchSidebarEntry` components
+- Chain list sorted by most recently updated, with date display and active indicator
+- Context menu (right-click / kebab) with Rename, Duplicate, Delete actions
+- Inline rename via double-click on chain name in sidebar and header bar
+- Delete confirmation dialog; auto-loads next chain after deletion
+- `duplicateChain` db helper using `withTransaction()` for atomic deep copy with remapped node/connection IDs
+- `useStitchAutoSave` hook: debounced 1000ms safety-net persist + Cmd+S immediate save with "Saving..." indicator
+- Chain header bar showing active chain name (editable) and save status
+- `StitchEmptyState` component for no-chain and no-nodes states with create CTA
+- 8 new sidebar tests covering list rendering, sorting, active highlight, delete dialog, collapsed state
+
 ## [0.18.11] - 2026-03-31
 
 ### Story 15.11: Node Result Preview
