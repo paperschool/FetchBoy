@@ -4,17 +4,34 @@ import { useStitchStore } from '@/stores/stitchStore';
 import { useCanvasTransform } from './StitchCanvas.hooks';
 import { StitchNode } from './StitchNode';
 import { AddNodeMenu } from './AddNodeMenu';
+import { ConnectionLayer } from './ConnectionLayer';
+import { StitchConnectionDragProvider, useConnectionDrag } from './StitchConnectionDragContext';
+import { validateConnection } from '../utils/connectionValidator';
 import type { StitchNodeType } from '@/types/stitch';
 import { DEFAULT_JSON_OBJECT_CONFIG, DEFAULT_JS_SNIPPET_CONFIG, DEFAULT_REQUEST_NODE_CONFIG, DEFAULT_SLEEP_NODE_CONFIG } from '@/types/stitch';
 
 export function StitchCanvas(): React.ReactElement {
+  return (
+    <StitchConnectionDragProvider>
+      <StitchCanvasInner />
+    </StitchConnectionDragProvider>
+  );
+}
+
+function StitchCanvasInner(): React.ReactElement {
   const nodes = useStitchStore((s) => s.nodes);
+  const connections = useStitchStore((s) => s.connections);
   const selectedNodeId = useStitchStore((s) => s.selectedNodeId);
   const selectNode = useStitchStore((s) => s.selectNode);
   const addNode = useStitchStore((s) => s.addNode);
   const updateNode = useStitchStore((s) => s.updateNode);
   const removeNode = useStitchStore((s) => s.removeNode);
+  const addConnection = useStitchStore((s) => s.addConnection);
   const activeChainId = useStitchStore((s) => s.activeChainId);
+  const selectConnection = useStitchStore((s) => s.selectConnection);
+  const selectedConnectionId = useStitchStore((s) => s.selectedConnectionId);
+  const removeConnection = useStitchStore((s) => s.removeConnection);
+  const { drag } = useConnectionDrag();
 
   const { transform, onWheel, onPointerDown, onPointerMove, onPointerUp, zoomIn, zoomOut, zoomReset } =
     useCanvasTransform();
@@ -22,7 +39,34 @@ export function StitchCanvas(): React.ReactElement {
   const handleCanvasClick = useCallback((e: React.MouseEvent): void => {
     if ((e.target as HTMLElement).closest('[data-stitch-node]')) return;
     selectNode(null);
-  }, [selectNode]);
+    selectConnection(null);
+  }, [selectNode, selectConnection]);
+
+  const handleConnectionDrop = useCallback(
+    (targetNodeId: string): void => {
+      if (!drag || !activeChainId) return;
+      const result = validateConnection(drag.sourceNodeId, drag.sourceKey, targetNodeId, connections);
+      if (!result.valid) return;
+      addConnection({
+        chainId: activeChainId,
+        sourceNodeId: drag.sourceNodeId,
+        sourceKey: drag.sourceKey,
+        targetNodeId,
+        targetSlot: 'input',
+      }).catch(() => {});
+    },
+    [drag, activeChainId, connections, addConnection],
+  );
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent): void => {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedConnectionId) {
+        e.preventDefault();
+        removeConnection(selectedConnectionId).catch(() => {});
+      }
+    },
+    [selectedConnectionId, removeConnection],
+  );
 
   const handleUpdatePosition = useCallback(
     (id: string, x: number, y: number): void => {
@@ -106,7 +150,9 @@ export function StitchCanvas(): React.ReactElement {
 
       {/* Canvas area */}
       <div
-        className="relative flex-1 cursor-grab overflow-hidden bg-app-main active:cursor-grabbing"
+        tabIndex={0}
+        onKeyDown={handleKeyDown}
+        className="relative flex-1 cursor-grab overflow-hidden bg-app-main outline-none active:cursor-grabbing"
         style={{
           backgroundImage: 'radial-gradient(circle, var(--app-border-subtle) 1px, transparent 1px)',
           backgroundSize: '20px 20px',
@@ -126,6 +172,7 @@ export function StitchCanvas(): React.ReactElement {
             inset: 0,
           }}
         >
+          <ConnectionLayer />
           {nodes.map((node) => (
             <StitchNode
               key={node.id}
@@ -138,6 +185,7 @@ export function StitchCanvas(): React.ReactElement {
               onUpdatePosition={handleUpdatePosition}
               onUpdateLabel={handleUpdateLabel}
               onDelete={handleDelete}
+              onConnectionDrop={handleConnectionDrop}
             />
           ))}
         </div>

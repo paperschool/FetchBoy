@@ -1,5 +1,20 @@
 # Long Changelog
 
+## [0.18.6] - 2026-03-31
+
+### Story 15.7: Node Connection System
+
+- Drag-to-connect wiring: drag from output ports to input slots creates persisted connections with bezier curves
+- `ConnectionLine` SVG component with cubic bezier, four visual states (active/preview/selected/broken), and wide hit area for click targeting
+- `ConnectionLayer` SVG overlay renders all connections aligned with canvas pan/zoom transform
+- `StitchConnectionDragProvider` React context manages transient drag state (source, cursor position)
+- `connectionValidator` rejects self-connections, duplicates, and cycles (DFS-based cycle detection)
+- `getNodeOutputKeys` unified resolver delegates to type-specific extractors for broken connection detection
+- Connection selection (click), deletion (Delete key or right-click), and broken connection indicators (dashed red lines when source key removed)
+- Output ports enlarge on hover with crosshair cursor; input slots glow green when a valid drag is in progress
+- Store extended with `selectedConnectionId` and `selectConnection` action
+- 22 new tests across validator, nodeOutputKeys, ConnectionLine, ConnectionLayer, and StitchNode
+
 ## [0.18.5] - 2026-03-31
 
 ### Story 15.6: Sleep / Delay Node

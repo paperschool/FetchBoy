@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { StitchNode } from './StitchNode';
+import { StitchConnectionDragProvider } from './StitchConnectionDragContext';
 import type { StitchNode as StitchNodeType } from '@/types/stitch';
 
 const makeNode = (overrides: Partial<StitchNodeType> = {}): StitchNodeType => ({
@@ -27,47 +28,55 @@ const defaultProps = {
   onDelete: vi.fn(),
 };
 
+function renderNode(props: Partial<Parameters<typeof StitchNode>[0]> = {}): ReturnType<typeof render> {
+  return render(
+    <StitchConnectionDragProvider>
+      <StitchNode {...defaultProps} node={makeNode()} {...props} />
+    </StitchConnectionDragProvider>,
+  );
+}
+
 describe('StitchNode', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('displays node label', () => {
-    render(<StitchNode {...defaultProps} node={makeNode()} />);
+    renderNode();
     expect(screen.getByText('My Request')).toBeInTheDocument();
   });
 
   it('displays method badge for request type', () => {
-    render(<StitchNode {...defaultProps} node={makeNode()} />);
+    renderNode();
     expect(screen.getByTestId('method-badge')).toHaveTextContent('GET');
   });
 
   it('displays type as label when label is null', () => {
-    render(<StitchNode {...defaultProps} node={makeNode({ label: null })} />);
-    expect(screen.getByText('request')).toBeInTheDocument(); // type fallback as label
+    renderNode({ node: makeNode({ label: null }) });
+    expect(screen.getByText('request')).toBeInTheDocument();
   });
 
   it('applies selected styling when selected', () => {
-    render(<StitchNode {...defaultProps} node={makeNode()} selected={true} />);
+    renderNode({ selected: true });
     const nodeEl = screen.getByTestId('stitch-node-node-1');
     expect(nodeEl.className).toContain('ring-2');
   });
 
   it('does not apply selected styling when not selected', () => {
-    render(<StitchNode {...defaultProps} node={makeNode()} selected={false} />);
+    renderNode({ selected: false });
     const nodeEl = screen.getByTestId('stitch-node-node-1');
     expect(nodeEl.className).not.toContain('ring-2');
   });
 
   it('calls onDelete on right-click', () => {
     const onDelete = vi.fn();
-    render(<StitchNode {...defaultProps} node={makeNode()} onDelete={onDelete} />);
+    renderNode({ onDelete });
     fireEvent.contextMenu(screen.getByTestId('stitch-node-node-1'));
     expect(onDelete).toHaveBeenCalledWith('node-1');
   });
 
   it('enters edit mode on double-click label', () => {
-    render(<StitchNode {...defaultProps} node={makeNode()} />);
+    renderNode();
     const label = screen.getByText('My Request');
     fireEvent.doubleClick(label);
     const input = screen.getByDisplayValue('My Request');
@@ -75,8 +84,13 @@ describe('StitchNode', () => {
   });
 
   it('renders different node types with correct type text', () => {
-    render(<StitchNode {...defaultProps} node={makeNode({ type: 'js-snippet', label: 'Code' })} />);
+    renderNode({ node: makeNode({ type: 'js-snippet', label: 'Code' }) });
     expect(screen.getByText('Code')).toBeInTheDocument();
     expect(screen.getByText('js-snippet')).toBeInTheDocument();
+  });
+
+  it('renders input slot', () => {
+    renderNode();
+    expect(screen.getByTestId('input-slot')).toBeInTheDocument();
   });
 });

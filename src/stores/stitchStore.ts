@@ -11,6 +11,7 @@ interface StitchState {
   nodes: StitchNode[];
   connections: StitchConnection[];
   selectedNodeId: string | null;
+  selectedConnectionId: string | null;
   executionState: StitchExecutionState;
 
   // Chain actions
@@ -29,6 +30,7 @@ interface StitchState {
   // Connection actions
   addConnection: (conn: Omit<StitchConnection, 'id' | 'createdAt'>) => Promise<StitchConnection>;
   removeConnection: (id: string) => Promise<void>;
+  selectConnection: (id: string | null) => void;
 
   // Execution
   setExecutionState: (state: StitchExecutionState) => void;
@@ -43,6 +45,7 @@ export const useStitchStore = create<StitchState>()(
     nodes: [],
     connections: [],
     selectedNodeId: null,
+    selectedConnectionId: null,
     executionState: 'idle' as StitchExecutionState,
 
     loadChains: async () => {
@@ -132,6 +135,7 @@ export const useStitchStore = create<StitchState>()(
     selectNode: (id) =>
       set((state) => {
         state.selectedNodeId = id;
+        if (id) state.selectedConnectionId = null;
       }),
 
     addConnection: async (conn) => {
@@ -148,6 +152,12 @@ export const useStitchStore = create<StitchState>()(
         state.connections = state.connections.filter((c) => c.id !== id);
       });
     },
+
+    selectConnection: (id) =>
+      set((state) => {
+        state.selectedConnectionId = id;
+        if (id) state.selectedNodeId = null;
+      }),
 
     setExecutionState: (execState) =>
       set((state) => {

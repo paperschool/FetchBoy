@@ -5,6 +5,7 @@ import type { StitchNodeType as NodeType } from '@/types/stitch';
 import { extractJsonKeys } from '../utils/jsonKeyExtractor';
 import { extractReturnKeys } from '../utils/jsKeyExtractor';
 import { getRequestOutputPorts } from '../utils/requestOutputResolver';
+import { useConnectionDrag } from './StitchConnectionDragContext';
 
 const METHOD_COLORS: Record<string, string> = {
   GET: 'bg-green-600 text-white',
@@ -47,7 +48,10 @@ interface StitchNodeProps {
   onUpdatePosition: (id: string, x: number, y: number) => void;
   onUpdateLabel: (id: string, label: string) => void;
   onDelete: (id: string) => void;
+  onConnectionDrop?: (targetNodeId: string) => void;
 }
+
+const NODE_WIDTH = 180;
 
 export const StitchNode = React.memo(function StitchNode({
   node,
@@ -57,7 +61,9 @@ export const StitchNode = React.memo(function StitchNode({
   onUpdatePosition,
   onUpdateLabel,
   onDelete,
+  onConnectionDrop,
 }: StitchNodeProps): React.ReactElement {
+  const { drag, startDrag, updateCursor, endDrag } = useConnectionDrag();
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
   const [dragging, setDragging] = useState(false);
@@ -117,8 +123,6 @@ export const StitchNode = React.memo(function StitchNode({
     }
   }, [selected, editing, node.id, onDelete]);
 
-  const displayLabel = node.label || `${node.type}`;
-
   const portResult = useMemo(() => {
     if (node.type === 'json-object') {
       const jsonStr = (node.config as { json?: string }).json ?? '';
@@ -148,6 +152,45 @@ export const StitchNode = React.memo(function StitchNode({
     return `${cfg.durationMs ?? 1000}ms`;
   }, [node.type, node.config]);
 
+  const handlePortPointerDown = useCallback((key: string, e: PointerEvent<HTMLDivElement>): void => {
+    e.stopPropagation();
+    e.preventDefault();
+    const allKeys = portResult?.keys ?? [];
+    const idx = allKeys.indexOf(key);
+    const count = allKeys.length;
+    const offset = count === 1 ? 0.5 : idx / (count - 1);
+    const leftPercent = (10 + offset * 80) / 100;
+    const portX = node.positionX + NODE_WIDTH * leftPercent;
+    const portY = node.positionY + 70;
+    startDrag(node.id, key, portX, portY);
+
+    const onMove = (ev: globalThis.PointerEvent): void => {
+      const nodeEl = (e.target as HTMLElement).closest('[data-stitch-node]');
+      if (!nodeEl) return;
+      const rect = nodeEl.getBoundingClientRect();
+      const scaleX = NODE_WIDTH / rect.width;
+      const dx = (ev.clientX - e.clientX) * scaleX;
+      const dy = (ev.clientY - e.clientY) * scaleX;
+      updateCursor(portX + dx, portY + dy);
+    };
+    const onUp = (): void => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      endDrag();
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }, [node.id, node.positionX, node.positionY, portResult, startDrag, updateCursor, endDrag]);
+
+  const handleInputSlotPointerUp = useCallback((): void => {
+    if (drag && drag.sourceNodeId !== node.id && onConnectionDrop) {
+      onConnectionDrop(node.id);
+    }
+  }, [drag, node.id, onConnectionDrop]);
+
+  const isDragTarget = drag !== null && drag.sourceNodeId !== node.id;
+  const displayLabel = node.label || `${node.type}`;
+
   return (
     <div
       data-stitch-node
@@ -165,8 +208,14 @@ export const StitchNode = React.memo(function StitchNode({
       onContextMenu={handleContextMenu}
       onKeyDown={handleKeyDown}
     >
-      {/* Input port indicator (top) */}
-      <div className="absolute -top-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full border-2 border-app-subtle bg-app-main" />
+      {/* Input port indicator (top) — drop target during drag */}
+      <div
+        className={`absolute -top-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full border-2 bg-app-main transition-colors ${
+          isDragTarget ? 'border-green-500 scale-150' : 'border-app-subtle'
+        }`}
+        onPointerUp={handleInputSlotPointerUp}
+        data-testid="input-slot"
+      />
 
       {/* Title bar — drag handle */}
       <div
@@ -248,10 +297,11 @@ export const StitchNode = React.memo(function StitchNode({
             return (
               <div
                 key={key}
-                className={`absolute -bottom-1.5 h-3 w-3 rounded-full border-2 bg-app-main ${portColor === 'amber' ? 'border-amber-500/50' : portColor === 'blue' ? 'border-blue-500/50' : 'border-green-500/50'}`}
+                className={`absolute -bottom-1.5 h-3 w-3 cursor-crosshair rounded-full border-2 bg-app-main ${portColor === 'amber' ? 'border-amber-500/50' : portColor === 'blue' ? 'border-blue-500/50' : 'border-green-500/50'} hover:scale-150 hover:border-blue-500 transition-transform`}
                 style={{ left: `${leftPercent}%`, transform: 'translateX(-50%)' }}
                 title={key}
                 data-testid={`output-port-${key}`}
+                onPointerDown={(e) => handlePortPointerDown(key, e)}
               />
             );
           })}

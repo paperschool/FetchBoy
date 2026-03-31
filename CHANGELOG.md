@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.18.6] - 2026-03-31
+
+- feat: Node connection system — drag-to-connect wiring with bezier curves, cycle detection, broken connection indicators, and connection selection/deletion
+
 ## [0.18.5] - 2026-03-31
 
 - feat: Sleep/delay node with fixed/random mode toggle, duration validation, and canvas duration summary
