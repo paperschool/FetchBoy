@@ -25,6 +25,7 @@ interface StitchState {
   executionStartTime: number;
   sleepCountdown: { nodeId: string; durationMs: number } | null;
   bottomPanel: 'none' | 'debug' | 'output';
+  debugScrollToNodeId: string | null;
 
   // Chain actions
   loadChains: () => Promise<void>;
@@ -68,6 +69,7 @@ export const useStitchStore = create<StitchState>()(
     executionStartTime: 0,
     sleepCountdown: null,
     bottomPanel: 'none',
+    debugScrollToNodeId: null,
 
     loadChains: async () => {
       const chains = await stitchDb.loadChains();

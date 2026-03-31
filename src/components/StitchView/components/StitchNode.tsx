@@ -274,8 +274,11 @@ export const StitchNode = React.memo(function StitchNode({
         )}
         <button
           className="text-app-muted hover:text-app-secondary"
-          title="Preview"
-          onClick={(e) => e.stopPropagation()}
+          title="Show in debug log"
+          onClick={(e) => {
+            e.stopPropagation();
+            useStitchStore.setState({ bottomPanel: 'debug', debugScrollToNodeId: node.id, selectedNodeId: null });
+          }}
         >
           <Eye size={11} />
         </button>

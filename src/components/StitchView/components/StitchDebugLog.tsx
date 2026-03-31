@@ -12,6 +12,7 @@ export function StitchDebugLog({ onClose }: StitchDebugLogProps): React.ReactEle
   const logs = useStitchStore((s) => s.executionLogs);
   const executionError = useStitchStore((s) => s.executionError);
   const executionState = useStitchStore((s) => s.executionState);
+  const debugScrollToNodeId = useStitchStore((s) => s.debugScrollToNodeId);
   const scrollRef = useRef<HTMLDivElement>(null);
   const userScrolledRef = useRef(false);
 
@@ -37,6 +38,21 @@ export function StitchDebugLog({ onClose }: StitchDebugLogProps): React.ReactEle
       el.scrollTop = el.scrollHeight;
     }
   }, [executionError]);
+
+  // Scroll to specific node entry when Eye button is clicked
+  useEffect(() => {
+    if (!debugScrollToNodeId || !scrollRef.current) return;
+    // Find the element and scroll to it
+    const target = scrollRef.current.querySelector(`[data-testid="debug-log-entry-${debugScrollToNodeId}"]`);
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Flash highlight
+      target.classList.add('bg-blue-500/15');
+      setTimeout(() => target.classList.remove('bg-blue-500/15'), 1500);
+    }
+    // Clear the scroll target
+    useStitchStore.setState({ debugScrollToNodeId: null });
+  }, [debugScrollToNodeId]);
 
   const errorNodeId = executionError?.nodeId ?? null;
 

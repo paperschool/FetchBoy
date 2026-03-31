@@ -116,7 +116,7 @@ export function StitchDebugLogEntry({ entry, isError }: StitchDebugLogEntryProps
                 fontSize={fontSize - 2}
                 path={`debug-output-${entry.nodeId}-${entry.timestamp}`}
                 testId={`debug-output-editor-${entry.nodeId}`}
-                height="120px"
+                height="240px"
               />
             </div>
           )}
