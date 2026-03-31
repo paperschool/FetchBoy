@@ -225,14 +225,17 @@ export const useStitchStore = create<StitchState>()(
 
       const callbacks = {
         onNodeStart: (nodeId: string): void => {
+          const node = nodes.find((n) => n.id === nodeId);
+          const url = node?.type === 'request' ? (node.config as { url?: string }).url ?? '' : undefined;
           set((state) => {
             state.executionCurrentNodeId = nodeId;
             state.executionLogs.push({
               nodeId,
-              nodeLabel: nodes.find((n) => n.id === nodeId)?.label ?? '',
-              nodeType: nodes.find((n) => n.id === nodeId)?.type ?? 'json-object',
+              nodeLabel: node?.label ?? '',
+              nodeType: node?.type ?? 'json-object',
               status: 'started',
               timestamp: Date.now() - startTime,
+              url,
             });
           });
         },

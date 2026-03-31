@@ -56,6 +56,12 @@ export function StitchDebugLogEntry({ entry, isError }: StitchDebugLogEntryProps
         )}
       </div>
 
+      {entry.url && (
+        <div className="mt-0.5 truncate text-[10px] font-mono text-app-muted" title={entry.url}>
+          {entry.url}
+        </div>
+      )}
+
       {entry.error && (
         <div className="mt-1 rounded bg-red-500/15 px-2 py-1 text-xs text-red-400" data-testid="log-error-message">
           {entry.error}

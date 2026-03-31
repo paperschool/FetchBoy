@@ -128,6 +128,7 @@ export interface ExecutionLogEntry {
   input?: Record<string, unknown>;
   output?: Record<string, unknown>;
   error?: string;
+  url?: string;            // request node URL (after interpolation)
 }
 
 export interface ExecutionContext {

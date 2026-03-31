@@ -163,12 +163,12 @@ export async function executeRequestNode(
     method: config.method ?? 'GET',
     url: interpolate(config.url ?? ''),
     headers: mapKvPairs(config.headers ?? []),
-    query_params: mapKvPairs(config.queryParams ?? []),
+    queryParams: mapKvPairs(config.queryParams ?? []),
     body: { mode: config.bodyType === 'none' ? 'none' : 'raw', raw: interpolate(config.body ?? '') },
     auth: { type: 'none', token: '', username: '', password: '', key: '', value: '', in: 'header' },
-    timeout_ms: 30000,
-    ssl_verify: true,
-    request_id: null,
+    timeoutMs: 30000,
+    sslVerify: true,
+    requestId: null,
   };
 
   try {
