@@ -111,9 +111,19 @@ function StitchCanvasInner(): React.ReactElement {
 
   const handleUpdatePosition = useCallback(
     (id: string, x: number, y: number): void => {
+      const movedNode = nodes.find((n) => n.id === id);
+      if (movedNode?.type === 'loop') {
+        // Move children by the same delta
+        const dx = x - movedNode.positionX;
+        const dy = y - movedNode.positionY;
+        const children = nodes.filter((n) => n.parentNodeId === id);
+        for (const child of children) {
+          updateNode(child.id, { positionX: child.positionX + dx, positionY: child.positionY + dy }).catch(() => {});
+        }
+      }
       updateNode(id, { positionX: x, positionY: y }).catch(() => {});
     },
-    [updateNode],
+    [updateNode, nodes],
   );
 
   // Check loop containment after a node drag ends
@@ -160,6 +170,13 @@ function StitchCanvasInner(): React.ReactElement {
       if (nodeToDelete?.type === 'js-snippet') {
         const cfg = nodeToDelete.config as { isLoopEntry?: boolean };
         if (cfg.isLoopEntry) return; // Can't delete loop entry snippet
+      }
+      // Delete children first if deleting a loop node
+      if (nodeToDelete?.type === 'loop') {
+        const children = nodes.filter((n) => n.parentNodeId === id);
+        for (const child of children) {
+          removeNode(child.id).catch(() => {});
+        }
       }
       removeNode(id).catch(() => {});
     },
