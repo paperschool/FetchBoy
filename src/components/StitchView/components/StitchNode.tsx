@@ -75,6 +75,7 @@ export const StitchNode = React.memo(function StitchNode({
   executionStatus = null,
 }: StitchNodeProps): React.ReactElement {
   const allNodes = useStitchStore((s) => s.nodes);
+  const hasOutput = useStitchStore((s) => node.id in s.executionNodeOutputs);
   const isLoopEntry = node.type === 'js-snippet' && (node.config as { isLoopEntry?: boolean }).isLoopEntry === true;
   const { drag, startDrag, updateCursor, endDrag } = useConnectionDrag();
   const nodeRef = useRef<HTMLDivElement>(null);
@@ -274,11 +275,18 @@ export const StitchNode = React.memo(function StitchNode({
           </span>
         )}
         <button
-          className="text-app-muted hover:text-app-secondary"
-          title="Show in debug log"
+          className={`transition-opacity ${hasOutput ? 'text-app-muted hover:text-app-secondary' : 'text-app-muted/30 cursor-default'}`}
+          title={hasOutput ? 'Preview last output' : 'No results'}
           onClick={(e) => {
             e.stopPropagation();
-            useStitchStore.setState({ bottomPanel: 'debug', debugScrollToNodeId: node.id, selectedNodeId: null });
+            if (!hasOutput) return;
+            const store = useStitchStore.getState();
+            if (store.previewNodeId === node.id && store.bottomPanel === 'preview') {
+              // Toggle: switch back to editor mode
+              useStitchStore.setState({ previewNodeId: null, bottomPanel: 'none', selectedNodeId: node.id });
+            } else {
+              store.setPreviewNode(node.id);
+            }
           }}
         >
           <Eye size={11} />

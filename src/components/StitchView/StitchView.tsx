@@ -6,6 +6,7 @@ import { StitchCanvas } from './components/StitchCanvas';
 import { StitchEditorPanel } from './components/StitchEditorPanel';
 import { StitchDebugLog } from './components/StitchDebugLog';
 import { StitchChainOutput } from './components/StitchChainOutput';
+import { StitchPreviewPanel } from './components/StitchPreviewPanel';
 
 export function StitchView(): React.ReactElement {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -22,6 +23,7 @@ export function StitchView(): React.ReactElement {
   const showEditor = selectedNode !== null && selectedNode.type !== undefined;
   const showDebugLog = !showEditor && bottomPanel === 'debug';
   const showOutput = !showEditor && bottomPanel === 'output';
+  const showPreview = !showEditor && bottomPanel === 'preview';
 
   const handleClosePanel = useCallback((): void => {
     useStitchStore.setState({ bottomPanel: 'none' });
@@ -174,10 +176,10 @@ export function StitchView(): React.ReactElement {
       mainContent={
         activeChainId ? (
           <div className="flex h-full flex-col">
-            <div className={(showEditor || showDebugLog || showOutput) ? 'min-h-0 flex-1' : 'h-full'}>
+            <div className={(showEditor || showDebugLog || showOutput || showPreview) ? 'min-h-0 flex-1' : 'h-full'}>
               <StitchCanvas />
             </div>
-            {(showEditor || showDebugLog || showOutput) && (
+            {(showEditor || showDebugLog || showOutput || showPreview) && (
               <>
                 <div
                   className="shrink-0 cursor-row-resize border-t border-app-subtle bg-app-sidebar hover:bg-blue-500/20 active:bg-blue-500/30"
@@ -190,6 +192,7 @@ export function StitchView(): React.ReactElement {
                   {showEditor && selectedNode && <StitchEditorPanel node={selectedNode} />}
                   {showDebugLog && <StitchDebugLog onClose={handleCloseAndClear} />}
                   {showOutput && <StitchChainOutput onClose={handleClosePanel} />}
+                  {showPreview && <StitchPreviewPanel />}
                 </div>
               </>
             )}

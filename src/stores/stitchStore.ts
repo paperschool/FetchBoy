@@ -24,8 +24,9 @@ interface StitchState {
   executionLogs: ExecutionLogEntry[];
   executionStartTime: number;
   sleepCountdown: { nodeId: string; durationMs: number } | null;
-  bottomPanel: 'none' | 'debug' | 'output';
+  bottomPanel: 'none' | 'debug' | 'output' | 'preview';
   debugScrollToNodeId: string | null;
+  previewNodeId: string | null;
 
   // Chain actions
   loadChains: () => Promise<void>;
@@ -44,6 +45,10 @@ interface StitchState {
   addConnection: (conn: Omit<StitchConnection, 'id' | 'createdAt'>) => Promise<StitchConnection>;
   removeConnection: (id: string) => Promise<void>;
   selectConnection: (id: string | null) => void;
+
+  // Preview
+  setPreviewNode: (nodeId: string | null) => void;
+  clearPreview: () => void;
 
   // Execution
   setExecutionState: (state: StitchExecutionState) => void;
@@ -70,6 +75,7 @@ export const useStitchStore = create<StitchState>()(
     sleepCountdown: null,
     bottomPanel: 'none',
     debugScrollToNodeId: null,
+    previewNodeId: null,
 
     loadChains: async () => {
       const chains = await stitchDb.loadChains();
@@ -174,7 +180,11 @@ export const useStitchStore = create<StitchState>()(
     selectNode: (id) =>
       set((state) => {
         state.selectedNodeId = id;
-        if (id) state.selectedConnectionId = null;
+        if (id) {
+          state.selectedConnectionId = null;
+          state.previewNodeId = null;
+          if (state.bottomPanel === 'preview') state.bottomPanel = 'none';
+        }
       }),
 
     addConnection: async (conn) => {
@@ -198,6 +208,24 @@ export const useStitchStore = create<StitchState>()(
         if (id) state.selectedNodeId = null;
       }),
 
+    setPreviewNode: (nodeId) =>
+      set((state) => {
+        if (nodeId) {
+          state.previewNodeId = nodeId;
+          state.bottomPanel = 'preview';
+          state.selectedNodeId = null;
+        } else {
+          state.previewNodeId = null;
+          if (state.bottomPanel === 'preview') state.bottomPanel = 'none';
+        }
+      }),
+
+    clearPreview: () =>
+      set((state) => {
+        state.previewNodeId = null;
+        if (state.bottomPanel === 'preview') state.bottomPanel = 'none';
+      }),
+
     setExecutionState: (execState) =>
       set((state) => {
         state.executionState = execState;
@@ -216,6 +244,7 @@ export const useStitchStore = create<StitchState>()(
         state.executionLogs = [];
         state.executionStartTime = startTime;
         state.sleepCountdown = null;
+        state.previewNodeId = null;
         state.bottomPanel = 'debug';
       });
 

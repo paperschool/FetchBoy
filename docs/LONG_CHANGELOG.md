@@ -1,5 +1,19 @@
 # Long Changelog
 
+## [0.18.11] - 2026-03-31
+
+### Story 15.11: Node Result Preview
+
+- Eye icon button on each StitchNode title bar opens last execution output in a read-only Monaco JSON panel
+- Button enabled/disabled based on whether execution output exists for the node
+- `StitchPreviewPanel` component with formatted JSON display, node label in header, and close button
+- Toggle behavior: clicking preview while already previewing switches back to editor mode
+- "No results yet — run the chain to see output" empty state when no execution data exists
+- `formatNodeOutput` utility for JSON.stringify with null/error handling
+- Store additions: `previewNodeId`, `setPreviewNode()`, `clearPreview()` in stitchStore
+- Preview auto-clears on node selection and execution start
+- 12 new tests: 7 for formatNodeOutput, 5 for StitchPreviewPanel
+
 ## [0.18.9] - 2026-03-31
 
 ### Story 15.9: Chain Execution Engine
