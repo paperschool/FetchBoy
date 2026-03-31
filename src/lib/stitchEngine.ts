@@ -87,17 +87,26 @@ export function resolveNodeInputs(
 
   for (const conn of incoming) {
     const sourceOutput = context.nodeOutputs[conn.sourceNodeId];
-    if (!sourceOutput) {
+    if (sourceOutput === undefined) {
       throw new Error(`Source node ${conn.sourceNodeId} has no output (execution order error)`);
     }
     const key = conn.sourceKey;
-    if (key && key in sourceOutput) {
-      inputs[key] = sourceOutput[key];
-    } else if (key) {
-      inputs[key] = undefined;
+    if (key) {
+      // Keyed connection — extract a specific key from source output
+      if (typeof sourceOutput === 'object' && sourceOutput !== null && !Array.isArray(sourceOutput) && key in sourceOutput) {
+        inputs[key] = (sourceOutput as Record<string, unknown>)[key];
+      } else {
+        inputs[key] = undefined;
+      }
     } else {
-      // No source key — spread all source outputs
-      Object.assign(inputs, sourceOutput);
+      // Null key (single-port connection) — pass the raw value through
+      if (typeof sourceOutput === 'object' && sourceOutput !== null && !Array.isArray(sourceOutput)) {
+        // Object: spread its keys into input
+        Object.assign(inputs, sourceOutput);
+      } else {
+        // Primitive, array, or null: assign as `value`
+        inputs.value = sourceOutput;
+      }
     }
   }
 
@@ -123,7 +132,7 @@ export function executeJsonObjectNode(
 }
 
 export interface JsSnippetResult {
-  output: Record<string, unknown>;
+  output: unknown;
   consoleLogs: Array<{ level: 'log' | 'warn' | 'error'; args: string }>;
 }
 
@@ -151,15 +160,8 @@ export function executeJsSnippetNode(
     // For a desktop app this is acceptable — the user is running their own code.
     const fn = new Function('input', code);
     const result: unknown = fn(input);
-    let output: Record<string, unknown>;
-    if (result === undefined || result === null) {
-      output = {};
-    } else if (typeof result !== 'object' || Array.isArray(result)) {
-      output = { value: result };
-    } else {
-      output = result as Record<string, unknown>;
-    }
-    return { output, consoleLogs: captured };
+    // Return the raw value — no wrapping. Objects, arrays, strings, numbers all pass through as-is.
+    return { output: result ?? null, consoleLogs: captured };
   } catch (err) {
     throw new Error(`JS Snippet node "${node.label ?? node.id}": ${(err as Error).message}`);
   } finally {
@@ -327,7 +329,7 @@ async function executeLoopNode(
   const terminalNodes = sortedChildren.filter((n) => !childSourceIds.has(n.id));
   const terminalNodeId = terminalNodes.length > 0 ? terminalNodes[terminalNodes.length - 1].id : sortedChildren[sortedChildren.length - 1].id;
 
-  const results: Record<string, unknown>[] = [];
+  const results: unknown[] = [];
 
   for (let i = 0; i < inputArray.length; i++) {
     if (cancelledRef.current) break;
@@ -365,7 +367,7 @@ async function executeLoopNode(
           }
         }
 
-        let output: Record<string, unknown>;
+        let output: unknown;
         let childConsoleLogs: Array<{ level: 'log' | 'warn' | 'error'; args: string }> | undefined;
         switch (childNode.type) {
           case 'json-object':
@@ -460,7 +462,7 @@ export async function executeChain(
     const nodeStart = Date.now();
     try {
       const input = resolveNodeInputs(node.id, topLevelConnections, ctx);
-      let output: Record<string, unknown>;
+      let output: unknown;
       let consoleLogs: Array<{ level: 'log' | 'warn' | 'error'; args: string }> | undefined;
 
       switch (node.type) {

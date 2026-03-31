@@ -19,7 +19,7 @@ interface StitchState {
   selectedConnectionId: string | null;
   executionState: StitchExecutionState;
   executionCurrentNodeId: string | null;
-  executionNodeOutputs: Record<string, Record<string, unknown>>;
+  executionNodeOutputs: Record<string, unknown>;
   executionError: { nodeId: string; message: string } | null;
   executionLogs: ExecutionLogEntry[];
   executionStartTime: number;
@@ -247,7 +247,7 @@ export const useStitchStore = create<StitchState>()(
             });
           });
         },
-        onNodeComplete: (nodeId: string, output: Record<string, unknown>, durationMs: number, loopCtx?: { loopNodeId: string; iteration: number }, consoleLogs?: Array<{ level: 'log' | 'warn' | 'error'; args: string }>): void => {
+        onNodeComplete: (nodeId: string, output: unknown, durationMs: number, loopCtx?: { loopNodeId: string; iteration: number }, consoleLogs?: Array<{ level: 'log' | 'warn' | 'error'; args: string }>): void => {
           set((state) => {
             state.executionNodeOutputs[nodeId] = output;
             state.sleepCountdown = null;

@@ -181,24 +181,24 @@ describe('executeJsSnippetNode', () => {
     expect(result.consoleLogs).toEqual([]);
   });
 
-  it('wraps non-object return in { value }', () => {
+  it('passes through non-object returns as-is', () => {
     expect(executeJsSnippetNode(
       makeNode({ id: 'js', type: 'js-snippet', config: { code: 'return 42' } }), {},
-    ).output).toEqual({ value: 42 });
+    ).output).toBe(42);
 
     expect(executeJsSnippetNode(
       makeNode({ id: 'js', type: 'js-snippet', config: { code: 'return "hello"' } }), {},
-    ).output).toEqual({ value: 'hello' });
+    ).output).toBe('hello');
 
     expect(executeJsSnippetNode(
       makeNode({ id: 'js', type: 'js-snippet', config: { code: 'return [1, 2, 3]' } }), {},
-    ).output).toEqual({ value: [1, 2, 3] });
+    ).output).toEqual([1, 2, 3]);
   });
 
-  it('returns empty object for null/undefined return', () => {
+  it('returns null for undefined return', () => {
     expect(executeJsSnippetNode(
       makeNode({ id: 'js', type: 'js-snippet', config: { code: '' } }), {},
-    ).output).toEqual({});
+    ).output).toBeNull();
   });
 
   it('captures console.log/warn/error', () => {

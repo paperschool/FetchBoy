@@ -121,7 +121,7 @@ export function StitchDebugLogEntry({ entry, isError }: StitchDebugLogEntryProps
         </div>
       )}
 
-      {entry.output && Object.keys(entry.output).length > 0 && (
+      {entry.output !== undefined && entry.output !== null && (
         <div className="mt-1">
           <button className="flex items-center gap-1 text-[10px] text-app-muted hover:text-app-secondary" onClick={toggleOutput}>
             {outputExpanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
