@@ -37,14 +37,14 @@ describe('StitchNode', () => {
     expect(screen.getByText('My Request')).toBeInTheDocument();
   });
 
-  it('displays node type', () => {
+  it('displays method badge for request type', () => {
     render(<StitchNode {...defaultProps} node={makeNode()} />);
-    expect(screen.getByText('request')).toBeInTheDocument();
+    expect(screen.getByTestId('method-badge')).toHaveTextContent('GET');
   });
 
   it('displays type as label when label is null', () => {
     render(<StitchNode {...defaultProps} node={makeNode({ label: null })} />);
-    expect(screen.getAllByText('request')).toHaveLength(2); // type label fallback + body type
+    expect(screen.getByText('request')).toBeInTheDocument(); // type fallback as label
   });
 
   it('applies selected styling when selected', () => {

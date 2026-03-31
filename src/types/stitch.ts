@@ -22,6 +22,32 @@ export const DEFAULT_JS_SNIPPET_CONFIG: JsSnippetNodeConfig = {
   code: '// Transform input data\n// Return an object — its keys become output ports\nreturn {\n  result: input.key\n};\n',
 };
 
+export interface StitchKeyValuePair {
+  key: string;
+  value: string;
+  enabled: boolean;
+}
+
+export interface RequestNodeConfig {
+  method: string;
+  url: string;
+  headers: StitchKeyValuePair[];
+  queryParams: StitchKeyValuePair[];
+  body: string;
+  bodyType: 'none' | 'json' | 'text' | 'xml';
+}
+
+export const DEFAULT_REQUEST_NODE_CONFIG: RequestNodeConfig = {
+  method: 'GET',
+  url: '',
+  headers: [],
+  queryParams: [],
+  body: '',
+  bodyType: 'none',
+};
+
+export const REQUEST_OUTPUT_PORTS = ['status', 'headers', 'body'] as const;
+
 // ─── Domain Interfaces ──────────────────────────────────────────────────────
 
 export interface StitchChain {

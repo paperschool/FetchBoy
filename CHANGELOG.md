@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.18.4] - 2026-03-31
+
+- feat: Request node with method/URL editor, reused Fetch tab KeyValueRows and HighlightedUrlInput, tabbed headers/params/body, and static output ports
+
 ## [0.18.3] - 2026-03-31
 
 - feat: JS Snippet node with static return-key analysis, input shape resolver, Monaco JS editor, and amber-tinted output ports

@@ -1,5 +1,17 @@
 # Long Changelog
 
+## [0.18.4] - 2026-03-31
+
+### Story 15.5: Request Node
+
+- `RequestNodeConfig` type with method, URL, headers, query params, body, and body type fields
+- Request nodes display a coloured method badge (GET=green, POST=blue, etc.) and truncated URL preview on the canvas
+- Static output ports (`status`, `headers`, `body`) with blue-tinted port indicators
+- `RequestNodeEditor` panel reusing Fetch tab's `KeyValueRows` and `HighlightedUrlInput` — no new custom components, no Fetch tab modifications
+- Tabbed editor: Headers, Query Params, Body (with body type selector and Monaco editor)
+- `{{variable}}` highlighting shows both connected input keys and active environment variables
+- 9 new tests for editor panel and output port resolver
+
 ## [0.18.3] - 2026-03-31
 
 ### Story 15.4: JS Snippet Node with Real-Time Key Export

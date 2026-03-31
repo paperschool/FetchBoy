@@ -4,6 +4,17 @@ import type { StitchNode as StitchNodeType } from '@/types/stitch';
 import type { StitchNodeType as NodeType } from '@/types/stitch';
 import { extractJsonKeys } from '../utils/jsonKeyExtractor';
 import { extractReturnKeys } from '../utils/jsKeyExtractor';
+import { getRequestOutputPorts } from '../utils/requestOutputResolver';
+
+const METHOD_COLORS: Record<string, string> = {
+  GET: 'bg-green-600 text-white',
+  POST: 'bg-blue-600 text-white',
+  PUT: 'bg-orange-500 text-white',
+  PATCH: 'bg-yellow-600 text-white',
+  DELETE: 'bg-red-600 text-white',
+  HEAD: 'bg-gray-500 text-white',
+  OPTIONS: 'bg-gray-500 text-white',
+};
 
 const NODE_ICONS: Record<NodeType, React.ReactNode> = {
   'request': <Send size={12} />,
@@ -13,17 +24,17 @@ const NODE_ICONS: Record<NodeType, React.ReactNode> = {
 };
 
 const NODE_COLORS: Record<NodeType, string> = {
-  'request': 'bg-blue-500/10 border-blue-500/30',
-  'js-snippet': 'bg-amber-500/10 border-amber-500/30',
-  'json-object': 'bg-green-500/10 border-green-500/30',
-  'sleep': 'bg-purple-500/10 border-purple-500/30',
+  'request': 'bg-app-main/95 border-blue-500/40',
+  'js-snippet': 'bg-app-main/95 border-amber-500/40',
+  'json-object': 'bg-app-main/95 border-green-500/40',
+  'sleep': 'bg-app-main/95 border-purple-500/40',
 };
 
 const NODE_HEADER_COLORS: Record<NodeType, string> = {
-  'request': 'bg-blue-500/20',
-  'js-snippet': 'bg-amber-500/20',
-  'json-object': 'bg-green-500/20',
-  'sleep': 'bg-purple-500/20',
+  'request': 'bg-blue-500/15',
+  'js-snippet': 'bg-amber-500/15',
+  'json-object': 'bg-green-500/15',
+  'sleep': 'bg-purple-500/15',
 };
 
 interface StitchNodeProps {
@@ -117,13 +128,18 @@ export const StitchNode = React.memo(function StitchNode({
       const code = (node.config as { code?: string }).code ?? '';
       return extractReturnKeys(code);
     }
+    if (node.type === 'request') {
+      return { keys: getRequestOutputPorts(), error: null };
+    }
     return null;
   }, [node.type, node.config]);
 
   const outputKeys = portResult?.keys ?? [];
   const hasError = portResult !== null && portResult.error !== null;
-  const hasDynamicPorts = node.type === 'json-object' || node.type === 'js-snippet';
-  const portColor = node.type === 'js-snippet' ? 'amber' : 'green';
+  const hasDynamicPorts = node.type === 'json-object' || node.type === 'js-snippet' || node.type === 'request';
+  const portColor = node.type === 'js-snippet' ? 'amber' : node.type === 'request' ? 'blue' : 'green';
+
+  const requestConfig = node.type === 'request' ? node.config as { method?: string; url?: string } : null;
 
   return (
     <div
@@ -186,6 +202,21 @@ export const StitchNode = React.memo(function StitchNode({
             <AlertCircle size={10} />
             {node.type === 'json-object' ? 'Invalid JSON' : 'Syntax error'}
           </span>
+        ) : requestConfig ? (
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-1">
+              <span className={`rounded px-1 py-0.5 text-[8px] font-bold ${METHOD_COLORS[requestConfig.method ?? 'GET'] ?? METHOD_COLORS.GET}`} data-testid="method-badge">
+                {requestConfig.method ?? 'GET'}
+              </span>
+            </div>
+            {requestConfig.url ? (
+              <span className="truncate text-[9px] text-app-muted" title={requestConfig.url} data-testid="url-preview">
+                {requestConfig.url.slice(0, 40)}{requestConfig.url.length > 40 ? '...' : ''}
+              </span>
+            ) : (
+              <span className="text-[9px] text-app-muted italic">No URL set</span>
+            )}
+          </div>
         ) : hasDynamicPorts && outputKeys.length > 0 ? (
           <div className="flex flex-wrap gap-1">
             {outputKeys.map((key) => (
@@ -208,7 +239,7 @@ export const StitchNode = React.memo(function StitchNode({
             return (
               <div
                 key={key}
-                className={`absolute -bottom-1.5 h-3 w-3 rounded-full border-2 bg-app-main ${portColor === 'amber' ? 'border-amber-500/50' : 'border-green-500/50'}`}
+                className={`absolute -bottom-1.5 h-3 w-3 rounded-full border-2 bg-app-main ${portColor === 'amber' ? 'border-amber-500/50' : portColor === 'blue' ? 'border-blue-500/50' : 'border-green-500/50'}`}
                 style={{ left: `${leftPercent}%`, transform: 'translateX(-50%)' }}
                 title={key}
                 data-testid={`output-port-${key}`}
