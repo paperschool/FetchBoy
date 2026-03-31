@@ -320,8 +320,13 @@ async function executeLoopNode(
       // Create a mini execution context for this iteration
       const iterCtx = createExecutionContext();
 
+      const loopCtx = { loopNodeId: loopNode.id, iteration: i };
+
       for (const childNode of sortedChildren) {
         if (cancelledRef.current) break;
+
+        callbacks.onNodeStart(childNode.id, loopCtx);
+        const childStart = Date.now();
 
         // First node in chain gets { element, index } plus any connected inputs
         const childInput = resolveNodeInputs(childNode.id, childConnections, iterCtx);
@@ -350,6 +355,7 @@ async function executeLoopNode(
         }
 
         iterCtx.nodeOutputs[childNode.id] = output;
+        callbacks.onNodeComplete(childNode.id, output, Date.now() - childStart, loopCtx);
       }
 
       // Collect terminal node output

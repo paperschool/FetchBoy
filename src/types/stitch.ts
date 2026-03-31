@@ -148,6 +148,8 @@ export interface ExecutionLogEntry {
   output?: Record<string, unknown>;
   error?: string;
   url?: string;            // request node URL (after interpolation)
+  loopIteration?: number;  // set for child steps inside a loop
+  loopNodeId?: string;     // the parent loop node ID
 }
 
 export interface ExecutionContext {
@@ -159,9 +161,14 @@ export interface ExecutionContext {
   startTime: number;
 }
 
+export interface LoopStepContext {
+  loopNodeId: string;
+  iteration: number;
+}
+
 export interface ExecutionCallbacks {
-  onNodeStart: (nodeId: string) => void;
-  onNodeComplete: (nodeId: string, output: Record<string, unknown>, durationMs: number) => void;
+  onNodeStart: (nodeId: string, loopCtx?: LoopStepContext) => void;
+  onNodeComplete: (nodeId: string, output: Record<string, unknown>, durationMs: number, loopCtx?: LoopStepContext) => void;
   onError: (nodeId: string, error: string) => void;
   onSleepStart: (nodeId: string, durationMs: number) => void;
   onChainComplete: () => void;

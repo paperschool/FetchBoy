@@ -228,7 +228,7 @@ export const useStitchStore = create<StitchState>()(
       }
 
       const callbacks = {
-        onNodeStart: (nodeId: string): void => {
+        onNodeStart: (nodeId: string, loopCtx?: { loopNodeId: string; iteration: number }): void => {
           const node = nodes.find((n) => n.id === nodeId);
           const url = node?.type === 'request' ? (node.config as { url?: string }).url ?? '' : undefined;
           set((state) => {
@@ -240,10 +240,12 @@ export const useStitchStore = create<StitchState>()(
               status: 'started',
               timestamp: Date.now() - startTime,
               url,
+              loopIteration: loopCtx?.iteration,
+              loopNodeId: loopCtx?.loopNodeId,
             });
           });
         },
-        onNodeComplete: (nodeId: string, output: Record<string, unknown>, durationMs: number): void => {
+        onNodeComplete: (nodeId: string, output: Record<string, unknown>, durationMs: number, loopCtx?: { loopNodeId: string; iteration: number }): void => {
           set((state) => {
             state.executionNodeOutputs[nodeId] = output;
             state.sleepCountdown = null;
@@ -255,6 +257,8 @@ export const useStitchStore = create<StitchState>()(
               timestamp: Date.now() - startTime,
               durationMs,
               output,
+              loopIteration: loopCtx?.iteration,
+              loopNodeId: loopCtx?.loopNodeId,
             });
           });
         },

@@ -41,13 +41,20 @@ export function StitchDebugLogEntry({ entry, isError }: StitchDebugLogEntryProps
   const toggleInput = useCallback((): void => setInputExpanded((p) => !p), []);
   const toggleOutput = useCallback((): void => setOutputExpanded((p) => !p), []);
 
+  const isLoopChild = entry.loopNodeId !== undefined;
+
   return (
     <div
-      className={`border-b border-app-subtle px-3 py-1.5 ${isError ? 'bg-red-500/10' : ''}`}
+      className={`border-b border-app-subtle py-1.5 ${isError ? 'bg-red-500/10' : ''} ${isLoopChild ? 'pl-7 pr-3 border-l-2 border-l-cyan-500/30' : 'px-3'}`}
       data-testid={`debug-log-entry-${entry.nodeId}`}
     >
       <div className="flex items-center gap-2">
         <span className="text-[10px] font-mono text-app-muted">{formatTimestamp(entry.timestamp)}</span>
+        {isLoopChild && (
+          <span className="rounded bg-cyan-500/15 px-1 py-0.5 text-[8px] font-medium text-cyan-600 dark:text-cyan-400">
+            [{entry.loopIteration}]
+          </span>
+        )}
         <span className="text-app-secondary">{NODE_ICONS[entry.nodeType]}</span>
         <span className="min-w-0 flex-1 truncate text-xs text-app-primary">
           {entry.nodeLabel || entry.nodeType}
