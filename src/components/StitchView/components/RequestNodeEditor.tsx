@@ -123,12 +123,9 @@ export function RequestNodeEditor({ node }: RequestNodeEditorProps): React.React
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      {/* Header */}
-      <div className="flex shrink-0 items-center justify-between border-b border-app-subtle bg-app-sidebar px-3 py-1.5">
-        <span className="text-xs font-medium text-app-primary">
-          Request — {node.label ?? 'Untitled'}
-        </span>
-        {savedRequests.length > 0 && (
+      {/* Collection loader bar */}
+      {savedRequests.length > 0 && (
+        <div className="flex shrink-0 items-center justify-end border-b border-app-subtle bg-app-sidebar px-3 py-1">
           <select
             className="select-flat border-app-subtle bg-app-main text-app-muted h-6 max-w-[14rem] rounded border pl-1.5 pr-5 text-[10px]"
             value=""
@@ -156,8 +153,8 @@ export function RequestNodeEditor({ node }: RequestNodeEditorProps): React.React
               );
             })}
           </select>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Method + URL row — matches Fetch tab layout */}
       <div className="grid shrink-0 grid-cols-[8rem_1fr] items-start gap-3 border-b border-app-subtle px-3 py-2">

@@ -1,5 +1,16 @@
 # Long Changelog
 
+## [0.18.7] - 2026-03-31
+
+### Story 15.8: Node Editor Panel
+
+- `StitchEditorPanel` unified container with header (type icon + label + close button) and type-based editor routing
+- Removed duplicate headers from individual editors (JsonObjectEditor, JsSnippetEditor, RequestNodeEditor, SleepNodeEditor)
+- Sleep editor polished: centered layout with human-readable duration preview ("1.5 seconds", "0.5 – 2.0 seconds")
+- Panel height transition smoothed with CSS `transition-[height]`
+- StitchView simplified — delegates all editor rendering to StitchEditorPanel
+- 6 new tests for panel routing, header rendering, and close behaviour
+
 ## [0.18.6] - 2026-03-31
 
 ### Story 15.7: Node Connection System

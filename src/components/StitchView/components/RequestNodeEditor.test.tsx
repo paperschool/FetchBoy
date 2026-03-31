@@ -54,11 +54,6 @@ describe('RequestNodeEditor', () => {
     useEnvironmentStore.setState({ environments: [] });
   });
 
-  it('renders the panel header with node label', () => {
-    render(<RequestNodeEditor node={makeRequestNode()} />);
-    expect(screen.getByText('Request — API Call')).toBeInTheDocument();
-  });
-
   it('renders method selector with GET default', () => {
     render(<RequestNodeEditor node={makeRequestNode()} />);
     const select = screen.getByTestId('request-method') as HTMLSelectElement;

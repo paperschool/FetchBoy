@@ -37,12 +37,6 @@ export function JsSnippetEditor({ node }: JsSnippetEditorProps): React.ReactElem
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <div className="shrink-0 border-b border-app-subtle bg-app-sidebar px-3 py-1.5">
-        <span className="text-xs font-medium text-app-primary">
-          JS Snippet — {node.label ?? 'Untitled'}
-        </span>
-      </div>
-
       {/* Main content: sidebar + editor */}
       <div className="flex min-h-0 flex-1">
         {/* Inputs & Exports sidebar */}

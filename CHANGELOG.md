@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.18.7] - 2026-03-31
+
+- feat: Unified editor panel with type-routed header, close button, polished sleep duration preview, and smooth height transitions
+
 ## [0.18.6] - 2026-03-31
 
 - feat: Node connection system — drag-to-connect wiring with bezier curves, cycle detection, broken connection indicators, and connection selection/deletion

@@ -52,11 +52,6 @@ describe('JsSnippetEditor', () => {
     });
   });
 
-  it('renders the panel header with node label', () => {
-    render(<JsSnippetEditor node={makeJsNode('return { a: 1 }')} />);
-    expect(screen.getByText('JS Snippet — Transform')).toBeInTheDocument();
-  });
-
   it('renders the Monaco editor', () => {
     render(<JsSnippetEditor node={makeJsNode('return { a: 1 }')} />);
     expect(screen.getByTestId('js-snippet-editor')).toBeInTheDocument();

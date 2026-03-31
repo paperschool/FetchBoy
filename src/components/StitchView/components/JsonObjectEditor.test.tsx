@@ -43,11 +43,6 @@ describe('JsonObjectEditor', () => {
     vi.clearAllMocks();
   });
 
-  it('renders the panel header with node label', () => {
-    render(<JsonObjectEditor node={makeJsonNode('{"a": 1}')} />);
-    expect(screen.getByText('JSON Object — Seed Data')).toBeInTheDocument();
-  });
-
   it('renders the Monaco editor', () => {
     render(<JsonObjectEditor node={makeJsonNode('{"a": 1}')} />);
     expect(screen.getByTestId('json-object-editor')).toBeInTheDocument();

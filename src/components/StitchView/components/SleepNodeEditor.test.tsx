@@ -42,11 +42,6 @@ describe('SleepNodeEditor', () => {
     });
   });
 
-  it('renders the panel header with node label', () => {
-    render(<SleepNodeEditor node={makeSleepNode()} />);
-    expect(screen.getByText('Sleep — Wait')).toBeInTheDocument();
-  });
-
   it('renders Fixed and Random mode buttons', () => {
     render(<SleepNodeEditor node={makeSleepNode()} />);
     expect(screen.getByTestId('mode-fixed')).toBeInTheDocument();

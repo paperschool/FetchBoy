@@ -3,10 +3,7 @@ import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { TabLayout } from '@/components/Layout/TabLayout';
 import { useStitchStore } from '@/stores/stitchStore';
 import { StitchCanvas } from './components/StitchCanvas';
-import { JsonObjectEditor } from './components/JsonObjectEditor';
-import { JsSnippetEditor } from './components/JsSnippetEditor';
-import { RequestNodeEditor } from './components/RequestNodeEditor';
-import { SleepNodeEditor } from './components/SleepNodeEditor';
+import { StitchEditorPanel } from './components/StitchEditorPanel';
 
 export function StitchView(): React.ReactElement {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -150,11 +147,8 @@ export function StitchView(): React.ReactElement {
                   title="Drag to resize"
                   data-testid="editor-resize-handle"
                 />
-                <div className="shrink-0 overflow-hidden" style={{ height: editorHeight }} data-testid="node-editor-panel">
-                  {selectedNode.type === 'json-object' && <JsonObjectEditor node={selectedNode} />}
-                  {selectedNode.type === 'js-snippet' && <JsSnippetEditor node={selectedNode} />}
-                  {selectedNode.type === 'request' && <RequestNodeEditor node={selectedNode} />}
-                  {selectedNode.type === 'sleep' && <SleepNodeEditor node={selectedNode} />}
+                <div className="shrink-0 overflow-hidden transition-[height] duration-150" style={{ height: editorHeight }}>
+                  <StitchEditorPanel node={selectedNode} />
                 </div>
               </>
             )}
