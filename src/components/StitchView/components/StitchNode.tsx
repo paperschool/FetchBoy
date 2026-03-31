@@ -152,8 +152,8 @@ export const StitchNode = React.memo(function StitchNode({
 
   const outputKeys = portResult?.keys ?? [];
   const hasError = portResult !== null && portResult.error !== null;
-  // JSON Object and JS Snippet use a single output port (full payload); Request and Sleep keep per-key ports
-  const useSinglePort = node.type === 'json-object' || node.type === 'js-snippet';
+  // JSON Object, JS Snippet, and Sleep use a single output port (full payload); Request keeps per-key ports
+  const useSinglePort = node.type === 'json-object' || node.type === 'js-snippet' || node.type === 'sleep';
   const hasDynamicPorts = !useSinglePort && outputKeys.length > 0;
   const portColor = node.type === 'js-snippet' ? 'amber' : node.type === 'request' ? 'blue' : node.type === 'sleep' ? 'purple' : 'green';
 
@@ -339,7 +339,7 @@ export const StitchNode = React.memo(function StitchNode({
         <div
           className={`absolute -bottom-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full border-2 bg-app-main transition-transform ${
             useSinglePort && !hasError
-              ? `cursor-crosshair ${portColor === 'amber' ? 'border-amber-500/50' : portColor === 'green' ? 'border-green-500/50' : 'border-app-subtle'} hover:scale-150 hover:border-blue-500`
+              ? `cursor-crosshair ${portColor === 'amber' ? 'border-amber-500/50' : portColor === 'purple' ? 'border-purple-500/50' : portColor === 'green' ? 'border-green-500/50' : 'border-app-subtle'} hover:scale-150 hover:border-blue-500`
               : 'border-app-subtle'
           }`}
           data-testid="output-port-single"
