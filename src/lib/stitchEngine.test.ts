@@ -458,4 +458,32 @@ describe('executeChain', () => {
       { val: 3 },
     ]);
   });
+
+  it('loop node accepts array from JS snippet { value: [...] } output', async () => {
+    const nodes = [
+      makeNode({
+        id: 'js-arr', positionY: 0, type: 'js-snippet',
+        config: { code: 'return [10, 20, 30]' },
+      }),
+      makeNode({ id: 'loop', positionY: 100, type: 'loop', config: { delayMs: 0 } }),
+      makeNode({
+        id: 'child-js', positionY: 150, type: 'js-snippet', parentNodeId: 'loop',
+        config: { code: 'return { half: input.element / 2 }' },
+      }),
+    ];
+    const conns = [
+      makeConn({ sourceNodeId: 'js-arr', targetNodeId: 'loop' }),
+    ];
+    const callbacks = makeCallbacks();
+    const cancelledRef = { current: false };
+
+    const ctx = await executeChain(nodes, conns, {}, callbacks, cancelledRef);
+
+    expect(ctx.status).toBe('completed');
+    expect(ctx.nodeOutputs['loop'].results).toEqual([
+      { half: 5 },
+      { half: 10 },
+      { half: 15 },
+    ]);
+  });
 });
