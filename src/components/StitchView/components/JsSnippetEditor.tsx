@@ -25,14 +25,24 @@ export function JsSnippetEditor({ node }: JsSnippetEditorProps): React.ReactElem
     [node.id, connections],
   );
 
+  const inputHint = useMemo((): string => {
+    if (inputKeys.length === 0) return '';
+    const destructured = inputKeys.join(', ');
+    return `// Available: const { ${destructured} } = input;\n`;
+  }, [inputKeys]);
+
+  const displayValue = inputHint + codeValue;
+
   const handleChange = useCallback(
     (value: string): void => {
+      // Strip the injected hint before saving
+      const raw = inputHint ? value.replace(inputHint, '') : value;
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
-        updateNode(node.id, { config: { ...node.config, code: value } }).catch(() => {});
+        updateNode(node.id, { config: { ...node.config, code: raw } }).catch(() => {});
       }, 300);
     },
-    [node.id, node.config, updateNode],
+    [node.id, node.config, updateNode, inputHint],
   );
 
   return (
@@ -91,7 +101,7 @@ export function JsSnippetEditor({ node }: JsSnippetEditorProps): React.ReactElem
         {/* Monaco editor */}
         <div className="min-h-0 min-w-0 flex-1">
           <MonacoEditorField
-            value={codeValue}
+            value={displayValue}
             language="javascript"
             fontSize={fontSize}
             path={`stitch-js-${node.id}`}
