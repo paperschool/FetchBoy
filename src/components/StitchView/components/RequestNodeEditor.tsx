@@ -53,8 +53,12 @@ export function RequestNodeEditor({ node }: RequestNodeEditorProps): React.React
   const storeUrl = cfg.url ?? '';
   const [localUrl, setLocalUrl] = useState(storeUrl);
   useEffect(() => { setLocalUrl(storeUrl); }, [storeUrl]);
-  const headers: KeyValueRow[] = cfg.headers ?? [];
-  const queryParams: KeyValueRow[] = cfg.queryParams ?? [];
+  const storeHeaders: KeyValueRow[] = cfg.headers ?? [];
+  const storeQueryParams: KeyValueRow[] = cfg.queryParams ?? [];
+  const [localHeaders, setLocalHeaders] = useState(storeHeaders);
+  const [localQueryParams, setLocalQueryParams] = useState(storeQueryParams);
+  useEffect(() => { setLocalHeaders(storeHeaders); }, [storeHeaders]);
+  useEffect(() => { setLocalQueryParams(storeQueryParams); }, [storeQueryParams]);
   const body = cfg.body ?? '';
   const bodyType = cfg.bodyType ?? 'none';
   const auth: StitchAuthConfig = cfg.auth ?? { type: 'none' };
@@ -64,7 +68,7 @@ export function RequestNodeEditor({ node }: RequestNodeEditorProps): React.React
   const inputKeys = useMemo(() => resolveInputShape(node.id, connections), [node.id, connections]);
   const availableVariables: KeyValuePair[] = useMemo(() => {
     const envVars: KeyValuePair[] = activeEnv?.variables ?? [];
-    const inputVars: KeyValuePair[] = inputKeys.map((k) => ({ key: k, value: '', enabled: true }));
+    const inputVars: KeyValuePair[] = inputKeys.map((k) => ({ key: k, value: '{{connected}}', enabled: true }));
     return [...inputVars, ...envVars];
   }, [activeEnv, inputKeys]);
 
@@ -104,35 +108,47 @@ export function RequestNodeEditor({ node }: RequestNodeEditorProps): React.React
 
   // KeyValueRows callbacks for headers
   const onAddHeader = useCallback((): void => {
-    persistImmediate({ headers: [...headers, { key: '', value: '', enabled: true }] });
-  }, [headers, persistImmediate]);
+    const updated = [...localHeaders, { key: '', value: '', enabled: true }];
+    setLocalHeaders(updated);
+    persistImmediate({ headers: updated });
+  }, [localHeaders, persistImmediate]);
   const onUpdateHeader = useCallback((i: number, field: 'key' | 'value', val: string): void => {
-    const updated = headers.map((r, idx) => (idx === i ? { ...r, [field]: val } : r));
-    persistImmediate({ headers: updated });
-  }, [headers, persistImmediate]);
+    const updated = localHeaders.map((r, idx) => (idx === i ? { ...r, [field]: val } : r));
+    setLocalHeaders(updated);
+    persist({ headers: updated });
+  }, [localHeaders, persist]);
   const onToggleHeader = useCallback((i: number): void => {
-    const updated = headers.map((r, idx) => (idx === i ? { ...r, enabled: !r.enabled } : r));
+    const updated = localHeaders.map((r, idx) => (idx === i ? { ...r, enabled: !r.enabled } : r));
+    setLocalHeaders(updated);
     persistImmediate({ headers: updated });
-  }, [headers, persistImmediate]);
+  }, [localHeaders, persistImmediate]);
   const onRemoveHeader = useCallback((i: number): void => {
-    persistImmediate({ headers: headers.filter((_, idx) => idx !== i) });
-  }, [headers, persistImmediate]);
+    const updated = localHeaders.filter((_, idx) => idx !== i);
+    setLocalHeaders(updated);
+    persistImmediate({ headers: updated });
+  }, [localHeaders, persistImmediate]);
 
   // KeyValueRows callbacks for query params
   const onAddParam = useCallback((): void => {
-    persistImmediate({ queryParams: [...queryParams, { key: '', value: '', enabled: true }] });
-  }, [queryParams, persistImmediate]);
+    const updated = [...localQueryParams, { key: '', value: '', enabled: true }];
+    setLocalQueryParams(updated);
+    persistImmediate({ queryParams: updated });
+  }, [localQueryParams, persistImmediate]);
   const onUpdateParam = useCallback((i: number, field: 'key' | 'value', val: string): void => {
-    const updated = queryParams.map((r, idx) => (idx === i ? { ...r, [field]: val } : r));
-    persistImmediate({ queryParams: updated });
-  }, [queryParams, persistImmediate]);
+    const updated = localQueryParams.map((r, idx) => (idx === i ? { ...r, [field]: val } : r));
+    setLocalQueryParams(updated);
+    persist({ queryParams: updated });
+  }, [localQueryParams, persist]);
   const onToggleParam = useCallback((i: number): void => {
-    const updated = queryParams.map((r, idx) => (idx === i ? { ...r, enabled: !r.enabled } : r));
+    const updated = localQueryParams.map((r, idx) => (idx === i ? { ...r, enabled: !r.enabled } : r));
+    setLocalQueryParams(updated);
     persistImmediate({ queryParams: updated });
-  }, [queryParams, persistImmediate]);
+  }, [localQueryParams, persistImmediate]);
   const onRemoveParam = useCallback((i: number): void => {
-    persistImmediate({ queryParams: queryParams.filter((_, idx) => idx !== i) });
-  }, [queryParams, persistImmediate]);
+    const updated = localQueryParams.filter((_, idx) => idx !== i);
+    setLocalQueryParams(updated);
+    persistImmediate({ queryParams: updated });
+  }, [localQueryParams, persistImmediate]);
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -216,7 +232,7 @@ export function RequestNodeEditor({ node }: RequestNodeEditorProps): React.React
         {activeTab === 'headers' && (
           <KeyValueRows
             sectionName="headers"
-            rows={headers}
+            rows={localHeaders}
             addLabel="Add Header"
             onAdd={onAddHeader}
             onUpdate={onUpdateHeader}
@@ -228,7 +244,7 @@ export function RequestNodeEditor({ node }: RequestNodeEditorProps): React.React
         {activeTab === 'params' && (
           <KeyValueRows
             sectionName="query"
-            rows={queryParams}
+            rows={localQueryParams}
             addLabel="Add Query Param"
             onAdd={onAddParam}
             onUpdate={onUpdateParam}
