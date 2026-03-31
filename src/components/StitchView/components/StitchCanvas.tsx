@@ -111,37 +111,38 @@ function StitchCanvasInner(): React.ReactElement {
 
   const handleUpdatePosition = useCallback(
     (id: string, x: number, y: number): void => {
-      const movedNode = nodes.find((n) => n.id === id);
-      // Don't allow loop nodes to be parented or loops inside loops
-      if (movedNode?.type === 'loop') {
-        updateNode(id, { positionX: x, positionY: y }).catch(() => {});
-        return;
-      }
+      updateNode(id, { positionX: x, positionY: y }).catch(() => {});
+    },
+    [updateNode],
+  );
 
-      // Check if the node is inside any loop node's bounds
+  // Check loop containment after a node drag ends
+  const handleNodeDragEnd = useCallback(
+    (id: string): void => {
+      const movedNode = nodes.find((n) => n.id === id);
+      if (!movedNode || movedNode.type === 'loop') return;
+
       const loopNodes = nodes.filter((n) => n.type === 'loop' && n.id !== id);
       let newParent: string | null = null;
       for (const loop of loopNodes) {
-        const childCount = nodes.filter((n) => n.parentNodeId === loop.id).length;
-        const isAlreadyChild = movedNode?.parentNodeId === loop.id;
-        if (!isAlreadyChild && childCount >= LOOP_MAX_CHILDREN) continue;
+        const childCount = nodes.filter((n) => n.parentNodeId === loop.id && n.id !== id).length;
+        if (childCount >= LOOP_MAX_CHILDREN) continue;
 
-        // Measure loop bounds (header + body)
         const loopEl = document.querySelector(`[data-node-id="${loop.id}"]`) as HTMLElement | null;
         const loopW = loopEl?.offsetWidth ?? 240;
         const loopH = loopEl?.offsetHeight ?? 152;
-        if (x >= loop.positionX && x + 180 <= loop.positionX + loopW &&
-            y >= loop.positionY + 32 && y + 70 <= loop.positionY + loopH) {
+        if (movedNode.positionX >= loop.positionX &&
+            movedNode.positionX + 180 <= loop.positionX + loopW &&
+            movedNode.positionY >= loop.positionY + 32 &&
+            movedNode.positionY + 70 <= loop.positionY + loopH) {
           newParent = loop.id;
           break;
         }
       }
 
-      const changes: { positionX: number; positionY: number; parentNodeId?: string | null } = { positionX: x, positionY: y };
-      if (movedNode && newParent !== movedNode.parentNodeId) {
-        changes.parentNodeId = newParent;
+      if (newParent !== movedNode.parentNodeId) {
+        updateNode(id, { parentNodeId: newParent }).catch(() => {});
       }
-      updateNode(id, changes).catch(() => {});
     },
     [updateNode, nodes],
   );
@@ -181,7 +182,7 @@ function StitchCanvasInner(): React.ReactElement {
         config,
         label,
         parentNodeId: null,
-      }).catch(() => {});
+      }).catch((err) => { console.error('[stitch] addNode failed:', err); });
     },
     [activeChainId, nodes, addNode, transform],
   );
@@ -415,6 +416,7 @@ function StitchCanvasInner(): React.ReactElement {
                 onUpdateLabel={handleUpdateLabel}
                 onDelete={handleDelete}
                 onConnectionDrop={handleConnectionDrop}
+                onDragEnd={handleNodeDragEnd}
                 connections={connections}
                 executionStatus={nodeExecStatus}
               />
