@@ -194,18 +194,11 @@ export async function executeRequestNode(
       // Body is not JSON — keep as raw string
     }
 
-    const output: Record<string, unknown> = {
+    return {
       status: response.status,
       headers: Object.fromEntries(response.headers.map((h) => [h.key, h.value])),
       body: parsedBody,
     };
-
-    // Spread parsed JSON body keys for downstream access
-    if (typeof parsedBody === 'object' && parsedBody !== null && !Array.isArray(parsedBody)) {
-      Object.assign(output, parsedBody as Record<string, unknown>);
-    }
-
-    return output;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     throw new Error(`Request node "${node.label ?? node.id}": ${msg}`);

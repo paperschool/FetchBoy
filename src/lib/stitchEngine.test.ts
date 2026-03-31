@@ -243,8 +243,8 @@ describe('executeRequestNode', () => {
     }));
 
     expect(result.status).toBe(200);
-    expect(result.id).toBe(1); // Spread from JSON body
     expect(result.body).toEqual({ id: 1 }); // Parsed JSON body
+    expect(result.id).toBeUndefined(); // No longer spread to top level
   });
 
   it('throws on network error', async () => {
