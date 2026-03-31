@@ -21,6 +21,11 @@ export function StitchView(): React.ReactElement {
   const [editorHeight, setEditorHeight] = useState(260);
   const dragRef = useRef<{ startY: number; startH: number } | null>(null);
 
+  const cleanupRef = useRef<(() => void) | null>(null);
+
+  // Clean up resize listeners if component unmounts mid-drag
+  useEffect(() => () => { cleanupRef.current?.(); }, []);
+
   const handleResizePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>): void => {
     e.preventDefault();
     dragRef.current = { startY: e.clientY, startH: editorHeight };
@@ -34,20 +39,29 @@ export function StitchView(): React.ReactElement {
     };
     const onUp = (): void => {
       dragRef.current = null;
+      cleanupRef.current = null;
       target.removeEventListener('pointermove', onMove);
       target.removeEventListener('pointerup', onUp);
     };
+    cleanupRef.current = onUp;
     target.addEventListener('pointermove', onMove);
     target.addEventListener('pointerup', onUp);
   }, [editorHeight]);
 
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   useEffect(() => {
-    loadChains().catch(() => {});
+    loadChains().catch((err) => {
+      console.error('Failed to load stitch chains:', err);
+      setLoadError('Failed to load chains. The database may be corrupted.');
+    });
   }, [loadChains]);
 
   const handleSelectChain = useCallback(
     (chainId: string): void => {
-      loadChain(chainId).catch(() => {});
+      loadChain(chainId).catch((err) => {
+        console.error('Failed to load chain:', err);
+      });
     },
     [loadChain],
   );
@@ -109,7 +123,9 @@ export function StitchView(): React.ReactElement {
                 <Plus size={14} />
               </button>
             </div>
-            {chains.length === 0 ? (
+            {loadError ? (
+              <p className="text-xs text-red-500">{loadError}</p>
+            ) : chains.length === 0 ? (
               <p className="text-xs text-app-muted">No chains yet</p>
             ) : (
               <ul className="space-y-1">

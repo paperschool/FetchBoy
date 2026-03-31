@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, type WheelEvent, type PointerEvent } from 'react';
+import { useState, useCallback, useRef, useEffect, type PointerEvent } from 'react';
 
 const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 2.0;
@@ -20,7 +20,7 @@ interface PanState {
 
 export interface UseCanvasTransformReturn {
   transform: CanvasTransform;
-  onWheel: (e: WheelEvent) => void;
+  canvasRef: React.RefObject<HTMLDivElement>;
   onPointerDown: (e: PointerEvent) => void;
   onPointerMove: (e: PointerEvent) => void;
   onPointerUp: () => void;
@@ -36,6 +36,8 @@ export function useCanvasTransform(): UseCanvasTransformReturn {
     zoom: 1,
   });
 
+  const canvasRef = useRef<HTMLDivElement>(null);
+
   const panRef = useRef<PanState>({
     isPanning: false,
     startX: 0,
@@ -44,14 +46,25 @@ export function useCanvasTransform(): UseCanvasTransformReturn {
     startPanY: 0,
   });
 
-  const onWheel = useCallback((e: WheelEvent): void => {
-    e.preventDefault();
-    setTransform((prev) => {
-      const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
-      const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, prev.zoom + delta));
-      return { ...prev, zoom: newZoom };
-    });
+  // Imperative wheel listener with { passive: false } so preventDefault() works
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    const handler = (e: WheelEvent): void => {
+      e.preventDefault();
+      setTransform((prev) => {
+        const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
+        const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, prev.zoom + delta));
+        return { ...prev, zoom: newZoom };
+      });
+    };
+    el.addEventListener('wheel', handler, { passive: false });
+    return () => el.removeEventListener('wheel', handler);
   }, []);
+
+  // Use a ref for the latest transform to avoid stale closures and unnecessary re-creations
+  const transformRef = useRef(transform);
+  transformRef.current = transform;
 
   const onPointerDown = useCallback((e: PointerEvent): void => {
     // Only pan on primary button and when clicking empty canvas
@@ -63,11 +76,11 @@ export function useCanvasTransform(): UseCanvasTransformReturn {
       isPanning: true,
       startX: e.clientX,
       startY: e.clientY,
-      startPanX: transform.panX,
-      startPanY: transform.panY,
+      startPanX: transformRef.current.panX,
+      startPanY: transformRef.current.panY,
     };
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  }, [transform.panX, transform.panY]);
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  }, []);
 
   const onPointerMove = useCallback((e: PointerEvent): void => {
     if (!panRef.current.isPanning) return;
@@ -102,5 +115,5 @@ export function useCanvasTransform(): UseCanvasTransformReturn {
     setTransform({ panX: 0, panY: 0, zoom: 1 });
   }, []);
 
-  return { transform, onWheel, onPointerDown, onPointerMove, onPointerUp, zoomIn, zoomOut, zoomReset };
+  return { transform, canvasRef, onPointerDown, onPointerMove, onPointerUp, zoomIn, zoomOut, zoomReset };
 }

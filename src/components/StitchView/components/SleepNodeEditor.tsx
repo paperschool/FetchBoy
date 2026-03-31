@@ -23,14 +23,26 @@ export function SleepNodeEditor({ node }: SleepNodeEditorProps): React.ReactElem
   const minMs = cfg.minMs ?? 500;
   const maxMs = cfg.maxMs ?? 2000;
 
+  const clamp = (val: number): number => {
+    const n = Number(val);
+    if (isNaN(n)) return 0;
+    return Math.max(0, Math.min(MAX_DURATION, Math.round(n)));
+  };
+
   const persist = useCallback(
     (changes: Partial<SleepNodeConfig>): void => {
+      const merged = { ...cfg, ...changes };
+      // Enforce min <= max before persisting (AC: validation)
+      if (merged.mode === 'random' && (merged.minMs ?? 0) > (merged.maxMs ?? 0)) {
+        // Swap min/max to auto-correct
+        const corrected = { ...changes, minMs: merged.maxMs, maxMs: merged.minMs };
+        updateNode(node.id, { config: { ...node.config, ...corrected } }).catch(() => {});
+        return;
+      }
       updateNode(node.id, { config: { ...node.config, ...changes } }).catch(() => {});
     },
-    [node.id, node.config, updateNode],
+    [node.id, node.config, cfg, updateNode],
   );
-
-  const clamp = (val: number): number => Math.max(0, Math.min(MAX_DURATION, Math.round(val)));
 
   const minMaxError = mode === 'random' && minMs > maxMs ? 'Min must be ≤ Max' : null;
   const humanDuration = mode === 'fixed'

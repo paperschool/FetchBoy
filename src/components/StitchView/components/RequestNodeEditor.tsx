@@ -36,6 +36,9 @@ export function RequestNodeEditor({ node }: RequestNodeEditorProps): React.React
   const [activeTab, setActiveTab] = useState<EditorTab>('headers');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Clean up debounce on unmount
+  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
+
   const cfg = node.config as unknown as RequestNodeConfig;
   const method = cfg.method ?? 'GET';
   const storeUrl = cfg.url ?? '';

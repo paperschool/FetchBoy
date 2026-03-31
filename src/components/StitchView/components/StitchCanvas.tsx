@@ -33,11 +33,13 @@ function StitchCanvasInner(): React.ReactElement {
   const removeConnection = useStitchStore((s) => s.removeConnection);
   const { drag } = useConnectionDrag();
 
-  const { transform, onWheel, onPointerDown, onPointerMove, onPointerUp, zoomIn, zoomOut, zoomReset } =
+  const { transform, canvasRef, onPointerDown, onPointerMove, onPointerUp, zoomIn, zoomOut, zoomReset } =
     useCanvasTransform();
 
   const handleCanvasClick = useCallback((e: React.MouseEvent): void => {
     if ((e.target as HTMLElement).closest('[data-stitch-node]')) return;
+    // Don't deselect when clicking on SVG connection lines
+    if ((e.target as HTMLElement).closest('svg')) return;
     selectNode(null);
     selectConnection(null);
   }, [selectNode, selectConnection]);
@@ -150,6 +152,7 @@ function StitchCanvasInner(): React.ReactElement {
 
       {/* Canvas area */}
       <div
+        ref={canvasRef}
         tabIndex={0}
         onKeyDown={handleKeyDown}
         className="relative flex-1 cursor-grab overflow-hidden bg-app-main outline-none active:cursor-grabbing"
@@ -158,7 +161,6 @@ function StitchCanvasInner(): React.ReactElement {
           backgroundSize: '20px 20px',
         }}
         data-testid="stitch-canvas"
-        onWheel={onWheel}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -179,8 +181,6 @@ function StitchCanvasInner(): React.ReactElement {
               node={node}
               selected={node.id === selectedNodeId}
               zoom={transform.zoom}
-              panX={transform.panX}
-              panY={transform.panY}
               onSelect={selectNode}
               onUpdatePosition={handleUpdatePosition}
               onUpdateLabel={handleUpdateLabel}

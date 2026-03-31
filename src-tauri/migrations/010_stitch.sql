@@ -28,3 +28,8 @@ CREATE TABLE IF NOT EXISTS stitch_connections (
     target_slot    TEXT,
     created_at     TEXT NOT NULL
 );
+
+CREATE INDEX IF NOT EXISTS idx_stitch_nodes_chain_id ON stitch_nodes(chain_id);
+CREATE INDEX IF NOT EXISTS idx_stitch_connections_chain_id ON stitch_connections(chain_id);
+CREATE INDEX IF NOT EXISTS idx_stitch_connections_source ON stitch_connections(source_node_id);
+CREATE INDEX IF NOT EXISTS idx_stitch_connections_target ON stitch_connections(target_node_id);

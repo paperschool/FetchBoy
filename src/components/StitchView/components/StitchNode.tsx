@@ -43,8 +43,6 @@ interface StitchNodeProps {
   node: StitchNodeType;
   selected: boolean;
   zoom: number;
-  panX: number;
-  panY: number;
   onSelect: (id: string) => void;
   onUpdatePosition: (id: string, x: number, y: number) => void;
   onUpdateLabel: (id: string, label: string) => void;
@@ -79,7 +77,7 @@ export const StitchNode = React.memo(function StitchNode({
     onSelect(node.id);
     dragRef.current = { startX: e.clientX, startY: e.clientY, nodeX: node.positionX, nodeY: node.positionY };
     setDragging(true);
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   }, [node.id, node.positionX, node.positionY, onSelect]);
 
   const handlePointerMove = useCallback((e: PointerEvent<HTMLDivElement>): void => {
@@ -174,12 +172,9 @@ export const StitchNode = React.memo(function StitchNode({
     startDrag(node.id, key, portX, portY);
 
     const onMove = (ev: globalThis.PointerEvent): void => {
-      const nodeEl = (e.target as HTMLElement).closest('[data-stitch-node]');
-      if (!nodeEl) return;
-      const rect = nodeEl.getBoundingClientRect();
-      const scaleX = NODE_WIDTH / rect.width;
-      const dx = (ev.clientX - e.clientX) * scaleX;
-      const dy = (ev.clientY - e.clientY) * scaleX;
+      // Convert screen-space delta to canvas-space using zoom (zoom === NODE_WIDTH / renderedWidth)
+      const dx = (ev.clientX - e.clientX) / zoom;
+      const dy = (ev.clientY - e.clientY) / zoom;
       updateCursor(portX + dx, portY + dy);
     };
     const onUp = (): void => {

@@ -80,7 +80,10 @@ export const useStitchStore = create<StitchState>()(
       await stitchDb.updateChain(id, { name });
       set((state) => {
         const chain = state.chains.find((c) => c.id === id);
-        if (chain) chain.name = name;
+        if (chain) {
+          chain.name = name;
+          chain.updatedAt = new Date().toISOString();
+        }
       });
     },
 
@@ -93,6 +96,7 @@ export const useStitchStore = create<StitchState>()(
           state.nodes = [];
           state.connections = [];
           state.selectedNodeId = null;
+          state.selectedConnectionId = null;
           state.executionState = 'idle';
         }
       });
@@ -115,11 +119,19 @@ export const useStitchStore = create<StitchState>()(
           if (changes.positionY !== undefined) node.positionY = changes.positionY;
           if (changes.config !== undefined) node.config = changes.config;
           if (changes.label !== undefined) node.label = changes.label;
+          node.updatedAt = new Date().toISOString();
         }
       });
     },
 
     removeNode: async (id) => {
+      // Explicitly delete orphaned connections before the node (CASCADE may be disabled)
+      const connsToDelete = useStitchStore.getState().connections.filter(
+        (c) => c.sourceNodeId === id || c.targetNodeId === id,
+      );
+      for (const c of connsToDelete) {
+        await stitchDb.deleteConnection(c.id);
+      }
       await stitchDb.deleteNode(id);
       set((state) => {
         state.nodes = state.nodes.filter((n) => n.id !== id);
@@ -128,6 +140,9 @@ export const useStitchStore = create<StitchState>()(
         );
         if (state.selectedNodeId === id) {
           state.selectedNodeId = null;
+        }
+        if (state.selectedConnectionId && connsToDelete.some((c) => c.id === state.selectedConnectionId)) {
+          state.selectedConnectionId = null;
         }
       });
     },

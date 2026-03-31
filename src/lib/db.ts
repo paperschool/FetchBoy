@@ -169,6 +169,7 @@ export async function getDb(): Promise<Database> {
         _db = await Database.load(DB_PATH);
         await _db.execute('PRAGMA journal_mode = WAL');
         await _db.execute('PRAGMA busy_timeout = 5000');
+        await _db.execute('PRAGMA foreign_keys = ON');
     }
     return _db;
 }

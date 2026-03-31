@@ -32,12 +32,19 @@ export function extractReturnKeys(code: string): JsKeyResult {
     return { keys: [], error: null };
   }
 
-  // Extract the object literal body by finding matching braces
+  // Extract the object literal body by finding matching braces (string-aware)
   let depth = 0;
   let objectEnd = -1;
+  let inStr: string | null = null;
   for (let i = 0; i < afterReturn.length; i++) {
-    if (afterReturn[i] === '{') depth++;
-    else if (afterReturn[i] === '}') {
+    const ch = afterReturn[i];
+    if (inStr) {
+      if (ch === inStr && afterReturn[i - 1] !== '\\') inStr = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === '`') { inStr = ch; continue; }
+    if (ch === '{') depth++;
+    else if (ch === '}') {
       depth--;
       if (depth === 0) {
         objectEnd = i;

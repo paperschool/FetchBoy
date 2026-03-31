@@ -58,6 +58,7 @@ export function ConnectionLayer(): React.ReactElement {
     [removeConnection],
   );
 
+  // Include nodes in deps so connection positions recalculate when node content/height changes
   const connectionLines = useMemo(() => {
     return connections.map((conn: StitchConnection) => {
       const sourceNode = nodeMap.get(conn.sourceNodeId);
@@ -92,7 +93,7 @@ export function ConnectionLayer(): React.ReactElement {
       id: string; fromX: number; fromY: number; toX: number; toY: number;
       status: 'active' | 'selected' | 'broken'; isBroken: boolean; sourceKey: string | null;
     }>;
-  }, [connections, nodeMap, selectedConnectionId]);
+  }, [connections, nodeMap, nodes, selectedConnectionId]);
 
   return (
     <svg

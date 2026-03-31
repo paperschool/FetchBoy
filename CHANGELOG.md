@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.18.8] - 2026-03-31
+
+- fix: Enable PRAGMA foreign_keys so CASCADE deletes actually work in SQLite
+- fix: Connection click-to-select broken by canvas event bubbling deselecting immediately
+- fix: Sleep node validation was cosmetic-only — now enforces min <= max before persisting
+- fix: Wheel zoom used passive listener (preventDefault no-op) — switched to imperative { passive: false }
+- fix: Node drag, connection positions, debounce cleanup, stale state, and removeNode orphaning connections
+
 ## [0.18.7] - 2026-03-31
 
 - feat: Unified editor panel with type-routed header, close button, polished sleep duration preview, and smooth height transitions
