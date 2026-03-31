@@ -5,6 +5,9 @@ import * as stitchDb from '@/lib/stitch';
 import { executeChain } from '@/lib/stitchEngine';
 import { useEnvironmentStore } from '@/stores/environmentStore';
 
+// Mutable ref lives outside immer — never frozen
+const cancelledRef = { current: false };
+
 // ─── State ──────────────────────────────────────────────────────────────────
 
 interface StitchState {
@@ -21,7 +24,6 @@ interface StitchState {
   executionLogs: ExecutionLogEntry[];
   executionStartTime: number;
   sleepCountdown: { nodeId: string; durationMs: number } | null;
-  cancelledRef: { current: boolean };
 
   // Chain actions
   loadChains: () => Promise<void>;
@@ -64,7 +66,6 @@ export const useStitchStore = create<StitchState>()(
     executionLogs: [],
     executionStartTime: 0,
     sleepCountdown: null,
-    cancelledRef: { current: false },
 
     loadChains: async () => {
       const chains = await stitchDb.loadChains();
@@ -198,7 +199,7 @@ export const useStitchStore = create<StitchState>()(
       }),
 
     startExecution: async () => {
-      const { nodes, connections, cancelledRef } = useStitchStore.getState();
+      const { nodes, connections } = useStitchStore.getState();
       cancelledRef.current = false;
       const startTime = Date.now();
 
@@ -302,7 +303,6 @@ export const useStitchStore = create<StitchState>()(
     },
 
     cancelExecution: () => {
-      const { cancelledRef } = useStitchStore.getState();
       cancelledRef.current = true;
       set((state) => {
         state.executionState = 'idle';
