@@ -112,6 +112,11 @@ function StitchCanvasInner(): React.ReactElement {
 
   const rebalanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Clear any pending rebalance when switching chains
+  useEffect(() => {
+    return () => { if (rebalanceTimerRef.current) clearTimeout(rebalanceTimerRef.current); };
+  }, [activeChainId]);
+
   const rebalanceLoop = useCallback(
     (loopNodeId: string): void => {
       const freshNodes = useStitchStore.getState().nodes;
