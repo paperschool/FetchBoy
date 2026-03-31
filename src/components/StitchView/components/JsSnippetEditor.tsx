@@ -25,10 +25,6 @@ export function JsSnippetEditor({ node }: JsSnippetEditorProps): React.ReactElem
     [node.id, connections],
   );
 
-  const inputShapeText = inputKeys.length > 0
-    ? `// Available input: { ${inputKeys.join(', ')} }`
-    : '// No input connected';
-
   const handleChange = useCallback(
     (value: string): void => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -47,45 +43,68 @@ export function JsSnippetEditor({ node }: JsSnippetEditorProps): React.ReactElem
         </span>
       </div>
 
-      {/* Input shape bar */}
-      <div className="shrink-0 border-b border-app-subtle bg-app-sidebar/50 px-3 py-1" data-testid="input-shape-bar">
-        <code className="text-[10px] text-app-muted">{inputShapeText}</code>
-      </div>
+      {/* Main content: sidebar + editor */}
+      <div className="flex min-h-0 flex-1">
+        {/* Inputs & Exports sidebar */}
+        <div className="flex w-36 shrink-0 flex-col gap-3 overflow-y-auto border-r border-app-subtle bg-app-sidebar p-3">
+          {/* Inputs */}
+          <div data-testid="input-shape-bar">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-app-muted">
+              Inputs
+            </span>
+            <div className="mt-1 flex flex-wrap gap-1">
+              {inputKeys.length === 0 ? (
+                <span className="text-[10px] text-app-muted">No input connected</span>
+              ) : (
+                inputKeys.map((key) => (
+                  <span
+                    key={key}
+                    className="rounded bg-blue-500/15 px-1.5 py-0.5 text-[10px] text-blue-700 dark:text-blue-400"
+                    data-testid={`input-key-${key}`}
+                  >
+                    {key}
+                  </span>
+                ))
+              )}
+            </div>
+          </div>
 
-      {/* Monaco editor */}
-      <div className="min-h-0 flex-1">
-        <MonacoEditorField
-          value={codeValue}
-          language="javascript"
-          fontSize={fontSize}
-          path={`stitch-js-${node.id}`}
-          testId="js-snippet-editor"
-          height="100%"
-          onChange={handleChange}
-        />
-      </div>
+          {/* Exports */}
+          <div>
+            <span className="text-[10px] font-medium uppercase tracking-wider text-app-muted">
+              Exports
+            </span>
+            <div className="mt-1 flex flex-wrap gap-1">
+              {error ? (
+                <span className="text-[10px] text-red-500" data-testid="editor-js-error">{error}</span>
+              ) : keys.length === 0 ? (
+                <span className="text-[10px] text-app-muted">No exports detected</span>
+              ) : (
+                keys.map((key) => (
+                  <span
+                    key={key}
+                    className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-amber-700 dark:text-amber-400"
+                    data-testid={`export-key-${key}`}
+                  >
+                    {key}
+                  </span>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
 
-      {/* Exports bar */}
-      <div className="shrink-0 border-t border-app-subtle bg-app-sidebar px-3 py-1.5">
-        <span className="text-[10px] font-medium uppercase tracking-wider text-app-muted">
-          Exports
-        </span>
-        <div className="mt-1 flex flex-wrap gap-1">
-          {error ? (
-            <span className="text-xs text-red-500" data-testid="editor-js-error">{error}</span>
-          ) : keys.length === 0 ? (
-            <span className="text-xs text-app-muted">No exports detected</span>
-          ) : (
-            keys.map((key) => (
-              <span
-                key={key}
-                className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-amber-700 dark:text-amber-400"
-                data-testid={`export-key-${key}`}
-              >
-                {key}
-              </span>
-            ))
-          )}
+        {/* Monaco editor */}
+        <div className="min-h-0 min-w-0 flex-1">
+          <MonacoEditorField
+            value={codeValue}
+            language="javascript"
+            fontSize={fontSize}
+            path={`stitch-js-${node.id}`}
+            testId="js-snippet-editor"
+            height="100%"
+            onChange={handleChange}
+          />
         </div>
       </div>
     </div>

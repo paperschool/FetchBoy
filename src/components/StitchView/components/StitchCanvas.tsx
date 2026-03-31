@@ -186,6 +186,7 @@ function StitchCanvasInner(): React.ReactElement {
               onUpdateLabel={handleUpdateLabel}
               onDelete={handleDelete}
               onConnectionDrop={handleConnectionDrop}
+              connections={connections}
             />
           ))}
         </div>

@@ -1,10 +1,11 @@
 import React, { useState, useCallback, useRef, useMemo, type PointerEvent, type KeyboardEvent } from 'react';
 import { Send, Code, Braces, Timer, Eye, AlertCircle } from 'lucide-react';
-import type { StitchNode as StitchNodeType } from '@/types/stitch';
+import type { StitchNode as StitchNodeType, StitchConnection } from '@/types/stitch';
 import type { StitchNodeType as NodeType } from '@/types/stitch';
 import { extractJsonKeys } from '../utils/jsonKeyExtractor';
 import { extractReturnKeys } from '../utils/jsKeyExtractor';
 import { getRequestOutputPorts } from '../utils/requestOutputResolver';
+import { resolveInputShape } from '../utils/inputShapeResolver';
 import { useConnectionDrag } from './StitchConnectionDragContext';
 
 const METHOD_COLORS: Record<string, string> = {
@@ -49,6 +50,7 @@ interface StitchNodeProps {
   onUpdateLabel: (id: string, label: string) => void;
   onDelete: (id: string) => void;
   onConnectionDrop?: (targetNodeId: string) => void;
+  connections?: StitchConnection[];
 }
 
 const NODE_WIDTH = 180;
@@ -62,8 +64,10 @@ export const StitchNode = React.memo(function StitchNode({
   onUpdateLabel,
   onDelete,
   onConnectionDrop,
+  connections = [],
 }: StitchNodeProps): React.ReactElement {
   const { drag, startDrag, updateCursor, endDrag } = useConnectionDrag();
+  const nodeRef = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
   const [dragging, setDragging] = useState(false);
@@ -135,13 +139,17 @@ export const StitchNode = React.memo(function StitchNode({
     if (node.type === 'request') {
       return { keys: getRequestOutputPorts(), error: null };
     }
+    if (node.type === 'sleep') {
+      const inputKeys = resolveInputShape(node.id, connections);
+      return inputKeys.length > 0 ? { keys: inputKeys, error: null } : null;
+    }
     return null;
-  }, [node.type, node.config]);
+  }, [node.type, node.config, node.id, connections]);
 
   const outputKeys = portResult?.keys ?? [];
   const hasError = portResult !== null && portResult.error !== null;
-  const hasDynamicPorts = node.type === 'json-object' || node.type === 'js-snippet' || node.type === 'request';
-  const portColor = node.type === 'js-snippet' ? 'amber' : node.type === 'request' ? 'blue' : 'green';
+  const hasDynamicPorts = outputKeys.length > 0;
+  const portColor = node.type === 'js-snippet' ? 'amber' : node.type === 'request' ? 'blue' : node.type === 'sleep' ? 'purple' : 'green';
 
   const requestConfig = node.type === 'request' ? node.config as { method?: string; url?: string } : null;
 
@@ -161,7 +169,8 @@ export const StitchNode = React.memo(function StitchNode({
     const offset = count === 1 ? 0.5 : idx / (count - 1);
     const leftPercent = (10 + offset * 80) / 100;
     const portX = node.positionX + NODE_WIDTH * leftPercent;
-    const portY = node.positionY + 70;
+    const measuredHeight = nodeRef.current?.offsetHeight ?? 82;
+    const portY = node.positionY + measuredHeight;
     startDrag(node.id, key, portX, portY);
 
     const onMove = (ev: globalThis.PointerEvent): void => {
@@ -193,8 +202,10 @@ export const StitchNode = React.memo(function StitchNode({
 
   return (
     <div
+      ref={nodeRef}
       data-stitch-node
       data-testid={`stitch-node-${node.id}`}
+      data-node-id={node.id}
       tabIndex={0}
       className={`absolute select-none rounded-lg border shadow-sm transition-shadow ${NODE_COLORS[node.type]} ${
         selected ? 'ring-2 ring-blue-500 shadow-md' : ''
@@ -278,7 +289,7 @@ export const StitchNode = React.memo(function StitchNode({
         ) : hasDynamicPorts && outputKeys.length > 0 ? (
           <div className="flex flex-wrap gap-1">
             {outputKeys.map((key) => (
-              <span key={key} className={`rounded px-1 py-0.5 text-[9px] ${portColor === 'amber' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400' : 'bg-green-500/15 text-green-700 dark:text-green-400'}`} data-testid={`port-${key}`}>
+              <span key={key} className={`rounded px-1 py-0.5 text-[9px] ${portColor === 'amber' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400' : portColor === 'blue' ? 'bg-blue-500/15 text-blue-700 dark:text-blue-400' : portColor === 'purple' ? 'bg-purple-500/15 text-purple-700 dark:text-purple-400' : 'bg-green-500/15 text-green-700 dark:text-green-400'}`} data-testid={`port-${key}`}>
                 {key}
               </span>
             ))}
@@ -287,6 +298,15 @@ export const StitchNode = React.memo(function StitchNode({
           <span className="text-[10px] text-app-muted">{node.type}</span>
         )}
       </div>
+
+      {/* Output port labels */}
+      {hasDynamicPorts && !hasError && outputKeys.length > 0 && (
+        <div className="flex justify-around px-1 pb-1">
+          {outputKeys.map((key) => (
+            <span key={key} className="max-w-[3rem] truncate text-center text-[7px] leading-none text-app-muted">{key}</span>
+          ))}
+        </div>
+      )}
 
       {/* Output ports */}
       {hasDynamicPorts && !hasError && outputKeys.length > 0 ? (
@@ -297,7 +317,7 @@ export const StitchNode = React.memo(function StitchNode({
             return (
               <div
                 key={key}
-                className={`absolute -bottom-1.5 h-3 w-3 cursor-crosshair rounded-full border-2 bg-app-main ${portColor === 'amber' ? 'border-amber-500/50' : portColor === 'blue' ? 'border-blue-500/50' : 'border-green-500/50'} hover:scale-150 hover:border-blue-500 transition-transform`}
+                className={`absolute -bottom-1.5 h-3 w-3 cursor-crosshair rounded-full border-2 bg-app-main ${portColor === 'amber' ? 'border-amber-500/50' : portColor === 'blue' ? 'border-blue-500/50' : portColor === 'purple' ? 'border-purple-500/50' : 'border-green-500/50'} hover:scale-150 hover:border-blue-500 transition-transform`}
                 style={{ left: `${leftPercent}%`, transform: 'translateX(-50%)' }}
                 title={key}
                 data-testid={`output-port-${key}`}

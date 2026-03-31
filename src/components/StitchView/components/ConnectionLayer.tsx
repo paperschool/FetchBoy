@@ -7,6 +7,12 @@ import type { StitchNode, StitchConnection } from '@/types/stitch';
 
 const NODE_WIDTH = 180;
 const INPUT_SLOT_OFFSET_Y = -1.5;
+const FALLBACK_HEIGHT = 82;
+
+function measureNodeHeight(nodeId: string): number {
+  const el = document.querySelector(`[data-node-id="${nodeId}"]`);
+  return el ? (el as HTMLElement).offsetHeight : FALLBACK_HEIGHT;
+}
 
 function getOutputPortPosition(
   node: StitchNode,
@@ -17,8 +23,8 @@ function getOutputPortPosition(
   const count = allKeys.length;
   const offset = count === 1 ? 0.5 : count === 0 ? 0.5 : idx / (count - 1);
   const leftPercent = (10 + offset * 80) / 100;
-  // Node min-height ~70, but actual height varies. Use ~70 as estimate.
-  return { x: node.positionX + NODE_WIDTH * leftPercent, y: node.positionY + 70 };
+  const nodeHeight = measureNodeHeight(node.id);
+  return { x: node.positionX + NODE_WIDTH * leftPercent, y: node.positionY + nodeHeight };
 }
 
 function getInputSlotPosition(node: StitchNode): { x: number; y: number } {
@@ -58,12 +64,12 @@ export function ConnectionLayer(): React.ReactElement {
       const targetNode = nodeMap.get(conn.targetNodeId);
       if (!sourceNode || !targetNode) return null;
 
-      const sourceKeys = getNodeOutputKeys(sourceNode);
+      const sourceKeys = getNodeOutputKeys(sourceNode, connections);
       const isBroken = conn.sourceKey !== null && !sourceKeys.includes(conn.sourceKey);
 
       const from = conn.sourceKey
         ? getOutputPortPosition(sourceNode, conn.sourceKey, sourceKeys)
-        : { x: sourceNode.positionX + NODE_WIDTH / 2, y: sourceNode.positionY + 70 };
+        : { x: sourceNode.positionX + NODE_WIDTH / 2, y: sourceNode.positionY + measureNodeHeight(sourceNode.id) };
       const to = getInputSlotPosition(targetNode);
 
       const status = conn.id === selectedConnectionId

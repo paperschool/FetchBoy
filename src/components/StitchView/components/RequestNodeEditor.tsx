@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useMemo } from 'react';
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { MonacoEditorField } from '@/components/Editor/MonacoEditorField';
 import { HighlightedUrlInput } from '@/components/MainPanel/HighlightedUrlInput';
 import { KeyValueRows } from '@/components/RequestBuilder/KeyValueRows';
@@ -38,7 +38,9 @@ export function RequestNodeEditor({ node }: RequestNodeEditorProps): React.React
 
   const cfg = node.config as unknown as RequestNodeConfig;
   const method = cfg.method ?? 'GET';
-  const url = cfg.url ?? '';
+  const storeUrl = cfg.url ?? '';
+  const [localUrl, setLocalUrl] = useState(storeUrl);
+  useEffect(() => { setLocalUrl(storeUrl); }, [storeUrl]);
   const headers: KeyValueRow[] = cfg.headers ?? [];
   const queryParams: KeyValueRow[] = cfg.queryParams ?? [];
   const body = cfg.body ?? '';
@@ -177,8 +179,8 @@ export function RequestNodeEditor({ node }: RequestNodeEditorProps): React.React
           <label htmlFor={`stitch-url-${node.id}`} className="text-app-secondary mb-1 block text-xs font-medium">Request URL</label>
           <HighlightedUrlInput
             id={`stitch-url-${node.id}`}
-            value={url}
-            onChange={(v) => persist({ url: v })}
+            value={localUrl}
+            onChange={(v) => { setLocalUrl(v); persist({ url: v }); }}
             placeholder="https://api.example.com/{{path}}"
             variables={availableVariables}
           />

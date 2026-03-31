@@ -24,7 +24,15 @@ describe('getNodeOutputKeys', () => {
     expect(getNodeOutputKeys(makeNode('request'))).toEqual(['status', 'headers', 'body']);
   });
 
-  it('returns empty for sleep node', () => {
+  it('returns empty for sleep node with no connections', () => {
     expect(getNodeOutputKeys(makeNode('sleep'))).toEqual([]);
+  });
+
+  it('returns input keys for sleep node (pass-through)', () => {
+    const connections = [
+      { id: 'c1', chainId: 'c', sourceNodeId: 'src', sourceKey: 'name', targetNodeId: 'n1', targetSlot: 'input', createdAt: 'ts' },
+      { id: 'c2', chainId: 'c', sourceNodeId: 'src', sourceKey: 'age', targetNodeId: 'n1', targetSlot: 'input', createdAt: 'ts' },
+    ];
+    expect(getNodeOutputKeys(makeNode('sleep'), connections)).toEqual(['name', 'age']);
   });
 });

@@ -75,10 +75,10 @@ describe('JsSnippetEditor', () => {
 
   it('shows "No input connected" when no connections', () => {
     render(<JsSnippetEditor node={makeJsNode('return { a: 1 }')} />);
-    expect(screen.getByText('// No input connected')).toBeInTheDocument();
+    expect(screen.getByText('No input connected')).toBeInTheDocument();
   });
 
-  it('shows input shape when connections exist', () => {
+  it('shows input keys as chips when connections exist', () => {
     useStitchStore.setState({
       connections: [
         { id: 'c1', chainId: 'chain-1', sourceNodeId: 'src', sourceKey: 'name', targetNodeId: 'node-1', targetSlot: 'in', createdAt: 'ts' },
@@ -86,7 +86,8 @@ describe('JsSnippetEditor', () => {
       ],
     });
     render(<JsSnippetEditor node={makeJsNode('return { a: 1 }')} />);
-    expect(screen.getByText('// Available input: { name, age }')).toBeInTheDocument();
+    expect(screen.getByTestId('input-key-name')).toBeInTheDocument();
+    expect(screen.getByTestId('input-key-age')).toBeInTheDocument();
   });
 
   it('shows error for unbalanced braces', () => {
