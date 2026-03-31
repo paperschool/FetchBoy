@@ -5,7 +5,7 @@ import { useCanvasTransform } from './StitchCanvas.hooks';
 import { StitchNode } from './StitchNode';
 import { AddNodeMenu } from './AddNodeMenu';
 import type { StitchNodeType } from '@/types/stitch';
-import { DEFAULT_JSON_OBJECT_CONFIG, DEFAULT_JS_SNIPPET_CONFIG, DEFAULT_REQUEST_NODE_CONFIG } from '@/types/stitch';
+import { DEFAULT_JSON_OBJECT_CONFIG, DEFAULT_JS_SNIPPET_CONFIG, DEFAULT_REQUEST_NODE_CONFIG, DEFAULT_SLEEP_NODE_CONFIG } from '@/types/stitch';
 
 export function StitchCanvas(): React.ReactElement {
   const nodes = useStitchStore((s) => s.nodes);
@@ -55,6 +55,7 @@ export function StitchCanvas(): React.ReactElement {
       const config = type === 'json-object' ? { ...DEFAULT_JSON_OBJECT_CONFIG }
         : type === 'js-snippet' ? { ...DEFAULT_JS_SNIPPET_CONFIG }
         : type === 'request' ? { ...DEFAULT_REQUEST_NODE_CONFIG }
+        : type === 'sleep' ? { ...DEFAULT_SLEEP_NODE_CONFIG }
         : {};
       addNode({
         chainId: activeChainId,

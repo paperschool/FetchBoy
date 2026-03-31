@@ -48,6 +48,20 @@ export const DEFAULT_REQUEST_NODE_CONFIG: RequestNodeConfig = {
 
 export const REQUEST_OUTPUT_PORTS = ['status', 'headers', 'body'] as const;
 
+export interface SleepNodeConfig {
+  mode: 'fixed' | 'random';
+  durationMs: number;
+  minMs: number;
+  maxMs: number;
+}
+
+export const DEFAULT_SLEEP_NODE_CONFIG: SleepNodeConfig = {
+  mode: 'fixed',
+  durationMs: 1000,
+  minMs: 500,
+  maxMs: 2000,
+};
+
 // ─── Domain Interfaces ──────────────────────────────────────────────────────
 
 export interface StitchChain {

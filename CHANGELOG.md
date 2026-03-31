@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.18.5] - 2026-03-31
+
+- feat: Sleep/delay node with fixed/random mode toggle, duration validation, and canvas duration summary
+
 ## [0.18.4] - 2026-03-31
 
 - feat: Request node with method/URL editor, reused Fetch tab KeyValueRows and HighlightedUrlInput, tabbed headers/params/body, and static output ports

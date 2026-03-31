@@ -141,6 +141,13 @@ export const StitchNode = React.memo(function StitchNode({
 
   const requestConfig = node.type === 'request' ? node.config as { method?: string; url?: string } : null;
 
+  const sleepSummary = useMemo((): string | null => {
+    if (node.type !== 'sleep') return null;
+    const cfg = node.config as { mode?: string; durationMs?: number; minMs?: number; maxMs?: number };
+    if (cfg.mode === 'random') return `${cfg.minMs ?? 500}–${cfg.maxMs ?? 2000}ms`;
+    return `${cfg.durationMs ?? 1000}ms`;
+  }, [node.type, node.config]);
+
   return (
     <div
       data-stitch-node
@@ -217,6 +224,8 @@ export const StitchNode = React.memo(function StitchNode({
               <span className="text-[9px] text-app-muted italic">No URL set</span>
             )}
           </div>
+        ) : sleepSummary ? (
+          <span className="text-[10px] font-mono text-purple-500" data-testid="sleep-summary">{sleepSummary}</span>
         ) : hasDynamicPorts && outputKeys.length > 0 ? (
           <div className="flex flex-wrap gap-1">
             {outputKeys.map((key) => (

@@ -1,5 +1,15 @@
 # Long Changelog
 
+## [0.18.5] - 2026-03-31
+
+### Story 15.6: Sleep / Delay Node
+
+- `SleepNodeConfig` type with fixed/random modes, duration, min/max milliseconds
+- Sleep nodes display duration summary on canvas body (`1000ms` or `500–2000ms`) in purple monospace
+- `SleepNodeEditor` panel with Fixed/Random mode toggle, numeric inputs with validation (min ≤ max, 0–60000ms cap)
+- Editor panel routing now opens for all node types (simplified `showEditor` logic)
+- 7 new tests for editor modes, validation, and mode switching
+
 ## [0.18.4] - 2026-03-31
 
 ### Story 15.5: Request Node

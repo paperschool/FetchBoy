@@ -6,6 +6,7 @@ import { StitchCanvas } from './components/StitchCanvas';
 import { JsonObjectEditor } from './components/JsonObjectEditor';
 import { JsSnippetEditor } from './components/JsSnippetEditor';
 import { RequestNodeEditor } from './components/RequestNodeEditor';
+import { SleepNodeEditor } from './components/SleepNodeEditor';
 
 export function StitchView(): React.ReactElement {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -18,7 +19,7 @@ export function StitchView(): React.ReactElement {
   const createChain = useStitchStore((s) => s.createChain);
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId) ?? null;
-  const showEditor = selectedNode?.type === 'json-object' || selectedNode?.type === 'js-snippet' || selectedNode?.type === 'request';
+  const showEditor = selectedNode !== null && selectedNode.type !== undefined;
 
   const [editorHeight, setEditorHeight] = useState(260);
   const dragRef = useRef<{ startY: number; startH: number } | null>(null);
@@ -153,6 +154,7 @@ export function StitchView(): React.ReactElement {
                   {selectedNode.type === 'json-object' && <JsonObjectEditor node={selectedNode} />}
                   {selectedNode.type === 'js-snippet' && <JsSnippetEditor node={selectedNode} />}
                   {selectedNode.type === 'request' && <RequestNodeEditor node={selectedNode} />}
+                  {selectedNode.type === 'sleep' && <SleepNodeEditor node={selectedNode} />}
                 </div>
               </>
             )}
