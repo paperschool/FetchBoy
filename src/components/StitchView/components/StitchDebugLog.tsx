@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react';
-import { X, ScrollText } from 'lucide-react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { X, ScrollText, ChevronRight, ChevronDown, Repeat } from 'lucide-react';
 import { useStitchStore } from '@/stores/stitchStore';
 import { StitchDebugLogEntry } from './StitchDebugLogEntry';
+import type { ExecutionLogEntry } from '@/types/stitch';
 
 interface StitchDebugLogProps {
   onClose: () => void;
@@ -39,6 +40,30 @@ export function StitchDebugLog({ onClose }: StitchDebugLogProps): React.ReactEle
 
   const errorNodeId = executionError?.nodeId ?? null;
 
+  // Group logs: top-level entries + loop groups
+  const groupedLogs = useMemo(() => {
+    const groups: Array<
+      | { type: 'entry'; entry: ExecutionLogEntry; index: number }
+      | { type: 'loop'; loopNodeId: string; entries: Array<{ entry: ExecutionLogEntry; index: number }> }
+    > = [];
+    let currentLoop: { loopNodeId: string; entries: Array<{ entry: ExecutionLogEntry; index: number }> } | null = null;
+
+    for (let i = 0; i < logs.length; i++) {
+      const entry = logs[i];
+      if (entry.loopNodeId) {
+        if (!currentLoop || currentLoop.loopNodeId !== entry.loopNodeId) {
+          currentLoop = { loopNodeId: entry.loopNodeId, entries: [] };
+          groups.push({ type: 'loop', ...currentLoop });
+        }
+        currentLoop.entries.push({ entry, index: i });
+      } else {
+        currentLoop = null;
+        groups.push({ type: 'entry', entry, index: i });
+      }
+    }
+    return groups;
+  }, [logs]);
+
   return (
     <div className="flex h-full flex-col overflow-hidden" data-testid="stitch-debug-log">
       {/* Header */}
@@ -52,7 +77,7 @@ export function StitchDebugLog({ onClose }: StitchDebugLogProps): React.ReactEle
             : executionState === 'error'
               ? 'Failed'
               : executionState === 'completed'
-                ? `Completed (${logs.filter((l) => l.status === 'completed').length} nodes)`
+                ? `Completed (${logs.filter((l) => l.status === 'completed' && !l.loopNodeId).length} nodes)`
                 : 'Idle'}
         </span>
         <button
@@ -77,15 +102,67 @@ export function StitchDebugLog({ onClose }: StitchDebugLogProps): React.ReactEle
             <p className="text-xs text-app-muted">Waiting for execution...</p>
           </div>
         ) : (
-          logs.map((entry, i) => (
-            <StitchDebugLogEntry
-              key={`${entry.nodeId}-${entry.status}-${i}`}
-              entry={entry}
-              isError={entry.nodeId === errorNodeId && entry.status === 'error'}
-            />
-          ))
+          groupedLogs.map((group, gi) =>
+            group.type === 'entry' ? (
+              <StitchDebugLogEntry
+                key={`entry-${group.index}`}
+                entry={group.entry}
+                isError={group.entry.nodeId === errorNodeId && group.entry.status === 'error'}
+              />
+            ) : (
+              <LoopLogGroup
+                key={`loop-${gi}`}
+                loopNodeId={group.loopNodeId}
+                entries={group.entries}
+                errorNodeId={errorNodeId}
+              />
+            ),
+          )
         )}
       </div>
+    </div>
+  );
+}
+
+// ─── Collapsible loop log group ─────────────────────────────────────────────
+
+function LoopLogGroup({ loopNodeId, entries, errorNodeId }: {
+  loopNodeId: string;
+  entries: Array<{ entry: ExecutionLogEntry; index: number }>;
+  errorNodeId: string | null;
+}): React.ReactElement {
+  const nodes = useStitchStore((s) => s.nodes);
+  const [collapsed, setCollapsed] = useState(false);
+  const toggle = useCallback((): void => setCollapsed((p) => !p), []);
+
+  const loopNode = nodes.find((n) => n.id === loopNodeId);
+  const loopLabel = loopNode?.label ?? 'Loop';
+  const iterationCount = new Set(entries.map((e) => e.entry.loopIteration)).size;
+  const hasError = entries.some((e) => e.entry.status === 'error');
+
+  return (
+    <div>
+      {/* Loop group header — clickable to collapse */}
+      <button
+        className={`flex w-full cursor-pointer items-center gap-2 border-b border-app-subtle px-3 py-1.5 text-left transition-colors hover:bg-app-hover ${hasError ? 'bg-red-500/5' : 'bg-cyan-500/5'}`}
+        onClick={toggle}
+        data-testid={`loop-group-${loopNodeId}`}
+      >
+        {collapsed ? <ChevronRight size={12} className="shrink-0 text-app-muted" /> : <ChevronDown size={12} className="shrink-0 text-app-muted" />}
+        <Repeat size={11} className="shrink-0 text-cyan-600 dark:text-cyan-400" />
+        <span className="min-w-0 flex-1 truncate text-xs font-medium text-app-primary">{loopLabel}</span>
+        <span className="text-[10px] text-app-muted">{iterationCount} iteration{iterationCount !== 1 ? 's' : ''}</span>
+        <span className="text-[10px] text-app-muted">{entries.length} steps</span>
+      </button>
+
+      {/* Child entries */}
+      {!collapsed && entries.map((e) => (
+        <StitchDebugLogEntry
+          key={`loop-${e.index}`}
+          entry={e.entry}
+          isError={e.entry.nodeId === errorNodeId && e.entry.status === 'error'}
+        />
+      ))}
     </div>
   );
 }
