@@ -16,6 +16,7 @@ export const DEFAULT_JSON_OBJECT_CONFIG: JsonObjectNodeConfig = {
 
 export interface JsSnippetNodeConfig {
   code: string;
+  isLoopEntry?: boolean;
 }
 
 export const DEFAULT_JS_SNIPPET_CONFIG: JsSnippetNodeConfig = {

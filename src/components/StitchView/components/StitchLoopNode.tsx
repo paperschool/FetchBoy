@@ -7,7 +7,7 @@ const LOOP_PADDING = 20;
 const LOOP_HEADER_HEIGHT = 32;
 const LOOP_MIN_WIDTH = 240;
 const LOOP_MIN_HEIGHT = 120;
-const MAX_CHILDREN = 4;
+const MAX_CHILDREN = 5;
 
 interface StitchLoopNodeProps {
   node: StitchNodeType;

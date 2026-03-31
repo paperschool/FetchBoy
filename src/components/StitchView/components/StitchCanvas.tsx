@@ -156,9 +156,33 @@ function StitchCanvasInner(): React.ReactElement {
 
   const handleDelete = useCallback(
     (id: string): void => {
+      const nodeToDelete = nodes.find((n) => n.id === id);
+      if (nodeToDelete?.type === 'js-snippet') {
+        const cfg = nodeToDelete.config as { isLoopEntry?: boolean };
+        if (cfg.isLoopEntry) return; // Can't delete loop entry snippet
+      }
       removeNode(id).catch(() => {});
     },
-    [removeNode],
+    [removeNode, nodes],
+  );
+
+  const createLoopEntrySnippet = useCallback(
+    (loopNodeId: string, x: number, y: number): void => {
+      if (!activeChainId) return;
+      addNode({
+        chainId: activeChainId,
+        type: 'js-snippet',
+        positionX: x + 30,
+        positionY: y + 50,
+        config: {
+          code: '// Entry point — receives { element, index } per iteration\nconst { element, index } = input;\nreturn { element, index };\n',
+          isLoopEntry: true,
+        },
+        label: 'Entry',
+        parentNodeId: loopNodeId,
+      }).catch(() => {});
+    },
+    [activeChainId, addNode],
   );
 
   const handleAddNode = useCallback(
@@ -182,9 +206,11 @@ function StitchCanvasInner(): React.ReactElement {
         config,
         label,
         parentNodeId: null,
+      }).then((newNode) => {
+        if (type === 'loop') createLoopEntrySnippet(newNode.id, centerX, centerY);
       }).catch((err) => { console.error('[stitch] addNode failed:', err); });
     },
-    [activeChainId, nodes, addNode, transform],
+    [activeChainId, nodes, addNode, transform, createLoopEntrySnippet],
   );
 
   // ─── Canvas context menu ───────────────────────────────────────────
@@ -259,9 +285,10 @@ function StitchCanvasInner(): React.ReactElement {
           targetSlot: 'input',
         }).catch(() => {});
       }
+      if (type === 'loop') createLoopEntrySnippet(newNode.id, contextMenu.canvasX, contextMenu.canvasY);
     }).catch(() => {});
     setContextMenu(null);
-  }, [activeChainId, nodes, addNode, addConnection, contextMenu]);
+  }, [activeChainId, nodes, addNode, addConnection, contextMenu, createLoopEntrySnippet]);
 
   const handleCanvasPointerDown = useCallback((e: React.PointerEvent): void => {
     setContextMenu(null);

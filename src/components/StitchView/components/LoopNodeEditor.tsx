@@ -46,7 +46,7 @@ export function LoopNodeEditor({ node }: LoopNodeEditorProps): React.ReactElemen
 
         <div className="flex items-center gap-2">
           <span className="text-xs text-app-muted">Sub-nodes:</span>
-          <span className="text-xs font-medium text-app-primary">{childCount} / 4</span>
+          <span className="text-xs font-medium text-app-primary">{childCount} / 5</span>
         </div>
 
         <div className="rounded bg-app-sidebar p-3 text-xs text-app-muted">
