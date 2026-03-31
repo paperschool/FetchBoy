@@ -18,6 +18,7 @@ interface StitchLoopNodeProps {
   onUpdatePosition: (id: string, x: number, y: number) => void;
   onUpdateLabel: (id: string, label: string) => void;
   onDelete: (id: string) => void;
+  onConnectionDrop?: (targetNodeId: string) => void;
   executionStatus?: ExecutionNodeStatus | null;
   connections?: StitchConnection[];
 }
@@ -33,9 +34,10 @@ export const StitchLoopNode = React.memo(function StitchLoopNode({
   onUpdatePosition,
   onUpdateLabel,
   onDelete,
+  onConnectionDrop,
   executionStatus = null,
 }: StitchLoopNodeProps): React.ReactElement {
-  const { startDrag, updateCursor, endDrag } = useConnectionDrag();
+  const { drag, startDrag, updateCursor, endDrag } = useConnectionDrag();
   const nodeRef = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
@@ -133,6 +135,13 @@ export const StitchLoopNode = React.memo(function StitchLoopNode({
     window.addEventListener('pointerup', onUp);
   }, [node.id, node.positionX, node.positionY, bounds, zoom, startDrag, updateCursor, endDrag]);
 
+  const handleInputSlotPointerUp = useCallback((): void => {
+    if (drag && drag.sourceNodeId !== node.id && onConnectionDrop) {
+      onConnectionDrop(node.id);
+    }
+  }, [drag, node.id, onConnectionDrop]);
+
+  const isDragTarget = drag !== null && drag.sourceNodeId !== node.id;
   const displayLabel = node.label || 'Loop';
 
   return (
@@ -160,7 +169,10 @@ export const StitchLoopNode = React.memo(function StitchLoopNode({
     >
       {/* Input port */}
       <div
-        className="absolute -top-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full border-2 border-cyan-500/50 bg-app-main"
+        className={`absolute -top-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full border-2 bg-app-main transition-colors ${
+          isDragTarget ? 'border-green-500 scale-150' : 'border-cyan-500/50'
+        }`}
+        onPointerUp={handleInputSlotPointerUp}
         data-testid="loop-input-slot"
       />
 
