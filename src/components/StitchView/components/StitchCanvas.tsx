@@ -8,6 +8,7 @@ import { AddNodeMenu } from './AddNodeMenu';
 import { ConnectionLayer } from './ConnectionLayer';
 import { StitchConnectionDragProvider, useConnectionDrag } from './StitchConnectionDragContext';
 import { validateConnection } from '../utils/connectionValidator';
+import { computeLoopChildPositions } from '../utils/loopLayout';
 import type { StitchNodeType } from '@/types/stitch';
 import { DEFAULT_JSON_OBJECT_CONFIG, DEFAULT_JS_SNIPPET_CONFIG, DEFAULT_REQUEST_NODE_CONFIG, DEFAULT_SLEEP_NODE_CONFIG, DEFAULT_LOOP_NODE_CONFIG } from '@/types/stitch';
 
@@ -126,6 +127,21 @@ function StitchCanvasInner(): React.ReactElement {
     [updateNode, nodes],
   );
 
+  const rebalanceLoop = useCallback(
+    (loopNodeId: string): void => {
+      const freshNodes = useStitchStore.getState().nodes;
+      const freshConns = useStitchStore.getState().connections;
+      const loopNode = freshNodes.find((n) => n.id === loopNodeId);
+      if (!loopNode) return;
+      const children = freshNodes.filter((n) => n.parentNodeId === loopNodeId);
+      const positions = computeLoopChildPositions(loopNode, children, freshConns);
+      for (const [childId, pos] of positions) {
+        updateNode(childId, { positionX: pos.x, positionY: pos.y }).catch(() => {});
+      }
+    },
+    [updateNode],
+  );
+
   // Check loop containment after a node drag ends
   const handleNodeDragEnd = useCallback(
     (id: string): void => {
@@ -151,10 +167,14 @@ function StitchCanvasInner(): React.ReactElement {
       }
 
       if (newParent !== movedNode.parentNodeId) {
-        updateNode(id, { parentNodeId: newParent }).catch(() => {});
+        updateNode(id, { parentNodeId: newParent }).then(() => {
+          // Rebalance the loop we joined or left
+          if (newParent) rebalanceLoop(newParent);
+          if (movedNode.parentNodeId) rebalanceLoop(movedNode.parentNodeId);
+        }).catch(() => {});
       }
     },
-    [updateNode, nodes],
+    [updateNode, nodes, rebalanceLoop],
   );
 
   const handleUpdateLabel = useCallback(
@@ -184,22 +204,22 @@ function StitchCanvasInner(): React.ReactElement {
   );
 
   const createLoopEntrySnippet = useCallback(
-    (loopNodeId: string, x: number, y: number): void => {
+    (loopNodeId: string): void => {
       if (!activeChainId) return;
       addNode({
         chainId: activeChainId,
         type: 'js-snippet',
-        positionX: x + 30,
-        positionY: y + 50,
+        positionX: 0,
+        positionY: 0,
         config: {
           code: '// Entry point — receives { element, index } per iteration\nconst { element, index } = input;\nreturn { element, index };\n',
           isLoopEntry: true,
         },
         label: 'Entry',
         parentNodeId: loopNodeId,
-      }).catch(() => {});
+      }).then(() => rebalanceLoop(loopNodeId)).catch(() => {});
     },
-    [activeChainId, addNode],
+    [activeChainId, addNode, rebalanceLoop],
   );
 
   const handleAddNode = useCallback(
@@ -224,7 +244,7 @@ function StitchCanvasInner(): React.ReactElement {
         label,
         parentNodeId: null,
       }).then((newNode) => {
-        if (type === 'loop') createLoopEntrySnippet(newNode.id, centerX, centerY);
+        if (type === 'loop') createLoopEntrySnippet(newNode.id);
       }).catch((err) => { console.error('[stitch] addNode failed:', err); });
     },
     [activeChainId, nodes, addNode, transform, createLoopEntrySnippet],
@@ -233,7 +253,7 @@ function StitchCanvasInner(): React.ReactElement {
   // ─── Canvas context menu ───────────────────────────────────────────
   const [contextMenu, setContextMenu] = useState<{
     x: number; y: number; canvasX: number; canvasY: number;
-    pendingSource?: { nodeId: string; sourceKey: string | null };
+    pendingSource?: { nodeId: string; sourceKey: string | null; parentNodeId: string | null };
   } | null>(null);
 
   // Detect drag-drop on empty space → show context menu to create + connect
@@ -252,13 +272,14 @@ function StitchCanvasInner(): React.ReactElement {
     const screenX = rect.left + dropped.cursorX * transform.zoom + transform.panX;
     const screenY = rect.top + dropped.cursorY * transform.zoom + transform.panY;
     const sourceKey = dropped.sourceKey === '__output__' ? null : dropped.sourceKey;
+    const sourceNode = nodes.find((n) => n.id === dropped.sourceNodeId);
 
     setContextMenu({
       x: screenX,
       y: screenY,
       canvasX: dropped.cursorX,
       canvasY: dropped.cursorY,
-      pendingSource: { nodeId: dropped.sourceNodeId, sourceKey },
+      pendingSource: { nodeId: dropped.sourceNodeId, sourceKey, parentNodeId: sourceNode?.parentNodeId ?? null },
     });
   }, [drag, consumeDroppedDrag, transform, canvasRef]);
 
@@ -284,6 +305,9 @@ function StitchCanvasInner(): React.ReactElement {
       : type === 'loop' ? { ...DEFAULT_LOOP_NODE_CONFIG }
       : {};
     const pending = contextMenu.pendingSource;
+    const inheritedParent = pending?.parentNodeId ?? null;
+    // Don't allow creating loop nodes inside loops
+    if (type === 'loop' && inheritedParent) return;
     addNode({
       chainId: activeChainId,
       type,
@@ -291,10 +315,10 @@ function StitchCanvasInner(): React.ReactElement {
       positionY: contextMenu.canvasY,
       config,
       label,
-      parentNodeId: null,
-    }).then((newNode) => {
+      parentNodeId: inheritedParent,
+    }).then(async (newNode) => {
       if (pending) {
-        addConnection({
+        await addConnection({
           chainId: activeChainId,
           sourceNodeId: pending.nodeId,
           sourceKey: pending.sourceKey,
@@ -302,10 +326,11 @@ function StitchCanvasInner(): React.ReactElement {
           targetSlot: 'input',
         }).catch(() => {});
       }
-      if (type === 'loop') createLoopEntrySnippet(newNode.id, contextMenu.canvasX, contextMenu.canvasY);
+      if (type === 'loop') createLoopEntrySnippet(newNode.id);
+      if (inheritedParent) rebalanceLoop(inheritedParent);
     }).catch(() => {});
     setContextMenu(null);
-  }, [activeChainId, nodes, addNode, addConnection, contextMenu, createLoopEntrySnippet]);
+  }, [activeChainId, nodes, addNode, addConnection, contextMenu, createLoopEntrySnippet, rebalanceLoop]);
 
   const handleCanvasPointerDown = useCallback((e: React.PointerEvent): void => {
     setContextMenu(null);
