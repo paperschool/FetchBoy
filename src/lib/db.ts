@@ -170,6 +170,12 @@ export async function getDb(): Promise<Database> {
         await _db.execute('PRAGMA journal_mode = WAL');
         await _db.execute('PRAGMA busy_timeout = 5000');
         await _db.execute('PRAGMA foreign_keys = ON');
+        // Ensure parent_node_id column exists (migration 011 may not have run via Tauri yet)
+        try {
+            await _db.execute('ALTER TABLE stitch_nodes ADD COLUMN parent_node_id TEXT REFERENCES stitch_nodes(id) ON DELETE CASCADE');
+        } catch {
+            // Column already exists — safe to ignore
+        }
     }
     return _db;
 }

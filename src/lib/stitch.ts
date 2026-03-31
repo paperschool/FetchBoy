@@ -126,20 +126,11 @@ export async function insertNode(
     createdAt: now(),
     updatedAt: now(),
   };
-  try {
-    await insertOne(
-      'stitch_nodes',
-      ['id', 'chain_id', 'type', 'position_x', 'position_y', 'config', 'label', 'parent_node_id', 'created_at', 'updated_at'],
-      [full.id, full.chainId, full.type, full.positionX, full.positionY, JSON.stringify(full.config), full.label, full.parentNodeId, full.createdAt, full.updatedAt],
-    );
-  } catch {
-    // Fallback for databases without parent_node_id column (pre-migration 011)
-    await insertOne(
-      'stitch_nodes',
-      ['id', 'chain_id', 'type', 'position_x', 'position_y', 'config', 'label', 'created_at', 'updated_at'],
-      [full.id, full.chainId, full.type, full.positionX, full.positionY, JSON.stringify(full.config), full.label, full.createdAt, full.updatedAt],
-    );
-  }
+  await insertOne(
+    'stitch_nodes',
+    ['id', 'chain_id', 'type', 'position_x', 'position_y', 'config', 'label', 'parent_node_id', 'created_at', 'updated_at'],
+    [full.id, full.chainId, full.type, full.positionX, full.positionY, JSON.stringify(full.config), full.label, full.parentNodeId, full.createdAt, full.updatedAt],
+  );
   return full;
 }
 
@@ -157,16 +148,7 @@ export async function updateNode(
   const update = buildUpdate('stitch_nodes', id, mapped);
   if (!update) return;
   const db = await getDb();
-  try {
-    await db.execute(update.sql, update.values);
-  } catch {
-    // Fallback: retry without parent_node_id for pre-migration 011 databases
-    if ('parent_node_id' in mapped) {
-      delete mapped.parent_node_id;
-      const fallback = buildUpdate('stitch_nodes', id, mapped);
-      if (fallback) await db.execute(fallback.sql, fallback.values);
-    }
-  }
+  await db.execute(update.sql, update.values);
 }
 
 export async function deleteNode(id: string): Promise<void> {
