@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { FolderOpen } from 'lucide-react';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { MonacoEditorField } from '@/components/Editor/MonacoEditorField';
+import { SaveContentButton } from '@/components/Editor/SaveContentButton';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 
 type BodyMode = 'inline' | 'file';
@@ -100,6 +101,9 @@ export function MappingResponseBodyEditor({
 
                     {mode === 'inline' && (
                         <div data-testid="mrb-inline-editor">
+                            <div className="flex justify-end mb-1">
+                                <SaveContentButton content={body} language={contentType} defaultName="mapping-body" />
+                            </div>
                             <MonacoEditorField
                                 value={body}
                                 language={langEntry.lang}

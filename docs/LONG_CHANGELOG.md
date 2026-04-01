@@ -1,5 +1,13 @@
 # Long Changelog
 
+## [0.18.18] - 2026-04-01
+
+- feat: auto-save mapping editor with debounced writes and saving/saved status indicator
+- feat: save-to-file button on Monaco editors in fetch response, intercept detail, and mapping body views
+- fix: hide size, type, and time columns in intercept table at tablet width (<768px)
+- feat: inject app version into window title via Vite build plugin
+- refactor: replace manual save button in mapping editor with `silentSave` store action and dirty-flag pattern
+
 ## [0.18.17] - 2026-04-01
 
 ### Story 15.16: Proxy-Triggered Mapping Chain Execution

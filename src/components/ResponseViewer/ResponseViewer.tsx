@@ -1,4 +1,5 @@
 import { MonacoEditorField } from '@/components/Editor/MonacoEditorField';
+import { SaveContentButton } from '@/components/Editor/SaveContentButton';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import { Download, Send, X, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -213,6 +214,10 @@ export function ResponseViewer({ response, error, logs = [], onClearLogs, reques
           {!isBinaryContentType(response.contentType) && (
             <>
               <div className="absolute top-2 right-2 z-10 flex items-center gap-2">
+                <SaveContentButton
+                  content={responseBodyLanguage === 'plaintext' ? response.body : (formattedJsonBody ?? response.body)}
+                  language={responseBodyLanguage}
+                />
                 <select
                   id="response-body-language"
                   aria-label="Response Body Language"

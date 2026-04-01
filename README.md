@@ -135,7 +135,7 @@ yarn tauri dev
 
 ### windows
 
-After downloading bundle, windows defender may prompt you not to run the unsigned application, this is normal. In the "Don't Run" screen, click to see more details and then run it. 
+After downloading bundle, windows defender may prompt you not to run the unsigned application, this is normal. In the "Don't Run" screen, click to see more details and then run it.
 
 > ⚠️ **Disclaimer:** Fetch Boy is currently in **early development**. The app has not been signed or notarized by Windows App Store (or associated partners) yet, which means Windows Defender may show warnings when trying to run it. This can be bypassed as above by ignoring the warning when launching the application. Once the app reaches a more stable release, proper signing and notarization will be set up.
 
@@ -187,7 +187,8 @@ The proxy is designed for **local development and debugging** — inspecting API
 
 ## Known Issues
 
-1. UI speed seems quite sluggish on Windows 11 - Not sure why.
+1. Intercept Server seems to indicate its still running when rebooting the app (even though it isn't)
+2. UI speed seems quite sluggish on Windows 11 - Not sure why.
 
 ## Project Structure
 

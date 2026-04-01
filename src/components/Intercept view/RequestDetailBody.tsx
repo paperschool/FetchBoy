@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { MonacoEditorField } from '@/components/Editor/MonacoEditorField'
+import { SaveContentButton } from '@/components/Editor/SaveContentButton'
 import { isImageContentType, ImageViewer } from '@/components/ResponseViewer/ResponseViewer'
 import type { InterceptRequest, BreakpointModifications } from '@/stores/interceptStore'
 
@@ -54,7 +55,11 @@ export function RequestDetailBody({
 
   return (
     <div className="relative min-h-[220px] flex-1">
-      <div className="absolute top-2 right-2 z-10">
+      <div className="absolute top-2 right-2 z-10 flex items-center gap-2">
+        <SaveContentButton
+          content={editMode ? (pendingMods.responseBody ?? selectedRequest.responseBody ?? '') : (formattedBody ?? selectedRequest.responseBody ?? '')}
+          language={bodyLanguage}
+        />
         <select value={bodyLanguage} onChange={(e) => setBodyLanguage(e.target.value as BodyLanguage)}
           className="select-flat border-app-subtle bg-app-main text-app-primary h-8 rounded-md border pl-2 pr-7 text-xs"
           aria-label="Body language">

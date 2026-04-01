@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Check, AlertCircle, Play, Pause, Workflow } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Check, AlertCircle, Play, Pause, Workflow, Loader2 } from 'lucide-react';
 import { useMappingsStore } from '@/stores/mappingsStore';
 import type { MatchType, MappingEditForm } from '@/stores/mappingsStore';
 import { useStitchStore } from '@/stores/stitchStore';
@@ -54,8 +54,12 @@ function MappingLogTab({ mappingId }: { mappingId: string | null }) {
     );
 }
 
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+const DEBOUNCE_MS = 800;
+const SAVED_DISPLAY_MS = 2000;
+
 export function MappingEditor({ onClose }: Props) {
-    const { editForm, saveMapping } = useMappingsStore();
+    const { editForm, silentSave } = useMappingsStore();
     const storeEnabled = useMappingsStore((s) =>
         s.mappings.find((m) => m.id === editForm.id)?.enabled
     );
@@ -80,43 +84,76 @@ export function MappingEditor({ onClose }: Props) {
     const [useChain, setUseChain] = useState(editForm.useChain ?? false);
     const [chainId, setChainId] = useState<string | null>(editForm.chainId ?? null);
     const [urlError, setUrlError] = useState<string | null>(null);
-    const [saving, setSaving] = useState(false);
+    const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+
+    const mappingIdRef = useRef(editForm.id);
+    const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+    const savedTimerRef = useRef<ReturnType<typeof setTimeout>>();
+    const savingRef = useRef(false);
+
+    useEffect(() => {
+        return () => {
+            if (debounceRef.current) clearTimeout(debounceRef.current);
+            if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+        };
+    }, []);
 
     useEffect(() => {
         setUrlError(validateUrlPattern(urlPattern, matchType));
     }, [urlPattern, matchType]);
 
-    const canSave = !urlError && !!urlPattern && !saving;
+    // Called by the debounce timer — not a hook dep, just a stable ref.
+    const formRef = useRef({ name, urlPattern, matchType, enabled, headersAdd, headersRemove, cookies, responseBodyEnabled, responseBody, responseBodyContentType, responseBodyFilePath, urlRemapEnabled, urlRemapTarget, useChain, chainId });
+    formRef.current = { name, urlPattern, matchType, enabled, headersAdd, headersRemove, cookies, responseBodyEnabled, responseBody, responseBodyContentType, responseBodyFilePath, urlRemapEnabled, urlRemapTarget, useChain, chainId };
 
-    const handleSave = async () => {
-        const err = validateUrlPattern(urlPattern, matchType);
-        if (err) { setUrlError(err); setActiveTab('match'); return; }
-        setSaving(true);
-        const form: MappingEditForm = {
-            ...editForm,
-            name,
-            urlPattern,
-            matchType,
-            enabled,
-            headersAdd,
-            headersRemove,
-            cookies,
-            responseBodyEnabled,
-            responseBody,
-            responseBodyContentType,
-            responseBodyFilePath,
-            urlRemapEnabled,
-            urlRemapTarget,
-            useChain,
-            chainId,
-        };
-        try {
-            await saveMapping(form);
-            onClose();
-        } finally {
-            setSaving(false);
-        }
+    // Bump this to trigger a debounced save. The effect below watches it.
+    const [saveGen, setSaveGen] = useState(0);
+    const dirty = () => setSaveGen((g) => g + 1);
+
+    // Wrapped setters that also mark the form dirty for auto-save.
+    const edit = {
+        name:        (v: string) => { setName(v); dirty(); },
+        urlPattern:  (v: string) => { setUrlPattern(v); dirty(); },
+        matchType:   (v: MatchType) => { setMatchType(v); dirty(); },
+        headersAdd:  (v: MappingHeader[]) => { setHeadersAdd(v); dirty(); },
+        headersRemove: (v: MappingHeader[]) => { setHeadersRemove(v); dirty(); },
+        cookies:     (v: MappingCookie[]) => { setCookies(v); dirty(); },
+        responseBodyEnabled: (v: boolean) => { setResponseBodyEnabled(v); dirty(); },
+        responseBody: (v: string) => { setResponseBody(v); dirty(); },
+        responseBodyContentType: (v: string) => { setResponseBodyContentType(v); dirty(); },
+        responseBodyFilePath: (v: string) => { setResponseBodyFilePath(v); dirty(); },
+        urlRemapEnabled: (v: boolean) => { setUrlRemapEnabled(v); dirty(); },
+        urlRemapTarget: (v: string) => { setUrlRemapTarget(v); dirty(); },
+        useChain:    (v: boolean) => { setUseChain(v); dirty(); },
+        chainId:     (v: string | null) => { setChainId(v); dirty(); },
+        enabled:     () => { if (editForm.id) void toggleEnabled(editForm.id); else setLocalEnabled((e) => !e); dirty(); },
     };
+
+    // Debounced auto-save. Reads form values from refs so the effect only
+    // depends on the generation counter — no store values in deps at all.
+    useEffect(() => {
+        if (saveGen === 0) return;              // skip mount
+        if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+        setSaveStatus('saving');
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => {
+            const f = formRef.current;
+            const err = validateUrlPattern(f.urlPattern, f.matchType);
+            if (err || !f.urlPattern) { setSaveStatus('idle'); return; }
+
+            savingRef.current = true;
+            const form: MappingEditForm = { ...editForm, id: mappingIdRef.current, ...f };
+            silentSave(form)
+                .then((savedId) => {
+                    mappingIdRef.current = savedId;
+                    setSaveStatus('saved');
+                    savedTimerRef.current = setTimeout(() => setSaveStatus('idle'), SAVED_DISPLAY_MS);
+                })
+                .catch(() => setSaveStatus('error'))
+                .finally(() => { savingRef.current = false; });
+        }, DEBOUNCE_MS);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [saveGen]);
 
     return (
         <ViewerShell tabs={TABS} activeTab={activeTab} onTabChange={(id) => setActiveTab(id as EditorTab)}
@@ -132,7 +169,7 @@ export function MappingEditor({ onClose }: Props) {
                                 <label className="block text-app-muted text-xs mb-1">Name</label>
                                 <input
                                     type="text" value={name}
-                                    onChange={(e) => setName(e.target.value)}
+                                    onChange={(e) => edit.name(e.target.value)}
                                     className="w-full bg-app-main text-app-inverse border border-app-subtle rounded px-2 py-1.5 text-sm"
                                     data-testid="mapping-name-input"
                                 />
@@ -141,7 +178,7 @@ export function MappingEditor({ onClose }: Props) {
                                 <label className="block text-app-muted text-xs mb-1">URL Pattern</label>
                                 <input
                                     type="text" value={urlPattern}
-                                    onChange={(e) => setUrlPattern(e.target.value)}
+                                    onChange={(e) => edit.urlPattern(e.target.value)}
                                     placeholder={PLACEHOLDERS[matchType]}
                                     className="w-full bg-app-main text-app-inverse border border-app-subtle rounded px-2 py-1.5 text-sm font-mono"
                                     data-testid="mapping-url-input"
@@ -159,9 +196,9 @@ export function MappingEditor({ onClose }: Props) {
                                         <button key={type}
                                             onClick={() => {
                                                 if (type === 'wildcard' && urlPattern && !urlPattern.startsWith('*') && !/^https?:\/\//.test(urlPattern)) {
-                                                    setUrlPattern('*' + urlPattern);
+                                                    edit.urlPattern('*' + urlPattern);
                                                 }
-                                                setMatchType(type);
+                                                edit.matchType(type);
                                             }}
                                             className={`px-3 py-1 text-xs rounded ${
                                                 matchType === type
@@ -177,7 +214,7 @@ export function MappingEditor({ onClose }: Props) {
                             </div>
                             <div className="flex items-center gap-2">
                             <button type="button"
-                                onClick={() => { if (editForm.id) void toggleEnabled(editForm.id); else setLocalEnabled((e) => !e); }}
+                                onClick={() => edit.enabled()}
                                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
                                     enabled ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30' : 'bg-gray-500/20 text-app-muted hover:bg-gray-500/30'
                                 }`}
@@ -195,7 +232,7 @@ export function MappingEditor({ onClose }: Props) {
                                             const existing = stitchStore.chains.find((c) => c.id === chainId);
                                             if (existing) {
                                                 await stitchStore.loadChain(chainId);
-                                                setUseChain(true);
+                                                edit.useChain(true);
                                                 useAppTabStore.getState().setActiveTab('stitch');
                                                 return;
                                             }
@@ -218,11 +255,11 @@ export function MappingEditor({ onClose }: Props) {
                                         await stitchStore.addConnection({
                                             chainId: chain.id, sourceNodeId: entry.id, sourceKey: null, targetNodeId: exit.id, targetSlot: 'input',
                                         });
-                                        setChainId(chain.id);
-                                        setUseChain(true);
+                                        edit.chainId(chain.id);
+                                        edit.useChain(true);
                                         useAppTabStore.getState().setActiveTab('stitch');
                                     } else {
-                                        setUseChain(false);
+                                        edit.useChain(false);
                                     }
                                 }}
                                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
@@ -241,19 +278,19 @@ export function MappingEditor({ onClose }: Props) {
                         <MappingHeadersEditor
                             headersAdd={headersAdd}
                             headersRemove={headersRemove}
-                            onChangeAdd={setHeadersAdd}
-                            onChangeRemove={setHeadersRemove}
+                            onChangeAdd={edit.headersAdd}
+                            onChangeRemove={edit.headersRemove}
                         />
                     )}
                     {activeTab === 'cookies' && (
-                        <MappingCookieEditor cookies={cookies} onChange={setCookies} />
+                        <MappingCookieEditor cookies={cookies} onChange={edit.cookies} />
                     )}
                     {activeTab === 'remap' && (
                         <MappingUrlRemapEditor
                             enabled={urlRemapEnabled}
                             target={urlRemapTarget}
-                            onChangeEnabled={setUrlRemapEnabled}
-                            onChangeTarget={setUrlRemapTarget}
+                            onChangeEnabled={edit.urlRemapEnabled}
+                            onChangeTarget={edit.urlRemapTarget}
                         />
                     )}
                     {activeTab === 'response' && (
@@ -262,21 +299,28 @@ export function MappingEditor({ onClose }: Props) {
                             body={responseBody}
                             contentType={responseBodyContentType}
                             filePath={responseBodyFilePath}
-                            onChangeEnabled={setResponseBodyEnabled}
-                            onChangeBody={setResponseBody}
-                            onChangeContentType={setResponseBodyContentType}
-                            onChangeFilePath={setResponseBodyFilePath}
+                            onChangeEnabled={edit.responseBodyEnabled}
+                            onChangeBody={edit.responseBody}
+                            onChangeContentType={edit.responseBodyContentType}
+                            onChangeFilePath={edit.responseBodyFilePath}
                         />
                     )}
                     {activeTab === 'log' && <MappingLogTab mappingId={editForm.id} />}
                 </div>
-                <div className="flex gap-2 justify-end pt-3 border-t border-app-subtle">
-                    <button onClick={onClose} className="px-4 py-1.5 text-sm text-app-muted hover:text-app-inverse">Cancel</button>
-                    <button onClick={() => void handleSave()} disabled={!canSave}
-                        className="px-4 py-1.5 text-sm bg-app-accent text-white rounded hover:bg-app-accent/80 disabled:opacity-50 flex items-center gap-1"
-                        data-testid="mapping-save-button"
-                    >
-                        <Check size={14} /> {saving ? 'Saving…' : 'Save'}
+                <div className="flex items-center justify-between pt-3 border-t border-app-subtle">
+                    <div className="flex items-center gap-1.5 text-xs h-6" data-testid="mapping-save-status">
+                        {saveStatus === 'saving' && (
+                            <><Loader2 size={13} className="animate-spin text-blue-400" /><span className="text-app-muted">Saving…</span></>
+                        )}
+                        {saveStatus === 'saved' && (
+                            <><Check size={13} className="text-emerald-400" /><span className="text-emerald-400">Saved</span></>
+                        )}
+                        {saveStatus === 'error' && (
+                            <><AlertCircle size={13} className="text-red-400" /><span className="text-red-400">Save failed</span></>
+                        )}
+                    </div>
+                    <button onClick={onClose} className="px-4 py-1.5 text-sm text-app-muted hover:text-app-inverse">
+                        Close
                     </button>
                 </div>
             </>

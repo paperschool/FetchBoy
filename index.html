@@ -14,7 +14,7 @@
       content="#111827"
       media="(prefers-color-scheme: dark)"
     />
-    <title>Fetch Boy 🦴</title>
+    <title>Fetch Boy</title>
     <style>
       html,
       body {
@@ -28,6 +28,22 @@
           background-color: #111827;
         }
       }
+
+      /*
+       * Static splash — all styles pre-match Tailwind preflight so that
+       * when the CSS reset loads mid-display nothing shifts.
+       */
+      #static-splash,
+      #static-splash *,
+      #static-splash *::before,
+      #static-splash *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        border: 0 solid;
+        line-height: 1.5;
+      }
+
       #static-splash {
         position: fixed;
         inset: 0;
@@ -36,6 +52,7 @@
         align-items: center;
         justify-content: center;
         background-color: #ffffff;
+        cursor: pointer;
       }
       @media (prefers-color-scheme: dark) {
         #static-splash {
@@ -45,27 +62,367 @@
       #static-splash.hidden {
         display: none;
       }
+
+      #static-splash canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+
+      #splash-content {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        z-index: 1;
+      }
+
+      #splash-logo-wrap {
+        width: 512px;
+        height: 430px;
+        background: url('/src-tauri/icons/fetch-boi-logo.svg') center / contain no-repeat;
+        opacity: 0;
+        transform: scale(0.92);
+        transition: opacity 1.2s ease-out, transform 1.2s ease-out;
+      }
+      #splash-logo-wrap.visible {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      #splash-text {
+        margin-top: -2.5rem;
+        font-family: system-ui, -apple-system, sans-serif;
+        font-weight: 700;
+        font-size: 4.5rem;
+        letter-spacing: 0.05em;
+        line-height: 1;
+        color: #1f2937;
+        user-select: none;
+        opacity: 0;
+        transform: scale(0.8) translateY(10px);
+        transition: opacity 2s ease-out, transform 2s ease-out;
+      }
+      #splash-text.visible {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+      @media (prefers-color-scheme: dark) {
+        #splash-text {
+          color: #f3f4f6;
+        }
+      }
+
     </style>
   </head>
 
   <body>
     <div id="static-splash">
-      <div style="opacity: 0; animation: splash-static-fade-in 0.5s ease-out forwards;">
-        <img
-          src="/src-tauri/icons/fetch-boi-logo.svg"
-          alt="FetchBoy"
-          width="512"
-          height="512"
-          style="display: block; object-fit: contain;"
-        />
+      <canvas id="splash-canvas"></canvas>
+      <div id="splash-content">
+        <div id="splash-logo-wrap"></div>
+        <span id="splash-text">Fetchboy</span>
       </div>
-      <style>
-        @keyframes splash-static-fade-in {
-          from { opacity: 0; transform: scale(0.9); }
-          to { opacity: 1; transform: scale(1); }
-        }
-      </style>
     </div>
+
+    <script>
+      (function () {
+        /* ── Node-graph animation (pure vanilla, no dependencies) ── */
+        var NODE_COUNT  = 250;
+        var NODE_RADIUS = 5;
+        var MAX_LINK    = 180;
+        var SPEED       = 0.2;
+        var PAD         = 30;
+        var SPLASH_MS   = 5000;
+
+        var canvas = document.getElementById('splash-canvas');
+        var ctx    = canvas.getContext('2d');
+        var nodes  = [];
+        var raf    = 0;
+        var startTime = Date.now();
+
+        function resize() {
+          canvas.width  = window.innerWidth;
+          canvas.height = window.innerHeight;
+        }
+
+        function initNodes() {
+          nodes = [];
+          var w = canvas.width, h = canvas.height;
+          for (var i = 0; i < NODE_COUNT; i++) {
+            var a = Math.random() * Math.PI * 2;
+            nodes.push({
+              x:  PAD + Math.random() * (w - PAD * 2),
+              y:  PAD + Math.random() * (h - PAD * 2),
+              vx: Math.cos(a) * SPEED,
+              vy: Math.sin(a) * SPEED,
+              r:  NODE_RADIUS * (0.5 + Math.random() * 1.5)
+            });
+          }
+        }
+
+        /* ── Chain highlights: light up node-to-node paths across the grid ── */
+        var CHAIN_INTERVAL  = 2000;   // ms between new chains
+        var CHAIN_HOP_DELAY = 150;    // ms between each node lighting up
+        var CHAIN_FADE_TIME = 1200;   // ms for chain to fade after completing
+        var chains = [];
+        var litNodes = new Set();     // Set of node indices currently in a chain
+
+        function nodeIndex(node) {
+          return nodes.indexOf(node);
+        }
+
+        function findEdgeNodeIndices(w, h, edge) {
+          var margin = 80;
+          var result = [];
+          for (var i = 0; i < nodes.length; i++) {
+            var n = nodes[i];
+            if (edge === 0 && n.x < margin) result.push(i);
+            else if (edge === 1 && n.x > w - margin) result.push(i);
+            else if (edge === 2 && n.y < margin) result.push(i);
+            else if (edge === 3 && n.y > h - margin) result.push(i);
+          }
+          return result;
+        }
+
+        function atOppositeEdge(idx, edge, w, h) {
+          var m = 80, n = nodes[idx];
+          if (edge === 1) return n.x > w - m;
+          if (edge === 0) return n.x < m;
+          if (edge === 3) return n.y > h - m;
+          return n.y < m;
+        }
+
+        function buildChainPath(w, h) {
+          var startEdge = Math.floor(Math.random() * 4);
+          var endEdge = [1, 0, 3, 2][startEdge];
+          var candidates = findEdgeNodeIndices(w, h, startEdge);
+          if (candidates.length === 0) return null;
+
+          var path = [];
+          var visited = new Set();
+          var cur = candidates[Math.floor(Math.random() * candidates.length)];
+          path.push(cur);
+          visited.add(cur);
+
+          for (var step = 0; step < 30; step++) {
+            var best = -1, bestScore = Infinity;
+            var cn = nodes[cur];
+            for (var i = 0; i < nodes.length; i++) {
+              if (visited.has(i)) continue;
+              var n = nodes[i];
+              var dx = n.x - cn.x, dy = n.y - cn.y;
+              var dist = Math.sqrt(dx * dx + dy * dy);
+              if (dist > MAX_LINK * 1.3) continue;
+
+              var edgePull = 0;
+              if (endEdge === 0) edgePull = -dx;
+              else if (endEdge === 1) edgePull = dx;
+              else if (endEdge === 2) edgePull = -dy;
+              else edgePull = dy;
+
+              var score = dist - edgePull * 0.8 + Math.random() * 50;
+              if (score < bestScore) { bestScore = score; best = i; }
+            }
+            if (best === -1) break;
+            path.push(best);
+            visited.add(best);
+            cur = best;
+            if (atOppositeEdge(cur, endEdge, w, h)) break;
+          }
+
+          return path.length >= 3 ? path : null;
+        }
+
+        function spawnChain() {
+          var w = canvas.width, h = canvas.height;
+          var path = buildChainPath(w, h);
+          if (!path) return;
+
+          chains.push({
+            path: path,
+            litCount: 0,
+            lastHopTime: Date.now(),
+            complete: false,
+            fadeStart: 0
+          });
+        }
+
+        var lastChainSpawn = 0;
+
+        function updateChains() {
+          var now = Date.now();
+          if (now - lastChainSpawn > CHAIN_INTERVAL) {
+            lastChainSpawn = now;
+            spawnChain();
+          }
+
+          // Rebuild lit set
+          litNodes.clear();
+
+          for (var ci = chains.length - 1; ci >= 0; ci--) {
+            var ch = chains[ci];
+
+            // Light up next node in sequence
+            if (!ch.complete && now - ch.lastHopTime > CHAIN_HOP_DELAY) {
+              ch.litCount++;
+              ch.lastHopTime = now;
+              if (ch.litCount >= ch.path.length) {
+                ch.complete = true;
+                ch.fadeStart = now;
+              }
+            }
+
+            // Remove fully faded chains
+            if (ch.complete && now - ch.fadeStart > CHAIN_FADE_TIME) {
+              chains.splice(ci, 1);
+              continue;
+            }
+
+            // Calculate brightness
+            var brightness = 1;
+            if (ch.complete) {
+              brightness = 1 - (now - ch.fadeStart) / CHAIN_FADE_TIME;
+            }
+            ch._brightness = brightness;
+
+            // Mark lit nodes
+            for (var ni = 0; ni < ch.litCount && ni < ch.path.length; ni++) {
+              litNodes.add(ch.path[ni]);
+            }
+          }
+        }
+
+        function drawChains() {
+          for (var ci = 0; ci < chains.length; ci++) {
+            var ch = chains[ci];
+            var b = ch._brightness;
+
+            // Draw lit lines between consecutive chain nodes
+            for (var ni = 1; ni < ch.litCount && ni < ch.path.length; ni++) {
+              var a = nodes[ch.path[ni - 1]];
+              var bn = nodes[ch.path[ni]];
+              ctx.strokeStyle = 'rgba(140,200,255,' + (0.7 * b) + ')';
+              ctx.lineWidth = 2.5;
+              ctx.beginPath();
+              ctx.moveTo(a.x, a.y);
+              ctx.lineTo(bn.x, bn.y);
+              ctx.stroke();
+            }
+
+            // Draw lit nodes
+            for (var ni = 0; ni < ch.litCount && ni < ch.path.length; ni++) {
+              var n = nodes[ch.path[ni]];
+              ctx.fillStyle = 'rgba(160,210,255,' + (0.9 * b) + ')';
+              ctx.beginPath();
+              ctx.arc(n.x, n.y, n.r * 1.4, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+        }
+
+        function frame() {
+          var w = canvas.width, h = canvas.height;
+          ctx.clearRect(0, 0, w, h);
+
+          // Ease from full speed to ~10% over the splash duration
+          var elapsed = Date.now() - startTime;
+          var t = Math.min(elapsed / SPLASH_MS, 1);
+          var speedMul = 1 - 0.9 * t * t; // quadratic ease-out to 0.1
+
+          // update nodes
+          for (var i = 0; i < nodes.length; i++) {
+            var n = nodes[i];
+            n.x += n.vx * speedMul; n.y += n.vy * speedMul;
+            if (n.x < PAD || n.x > w - PAD) n.vx *= -1;
+            if (n.y < PAD || n.y > h - PAD) n.vy *= -1;
+            n.x = Math.max(PAD, Math.min(w - PAD, n.x));
+            n.y = Math.max(PAD, Math.min(h - PAD, n.y));
+          }
+
+          // lines
+          for (var i = 0; i < nodes.length; i++) {
+            for (var j = i + 1; j < nodes.length; j++) {
+              var dx = nodes[i].x - nodes[j].x;
+              var dy = nodes[i].y - nodes[j].y;
+              var d  = Math.sqrt(dx * dx + dy * dy);
+              if (d < MAX_LINK) {
+                var ratio = d / MAX_LINK;
+                var alpha = 0.45 * (1 - ratio) * (1 - ratio);
+                ctx.strokeStyle = 'rgba(59,100,180,' + alpha + ')';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(nodes[i].x, nodes[i].y);
+                ctx.lineTo(nodes[j].x, nodes[j].y);
+                ctx.stroke();
+              }
+            }
+          }
+
+          // dots
+          ctx.fillStyle = 'rgba(100,140,210,0.6)';
+          for (var i = 0; i < nodes.length; i++) {
+            ctx.beginPath();
+            ctx.arc(nodes[i].x, nodes[i].y, nodes[i].r, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          // chain highlights
+          updateChains();
+          drawChains();
+
+          raf = requestAnimationFrame(frame);
+        }
+
+        resize();
+        initNodes();
+        raf = requestAnimationFrame(frame);
+        window.addEventListener('resize', function () {
+          resize();
+        });
+
+        /* ── Trigger logo/text entrance after layout is settled ── */
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            document.getElementById('splash-logo-wrap').classList.add('visible');
+            // Text enters slightly later for parallax feel
+            setTimeout(function () {
+              document.getElementById('splash-text').classList.add('visible');
+            }, 120);
+          });
+        });
+
+        /* ── Readiness flag for React ── */
+        window.__splashReady = false;
+        setTimeout(function () {
+          window.__splashReady = true;
+        }, SPLASH_MS);
+
+        /* ── Click-to-skip (only after timer) ── */
+        document.getElementById('static-splash').addEventListener('click', function () {
+          if (window.__splashReady) {
+            window.__splashSkipped = true;
+            // dispatch a custom event so React can react immediately
+            window.dispatchEvent(new Event('splash-ready'));
+          }
+        });
+
+        // Also fire the event when timer completes
+        setTimeout(function () {
+          window.dispatchEvent(new Event('splash-ready'));
+        }, SPLASH_MS);
+
+        /* ── Cleanup helper (called by React) ── */
+        window.__splashCleanup = function () {
+          cancelAnimationFrame(raf);
+          var el = document.getElementById('static-splash');
+          if (el) el.classList.add('hidden');
+        };
+      })();
+    </script>
+
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

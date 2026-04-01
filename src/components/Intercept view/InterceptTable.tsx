@@ -110,13 +110,13 @@ export function InterceptTable() {
   );
 
   const tableContainerRef = useRef<HTMLDivElement>(null);
-  const [isNarrow, setIsNarrow] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
 
   useEffect(() => {
     const el = tableContainerRef.current;
     if (!el) return;
     const obs = new ResizeObserver(([entry]) => {
-      setIsNarrow(entry.contentRect.width < 480);
+      setIsTablet(entry.contentRect.width < 768);
     });
     obs.observe(el);
     return () => obs.disconnect();
@@ -230,7 +230,10 @@ export function InterceptTable() {
           <div className="w-full flex-shrink-0">
             <div className="flex bg-app-main border-b border-app-subtle">
               {columnDefs
-                .filter((col) => !isNarrow || (col.id !== 'contentType' && col.id !== 'size'))
+                .filter((col) => {
+                  if (isTablet && (col.id === 'contentType' || col.id === 'size' || col.id === 'timestamp')) return false;
+                  return true;
+                })
                 .map((col) => (
                   <div
                     key={col.id}
@@ -276,9 +279,11 @@ export function InterceptTable() {
                     onClick={() => setSelectedRequestId(req.id)}
                   >
                     {/* Timestamp */}
-                    <div className="px-2 text-xs text-app-muted w-[100px] shrink-0 tabular-nums">
-                      {formatTimestamp(req.timestamp)}
-                    </div>
+                    {!isTablet && (
+                      <div className="px-2 text-xs text-app-muted w-[100px] shrink-0 tabular-nums">
+                        {formatTimestamp(req.timestamp)}
+                      </div>
+                    )}
                     {/* Host + Path — dominant column */}
                     <div className="px-2 text-xs text-app-primary flex-1 min-w-0 flex items-center gap-1 overflow-hidden">
                       <span className="truncate" title={fullUrl}>
@@ -325,7 +330,7 @@ export function InterceptTable() {
                       {formatStatusCode(req.statusCode, req.isPending)}
                     </div>
                     {/* Content-Type */}
-                    {!isNarrow && (
+                    {!isTablet && (
                       <div className="px-2 w-[100px] shrink-0 text-xs text-app-muted overflow-hidden">
                         <span
                           className="truncate block"
@@ -336,7 +341,7 @@ export function InterceptTable() {
                       </div>
                     )}
                     {/* Size */}
-                    {!isNarrow && (
+                    {!isTablet && (
                       <div className="px-2 w-[70px] shrink-0 text-xs text-app-muted tabular-nums">
                         {formatSize(req.size)}
                       </div>

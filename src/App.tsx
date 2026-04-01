@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { AppTabs } from '@/components/AppTabs/AppTabs';
 import { FetchView } from '@/components/FetchView/FetchView';
-import { SplashScreen } from '@/components/Layout/SplashScreen';
 import { TourController } from '@/components/Layout/TourController';
 import { KeyboardShortcutsModal } from '@/components/ui/KeyboardShortcutsModal';
 import { WhatsNewModal } from '@/components/ui/WhatsNewModal';
@@ -14,6 +13,13 @@ import { seedSampleDataIfNeeded } from '@/lib/seedSampleData';
 import { getCurrentVersion, isNewVersion } from '@/lib/appVersion';
 import { parseChangelog } from '@/lib/parseChangelog';
 import changelogRaw from '../CHANGELOG.md?raw';
+
+declare global {
+  interface Window {
+    __splashReady?: boolean;
+    __splashCleanup?: () => void;
+  }
+}
 
 async function persistLastSeenVersion(version: string): Promise<void> {
   try {
@@ -33,15 +39,34 @@ function App() {
 
   const method = useRequestStore((s) => s.method);
   const hasCompletedTour = useTourStore((s) => s.hasCompletedTour);
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(!window.__splashReady);
   const [showTour, setShowTour] = useState(false);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
   const [showWhatsNew, setShowWhatsNew] = useState(false);
 
-  function handleSplashComplete() {
-    setShowSplash(false);
-    setTimeout(() => setShowTour(true), 500);
-  }
+  // Wait for the static splash to finish, then hide it and show the app
+  useEffect(() => {
+    if (!showSplash) {
+      // Already done (e.g. React loaded after 5s)
+      window.__splashCleanup?.();
+      return;
+    }
+
+    function onReady() {
+      setShowSplash(false);
+      window.__splashCleanup?.();
+      setTimeout(() => setShowTour(true), 500);
+    }
+
+    // If splash already finished before React mounted
+    if (window.__splashReady) {
+      onReady();
+      return;
+    }
+
+    window.addEventListener('splash-ready', onReady, { once: true });
+    return () => window.removeEventListener('splash-ready', onReady);
+  }, [showSplash]);
 
   // Set window title with version
   useEffect(() => {
@@ -87,7 +112,8 @@ function App() {
   }, []);
 
   if (showSplash) {
-    return <SplashScreen onComplete={handleSplashComplete} />;
+    // Static HTML splash is already visible — render nothing until it finishes
+    return null;
   }
 
   return (

@@ -73,6 +73,8 @@ interface MappingsState {
     startEditing: (mapping?: Mapping, folderId?: string | null) => void;
     cancelEditing: () => void;
     saveMapping: (form: MappingEditForm) => Promise<void>;
+    /** Save without closing the editor. Returns the mapping id (useful for newly created mappings). */
+    silentSave: (form: MappingEditForm) => Promise<string>;
 }
 
 export const useMappingsStore = create<MappingsState>()(
@@ -167,6 +169,32 @@ export const useMappingsStore = create<MappingsState>()(
                 },
             });
             await syncMappingsToProxy(get().mappings);
+        },
+
+        silentSave: async (form: MappingEditForm) => {
+            let savedId = form.id;
+            await saveEntity({
+                form,
+                dbCreate: (f) => dbCreateMapping(f.folderId, f.name, f.urlPattern, f.matchType),
+                dbUpdate: dbUpdateMapping,
+                formToDbChanges: mappingFormToDb,
+                applyToState: (entity, isNew) => {
+                    savedId = entity.id;
+                    set((state) => {
+                        if (isNew) {
+                            state.mappings.push(entity as unknown as Mapping);
+                        } else {
+                            const m = state.mappings.find((x) => x.id === form.id);
+                            if (m) Object.assign(m, mappingFormToDb(form));
+                        }
+                        // Do NOT update editForm.id here — the component tracks it
+                        // via mappingIdRef, and changing editForm.id would change the
+                        // React key, remounting the editor and losing local state.
+                    });
+                },
+            });
+            await syncMappingsToProxy(get().mappings);
+            return savedId!;
         },
     })),
 );
