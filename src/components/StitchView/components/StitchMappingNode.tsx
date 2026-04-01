@@ -31,7 +31,7 @@ export const StitchMappingNode = React.memo(function StitchMappingNode({
   onSelect,
   onUpdatePosition,
   onUpdateLabel,
-  onDelete,
+  onDelete: _onDelete,
   onConnectionDrop,
   executionStatus = null,
 }: StitchMappingNodeProps): React.ReactElement {
@@ -100,17 +100,17 @@ export const StitchMappingNode = React.memo(function StitchMappingNode({
   }, []);
 
   const handleContextMenu = useCallback((e: React.MouseEvent): void => {
+    // Mapping containers are mapper-bound — prevent accidental deletion via right-click
     e.preventDefault();
     e.stopPropagation();
-    onDelete(node.id);
-  }, [node.id, onDelete]);
+  }, []);
 
   const handleKeyDown = useCallback((e: KeyboardEvent<HTMLDivElement>): void => {
+    // Prevent keyboard deletion of mapper-bound containers
     if ((e.key === 'Delete' || e.key === 'Backspace') && selected && !editing) {
       e.preventDefault();
-      onDelete(node.id);
     }
-  }, [selected, editing, node.id, onDelete]);
+  }, [selected, editing]);
 
   const handleOutputPortDown = useCallback((e: PointerEvent<HTMLDivElement>): void => {
     e.stopPropagation();
@@ -222,9 +222,9 @@ export const StitchMappingNode = React.memo(function StitchMappingNode({
         </button>
       </div>
 
-      {/* Drop zone body */}
+      {/* Drop zone body — pointer-events-none so clicks pass through to connection lines behind */}
       <div
-        className="relative"
+        className="pointer-events-none relative"
         style={{ minHeight: bounds.height }}
         data-testid="mapping-drop-zone"
       >
