@@ -121,31 +121,14 @@ export const useStitchStore = create<StitchState>()(
       // If chain is bound to a mapper, unhook it
       const chain = useStitchStore.getState().chains.find((c) => c.id === id);
       if (chain?.mappingId) {
+        const { updateMapping } = await import('@/lib/mappings');
+        await updateMapping(chain.mappingId, { use_chain: false, chain_id: null }).catch(() => {});
+        // Patch in-memory mapping state
         const { useMappingsStore } = await import('@/stores/mappingsStore');
-        const mappingsState = useMappingsStore.getState();
-        const mapping = mappingsState.mappings.find((m) => m.id === chain.mappingId);
-        if (mapping) {
-          await mappingsState.saveMapping({
-            ...mappingsState.editForm,
-            id: mapping.id,
-            name: mapping.name,
-            urlPattern: mapping.url_pattern,
-            matchType: mapping.match_type,
-            enabled: mapping.enabled,
-            folderId: mapping.folder_id,
-            headersAdd: mapping.headers_add,
-            headersRemove: mapping.headers_remove,
-            cookies: mapping.cookies,
-            responseBodyEnabled: mapping.response_body_enabled,
-            responseBody: mapping.response_body,
-            responseBodyContentType: mapping.response_body_content_type,
-            responseBodyFilePath: mapping.response_body_file_path,
-            urlRemapEnabled: mapping.url_remap_enabled,
-            urlRemapTarget: mapping.url_remap_target,
-            useChain: false,
-            chainId: null,
-          });
-        }
+        useMappingsStore.setState((state) => {
+          const m = state.mappings.find((x) => x.id === chain.mappingId);
+          if (m) { m.use_chain = false; m.chain_id = null; }
+        });
       }
       await stitchDb.deleteChain(id);
       set((state) => {

@@ -116,7 +116,7 @@ export async function updateMapping(
     changes: Partial<Pick<Mapping,
         'name' | 'url_pattern' | 'match_type' | 'enabled' |
         'response_body_enabled' | 'response_body' | 'response_body_content_type' | 'response_body_file_path' |
-        'url_remap_enabled' | 'url_remap_target'> & {
+        'url_remap_enabled' | 'url_remap_target' | 'use_chain' | 'chain_id'> & {
         headers_add?: MappingHeader[];
         headers_remove?: MappingHeader[];
         cookies?: MappingCookie[];
@@ -126,6 +126,7 @@ export async function updateMapping(
         enabled: boolToInt,
         response_body_enabled: boolToInt,
         url_remap_enabled: boolToInt,
+        use_chain: boolToInt,
         headers_add: toJson,
         headers_remove: toJson,
         cookies: toJson,

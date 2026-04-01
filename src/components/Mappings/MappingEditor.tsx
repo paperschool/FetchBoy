@@ -175,6 +175,7 @@ export function MappingEditor({ onClose }: Props) {
                                     ))}
                                 </div>
                             </div>
+                            <div className="flex items-center gap-2">
                             <button type="button"
                                 onClick={() => { if (editForm.id) void toggleEnabled(editForm.id); else setLocalEnabled((e) => !e); }}
                                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
@@ -233,6 +234,7 @@ export function MappingEditor({ onClose }: Props) {
                                 <Workflow size={13} />
                                 {useChain ? 'Chain Active' : 'Use Chain'}
                             </button>
+                            </div>
                         </>
                     )}
                     {activeTab === 'headers' && (
