@@ -1,8 +1,8 @@
-import { useMemo, useCallback, useState, useEffect } from 'react';
+import { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import { useStitchStore } from '@/stores/stitchStore';
 import { ConnectionLine } from './ConnectionLine';
 import { useConnectionDrag } from './StitchConnectionDragContext';
-import { getNodeOutputKeys } from '../utils/nodeOutputKeys';
+import { getNodeOutputKeys, getNodeInputKeys } from '../utils/nodeOutputKeys';
 import type { StitchNode, StitchConnection } from '@/types/stitch';
 
 const NODE_WIDTH = 180;
@@ -32,7 +32,17 @@ function measureNodeWidth(nodeId: string): number {
   return el ? (el as HTMLElement).offsetWidth : NODE_WIDTH;
 }
 
-function getInputSlotPosition(node: StitchNode): { x: number; y: number } {
+function getInputSlotPosition(node: StitchNode, targetSlot?: string | null): { x: number; y: number } {
+  const inputKeys = getNodeInputKeys(node);
+  if (targetSlot && inputKeys.length > 0) {
+    const idx = inputKeys.indexOf(targetSlot);
+    if (idx >= 0) {
+      const count = inputKeys.length;
+      const offset = count === 1 ? 0.5 : idx / (count - 1);
+      const leftPercent = (10 + offset * 80) / 100;
+      return { x: node.positionX + NODE_WIDTH * leftPercent, y: node.positionY + INPUT_SLOT_OFFSET_Y };
+    }
+  }
   const width = node.type === 'loop' ? measureNodeWidth(node.id) : NODE_WIDTH;
   return { x: node.positionX + width / 2, y: node.positionY + INPUT_SLOT_OFFSET_Y };
 }
@@ -46,11 +56,18 @@ export function ConnectionLayer(): React.ReactElement {
   const { drag } = useConnectionDrag();
 
   // Force recalculation after DOM paints (node heights not available during initial render)
+  // Double-rAF ensures the browser has fully laid out and painted the nodes
   const [calibrated, setCalibrated] = useState(0);
+  const calibrateRef = useRef<number | null>(null);
   useEffect(() => {
-    const id = requestAnimationFrame(() => setCalibrated((c) => c + 1));
-    return () => cancelAnimationFrame(id);
-  }, [nodes]);
+    const id1 = requestAnimationFrame(() => {
+      calibrateRef.current = requestAnimationFrame(() => setCalibrated((c) => c + 1));
+    });
+    return () => {
+      cancelAnimationFrame(id1);
+      if (calibrateRef.current) cancelAnimationFrame(calibrateRef.current);
+    };
+  }, [nodes, connections]);
 
   const nodeMap = useMemo(() => {
     const map = new Map<string, StitchNode>();
@@ -84,7 +101,7 @@ export function ConnectionLayer(): React.ReactElement {
       const from = conn.sourceKey
         ? getOutputPortPosition(sourceNode, conn.sourceKey, sourceKeys)
         : { x: sourceNode.positionX + measureNodeWidth(sourceNode.id) / 2, y: sourceNode.positionY + measureNodeHeight(sourceNode.id) };
-      const to = getInputSlotPosition(targetNode);
+      const to = getInputSlotPosition(targetNode, conn.targetSlot);
 
       const status = conn.id === selectedConnectionId
         ? 'selected' as const

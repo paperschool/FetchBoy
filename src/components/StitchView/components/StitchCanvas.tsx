@@ -32,6 +32,8 @@ function StitchCanvasInner(): React.ReactElement {
   const removeNode = useStitchStore((s) => s.removeNode);
   const addConnection = useStitchStore((s) => s.addConnection);
   const activeChainId = useStitchStore((s) => s.activeChainId);
+  const chains = useStitchStore((s) => s.chains);
+  const isMapperChain = chains.find((c) => c.id === activeChainId)?.mappingId != null;
   const selectConnection = useStitchStore((s) => s.selectConnection);
   const selectedConnectionId = useStitchStore((s) => s.selectedConnectionId);
   const removeConnection = useStitchStore((s) => s.removeConnection);
@@ -45,7 +47,7 @@ function StitchCanvasInner(): React.ReactElement {
   const { drag, consumeDroppedDrag } = useConnectionDrag();
   const connectionMadeRef = useRef(false);
 
-  const { transform, canvasRef, onPointerDown, onPointerMove, onPointerUp, zoomIn, zoomOut, zoomReset } =
+  const { transform, canvasRef, onPointerDown, onPointerMove, onPointerUp, zoomIn, zoomOut, zoomReset, frameAll } =
     useCanvasTransform();
 
   const handlePlay = useCallback((): void => {
@@ -85,9 +87,20 @@ function StitchCanvasInner(): React.ReactElement {
   }, [selectNode, selectConnection]);
 
   const handleConnectionDrop = useCallback(
-    (targetNodeId: string): void => {
+    async (targetNodeId: string, targetSlot?: string): Promise<void> => {
       if (!drag || !activeChainId) return;
       const sourceKey = drag.sourceKey === '__output__' ? null : drag.sourceKey;
+      const slot = targetSlot ?? 'input';
+
+      // Exit node: disconnect existing incoming connection to this port before rewiring
+      const targetNode = nodes.find((n) => n.id === targetNodeId);
+      if (targetNode?.type === 'mapping-exit' && slot && slot !== 'input') {
+        const existing = connections.find(
+          (c) => c.targetNodeId === targetNodeId && c.targetSlot === slot,
+        );
+        if (existing) await removeConnection(existing.id).catch(() => {});
+      }
+
       const result = validateConnection(drag.sourceNodeId, sourceKey, targetNodeId, connections);
       if (!result.valid) return;
       connectionMadeRef.current = true;
@@ -96,10 +109,10 @@ function StitchCanvasInner(): React.ReactElement {
         sourceNodeId: drag.sourceNodeId,
         sourceKey,
         targetNodeId,
-        targetSlot: 'input',
+        targetSlot: slot,
       }).catch(() => {});
     },
-    [drag, activeChainId, connections, addConnection],
+    [drag, activeChainId, connections, nodes, addConnection, removeConnection],
   );
 
   const handleKeyDown = useCallback(
@@ -231,6 +244,8 @@ function StitchCanvasInner(): React.ReactElement {
       }
       // Can't delete mapping entry/exit nodes individually
       if (nodeToDelete?.type === 'mapping-entry' || nodeToDelete?.type === 'mapping-exit') return;
+      // Can't delete the mapping container in mapper-bound chains
+      if (isMapperChain && nodeToDelete?.type === 'mapping') return;
       // Delete children first if deleting a container node (loop or mapping)
       if (nodeToDelete?.type === 'loop' || nodeToDelete?.type === 'mapping') {
         const children = nodes.filter((n) => n.parentNodeId === id);
@@ -240,7 +255,7 @@ function StitchCanvasInner(): React.ReactElement {
       }
       removeNode(id).catch(() => {});
     },
-    [removeNode, nodes],
+    [removeNode, nodes, isMapperChain],
   );
 
   const createMappingChildren = useCallback(
@@ -265,13 +280,16 @@ function StitchCanvasInner(): React.ReactElement {
         parentNodeId: mappingNodeId,
       });
       Promise.all([entryPromise, exitPromise]).then(async ([entry, exit]) => {
-        await addConnection({
-          chainId: activeChainId,
-          sourceNodeId: entry.id,
-          sourceKey: null,
-          targetNodeId: exit.id,
-          targetSlot: 'input',
-        }).catch(() => {});
+        // Create one connection per output key from entry → exit (keyed input ports)
+        for (const key of ['status', 'headers', 'body', 'cookies']) {
+          await addConnection({
+            chainId: activeChainId,
+            sourceNodeId: entry.id,
+            sourceKey: key,
+            targetNodeId: exit.id,
+            targetSlot: key,
+          }).catch(() => {});
+        }
         rebalanceMapping(mappingNodeId);
       }).catch(() => {});
     },
@@ -299,7 +317,7 @@ function StitchCanvasInner(): React.ReactElement {
 
   const handleAddNode = useCallback(
     (type: StitchNodeType): void => {
-      if (!activeChainId) return;
+      if (!activeChainId || isMapperChain) return;
       const existingOfType = nodes.filter((n) => n.type === type).length;
       const labelMap: Record<string, string> = { 'js-snippet': 'Snippet', 'json-object': 'JSON', sleep: 'Sleep', loop: 'Loop', request: 'Request', merge: 'Merge', condition: 'Condition', mapping: 'Mapping' };
       const label = `${labelMap[type] ?? type} ${existingOfType + 1}`;
@@ -327,7 +345,7 @@ function StitchCanvasInner(): React.ReactElement {
         if (type === 'mapping') createMappingChildren(newNode.id);
       }).catch((err) => { console.error('[stitch] addNode failed:', err); });
     },
-    [activeChainId, nodes, addNode, transform, createLoopEntrySnippet, createMappingChildren],
+    [activeChainId, isMapperChain, nodes, addNode, transform, createLoopEntrySnippet, createMappingChildren],
   );
 
   // ─── Canvas context menu ───────────────────────────────────────────
@@ -346,13 +364,17 @@ function StitchCanvasInner(): React.ReactElement {
     const dropped = consumeDroppedDrag();
     if (!dropped || connectionMadeRef.current) return;
 
+    const sourceNode = nodes.find((n) => n.id === dropped.sourceNodeId);
+
+    // Mapper chains: only allow drag-drop context menu for nodes inside the container
+    if (isMapperChain && !sourceNode?.parentNodeId) return;
+
     // Convert cursor canvas coords to screen coords for the menu position
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
     const screenX = rect.left + dropped.cursorX * transform.zoom + transform.panX;
     const screenY = rect.top + dropped.cursorY * transform.zoom + transform.panY;
     const sourceKey = dropped.sourceKey === '__output__' ? null : dropped.sourceKey;
-    const sourceNode = nodes.find((n) => n.id === dropped.sourceNodeId);
 
     setContextMenu({
       x: screenX,
@@ -361,18 +383,20 @@ function StitchCanvasInner(): React.ReactElement {
       canvasY: dropped.cursorY,
       pendingSource: { nodeId: dropped.sourceNodeId, sourceKey, parentNodeId: sourceNode?.parentNodeId ?? null },
     });
-  }, [drag, consumeDroppedDrag, transform, canvasRef]);
+  }, [drag, consumeDroppedDrag, transform, canvasRef, isMapperChain, nodes]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent): void => {
     // Only show on empty canvas, not on nodes
     if ((e.target as HTMLElement).closest('[data-stitch-node]')) return;
     e.preventDefault();
+    // Mapper chains don't allow adding nodes outside the container
+    if (isMapperChain) return;
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
     const canvasX = (e.clientX - rect.left - transform.panX) / transform.zoom;
     const canvasY = (e.clientY - rect.top - transform.panY) / transform.zoom;
     setContextMenu({ x: e.clientX, y: e.clientY, canvasX, canvasY });
-  }, [transform, canvasRef]);
+  }, [isMapperChain, transform, canvasRef]);
 
   const handleContextAdd = useCallback((type: StitchNodeType): void => {
     if (!activeChainId || !contextMenu) return;
@@ -431,7 +455,7 @@ function StitchCanvasInner(): React.ReactElement {
         className="flex shrink-0 items-center gap-2 border-b border-app-subtle bg-app-sidebar px-3 py-1.5"
         data-stitch-toolbar
       >
-        <AddNodeMenu onAddNode={handleAddNode} />
+        <AddNodeMenu onAddNode={handleAddNode} disabled={isMapperChain} />
         <div className="mx-1 h-4 w-px bg-app-subtle" />
         {isRunning ? (
           <button
@@ -491,8 +515,8 @@ function StitchCanvasInner(): React.ReactElement {
         </button>
         <button
           className="rounded p-1 text-app-muted hover:bg-app-hover hover:text-app-secondary"
-          onClick={zoomReset}
-          title="Reset zoom"
+          onClick={() => nodes.length > 0 ? frameAll(nodes) : zoomReset()}
+          title="Frame all nodes"
         >
           <Maximize size={14} />
         </button>

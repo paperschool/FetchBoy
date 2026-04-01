@@ -18,7 +18,7 @@ interface StitchLoopNodeProps {
   onUpdatePosition: (id: string, x: number, y: number) => void;
   onUpdateLabel: (id: string, label: string) => void;
   onDelete: (id: string) => void;
-  onConnectionDrop?: (targetNodeId: string) => void;
+  onConnectionDrop?: (targetNodeId: string, targetSlot?: string) => void;
   executionStatus?: ExecutionNodeStatus | null;
   connections?: StitchConnection[];
 }

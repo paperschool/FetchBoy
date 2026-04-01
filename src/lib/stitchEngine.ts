@@ -94,16 +94,22 @@ export function resolveNodeInputs(
       continue;
     }
     const key = conn.sourceKey;
+    // Named target slot — use targetSlot as the input key name when specified
+    const targetKey = conn.targetSlot && conn.targetSlot !== 'input' ? conn.targetSlot : null;
     if (key) {
       // Keyed connection — extract a specific key from source output
+      let value: unknown;
       if (typeof sourceOutput === 'object' && sourceOutput !== null && !Array.isArray(sourceOutput) && key in sourceOutput) {
-        inputs[key] = (sourceOutput as Record<string, unknown>)[key];
+        value = (sourceOutput as Record<string, unknown>)[key];
       } else {
-        inputs[key] = undefined;
+        value = undefined;
       }
+      inputs[targetKey ?? key] = value;
     } else {
       // Null key (single-port connection) — pass the raw value through
-      if (typeof sourceOutput === 'object' && sourceOutput !== null && !Array.isArray(sourceOutput)) {
+      if (targetKey) {
+        inputs[targetKey] = sourceOutput;
+      } else if (typeof sourceOutput === 'object' && sourceOutput !== null && !Array.isArray(sourceOutput)) {
         // Object: spread its keys into input
         Object.assign(inputs, sourceOutput);
       } else {
@@ -382,11 +388,20 @@ export function executeMappingEntryNode(
   _node: StitchNode,
   input: Record<string, unknown>,
 ): Record<string, unknown> {
-  // Entry node outputs the incoming request data (or sample data for manual runs)
+  const hdrs = (input.headers as Record<string, string>) ?? {};
+  const cookieStr = hdrs['cookie'] ?? hdrs['Cookie'] ?? '';
+  const cookies: Record<string, string> = {};
+  if (cookieStr) {
+    for (const pair of cookieStr.split(';')) {
+      const [k, ...v] = pair.split('=');
+      if (k?.trim()) cookies[k.trim()] = v.join('=').trim();
+    }
+  }
   return {
     status: input.status ?? 200,
     headers: input.headers ?? {},
     body: input.body ?? {},
+    cookies,
   };
 }
 
@@ -396,21 +411,39 @@ export function executeMappingExitNode(
 ): Record<string, unknown> {
   const config = node.config as unknown as MappingExitNodeConfig;
 
-  const interpolate = (str: string): string =>
-    str.replace(/\{\{(\w+)\}\}/g, (_, key: string) => {
-      if (key in input) return String(input[key]);
-      return `{{${key}}}`;
-    });
+  const status = input.status ?? config.status ?? 200;
 
-  const headers: Record<string, string> = {};
-  for (const h of config.headers ?? []) {
-    if (h.key) headers[interpolate(h.key)] = interpolate(h.value);
+  let headers: Record<string, string> = {};
+  if (input.headers && typeof input.headers === 'object' && !Array.isArray(input.headers)) {
+    headers = { ...(input.headers as Record<string, string>) };
+  } else {
+    for (const h of config.headers ?? []) {
+      if (h.key) headers[h.key] = h.value;
+    }
   }
 
+  if (input.cookies && typeof input.cookies === 'object' && !Array.isArray(input.cookies)) {
+    const cookieEntries = Object.entries(input.cookies as Record<string, string>);
+    if (cookieEntries.length > 0) {
+      headers['Set-Cookie'] = cookieEntries.map(([k, v]) => `${k}=${v}`).join(', ');
+    }
+  } else {
+    const setCookies: string[] = [];
+    for (const c of config.cookies ?? []) {
+      if (c.key) setCookies.push(`${c.key}=${c.value}`);
+    }
+    if (setCookies.length > 0) {
+      headers['Set-Cookie'] = setCookies.join(', ');
+    }
+  }
+
+  let body: unknown = input.body ?? config.body ?? '';
+  if (typeof body === 'object' && body !== null) body = JSON.stringify(body);
+
   return {
-    status: config.status ?? 200,
+    status,
     headers,
-    body: interpolate(config.body ?? ''),
+    body,
     bodyContentType: config.bodyContentType ?? 'application/json',
   };
 }
@@ -439,7 +472,6 @@ export async function executeMappingNode(
     throw new Error(`Mapping node "${mappingNode.label ?? mappingNode.id}": ${(err as Error).message}`);
   }
 
-  // Find exit node to capture its output
   const exitNode = sortedChildren.find((n) => n.type === 'mapping-exit');
   const exitNodeId = exitNode?.id ?? sortedChildren[sortedChildren.length - 1].id;
 
@@ -453,7 +485,6 @@ export async function executeMappingNode(
 
     const childInput = resolveNodeInputs(childNode.id, childConnections, ctx);
 
-    // Entry node gets the mapping input (intercepted request data)
     if (childNode.type === 'mapping-entry') {
       Object.assign(childInput, input);
     }

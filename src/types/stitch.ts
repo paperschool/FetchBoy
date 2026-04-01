@@ -117,6 +117,7 @@ export interface MappingExitNodeConfig {
   isExitNode: true;
   status: number;
   headers: Array<{ key: string; value: string }>;
+  cookies: Array<{ key: string; value: string }>;
   body: string;
   bodyContentType: string;
 }
@@ -125,6 +126,7 @@ export const DEFAULT_MAPPING_EXIT_CONFIG: MappingExitNodeConfig = {
   isExitNode: true,
   status: 200,
   headers: [],
+  cookies: [],
   body: '',
   bodyContentType: 'application/json',
 };

@@ -21,8 +21,9 @@ node_modules/
 
 # local agentic configuations
 _bmad
-_bmad-output
+_bmad-output/*
 .claude
+.cline
 .clinerules
 CLAUDE.md
 .github/copilot-instructions.md

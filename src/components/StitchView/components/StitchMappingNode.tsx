@@ -2,7 +2,6 @@ import React, { useCallback, useRef, useState, useMemo, type PointerEvent, type 
 import { Globe, Eye } from 'lucide-react';
 import type { StitchNode as StitchNodeType, StitchConnection, ExecutionNodeStatus, MappingNodeConfig } from '@/types/stitch';
 import { useStitchStore } from '@/stores/stitchStore';
-import { useConnectionDrag } from './StitchConnectionDragContext';
 
 const MAPPING_PADDING = 20;
 const MAPPING_HEADER_HEIGHT = 32;
@@ -18,7 +17,7 @@ interface StitchMappingNodeProps {
   onUpdatePosition: (id: string, x: number, y: number) => void;
   onUpdateLabel: (id: string, label: string) => void;
   onDelete: (id: string) => void;
-  onConnectionDrop?: (targetNodeId: string) => void;
+  onConnectionDrop?: (targetNodeId: string, targetSlot?: string) => void;
   executionStatus?: ExecutionNodeStatus | null;
   connections?: StitchConnection[];
 }
@@ -32,10 +31,9 @@ export const StitchMappingNode = React.memo(function StitchMappingNode({
   onUpdatePosition,
   onUpdateLabel,
   onDelete: _onDelete,
-  onConnectionDrop,
+  onConnectionDrop: _onConnectionDrop,
   executionStatus = null,
 }: StitchMappingNodeProps): React.ReactElement {
-  const { drag, startDrag, updateCursor, endDrag } = useConnectionDrag();
   const nodeRef = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
@@ -112,33 +110,6 @@ export const StitchMappingNode = React.memo(function StitchMappingNode({
     }
   }, [selected, editing]);
 
-  const handleOutputPortDown = useCallback((e: PointerEvent<HTMLDivElement>): void => {
-    e.stopPropagation();
-    e.preventDefault();
-    const portX = node.positionX + bounds.width / 2;
-    const portY = node.positionY + MAPPING_HEADER_HEIGHT + bounds.height;
-    startDrag(node.id, '__output__', portX, portY);
-    const onMove = (ev: globalThis.PointerEvent): void => {
-      const dx = (ev.clientX - e.clientX) / zoom;
-      const dy = (ev.clientY - e.clientY) / zoom;
-      updateCursor(portX + dx, portY + dy);
-    };
-    const onUp = (): void => {
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-      endDrag();
-    };
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
-  }, [node.id, node.positionX, node.positionY, bounds, zoom, startDrag, updateCursor, endDrag]);
-
-  const handleInputSlotPointerUp = useCallback((): void => {
-    if (drag && drag.sourceNodeId !== node.id && onConnectionDrop) {
-      onConnectionDrop(node.id);
-    }
-  }, [drag, node.id, onConnectionDrop]);
-
-  const isDragTarget = drag !== null && drag.sourceNodeId !== node.id;
   const displayLabel = node.label || 'Mapping';
   const urlHint = config.urlPattern ? config.urlPattern : '';
 
@@ -165,15 +136,6 @@ export const StitchMappingNode = React.memo(function StitchMappingNode({
       onContextMenu={handleContextMenu}
       onKeyDown={handleKeyDown}
     >
-      {/* Input port */}
-      <div
-        className={`pointer-events-auto absolute -top-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full border-2 bg-app-main transition-colors ${
-          isDragTarget ? 'border-green-500 scale-150' : 'border-yellow-500/50'
-        }`}
-        onPointerUp={handleInputSlotPointerUp}
-        data-testid="mapping-input-slot"
-      />
-
       {/* Header — pointer-events-auto so dragging works */}
       <div
         className={`pointer-events-auto flex cursor-grab items-center gap-1.5 rounded-t-lg px-2 py-1.5 bg-yellow-500/15 ${dragging ? 'cursor-grabbing' : ''}`}
@@ -235,12 +197,6 @@ export const StitchMappingNode = React.memo(function StitchMappingNode({
         )}
       </div>
 
-      {/* Output port */}
-      <div
-        className="pointer-events-auto absolute -bottom-1.5 left-1/2 h-3 w-3 -translate-x-1/2 cursor-crosshair rounded-full border-2 border-yellow-500/50 bg-app-main transition-transform hover:scale-150 hover:border-blue-500"
-        data-testid="mapping-output-port"
-        onPointerDown={handleOutputPortDown}
-      />
     </div>
   );
 });

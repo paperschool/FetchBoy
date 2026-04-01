@@ -360,6 +360,15 @@ export const useStitchStore = create<StitchState>()(
             state.executionCurrentNodeId = null;
             state.sleepCountdown = null;
           });
+          // Fade out green highlights after 4 seconds so subsequent runs are visible
+          setTimeout(() => {
+            set((state) => {
+              if (state.executionState === 'completed') {
+                state.executionNodeOutputs = {};
+                state.executionState = 'idle';
+              }
+            });
+          }, 4000);
         },
       };
 

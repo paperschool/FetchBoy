@@ -4,7 +4,8 @@ import { useTauriListener } from '@/hooks/useTauriListener';
 import { loadChainWithNodes } from '@/lib/stitch';
 import { executeMappingNode } from '@/lib/stitchEngine';
 import { useEnvironmentStore } from '@/stores/environmentStore';
-import type { ExecutionCallbacks } from '@/types/stitch';
+import { useStitchStore } from '@/stores/stitchStore';
+import type { ExecutionCallbacks, StitchNode } from '@/types/stitch';
 
 interface ChainExecutionRequestPayload {
   requestId: string;
@@ -47,13 +48,105 @@ export function useChainExecutionListener(): void {
         }
       }
 
-      // Silent callbacks — no UI state updates
+      // Show visual feedback and debug log if the fired chain is currently being viewed
+      const isActiveChain = useStitchStore.getState().activeChainId === chainId;
+      const startTime = Date.now();
+      const findNode = (id: string): StitchNode | undefined => nodes.find((n) => n.id === id);
+
+      if (isActiveChain) {
+        useStitchStore.setState((s) => {
+          s.executionState = 'running';
+          s.executionNodeOutputs = {};
+          s.executionError = null;
+          s.executionLogs = [];
+          s.executionStartTime = startTime;
+          s.bottomPanel = 'debug';
+        });
+      }
+
       const callbacks: ExecutionCallbacks = {
-        onNodeStart: () => {},
-        onNodeComplete: () => {},
-        onError: () => {},
-        onSleepStart: () => {},
-        onChainComplete: () => {},
+        onNodeStart: (nodeId, loopCtx) => {
+          if (!isActiveChain) return;
+          const node = findNode(nodeId);
+          useStitchStore.setState((s) => {
+            s.executionCurrentNodeId = nodeId;
+            s.executionLogs.push({
+              nodeId,
+              nodeLabel: node?.label ?? '',
+              nodeType: node?.type ?? 'json-object',
+              status: 'started',
+              timestamp: Date.now() - startTime,
+              url: node?.type === 'request' ? (node.config as { url?: string }).url : undefined,
+              loopIteration: loopCtx?.iteration,
+              loopNodeId: loopCtx?.loopNodeId,
+            });
+          });
+        },
+        onNodeComplete: (nodeId, output, durationMs, loopCtx, consoleLogs) => {
+          if (!isActiveChain) return;
+          const node = findNode(nodeId);
+          useStitchStore.setState((s) => {
+            s.executionNodeOutputs[nodeId] = output;
+            s.executionCurrentNodeId = null;
+            s.executionLogs.push({
+              nodeId,
+              nodeLabel: node?.label ?? '',
+              nodeType: node?.type ?? 'json-object',
+              status: 'completed',
+              timestamp: Date.now() - startTime,
+              durationMs,
+              output,
+              loopIteration: loopCtx?.iteration,
+              loopNodeId: loopCtx?.loopNodeId,
+              consoleLogs,
+            });
+          });
+        },
+        onError: (nodeId, error) => {
+          if (!isActiveChain) return;
+          const node = findNode(nodeId);
+          useStitchStore.setState((s) => {
+            s.executionState = 'error';
+            s.executionError = { nodeId, message: error };
+            s.executionCurrentNodeId = null;
+            s.executionLogs.push({
+              nodeId,
+              nodeLabel: node?.label ?? nodeId,
+              nodeType: node?.type ?? 'json-object',
+              status: 'error',
+              timestamp: Date.now() - startTime,
+              error,
+            });
+          });
+        },
+        onSleepStart: (nodeId, durationMs) => {
+          if (!isActiveChain) return;
+          useStitchStore.setState((s) => {
+            s.sleepCountdown = { nodeId, durationMs };
+            s.executionLogs.push({
+              nodeId,
+              nodeLabel: findNode(nodeId)?.label ?? '',
+              nodeType: 'sleep',
+              status: 'sleeping',
+              timestamp: Date.now() - startTime,
+            });
+          });
+        },
+        onChainComplete: () => {
+          if (!isActiveChain) return;
+          useStitchStore.setState((s) => {
+            s.executionState = 'completed';
+            s.executionCurrentNodeId = null;
+            s.sleepCountdown = null;
+          });
+          // Fade out green highlights after 4 seconds so subsequent runs are visible
+          setTimeout(() => {
+            useStitchStore.setState((s) => {
+              s.executionNodeOutputs = {};
+              s.executionState = 'idle';
+            });
+          }, 4000);
+        },
       };
 
       const cancelledRef = { current: false };
@@ -76,6 +169,8 @@ export function useChainExecutionListener(): void {
         callbacks,
         cancelledRef,
       );
+
+      callbacks.onChainComplete();
 
       // Send the result back to the proxy
       await invoke('resume_chain', {

@@ -232,6 +232,25 @@ export function MappingEditor({ onClose }: Props) {
                                             const existing = stitchStore.chains.find((c) => c.id === chainId);
                                             if (existing) {
                                                 await stitchStore.loadChain(chainId);
+                                                // Upgrade old single-connection entry→exit to 4 keyed connections
+                                                const freshState = useStitchStore.getState();
+                                                const entryNode = freshState.nodes.find((n: { type: string }) => n.type === 'mapping-entry');
+                                                const exitNode = freshState.nodes.find((n: { type: string }) => n.type === 'mapping-exit');
+                                                if (entryNode && exitNode) {
+                                                    const entryToExit = freshState.connections.filter(
+                                                        (c: { sourceNodeId: string; targetNodeId: string }) => c.sourceNodeId === entryNode.id && c.targetNodeId === exitNode.id,
+                                                    );
+                                                    const hasOldSingle = entryToExit.length === 1 && entryToExit[0].sourceKey === null;
+                                                    if (hasOldSingle) {
+                                                        await stitchStore.removeConnection(entryToExit[0].id);
+                                                        for (const key of ['status', 'headers', 'body', 'cookies']) {
+                                                            await stitchStore.addConnection({
+                                                                chainId, sourceNodeId: entryNode.id, sourceKey: key,
+                                                                targetNodeId: exitNode.id, targetSlot: key,
+                                                            });
+                                                        }
+                                                    }
+                                                }
                                                 edit.useChain(true);
                                                 useAppTabStore.getState().setActiveTab('stitch');
                                                 return;
@@ -252,9 +271,11 @@ export function MappingEditor({ onClose }: Props) {
                                             chainId: chain.id, type: 'mapping-exit', positionX: 340, positionY: 150,
                                             config: { ...DEFAULT_MAPPING_EXIT_CONFIG }, label: 'Exit', parentNodeId: mappingNode.id,
                                         });
-                                        await stitchStore.addConnection({
-                                            chainId: chain.id, sourceNodeId: entry.id, sourceKey: null, targetNodeId: exit.id, targetSlot: 'input',
-                                        });
+                                        for (const key of ['status', 'headers', 'body', 'cookies']) {
+                                            await stitchStore.addConnection({
+                                                chainId: chain.id, sourceNodeId: entry.id, sourceKey: key, targetNodeId: exit.id, targetSlot: key,
+                                            });
+                                        }
                                         edit.chainId(chain.id);
                                         edit.useChain(true);
                                         useAppTabStore.getState().setActiveTab('stitch');

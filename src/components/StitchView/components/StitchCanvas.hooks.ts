@@ -27,6 +27,7 @@ export interface UseCanvasTransformReturn {
   zoomIn: () => void;
   zoomOut: () => void;
   zoomReset: () => void;
+  frameAll: (nodes: Array<{ positionX: number; positionY: number }>) => void;
 }
 
 export function useCanvasTransform(): UseCanvasTransformReturn {
@@ -115,5 +116,40 @@ export function useCanvasTransform(): UseCanvasTransformReturn {
     setTransform({ panX: 0, panY: 0, zoom: 1 });
   }, []);
 
-  return { transform, canvasRef, onPointerDown, onPointerMove, onPointerUp, zoomIn, zoomOut, zoomReset };
+  const NODE_W = 180;
+  const NODE_H = 90;
+  const PADDING = 60;
+
+  const frameAll = useCallback((nodes: Array<{ positionX: number; positionY: number }>): void => {
+    if (nodes.length === 0) {
+      setTransform({ panX: 0, panY: 0, zoom: 1 });
+      return;
+    }
+    const rect = canvasRef.current?.getBoundingClientRect();
+    const viewW = rect?.width ?? 800;
+    const viewH = rect?.height ?? 600;
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const n of nodes) {
+      minX = Math.min(minX, n.positionX);
+      minY = Math.min(minY, n.positionY);
+      maxX = Math.max(maxX, n.positionX + NODE_W);
+      maxY = Math.max(maxY, n.positionY + NODE_H);
+    }
+
+    const contentW = maxX - minX + PADDING * 2;
+    const contentH = maxY - minY + PADDING * 2;
+
+    const zoom = Math.min(
+      Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, viewW / contentW, viewH / contentH)),
+      1.0, // don't zoom in past 100%
+    );
+
+    const panX = (viewW - contentW * zoom) / 2 - (minX - PADDING) * zoom;
+    const panY = (viewH - contentH * zoom) / 2 - (minY - PADDING) * zoom;
+
+    setTransform({ panX, panY, zoom });
+  }, [canvasRef]);
+
+  return { transform, canvasRef, onPointerDown, onPointerMove, onPointerUp, zoomIn, zoomOut, zoomReset, frameAll };
 }

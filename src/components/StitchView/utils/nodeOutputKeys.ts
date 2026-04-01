@@ -4,6 +4,14 @@ import { extractReturnKeys } from './jsKeyExtractor';
 import { getRequestOutputPorts } from './requestOutputResolver';
 import { resolveInputShape } from './inputShapeResolver';
 
+export const MAPPING_EXIT_INPUT_KEYS = ['status', 'headers', 'body', 'cookies'] as const;
+
+/** Returns named input port keys for nodes that have them (most nodes just have a single unnamed input slot). */
+export function getNodeInputKeys(node: StitchNode): string[] {
+  if (node.type === 'mapping-exit') return [...MAPPING_EXIT_INPUT_KEYS];
+  return [];
+}
+
 /** Returns the current output keys for any node type. */
 export function getNodeOutputKeys(node: StitchNode, connections?: StitchConnection[], nodes?: StitchNode[]): string[] {
   switch (node.type) {
@@ -28,7 +36,7 @@ export function getNodeOutputKeys(node: StitchNode, connections?: StitchConnecti
     case 'condition':
       return ['true', 'false'];
     case 'mapping-entry':
-      return ['status', 'headers', 'body'];
+      return ['status', 'headers', 'body', 'cookies'];
     default:
       return [];
   }

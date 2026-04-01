@@ -14,15 +14,17 @@ const NODE_TYPE_OPTIONS: { type: StitchNodeType; label: string; icon: React.Reac
 
 interface AddNodeMenuProps {
   onAddNode: (type: StitchNodeType) => void;
+  disabled?: boolean;
 }
 
-export function AddNodeMenu({ onAddNode }: AddNodeMenuProps): React.ReactElement {
+export function AddNodeMenu({ onAddNode, disabled }: AddNodeMenuProps): React.ReactElement {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const handleToggle = useCallback((): void => {
+    if (disabled) return;
     setOpen((prev) => !prev);
-  }, []);
+  }, [disabled]);
 
   const handleSelect = useCallback((type: StitchNodeType): void => {
     onAddNode(type);
@@ -43,8 +45,9 @@ export function AddNodeMenu({ onAddNode }: AddNodeMenuProps): React.ReactElement
   return (
     <div className="relative" ref={menuRef} data-stitch-toolbar>
       <button
-        className="flex items-center gap-1 rounded border border-green-500 bg-transparent px-2 py-1 text-xs font-medium text-green-500 transition-colors hover:bg-green-500/15"
+        className={`flex items-center gap-1 rounded border px-2 py-1 text-xs font-medium transition-colors ${disabled ? 'border-app-subtle text-app-muted cursor-not-allowed opacity-40' : 'border-green-500 text-green-500 hover:bg-green-500/15'}`}
         onClick={handleToggle}
+        disabled={disabled}
         data-testid="add-node-button"
       >
         <Plus size={12} />

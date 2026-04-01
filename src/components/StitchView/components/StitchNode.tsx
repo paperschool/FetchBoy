@@ -7,6 +7,7 @@ import { extractJsonKeys } from '../utils/jsonKeyExtractor';
 import { extractReturnKeys } from '../utils/jsKeyExtractor';
 import { getRequestOutputPorts } from '../utils/requestOutputResolver';
 import { resolveInputShape } from '../utils/inputShapeResolver';
+import { getNodeInputKeys } from '../utils/nodeOutputKeys';
 import { useConnectionDrag } from './StitchConnectionDragContext';
 
 const METHOD_COLORS: Record<string, string> = {
@@ -68,7 +69,7 @@ interface StitchNodeProps {
   onUpdatePosition: (id: string, x: number, y: number) => void;
   onUpdateLabel: (id: string, label: string) => void;
   onDelete: (id: string) => void;
-  onConnectionDrop?: (targetNodeId: string) => void;
+  onConnectionDrop?: (targetNodeId: string, targetSlot?: string) => void;
   onDragEnd?: (id: string) => void;
   connections?: StitchConnection[];
   executionStatus?: ExecutionNodeStatus | null;
@@ -174,7 +175,7 @@ export const StitchNode = React.memo(function StitchNode({
       return { keys: ['true', 'false'], error: null };
     }
     if (node.type === 'mapping-entry') {
-      return { keys: ['status', 'headers', 'body'], error: null };
+      return { keys: ['status', 'headers', 'body', 'cookies'], error: null };
     }
     return null;
   }, [node.type, node.config, node.id, connections, allNodes]);
@@ -229,9 +230,11 @@ export const StitchNode = React.memo(function StitchNode({
     window.addEventListener('pointerup', onUp);
   }, [node.id, node.positionX, node.positionY, portResult, startDrag, updateCursor, endDrag]);
 
-  const handleInputSlotPointerUp = useCallback((): void => {
+  const inputKeys = useMemo(() => getNodeInputKeys(node), [node.type]);
+
+  const handleInputSlotPointerUp = useCallback((targetSlot?: string): void => {
     if (drag && drag.sourceNodeId !== node.id && onConnectionDrop) {
-      onConnectionDrop(node.id);
+      onConnectionDrop(node.id, targetSlot);
     }
   }, [drag, node.id, onConnectionDrop]);
 
@@ -261,14 +264,42 @@ export const StitchNode = React.memo(function StitchNode({
       onContextMenu={handleContextMenu}
       onKeyDown={handleKeyDown}
     >
-      {/* Input port indicator (top) — drop target during drag */}
-      <div
-        className={`absolute -top-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full border-2 bg-app-main transition-colors ${
-          isDragTarget ? 'border-green-500 scale-150' : 'border-app-subtle'
-        }`}
-        onPointerUp={handleInputSlotPointerUp}
-        data-testid="input-slot"
-      />
+      {/* Input port(s) — named for exit node, hidden for entry node, single slot for others */}
+      {node.type === 'mapping-entry' ? null : inputKeys.length > 0 ? (
+        <>
+          {/* Named input port labels */}
+          <div className="absolute -top-4 flex w-full justify-around px-1">
+            {inputKeys.map((key) => (
+              <span key={key} className="max-w-[3rem] truncate text-center text-[7px] leading-none text-app-muted">{key}</span>
+            ))}
+          </div>
+          {/* Named input ports */}
+          {inputKeys.map((key, i) => {
+            const offset = inputKeys.length === 1 ? 0.5 : i / (inputKeys.length - 1);
+            const leftPercent = 10 + offset * 80;
+            return (
+              <div
+                key={key}
+                className={`absolute -top-1.5 h-3 w-3 rounded-full border-2 bg-app-main transition-colors ${
+                  isDragTarget ? 'border-green-500 scale-150' : 'border-yellow-500/50'
+                }`}
+                style={{ left: `${leftPercent}%`, transform: 'translateX(-50%)' }}
+                title={key}
+                onPointerUp={() => handleInputSlotPointerUp(key)}
+                data-testid={`input-slot-${key}`}
+              />
+            );
+          })}
+        </>
+      ) : (
+        <div
+          className={`absolute -top-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full border-2 bg-app-main transition-colors ${
+            isDragTarget ? 'border-green-500 scale-150' : 'border-app-subtle'
+          }`}
+          onPointerUp={() => handleInputSlotPointerUp()}
+          data-testid="input-slot"
+        />
+      )}
 
       {/* Title bar — drag handle */}
       <div
