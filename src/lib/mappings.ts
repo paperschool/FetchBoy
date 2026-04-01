@@ -151,5 +151,6 @@ export async function syncMappingsToProxy(mappings: Mapping[]): Promise<void> {
         response_body_content_type: m.response_body_content_type,
         response_body_file_path: m.response_body_file_path,
         url_remap_enabled: m.url_remap_enabled, url_remap_target: m.url_remap_target,
+        use_chain: m.use_chain, chain_id: m.chain_id,
     }));
 }

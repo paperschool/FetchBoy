@@ -11,6 +11,7 @@ import { SettingsView } from "@/components/SettingsView/SettingsView";
 import { FetchTabActions } from "@/components/TopBar/TopBar";
 import { InterceptTabActions } from "@/components/Intercept view/InterceptTopBar";
 import { StitchView } from "@/components/StitchView/StitchView";
+import { useChainExecutionListener } from "@/hooks/useChainExecutionListener";
 
 type AppTab = "fetch" | "intercept" | "stitch" | "debug" | "settings";
 
@@ -30,6 +31,9 @@ export function AppTabs({ children }: AppTabsProps) {
   const activeTab = useAppTabStore((s) => s.activeTab);
   const setActiveTab = useAppTabStore((s) => s.setActiveTab);
   const proxyEnabled = useUiSettingsStore((s) => s.proxyEnabled);
+
+  // Always-on listener for proxy-triggered chain execution (must be globally mounted)
+  useChainExecutionListener();
 
   return (
     <div className="flex h-screen flex-col">

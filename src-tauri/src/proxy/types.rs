@@ -146,6 +146,9 @@ pub struct MappingRule {
     pub response_body_file_path: String,
     pub url_remap_enabled: bool,
     pub url_remap_target: String,
+    #[serde(default)]
+    pub use_chain: bool,
+    pub chain_id: Option<String>,
 }
 
 pub type MappingsRef = Arc<Mutex<Vec<MappingRule>>>;
@@ -225,6 +228,36 @@ pub struct MappingAppliedEvent {
     pub original_url: Option<String>,
     pub remapped_url: Option<String>,
 }
+
+// ─── Chain execution types ──────────────────────────────────────────────────
+
+/// Event emitted to the frontend when a mapping with use_chain triggers chain execution.
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChainExecutionRequestEvent {
+    pub request_id: String,
+    pub chain_id: String,
+    pub mapping_id: String,
+    pub status: u16,
+    pub headers: HashMap<String, String>,
+    pub body: String,
+}
+
+/// Result returned from the frontend after chain execution completes.
+pub struct ChainExecutionResult {
+    pub status: u16,
+    pub headers: HashMap<String, String>,
+    pub body: String,
+    pub body_content_type: String,
+}
+
+/// Chain registry: maps request_id → oneshot sender so the resume_chain command can unblock waiting handlers.
+pub type ChainRegistryRef = Arc<Mutex<HashMap<String, oneshot::Sender<Option<ChainExecutionResult>>>>>;
+
+/// Shared configurable timeout (seconds) for chain execution.
+pub type ChainTimeoutRef = Arc<Mutex<u64>>;
+
+pub type ChainEmitFn = Arc<dyn Fn(&ChainExecutionRequestEvent) + Send + Sync + 'static>;
 
 pub type PausedEmitFn = Arc<dyn Fn(&BreakpointPausedEvent) + Send + Sync + 'static>;
 pub type RequestEmitFn = Arc<dyn Fn(&InterceptRequestEvent) + Send + Sync + 'static>;
@@ -478,5 +511,103 @@ mod tests {
         let req_json = serde_json::to_value(&req_event).unwrap();
         let resp_json = serde_json::to_value(&resp_event).unwrap();
         assert_eq!(req_json["id"], resp_json["id"]);
+    }
+
+    // ─── Chain execution type tests ──────────────────────────────────────────
+
+    #[test]
+    fn chain_execution_request_event_serialises_camelcase() {
+        let mut headers = HashMap::new();
+        headers.insert("content-type".to_string(), "application/json".to_string());
+
+        let event = ChainExecutionRequestEvent {
+            request_id: "req-123".to_string(),
+            chain_id: "chain-abc".to_string(),
+            mapping_id: "map-1".to_string(),
+            status: 200,
+            headers,
+            body: "{\"test\":true}".to_string(),
+        };
+
+        let json = serde_json::to_value(&event).unwrap();
+        assert_eq!(json["requestId"], "req-123");
+        assert_eq!(json["chainId"], "chain-abc");
+        assert_eq!(json["mappingId"], "map-1");
+        assert_eq!(json["status"], 200);
+        assert_eq!(json["headers"]["content-type"], "application/json");
+        assert_eq!(json["body"], "{\"test\":true}");
+    }
+
+    #[test]
+    fn mapping_rule_deserialises_with_chain_fields() {
+        let json = r#"{
+            "id": "m1",
+            "url_pattern": "api/data",
+            "match_type": "partial",
+            "enabled": true,
+            "headers_add": [],
+            "headers_remove": [],
+            "cookies": [],
+            "response_body_enabled": false,
+            "response_body": "",
+            "response_body_content_type": "application/json",
+            "response_body_file_path": "",
+            "url_remap_enabled": false,
+            "url_remap_target": "",
+            "use_chain": true,
+            "chain_id": "chain-xyz"
+        }"#;
+        let rule: MappingRule = serde_json::from_str(json).unwrap();
+        assert!(rule.use_chain);
+        assert_eq!(rule.chain_id, Some("chain-xyz".to_string()));
+    }
+
+    #[test]
+    fn mapping_rule_deserialises_without_chain_fields() {
+        let json = r#"{
+            "id": "m2",
+            "url_pattern": "api/other",
+            "match_type": "exact",
+            "enabled": true,
+            "headers_add": [],
+            "headers_remove": [],
+            "cookies": [],
+            "response_body_enabled": false,
+            "response_body": "",
+            "response_body_content_type": "application/json",
+            "response_body_file_path": "",
+            "url_remap_enabled": false,
+            "url_remap_target": ""
+        }"#;
+        let rule: MappingRule = serde_json::from_str(json).unwrap();
+        assert!(!rule.use_chain);
+        assert_eq!(rule.chain_id, None);
+    }
+
+    #[test]
+    fn chain_registry_stores_and_retrieves_sender() {
+        let registry: ChainRegistryRef = Arc::new(Mutex::new(HashMap::new()));
+        let (tx, rx) = oneshot::channel::<Option<ChainExecutionResult>>();
+
+        registry.lock().unwrap().insert("req-1".to_string(), tx);
+        assert!(registry.lock().unwrap().contains_key("req-1"));
+
+        let sender = registry.lock().unwrap().remove("req-1");
+        assert!(sender.is_some());
+
+        let result = ChainExecutionResult {
+            status: 201,
+            headers: HashMap::new(),
+            body: "test".to_string(),
+            body_content_type: "text/plain".to_string(),
+        };
+        let _ = sender.unwrap().send(Some(result));
+
+        let received = rx.blocking_recv().unwrap();
+        assert!(received.is_some());
+        let r = received.unwrap();
+        assert_eq!(r.status, 201);
+        assert_eq!(r.body, "test");
+        assert_eq!(r.body_content_type, "text/plain");
     }
 }

@@ -25,6 +25,7 @@ export const OVERRIDE_ICONS: Record<string, { label: string; tooltip: string; co
     cookies: { label: 'C', tooltip: 'Cookies set', color: 'text-orange-400' },
     response_body: { label: 'B', tooltip: 'Response body overridden', color: 'text-purple-400' },
     url_remap: { label: 'R', tooltip: 'URL remapped', color: 'text-blue-400' },
+    chain: { label: 'W', tooltip: 'Chain-generated response (Stitch)', color: 'text-yellow-400' },
     paused: { label: 'P', tooltip: 'Request paused (breakpoint)', color: 'text-amber-400' },
     status_code: { label: 'S', tooltip: 'Status code overridden', color: 'text-yellow-400' },
     blocked: { label: 'X', tooltip: 'Request blocked', color: 'text-red-500' },

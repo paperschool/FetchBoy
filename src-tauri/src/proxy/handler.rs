@@ -22,10 +22,13 @@ pub struct InterceptHandler {
     request_emit_fn: RequestEmitFn,
     response_emit_fn: ResponseEmitFn,
     mapping_emit_fn: MappingEmitFn,
+    chain_emit_fn: ChainEmitFn,
     breakpoints: BreakpointsRef,
     mappings: MappingsRef,
     pause_registry: PauseRegistryRef,
     pause_timeout: PauseTimeoutRef,
+    chain_registry: ChainRegistryRef,
+    chain_timeout: ChainTimeoutRef,
     /// Pending request captured in handle_request, consumed in handle_response.
     /// Hudsucker clones the handler once per request (see internal.rs `self.clone().proxy(req)`),
     /// so each clone handles exactly one request/response pair sequentially — no shared
@@ -39,20 +42,26 @@ impl InterceptHandler {
         request_emit_fn: RequestEmitFn,
         response_emit_fn: ResponseEmitFn,
         mapping_emit_fn: MappingEmitFn,
+        chain_emit_fn: ChainEmitFn,
         breakpoints: BreakpointsRef,
         mappings: MappingsRef,
         pause_registry: PauseRegistryRef,
         pause_timeout: PauseTimeoutRef,
+        chain_registry: ChainRegistryRef,
+        chain_timeout: ChainTimeoutRef,
     ) -> Self {
         Self {
             paused_emit_fn,
             request_emit_fn,
             response_emit_fn,
             mapping_emit_fn,
+            chain_emit_fn,
             breakpoints,
             mappings,
             pause_registry,
             pause_timeout,
+            chain_registry,
+            chain_timeout,
             pending: None,
         }
     }
@@ -320,10 +329,13 @@ impl HttpHandler for InterceptHandler {
         let paused_emit_fn = Arc::clone(&self.paused_emit_fn);
         let response_emit_fn = Arc::clone(&self.response_emit_fn);
         let mapping_emit_fn = Arc::clone(&self.mapping_emit_fn);
+        let chain_emit_fn = Arc::clone(&self.chain_emit_fn);
         let breakpoints = Arc::clone(&self.breakpoints);
         let mappings = Arc::clone(&self.mappings);
         let pause_registry = Arc::clone(&self.pause_registry);
         let pause_timeout_ref = Arc::clone(&self.pause_timeout);
+        let chain_registry = Arc::clone(&self.chain_registry);
+        let chain_timeout_ref = Arc::clone(&self.chain_timeout);
 
         async move {
             let (mut parts, body) = res.into_parts();
@@ -552,66 +564,150 @@ impl HttpHandler for InterceptHandler {
                     let mut overrides: Vec<String> = Vec::new();
                     let request_id = req_info.as_ref().map(|r| r.id.clone()).unwrap_or_default();
 
-                    // Add headers (skip if breakpoint already set them)
-                    for h in &mapping.headers_add {
-                        if h.enabled && !h.key.is_empty() {
-                            if let (Ok(name), Ok(val)) = (
-                                hudsucker::hyper::header::HeaderName::from_bytes(h.key.as_bytes()),
-                                HeaderValue::from_str(&h.value),
-                            ) {
-                                // Only add if breakpoint didn't already set this header
-                                if !parts.headers.contains_key(&name) || matched_bp.is_none() {
-                                    parts.headers.insert(name, val);
+                    // ── Chain-based mapping ────────────────────────────────────
+                    // When use_chain is true, delegate response generation to a
+                    // Stitch chain on the frontend instead of using static rules.
+                    let chain_applied = if mapping.use_chain {
+                        if let Some(ref chain_id) = mapping.chain_id {
+                            let chain_timeout_secs = *chain_timeout_ref.lock().unwrap();
+                            let (tx, rx) = oneshot::channel::<Option<ChainExecutionResult>>();
+
+                            chain_registry.lock().unwrap().insert(request_id.clone(), tx);
+
+                            // Build the request data to send to the frontend.
+                            let chain_body = orig_response_body.clone().unwrap_or_default();
+                            chain_emit_fn(&ChainExecutionRequestEvent {
+                                request_id: request_id.clone(),
+                                chain_id: chain_id.clone(),
+                                mapping_id: mapping.id.clone(),
+                                status: status_code,
+                                headers: response_headers.clone(),
+                                body: chain_body,
+                            });
+
+                            // Wait for the frontend to execute the chain and send the result back.
+                            let chain_result = if chain_timeout_secs == 0 {
+                                match rx.await {
+                                    Ok(result) => result,
+                                    Err(_) => None,
+                                }
+                            } else {
+                                match tokio::time::timeout(Duration::from_secs(chain_timeout_secs), rx).await {
+                                    Ok(Ok(result)) => result,
+                                    _ => {
+                                        log::warn!(
+                                            "Chain execution timeout for mapping '{}' ({}s)",
+                                            mapping.id, chain_timeout_secs,
+                                        );
+                                        None
+                                    }
+                                }
+                            };
+
+                            // Clean up the registry entry.
+                            chain_registry.lock().unwrap().remove(&request_id);
+
+                            if let Some(result) = chain_result {
+                                // Apply chain result to response.
+                                effective_status_code = result.status;
+                                final_bytes = Bytes::from(result.body.into_bytes());
+                                final_content_type = Some(result.body_content_type.clone());
+
+                                if let Ok(val) = HeaderValue::from_str(&result.body_content_type) {
+                                    parts.headers.insert(CONTENT_TYPE, val);
+                                }
+                                if let Ok(val) = HeaderValue::from_str(&final_bytes.len().to_string()) {
+                                    parts.headers.insert(CONTENT_LENGTH, val);
+                                }
+                                for (key, value) in &result.headers {
+                                    if let (Ok(name), Ok(val)) = (
+                                        hudsucker::hyper::header::HeaderName::from_bytes(key.as_bytes()),
+                                        HeaderValue::from_str(value),
+                                    ) {
+                                        parts.headers.insert(name, val);
+                                    }
+                                }
+
+                                overrides.push("chain".to_string());
+                                true
+                            } else {
+                                // Chain failed or timed out — fall through to original response.
+                                log::info!(
+                                    "Chain execution failed/timed out for mapping '{}' — using original response",
+                                    mapping.id,
+                                );
+                                false
+                            }
+                        } else {
+                            false
+                        }
+                    } else {
+                        false
+                    };
+
+                    // ── Static mapping rules (skip if chain was applied) ──────
+                    if !chain_applied {
+                        // Add headers (skip if breakpoint already set them)
+                        for h in &mapping.headers_add {
+                            if h.enabled && !h.key.is_empty() {
+                                if let (Ok(name), Ok(val)) = (
+                                    hudsucker::hyper::header::HeaderName::from_bytes(h.key.as_bytes()),
+                                    HeaderValue::from_str(&h.value),
+                                ) {
+                                    // Only add if breakpoint didn't already set this header
+                                    if !parts.headers.contains_key(&name) || matched_bp.is_none() {
+                                        parts.headers.insert(name, val);
+                                    }
                                 }
                             }
                         }
-                    }
-                    if mapping.headers_add.iter().any(|h| h.enabled && !h.key.is_empty()) {
-                        overrides.push("headers_add".to_string());
-                    }
+                        if mapping.headers_add.iter().any(|h| h.enabled && !h.key.is_empty()) {
+                            overrides.push("headers_add".to_string());
+                        }
 
-                    // Remove headers
-                    for h in &mapping.headers_remove {
-                        if h.enabled && !h.key.is_empty() {
-                            if let Ok(name) = hudsucker::hyper::header::HeaderName::from_bytes(h.key.as_bytes()) {
-                                parts.headers.remove(&name);
+                        // Remove headers
+                        for h in &mapping.headers_remove {
+                            if h.enabled && !h.key.is_empty() {
+                                if let Ok(name) = hudsucker::hyper::header::HeaderName::from_bytes(h.key.as_bytes()) {
+                                    parts.headers.remove(&name);
+                                }
                             }
                         }
-                    }
-                    if mapping.headers_remove.iter().any(|h| h.enabled && !h.key.is_empty()) {
-                        overrides.push("headers_remove".to_string());
-                    }
+                        if mapping.headers_remove.iter().any(|h| h.enabled && !h.key.is_empty()) {
+                            overrides.push("headers_remove".to_string());
+                        }
 
-                    // Set cookies via Set-Cookie headers
-                    for cookie in &mapping.cookies {
-                        let mut cookie_parts = vec![format!("{}={}", cookie.name, cookie.value)];
-                        if !cookie.domain.is_empty() { cookie_parts.push(format!("Domain={}", cookie.domain)); }
-                        if !cookie.path.is_empty() { cookie_parts.push(format!("Path={}", cookie.path)); }
-                        if cookie.secure { cookie_parts.push("Secure".to_string()); }
-                        if cookie.http_only { cookie_parts.push("HttpOnly".to_string()); }
-                        if !cookie.same_site.is_empty() { cookie_parts.push(format!("SameSite={}", cookie.same_site)); }
-                        if !cookie.expires.is_empty() { cookie_parts.push(format!("Expires={}", cookie.expires)); }
-                        let cookie_str = cookie_parts.join("; ");
-                        if let Ok(val) = HeaderValue::from_str(&cookie_str) {
-                            parts.headers.append(hudsucker::hyper::header::SET_COOKIE, val);
+                        // Set cookies via Set-Cookie headers
+                        for cookie in &mapping.cookies {
+                            let mut cookie_parts = vec![format!("{}={}", cookie.name, cookie.value)];
+                            if !cookie.domain.is_empty() { cookie_parts.push(format!("Domain={}", cookie.domain)); }
+                            if !cookie.path.is_empty() { cookie_parts.push(format!("Path={}", cookie.path)); }
+                            if cookie.secure { cookie_parts.push("Secure".to_string()); }
+                            if cookie.http_only { cookie_parts.push("HttpOnly".to_string()); }
+                            if !cookie.same_site.is_empty() { cookie_parts.push(format!("SameSite={}", cookie.same_site)); }
+                            if !cookie.expires.is_empty() { cookie_parts.push(format!("Expires={}", cookie.expires)); }
+                            let cookie_str = cookie_parts.join("; ");
+                            if let Ok(val) = HeaderValue::from_str(&cookie_str) {
+                                parts.headers.append(hudsucker::hyper::header::SET_COOKIE, val);
+                            }
                         }
-                    }
-                    if !mapping.cookies.is_empty() {
-                        overrides.push("cookies".to_string());
-                    }
+                        if !mapping.cookies.is_empty() {
+                            overrides.push("cookies".to_string());
+                        }
 
-                    // Replace response body (only if breakpoint didn't already replace)
-                    if mapping.response_body_enabled && !bp_replaced_body {
-                        let (body_bytes, ct) = read_mapping_response_body(mapping).await;
-                        final_bytes = Bytes::from(body_bytes);
-                        final_content_type = Some(ct.clone());
-                        if let Ok(val) = HeaderValue::from_str(&ct) {
-                            parts.headers.insert(CONTENT_TYPE, val);
+                        // Replace response body (only if breakpoint didn't already replace)
+                        if mapping.response_body_enabled && !bp_replaced_body {
+                            let (body_bytes, ct) = read_mapping_response_body(mapping).await;
+                            final_bytes = Bytes::from(body_bytes);
+                            final_content_type = Some(ct.clone());
+                            if let Ok(val) = HeaderValue::from_str(&ct) {
+                                parts.headers.insert(CONTENT_TYPE, val);
+                            }
+                            if let Ok(val) = HeaderValue::from_str(&final_bytes.len().to_string()) {
+                                parts.headers.insert(CONTENT_LENGTH, val);
+                            }
+                            overrides.push("response_body".to_string());
                         }
-                        if let Ok(val) = HeaderValue::from_str(&final_bytes.len().to_string()) {
-                            parts.headers.insert(CONTENT_LENGTH, val);
-                        }
-                        overrides.push("response_body".to_string());
                     }
 
                     if !overrides.is_empty() {
@@ -706,11 +802,14 @@ mod tests {
         let request_emit_fn: RequestEmitFn = Arc::new(|_| {});
         let response_emit_fn: ResponseEmitFn = Arc::new(|_| {});
         let mapping_emit_fn: MappingEmitFn = Arc::new(|_| {});
+        let chain_emit_fn: ChainEmitFn = Arc::new(|_| {});
         let breakpoints: BreakpointsRef = Arc::new(Mutex::new(Vec::new()));
         let mappings: MappingsRef = Arc::new(Mutex::new(Vec::new()));
         let pause_registry: PauseRegistryRef = Arc::new(Mutex::new(HashMap::new()));
         let pause_timeout: PauseTimeoutRef = Arc::new(Mutex::new(30));
-        let handler = InterceptHandler::new(paused_emit_fn, request_emit_fn, response_emit_fn, mapping_emit_fn, breakpoints, mappings, pause_registry, pause_timeout);
+        let chain_registry: ChainRegistryRef = Arc::new(Mutex::new(HashMap::new()));
+        let chain_timeout: ChainTimeoutRef = Arc::new(Mutex::new(30));
+        let handler = InterceptHandler::new(paused_emit_fn, request_emit_fn, response_emit_fn, mapping_emit_fn, chain_emit_fn, breakpoints, mappings, pause_registry, pause_timeout, chain_registry, chain_timeout);
         assert!(handler.pending.is_none());
     }
 }

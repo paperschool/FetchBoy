@@ -24,6 +24,7 @@ pub struct ProxyRestartInfo {
     pub request_emit_fn: proxy::RequestEmitFn,
     pub response_emit_fn: proxy::ResponseEmitFn,
     pub mapping_emit_fn: proxy::MappingEmitFn,
+    pub chain_emit_fn: proxy::ChainEmitFn,
 }
 
 /// Current proxy configuration (port + enabled flag).
@@ -43,6 +44,12 @@ pub struct PauseRegistryState(pub proxy::PauseRegistryRef);
 
 /// Configurable pause timeout in seconds (0 = never).
 pub struct PauseTimeoutState(pub proxy::PauseTimeoutRef);
+
+/// Chain execution registry — maps request_id to a oneshot sender so the resume_chain command can unblock waiting proxy handlers.
+pub struct ChainRegistryState(pub proxy::ChainRegistryRef);
+
+/// Configurable chain execution timeout in seconds (default 30).
+pub struct ChainTimeoutState(pub proxy::ChainTimeoutRef);
 
 /// Debug logger for persisting events to log files.
 pub struct DebugLoggerState(pub debug_logger::SharedDebugLogger);
@@ -208,6 +215,14 @@ pub fn run() {
                 }
             });
 
+            let emit_debug_chain = emit_debug.clone();
+            let chain_emit_base: Arc<dyn Fn(&proxy::ChainExecutionRequestEvent) + Send + Sync> =
+                make_emit(app.handle(), "mapping:chain-execute");
+            let chain_emit_fn: proxy::ChainEmitFn = Arc::new(move |event| {
+                chain_emit_base(event);
+                emit_debug_chain("info", "chain", &format!("Chain execute: chain={} mapping={}", event.chain_id, event.mapping_id));
+            });
+
             let emit_debug_clone = emit_debug.clone();
 
             // Register restart info so the set_proxy_config command can recreate the proxy.
@@ -217,6 +232,7 @@ pub fn run() {
                 request_emit_fn: Arc::clone(&request_emit_fn),
                 response_emit_fn: Arc::clone(&response_emit_fn),
                 mapping_emit_fn: Arc::clone(&mapping_emit_fn),
+                chain_emit_fn: Arc::clone(&chain_emit_fn),
             });
 
             // Default config: enabled on port 8080.
@@ -242,6 +258,13 @@ pub fn run() {
             app.manage(PauseRegistryState(Arc::clone(&pause_registry_ref)));
             app.manage(PauseTimeoutState(Arc::clone(&pause_timeout_ref)));
 
+            // Chain execution registry and timeout state.
+            let chain_registry_ref: proxy::ChainRegistryRef =
+                Arc::new(std::sync::Mutex::new(std::collections::HashMap::new()));
+            let chain_timeout_ref: proxy::ChainTimeoutRef = Arc::new(std::sync::Mutex::new(30));
+            app.manage(ChainRegistryState(Arc::clone(&chain_registry_ref)));
+            app.manage(ChainTimeoutState(Arc::clone(&chain_timeout_ref)));
+
             // Initialise the CA and start the proxy.
             match cert::CertificateAuthority::load_or_create(app_data_dir) {
                 Ok(ca) => {
@@ -255,10 +278,13 @@ pub fn run() {
                         request_emit_fn,
                         response_emit_fn,
                         mapping_emit_fn,
+                        chain_emit_fn,
                         breakpoints_ref,
                         mappings_ref,
                         pause_registry_ref,
                         pause_timeout_ref,
+                        chain_registry_ref,
+                        chain_timeout_ref,
                     );
                     app.manage(ProxyState(std::sync::Mutex::new(Some(proxy))));
                 }
@@ -298,7 +324,8 @@ pub fn run() {
             commands::open_log_folder,
             commands::open_proxy_settings,
             commands::open_cert_manager,
-            commands::exit_app
+            commands::exit_app,
+            commands::resume_chain
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

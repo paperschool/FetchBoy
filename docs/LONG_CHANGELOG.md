@@ -1,5 +1,22 @@
 # Long Changelog
 
+## [0.18.17] - 2026-04-01
+
+### Story 15.16: Proxy-Triggered Mapping Chain Execution
+
+- Mappings with `use_chain=true` now trigger Stitch chain execution when the proxy intercepts a matching request
+- Proxy pauses the response, emits `mapping:chain-execute` event to the frontend with intercepted request data (status, headers, body)
+- Frontend listener loads chain from DB, executes the mapping container node, and sends the result back via `resume_chain` command
+- Chain result (status, headers, body, content-type) replaces the response; static mapping rules are skipped when chain is active
+- Configurable chain execution timeout (default 30s); on timeout/error the proxy falls through to the original response
+- `ChainRegistryRef` and `ChainTimeoutRef` added to Rust proxy state (same oneshot pattern as breakpoint pause/resume)
+- New `chain_commands.rs` with `resume_chain` Tauri command
+- `useChainExecutionListener` hook mounted globally in AppTabs (always active, not just when Stitch tab is visible)
+- `syncMappingsToProxy` now includes `use_chain` and `chain_id` fields in the proxy sync payload
+- Mapping activity log shows "chain" override type (W icon, yellow) when chain-based mapping fires
+- 4 new Rust tests: chain event serialization, MappingRule with/without chain fields, chain registry round-trip
+- 4 new frontend tests: listener registration, successful chain execution, chain error fallback, missing mapping node fallback
+
 ## [0.18.16] - 2026-03-31
 
 ### Story 15.15: Mapping Chain Node (Revised — Mapper-Bound)
