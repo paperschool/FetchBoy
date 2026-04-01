@@ -149,7 +149,7 @@ export const StitchMappingNode = React.memo(function StitchMappingNode({
       data-testid={`stitch-mapping-${node.id}`}
       data-node-id={node.id}
       tabIndex={0}
-      className={`absolute select-none rounded-lg border-2 border-dashed shadow-sm transition-shadow border-yellow-500/40 bg-yellow-500/5 ${
+      className={`pointer-events-none absolute select-none rounded-lg border-2 border-dashed shadow-sm transition-shadow border-yellow-500/40 bg-yellow-500/5 ${
         selected ? 'ring-2 ring-yellow-400 shadow-md' : ''
       } ${dragging ? 'opacity-75' : ''} ${
         executionStatus === 'running' ? 'stitch-node-running' : ''
@@ -167,16 +167,16 @@ export const StitchMappingNode = React.memo(function StitchMappingNode({
     >
       {/* Input port */}
       <div
-        className={`absolute -top-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full border-2 bg-app-main transition-colors ${
+        className={`pointer-events-auto absolute -top-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full border-2 bg-app-main transition-colors ${
           isDragTarget ? 'border-green-500 scale-150' : 'border-yellow-500/50'
         }`}
         onPointerUp={handleInputSlotPointerUp}
         data-testid="mapping-input-slot"
       />
 
-      {/* Header */}
+      {/* Header — pointer-events-auto so dragging works */}
       <div
-        className={`flex cursor-grab items-center gap-1.5 rounded-t-lg px-2 py-1.5 bg-yellow-500/15 ${dragging ? 'cursor-grabbing' : ''}`}
+        className={`pointer-events-auto flex cursor-grab items-center gap-1.5 rounded-t-lg px-2 py-1.5 bg-yellow-500/15 ${dragging ? 'cursor-grabbing' : ''}`}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -222,9 +222,9 @@ export const StitchMappingNode = React.memo(function StitchMappingNode({
         </button>
       </div>
 
-      {/* Drop zone body — pointer-events-none so clicks pass through to connection lines behind */}
+      {/* Drop zone body */}
       <div
-        className="pointer-events-none relative"
+        className="relative"
         style={{ minHeight: bounds.height }}
         data-testid="mapping-drop-zone"
       >
@@ -237,7 +237,7 @@ export const StitchMappingNode = React.memo(function StitchMappingNode({
 
       {/* Output port */}
       <div
-        className="absolute -bottom-1.5 left-1/2 h-3 w-3 -translate-x-1/2 cursor-crosshair rounded-full border-2 border-yellow-500/50 bg-app-main transition-transform hover:scale-150 hover:border-blue-500"
+        className="pointer-events-auto absolute -bottom-1.5 left-1/2 h-3 w-3 -translate-x-1/2 cursor-crosshair rounded-full border-2 border-yellow-500/50 bg-app-main transition-transform hover:scale-150 hover:border-blue-500"
         data-testid="mapping-output-port"
         onPointerDown={handleOutputPortDown}
       />
