@@ -118,6 +118,35 @@ export const useStitchStore = create<StitchState>()(
     },
 
     deleteChain: async (id: string) => {
+      // If chain is bound to a mapper, unhook it
+      const chain = useStitchStore.getState().chains.find((c) => c.id === id);
+      if (chain?.mappingId) {
+        const { useMappingsStore } = await import('@/stores/mappingsStore');
+        const mappingsState = useMappingsStore.getState();
+        const mapping = mappingsState.mappings.find((m) => m.id === chain.mappingId);
+        if (mapping) {
+          await mappingsState.saveMapping({
+            ...mappingsState.editForm,
+            id: mapping.id,
+            name: mapping.name,
+            urlPattern: mapping.url_pattern,
+            matchType: mapping.match_type,
+            enabled: mapping.enabled,
+            folderId: mapping.folder_id,
+            headersAdd: mapping.headers_add,
+            headersRemove: mapping.headers_remove,
+            cookies: mapping.cookies,
+            responseBodyEnabled: mapping.response_body_enabled,
+            responseBody: mapping.response_body,
+            responseBodyContentType: mapping.response_body_content_type,
+            responseBodyFilePath: mapping.response_body_file_path,
+            urlRemapEnabled: mapping.url_remap_enabled,
+            urlRemapTarget: mapping.url_remap_target,
+            useChain: false,
+            chainId: null,
+          });
+        }
+      }
       await stitchDb.deleteChain(id);
       set((state) => {
         state.chains = state.chains.filter((c) => c.id !== id);
