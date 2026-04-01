@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.18.19] - 2026-04-01
+
+- feat: Import post-processing options — flatten single-child folders, depth limiting, folder selection, and same-name merge
+- feat: Toggleable import options panel in ImportWizard preview with live folder/request count updates
+- fix: Empty folders no longer left behind after depth-limit or folder-filter steps
+- fix: Same-name merge now uses relative path keys to prevent cross-category conflation
+- feat: Merged folders renamed to full path for self-describing names
+
 ## [0.18.8] - 2026-03-31
 
 - fix: Enable PRAGMA foreign_keys so CASCADE deletes actually work in SQLite

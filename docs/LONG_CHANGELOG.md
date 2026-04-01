@@ -1,5 +1,13 @@
 # Long Changelog
 
+## [0.18.19] - 2026-04-01
+
+- feat: import post-processing pipeline — flatten single-child folder chains, depth limiting, folder selection checkboxes, and structural merge of same-named folders across branches
+- feat: import options UI in ImportWizard preview step — collapsible panel with four toggleable options, live-updating folder/request counts, and "was X / Y" diff indicator
+- fix: empty folders left behind after depth-limiting and folder filtering — moved prune step to run unconditionally as the final pipeline stage
+- fix: global name merge incorrectly conflated folders from different categories (e.g. "USAT" under "Action Shots" merged with "USAT" under "Player Headshots") — switched to relative-path merge keys that preserve category context
+- feat: merged folders renamed to full relative path (e.g. "USAT" becomes "Action Shots / USAT") so names are self-describing without parent context
+
 ## [0.18.18] - 2026-04-01
 
 - feat: auto-save mapping editor with debounced writes and saving/saved status indicator

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   X,
   FileUp,
@@ -9,6 +9,8 @@ import {
   Bot,
   Check,
   ClipboardCopy,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { readTextFile } from "@tauri-apps/plugin-fs";
@@ -21,6 +23,10 @@ import { useCollectionStore } from "@/stores/collectionStore";
 import { useEnvironmentStore } from "@/stores/environmentStore";
 import { useDebugStore } from "@/stores/debugStore";
 import type { ImportFormat, ImportResult } from "@/lib/importers/types";
+import {
+  applyImportOptions,
+  getTopLevelFolders,
+} from "@/lib/importers/postProcess";
 import collectionPrompt from "../../../Collection-Generation-Prompt.md?raw";
 
 function emitDebug(
@@ -109,8 +115,45 @@ export function ImportWizard({
     requests: 0,
     environments: 0,
   });
+
+  // Import-option toggles (all enabled by default)
+  const [flattenSingleChild, setFlattenSingleChild] = useState(true);
+  const [filterTopFolders, setFilterTopFolders] = useState(true);
+  const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [limitDepth, setLimitDepth] = useState(true);
+  const [maxDepth, setMaxDepth] = useState(3);
+  const [mergeSameName, setMergeSameName] = useState(true);
+  const [optionsExpanded, setOptionsExpanded] = useState(true);
+
   const collectionStore = useCollectionStore();
   const envStore = useEnvironmentStore();
+
+  const topLevelFolders = useMemo(
+    () => (result ? getTopLevelFolders(result) : []),
+    [result],
+  );
+
+  const processedResult = useMemo(() => {
+    if (!result) return null;
+    return applyImportOptions(result, {
+      flattenSingleChild,
+      filterTopFolders,
+      selectedTopFolderIds: selectedFolderIds,
+      limitDepth,
+      maxDepth,
+      mergeSameName,
+    });
+  }, [
+    result,
+    flattenSingleChild,
+    filterTopFolders,
+    selectedFolderIds,
+    limitDepth,
+    maxDepth,
+    mergeSameName,
+  ]);
 
   if (!isOpen) return null;
 
@@ -119,6 +162,12 @@ export function ImportWizard({
     setFormat(null);
     setResult(null);
     setError(null);
+    setFlattenSingleChild(true);
+    setFilterTopFolders(true);
+    setSelectedFolderIds(new Set());
+    setLimitDepth(true);
+    setMaxDepth(3);
+    setMergeSameName(true);
     onClose();
   };
 
@@ -202,7 +251,12 @@ export function ImportWizard({
         "import-wizard",
         `File read OK (${text.length} chars) — parsing as ${format}`,
       );
-      setResult(parseByFormat(text, format));
+      const parsed = parseByFormat(text, format);
+      setResult(parsed);
+      const topIds = parsed.folders
+        .filter((f) => f.parent_id === null)
+        .map((f) => f.id);
+      setSelectedFolderIds(new Set(topIds));
       emitDebug("info", "import-wizard", "Parse successful — showing preview");
       setStep("preview");
     } catch (err) {
@@ -214,16 +268,16 @@ export function ImportWizard({
   };
 
   const handleImport = async (): Promise<void> => {
-    if (!result) return;
+    if (!processedResult) return;
     setStep("importing");
     emitDebug(
       "info",
       "import-wizard",
-      `Importing collection "${result.collection.name}" — ${result.folders.length} folder(s), ${result.requests.length} request(s)`,
+      `Importing collection "${processedResult.collection.name}" — ${processedResult.folders.length} folder(s), ${processedResult.requests.length} request(s)`,
     );
     try {
       const { collection, folders, requests, environments } =
-        await persistImportResult(result);
+        await persistImportResult(processedResult);
       emitDebug("info", "import-wizard", `Persisted to DB — updating stores`);
       collectionStore.addCollection(collection);
       for (const f of folders) collectionStore.addFolder(f);
@@ -248,16 +302,24 @@ export function ImportWizard({
     }
   };
 
-  const methodCounts = result?.requests.reduce<Record<string, number>>(
-    (acc, r) => {
-      acc[r.method] = (acc[r.method] ?? 0) + 1;
-      return acc;
-    },
-    {},
-  );
+  const methodCounts = processedResult?.requests.reduce<
+    Record<string, number>
+  >((acc, r) => {
+    acc[r.method] = (acc[r.method] ?? 0) + 1;
+    return acc;
+  }, {});
 
   const totalVars =
     result?.environments.reduce((sum, e) => sum + e.variables.length, 0) ?? 0;
+
+  const toggleFolderId = (id: string): void => {
+    setSelectedFolderIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const formatBtn = (
     f: ImportFormat,
@@ -379,18 +441,28 @@ export function ImportWizard({
           )}
 
           {/* Step 3: Preview */}
-          {step === "preview" && result && (
+          {step === "preview" && result && processedResult && (
             <>
               <p className="text-xs text-app-muted">
                 Review what will be imported:
               </p>
+
+              {/* Collection summary */}
               <div className="space-y-2 rounded-md border border-app-subtle p-3 text-xs">
                 <p className="font-medium text-app-primary">
                   {result.collection.name}
                 </p>
                 <p className="text-app-muted">
-                  {result.folders.length} folder(s), {result.requests.length}{" "}
-                  request(s)
+                  {processedResult.folders.length} folder(s),{" "}
+                  {processedResult.requests.length} request(s)
+                  {(processedResult.folders.length !==
+                    result.folders.length ||
+                    processedResult.requests.length !==
+                      result.requests.length) && (
+                    <span className="ml-1 text-blue-400">
+                      (was {result.folders.length} / {result.requests.length})
+                    </span>
+                  )}
                 </p>
                 {methodCounts && (
                   <div className="flex flex-wrap gap-2">
@@ -427,6 +499,147 @@ export function ImportWizard({
                   </div>
                 )}
               </div>
+
+              {/* Import options */}
+              <div className="rounded-md border border-app-subtle text-xs">
+                <button
+                  onClick={() => setOptionsExpanded((v) => !v)}
+                  className="flex w-full items-center gap-1.5 px-3 py-2 text-app-primary font-medium cursor-pointer hover:bg-app-subtle/20 transition-colors"
+                >
+                  {optionsExpanded ? (
+                    <ChevronDown size={14} />
+                  ) : (
+                    <ChevronRight size={14} />
+                  )}
+                  Import Options
+                </button>
+
+                {optionsExpanded && (
+                  <div className="space-y-3 border-t border-app-subtle px-3 py-3">
+                    {/* Flatten single-child */}
+                    <label className="flex items-center gap-2 text-app-primary cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={flattenSingleChild}
+                        onChange={(e) =>
+                          setFlattenSingleChild(e.target.checked)
+                        }
+                        className="accent-blue-500"
+                      />
+                      Collapse single-child folders
+                    </label>
+                    <p className="ml-5 -mt-2 text-[10px] text-app-muted">
+                      Merges folders that only contain one subfolder
+                    </p>
+
+                    {/* Limit depth */}
+                    <div>
+                      <label className="flex items-center gap-2 text-app-primary cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={limitDepth}
+                          onChange={(e) => setLimitDepth(e.target.checked)}
+                          className="accent-blue-500"
+                        />
+                        Limit folder depth
+                        {limitDepth && (
+                          <input
+                            type="number"
+                            min={1}
+                            max={10}
+                            value={maxDepth}
+                            onChange={(e) =>
+                              setMaxDepth(
+                                Math.max(1, parseInt(e.target.value) || 1),
+                              )
+                            }
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-12 rounded border border-app-subtle bg-transparent px-1.5 py-0.5 text-xs text-app-primary text-center"
+                          />
+                        )}
+                      </label>
+                      <p className="ml-5 mt-0.5 text-[10px] text-app-muted">
+                        Flattens folders nested deeper than the limit
+                      </p>
+                    </div>
+
+                    {/* Select folders */}
+                    <div>
+                      <label className="flex items-center gap-2 text-app-primary cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={filterTopFolders}
+                          onChange={(e) =>
+                            setFilterTopFolders(e.target.checked)
+                          }
+                          className="accent-blue-500"
+                        />
+                        Select folders to import
+                      </label>
+                      <p className="ml-5 mt-0.5 text-[10px] text-app-muted">
+                        Choose which top-level folders to include
+                      </p>
+
+                      {filterTopFolders && topLevelFolders.length > 0 && (
+                        <div className="ml-5 mt-1.5">
+                          <div className="flex gap-2 text-[10px] text-app-muted mb-1">
+                            <button
+                              onClick={() =>
+                                setSelectedFolderIds(
+                                  new Set(topLevelFolders.map((f) => f.id)),
+                                )
+                              }
+                              className="hover:text-app-primary cursor-pointer underline"
+                            >
+                              Select all
+                            </button>
+                            <button
+                              onClick={() => setSelectedFolderIds(new Set())}
+                              className="hover:text-app-primary cursor-pointer underline"
+                            >
+                              Deselect all
+                            </button>
+                          </div>
+                          <div className="max-h-28 overflow-y-auto space-y-0.5 rounded border border-app-subtle p-1.5">
+                            {topLevelFolders.map((f) => (
+                              <label
+                                key={f.id}
+                                className="flex items-center gap-1.5 text-app-primary cursor-pointer py-0.5 hover:bg-app-subtle/20 px-1 rounded"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={selectedFolderIds.has(f.id)}
+                                  onChange={() => toggleFolderId(f.id)}
+                                  className="accent-blue-500"
+                                />
+                                {f.name}
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Merge same-name folders */}
+                    <div>
+                      <label className="flex items-center gap-2 text-app-primary cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={mergeSameName}
+                          onChange={(e) => setMergeSameName(e.target.checked)}
+                          className="accent-blue-500"
+                        />
+                        Merge folders with the same name
+                      </label>
+                      <p className="ml-5 mt-0.5 text-[10px] text-app-muted">
+                        Deduplicates folders with identical names across the
+                        tree
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="flex justify-between">
                 <button
                   onClick={() => setStep("file")}
