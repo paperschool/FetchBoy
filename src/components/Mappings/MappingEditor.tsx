@@ -3,6 +3,7 @@ import { Check, AlertCircle, Play, Pause, Workflow } from 'lucide-react';
 import { useMappingsStore } from '@/stores/mappingsStore';
 import type { MatchType, MappingEditForm } from '@/stores/mappingsStore';
 import { useStitchStore } from '@/stores/stitchStore';
+import { useAppTabStore } from '@/stores/appTabStore';
 import { DEFAULT_MAPPING_CONFIG, DEFAULT_MAPPING_ENTRY_CONFIG, DEFAULT_MAPPING_EXIT_CONFIG } from '@/types/stitch';
 import type { MappingHeader, MappingCookie } from '@/lib/db';
 import { ViewerShell } from '@/components/ui/ViewerShell';
@@ -187,11 +188,20 @@ export function MappingEditor({ onClose }: Props) {
                             <button type="button"
                                 onClick={async () => {
                                     if (!useChain) {
-                                        // Create a bound chain with entry/exit nodes
                                         const stitchStore = useStitchStore.getState();
+                                        // Reuse existing chain if one was previously created
+                                        if (chainId) {
+                                            const existing = stitchStore.chains.find((c) => c.id === chainId);
+                                            if (existing) {
+                                                await stitchStore.loadChain(chainId);
+                                                setUseChain(true);
+                                                useAppTabStore.getState().setActiveTab('stitch');
+                                                return;
+                                            }
+                                        }
+                                        // Create a new bound chain with entry/exit nodes
                                         const chain = await stitchStore.createChain(`Mapping: ${name}`, editForm.id);
                                         await stitchStore.loadChain(chain.id);
-                                        // Create the mapping container with entry/exit
                                         const mappingNode = await stitchStore.addNode({
                                             chainId: chain.id, type: 'mapping', positionX: 100, positionY: 100,
                                             config: { ...DEFAULT_MAPPING_CONFIG, urlPattern, matchType }, label: name, parentNodeId: null,
@@ -209,9 +219,9 @@ export function MappingEditor({ onClose }: Props) {
                                         });
                                         setChainId(chain.id);
                                         setUseChain(true);
+                                        useAppTabStore.getState().setActiveTab('stitch');
                                     } else {
                                         setUseChain(false);
-                                        // Chain remains but is no longer active
                                     }
                                 }}
                                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors ${

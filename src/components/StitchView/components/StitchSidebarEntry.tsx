@@ -1,6 +1,8 @@
 import { useState, useRef, useCallback } from 'react';
 import { Copy, Pencil, Trash2, MoreVertical, Workflow } from 'lucide-react';
 import type { StitchChain } from '@/types/stitch';
+import { useAppTabStore } from '@/stores/appTabStore';
+import { useMappingsStore } from '@/stores/mappingsStore';
 
 interface StitchSidebarEntryProps {
   chain: StitchChain;
@@ -89,7 +91,21 @@ export function StitchSidebarEntry({
       ) : (
         <>
           {chain.mappingId && (
-            <span className="shrink-0 text-yellow-400" data-testid="mapper-badge"><Workflow size={10} /></span>
+            <button
+              className="shrink-0 text-yellow-400 hover:text-yellow-300"
+              data-testid="mapper-badge"
+              title="Open mapper"
+              onClick={(e) => {
+                e.stopPropagation();
+                const mapping = useMappingsStore.getState().mappings.find((m) => m.id === chain.mappingId);
+                if (mapping) {
+                  useMappingsStore.getState().startEditing(mapping);
+                  useAppTabStore.getState().setActiveTab('intercept');
+                }
+              }}
+            >
+              <Workflow size={10} />
+            </button>
           )}
           <span
             className="min-w-0 flex-1 truncate"
