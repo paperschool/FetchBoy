@@ -1,5 +1,16 @@
 # Long Changelog
 
+## [0.19.0] - 2026-04-02
+
+### Epic 16: Code Quality Hardening, Constants, & Localisation
+
+- refactor: created 4 Tauri IPC wrapper hooks (useProxyConfig, useCertificateManagement, useBreakpointMatching, useSystemOperations) — eliminated all direct `invoke()` calls from component files, routing through hooks per DIP
+- refactor: created 3 shared hooks (useAutoSave, useEventBuffer, useInlineRename) with 22 tests — replaced duplicated debounce/buffer/rename patterns in 5 consumer files; created UrlPatternInput and InlineEditableText shared UI components
+- refactor: decomposed stitchEngine.ts (885 lines) into 14 focused modules under `src/lib/stitchEngine/` with barrel export preserving public API; decomposed useSendRequest.ts into interpolateRequest, usePreRequestScript, useHistoryPersistence composition hooks
+- refactor: decomposed Rust types.rs (613 lines) into 8 module files under `src-tauri/src/proxy/types/`; introduced MatchType enum replacing stringly-typed match dispatching; replaced 16 Mutex `.unwrap()` calls with `.expect("context")` — 4 provably-safe unwraps remain with safety comments
+- feat: i18n foundation — `t(key, params?)` helper with TypeScript-enforced keys, interpolation support, 14 namespace files populated with ~260 domain strings across all feature areas; constants.ts expanded with TIMEOUTS, PROGRESS, UI_DIMENSIONS, CANVAS, SETTINGS_DEFAULTS sections
+- refactor: renamed `Intercept view/` directory to `InterceptView/` with all imports updated; extracted StitchNode constants, TabBar context menu, nodeFactory utility; 66 new tests added (hooks, urlUtils, arrayHelpers, urlPatternConfig, i18n)
+
 ## [0.18.19] - 2026-04-01
 
 - feat: import post-processing pipeline — flatten single-child folder chains, depth limiting, folder selection checkboxes, and structural merge of same-named folders across branches

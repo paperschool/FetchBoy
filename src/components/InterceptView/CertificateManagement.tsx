@@ -1,5 +1,5 @@
 import { FolderOpen, Copy, ShieldCheck, Globe } from "lucide-react";
-import { invoke } from "@tauri-apps/api/core";
+import { useSystemOperations } from "@/hooks/useSystemOperations";
 
 interface CaCertificateInfo {
   certPath: string;
@@ -29,6 +29,8 @@ export function CertificateManagement({
   onOpenFolder,
   onCopyPath,
 }: CertificateManagementProps): React.ReactElement | null {
+  const { openProxySettings, openCertManager } = useSystemOperations();
+
   return (
     <>
       {/* CA Certificate paths */}
@@ -39,10 +41,10 @@ export function CertificateManagement({
             <button onClick={onOpenFolder} className="flex items-center gap-1 px-2 py-1 text-xs text-app-muted hover:text-app-inverse hover:bg-gray-700 rounded transition-colors cursor-pointer">
               <FolderOpen size={12} /> Open Folder
             </button>
-            <button onClick={() => invoke("open_proxy_settings").catch((e: unknown) => console.warn("open_proxy_settings:", e))} className="flex items-center gap-1 px-2 py-1 text-xs text-app-muted hover:text-app-inverse hover:bg-gray-700 rounded transition-colors cursor-pointer" title="Open OS Proxy Settings">
+            <button onClick={openProxySettings} className="flex items-center gap-1 px-2 py-1 text-xs text-app-muted hover:text-app-inverse hover:bg-gray-700 rounded transition-colors cursor-pointer" title="Open OS Proxy Settings">
               <Globe size={12} /> Proxy Settings
             </button>
-            <button onClick={() => invoke("open_cert_manager").catch((e: unknown) => console.warn("open_cert_manager:", e))} className="flex items-center gap-1 px-2 py-1 text-xs text-app-muted hover:text-app-inverse hover:bg-gray-700 rounded transition-colors cursor-pointer" title="Open Certificate Manager">
+            <button onClick={openCertManager} className="flex items-center gap-1 px-2 py-1 text-xs text-app-muted hover:text-app-inverse hover:bg-gray-700 rounded transition-colors cursor-pointer" title="Open Certificate Manager">
               <ShieldCheck size={12} /> Cert Manager
             </button>
           </div>

@@ -14,34 +14,18 @@ import {
 } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { readTextFile } from "@tauri-apps/plugin-fs";
-import { parsePostmanV21 } from "@/lib/importers/postmanV21";
-import { parsePostmanV1 } from "@/lib/importers/postmanV1";
-import { parseInsomniaV4 } from "@/lib/importers/insomniaV4";
 import { persistImportResult } from "@/lib/importers/persist";
+import { parseByFormat } from "@/lib/importers/parseByFormat";
 import { importCollectionFromJson } from "@/lib/importExport";
 import { useCollectionStore } from "@/stores/collectionStore";
 import { useEnvironmentStore } from "@/stores/environmentStore";
-import { useDebugStore } from "@/stores/debugStore";
+import { emitDebug } from "@/lib/debugUtils";
 import type { ImportFormat, ImportResult } from "@/lib/importers/types";
 import {
   applyImportOptions,
   getTopLevelFolders,
 } from "@/lib/importers/postProcess";
 import collectionPrompt from "../../../Collection-Generation-Prompt.md?raw";
-
-function emitDebug(
-  level: "info" | "warn" | "error",
-  source: string,
-  message: string,
-): void {
-  useDebugStore.getState().addInternalEvent({
-    id: `${source}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    timestamp: Date.now(),
-    level,
-    source,
-    message,
-  });
-}
 
 type WizardStep =
   | "format"
@@ -64,16 +48,6 @@ const FORMAT_LABEL: Record<SelectedFormat, string> = {
   "fetchboy-v1": "v1",
 };
 
-function parseByFormat(text: string, format: ImportFormat): ImportResult {
-  switch (format) {
-    case "postman-v1":
-      return parsePostmanV1(text);
-    case "postman-v2":
-      return parsePostmanV21(text);
-    case "insomnia-v4":
-      return parseInsomniaV4(text);
-  }
-}
 
 function CopyPromptFooter(): React.ReactElement {
   const [copied, setCopied] = useState(false);

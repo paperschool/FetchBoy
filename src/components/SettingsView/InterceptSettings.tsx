@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
-import { invoke } from '@tauri-apps/api/core'
 import { useUiSettingsStore } from '@/stores/uiSettingsStore'
 import { useInterceptStore } from '@/stores/interceptStore'
 import { saveSetting } from '@/lib/settings'
-import { ProxyPortConfig } from '@/components/Intercept view/ProxyPortConfig'
-import { CertificateManagement } from '@/components/Intercept view/CertificateManagement'
+import { useProxyConfig } from '@/hooks/useProxyConfig'
+import { useCertificateManagement } from '@/hooks/useCertificateManagement'
+import { useSystemOperations } from '@/hooks/useSystemOperations'
+import { ProxyPortConfig } from '@/components/InterceptView/ProxyPortConfig'
+import { CertificateManagement } from '@/components/InterceptView/CertificateManagement'
 
 interface CaCertificateInfo { certPath: string; certExists: boolean }
 type ActionStatus = 'idle' | 'loading' | 'success' | 'error'
@@ -24,11 +26,14 @@ export function InterceptSettings(): React.ReactElement {
     const [caCertInfo, setCaCertInfo] = useState<CaCertificateInfo | null>(null)
     const [certStatus, setCertStatus] = useState<ActionStatus>('idle')
     const [certMessage, setCertMessage] = useState('')
+    const { setProxyConfig, unconfigureSystemProxy } = useProxyConfig()
+    const { installCert, uninstallCert, deleteCertFiles, verifyCertInstalled, getCaCertificatePath } = useCertificateManagement()
+    const { openFolder } = useSystemOperations()
 
     useEffect(() => {
-        invoke<CaCertificateInfo>('get_ca_certificate_path').then(setCaCertInfo).catch(() => setCaCertInfo(null))
-        invoke<boolean>('is_ca_installed').then((installed) => setCaInstalled(installed)).catch(() => setCaInstalled(false))
-    }, [setCaInstalled])
+        getCaCertificatePath().then(setCaCertInfo).catch(() => setCaCertInfo(null))
+        verifyCertInstalled().then((installed) => setCaInstalled(installed)).catch(() => setCaInstalled(false))
+    }, [setCaInstalled, getCaCertificatePath, verifyCertInstalled])
 
     function handleProxyPortInput(e: React.ChangeEvent<HTMLInputElement>): void { setPortInput(e.target.value) }
 
@@ -38,13 +43,13 @@ export function InterceptSettings(): React.ReactElement {
         setPortInput(String(clamped))
         setProxyPort(clamped)
         void saveSetting('proxy_port', clamped)
-        void invoke('set_proxy_config', { enabled: proxyEnabled, port: clamped }).catch(() => {})
+        void setProxyConfig(proxyEnabled, clamped)
     }
 
     async function handleInstallCert(): Promise<void> {
         setCertStatus('loading'); setCertMessage('')
         try {
-            await invoke('install_ca_to_system')
+            await installCert()
             setCertStatus('success'); setCertMessage('Certificate installed and trusted successfully.')
             setCaInstalled(true)
         } catch (err) { setCertStatus('error'); setCertMessage(String(err)) }
@@ -53,14 +58,14 @@ export function InterceptSettings(): React.ReactElement {
     async function handleUninstallCert(): Promise<void> {
         setCertStatus('loading'); setCertMessage('')
         try {
-            await invoke('uninstall_ca_from_system')
+            await uninstallCert()
             if (proxyEnabled) {
-                await invoke('unconfigure_system_proxy')
-                await invoke('set_proxy_config', { enabled: false, port: proxyPort })
+                await unconfigureSystemProxy()
+                await setProxyConfig(false, proxyPort)
                 setProxyEnabled(false); clearPauseState()
                 void saveSetting('proxy_enabled', false)
             }
-            await invoke('delete_ca_files')
+            await deleteCertFiles()
             setCaCertInfo((prev) => prev ? { ...prev, certExists: false } : null)
             setCertStatus('idle'); setCertMessage(''); setCaInstalled(false)
         } catch (err) { setCertStatus('error'); setCertMessage(String(err)) }
@@ -69,7 +74,7 @@ export function InterceptSettings(): React.ReactElement {
     function handleOpenCaFolder(): void {
         if (caCertInfo?.certPath) {
             const caDir = caCertInfo.certPath.substring(0, caCertInfo.certPath.lastIndexOf('/'))
-            invoke('open_folder', { path: caDir }).catch((err: unknown) => console.error('Failed to open CA folder:', err))
+            openFolder(caDir)
         }
     }
 

@@ -1,0 +1,17 @@
+export const auth = {
+  'auth.type': 'Auth Type',
+  'auth.none': 'None',
+  'auth.bearer': 'Bearer Token',
+  'auth.basic': 'Basic Auth',
+  'auth.apiKey': 'API Key',
+  'auth.token': 'Token',
+  'auth.username': 'Username',
+  'auth.password': 'Password',
+  'auth.key': 'Key',
+  'auth.value': 'Value',
+  'auth.addTo': 'Add to',
+  'auth.header': 'Header',
+  'auth.queryParam': 'Query Param',
+  'auth.tokenPlaceholder': 'Enter bearer token...',
+  'auth.keyPlaceholder': 'X-API-Key',
+} as const;

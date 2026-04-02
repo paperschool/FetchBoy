@@ -1,18 +1,19 @@
 import { FolderOpen } from 'lucide-react'
-import { invoke } from '@tauri-apps/api/core'
 import { useDebugEvents } from '@/hooks/useDebugEvents'
+import { useSystemOperations } from '@/hooks/useSystemOperations'
 import { InternalEventTable } from './InternalEventTable'
 import { TrafficTable } from './TrafficTable'
 import { ProxyFlowDiagram } from './ProxyFlowDiagram'
 
 export function DebugView() {
     useDebugEvents()
+    const { openLogFolder } = useSystemOperations()
 
     return (
         <div className="flex flex-col h-full bg-app-main">
             <div className="flex items-center justify-end px-2 py-1 border-b border-app-subtle shrink-0">
                 <button
-                    onClick={() => invoke('open_log_folder').catch((e: unknown) => console.warn('open_log_folder:', e))}
+                    onClick={openLogFolder}
                     className="flex items-center gap-1 px-2 py-1 text-xs text-app-muted hover:text-app-inverse hover:bg-gray-700 rounded transition-colors"
                     title="Open log files directory"
                 >

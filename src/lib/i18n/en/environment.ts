@@ -1,0 +1,17 @@
+export const environment = {
+  'environment.title': 'Environments',
+  'environment.newEnvironment': 'New Environment',
+  'environment.noEnvironments': 'No environments configured.',
+  'environment.active': 'Active',
+  'environment.setActive': 'Set Active',
+  'environment.variables': 'Variables',
+  'environment.addVariable': 'Add Variable',
+  'environment.import': 'Import',
+  'environment.export': 'Export',
+  'environment.delete': 'Delete Environment',
+  'environment.rename': 'Rename',
+  'environment.duplicate': 'Duplicate',
+  'environment.noActiveEnvironment': 'No active environment',
+  'environment.variableName': 'Variable Name',
+  'environment.variableValue': 'Variable Value',
+} as const;

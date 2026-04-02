@@ -38,18 +38,19 @@ fn match_wildcard(url: &str, pattern: &str) -> bool {
     // Convert glob-style wildcards to a regex pattern.
     // Escape dots and convert * to .*
     let regex_pattern = format!("^{}$", pattern.replace('.', "\\.").replace('*', ".*"));
-    let mut cache = REGEX_CACHE.lock().unwrap();
+    let mut cache = REGEX_CACHE.lock().expect("regex cache lock");
     let re = cache
         .entry(regex_pattern.clone())
         .or_insert_with(|| match Regex::new(&regex_pattern) {
             Ok(re) => re,
+            // SAFETY: "^$" is a valid regex pattern
             Err(_) => Regex::new("^$").unwrap(),
         });
     re.is_match(url)
 }
 
 fn match_regex(url: &str, pattern: &str) -> Result<bool, regex::Error> {
-    let mut cache = REGEX_CACHE.lock().unwrap();
+    let mut cache = REGEX_CACHE.lock().expect("regex cache lock");
     if let Some(re) = cache.get(pattern) {
         return Ok(re.is_match(url));
     }

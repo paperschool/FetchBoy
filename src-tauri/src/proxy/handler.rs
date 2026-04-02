@@ -74,10 +74,7 @@ impl HttpHandler for InterceptHandler {
         mut req: Request<Body>,
     ) -> impl std::future::Future<Output = RequestOrResponse> + Send {
         let id = uuid::Uuid::new_v4().to_string();
-        let timestamp = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_millis() as i64;
+        let timestamp = now_millis();
 
         let method = req.method().to_string();
 
@@ -149,7 +146,7 @@ impl HttpHandler for InterceptHandler {
             } else {
                 None
             };
-            *slot_for_async.lock().unwrap() = captured_body.clone();
+            *slot_for_async.lock().expect("request body slot lock") = captured_body.clone();
 
             // Emit split request event so the frontend can show request data immediately.
             request_emit_fn(&InterceptRequestEvent {
@@ -167,11 +164,11 @@ impl HttpHandler for InterceptHandler {
             let full_url = format!("https://{}{}", host, path);
             {
                 let remap_rule = {
-                    let guard = mappings_for_remap.lock().unwrap();
+                    let guard = mappings_for_remap.lock().expect("mappings remap lock");
                     guard
                         .iter()
                         .filter(|m| m.enabled && m.url_remap_enabled && !m.url_remap_target.is_empty())
-                        .find(|m| match_url(&full_url, &m.url_pattern, &m.match_type).matches)
+                        .find(|m| match_url(&full_url, &m.url_pattern, m.match_type.as_str()).matches)
                         .cloned()
                 };
 
@@ -202,10 +199,7 @@ impl HttpHandler for InterceptHandler {
                         }
 
                         // Emit mapping:applied event for the remap
-                        let ts = std::time::SystemTime::now()
-                            .duration_since(std::time::UNIX_EPOCH)
-                            .unwrap_or_default()
-                            .as_millis() as i64;
+                        let ts = now_millis();
                         mapping_emit_fn_for_remap(&MappingAppliedEvent {
                             mapping_id: rule.id.clone(),
                             mapping_name: rule.id.clone(),
@@ -221,11 +215,11 @@ impl HttpHandler for InterceptHandler {
 
             // Check for a blocking breakpoint BEFORE forwarding upstream.
             let blocking_bp = {
-                let guard = breakpoints.lock().unwrap();
+                let guard = breakpoints.lock().expect("breakpoints lock");
                 guard
                     .iter()
                     .filter(|bp| bp.enabled && bp.block_request_enabled)
-                    .find(|bp| match_url(&full_url, &bp.url_pattern, &bp.match_type).matches)
+                    .find(|bp| match_url(&full_url, &bp.url_pattern, bp.match_type.as_str()).matches)
                     .cloned()
             };
 
@@ -266,6 +260,7 @@ impl HttpHandler for InterceptHandler {
                     .status(status)
                     .header(CONTENT_LENGTH, block_body_bytes.len())
                     .body(Full::new(block_body_bytes).into())
+                    // SAFETY: builder with known-good status + body never fails
                     .unwrap();
                 return RequestOrResponse::Response(response);
             }
@@ -288,7 +283,7 @@ impl HttpHandler for InterceptHandler {
         async move {
             if let Some(req_info) = req_info {
                 let response_time_ms = req_info.started.elapsed().as_millis() as i64;
-                let request_body = req_info.request_body.lock().unwrap().clone();
+                let request_body = req_info.request_body.lock().expect("request body lock").clone();
 
                 response_emit_fn(&InterceptResponseEvent {
                     id: req_info.id.clone(),
@@ -307,6 +302,7 @@ impl HttpHandler for InterceptHandler {
             Response::builder()
                 .status(502)
                 .body(Body::empty())
+                // SAFETY: 502 + empty body never fails
                 .unwrap()
         }
     }
@@ -363,11 +359,11 @@ impl HttpHandler for InterceptHandler {
                 .unwrap_or_default();
 
             let matched_bp = {
-                let guard = breakpoints.lock().unwrap();
+                let guard = breakpoints.lock().expect("breakpoints lock");
                 guard
                     .iter()
                     .filter(|bp| bp.enabled && !bp.block_request_enabled)
-                    .find(|bp| match_url(&url, &bp.url_pattern, &bp.match_type).matches)
+                    .find(|bp| match_url(&url, &bp.url_pattern, bp.match_type.as_str()).matches)
                     .cloned()
             };
 
@@ -375,7 +371,7 @@ impl HttpHandler for InterceptHandler {
             // When a non-blocking breakpoint matches, pause the response and
             // wait for user action (Continue / Drop / Modify) or timeout.
             let user_decision: Option<PauseDecision> = if let Some(ref bp) = matched_bp {
-                let timeout_secs = *pause_timeout_ref.lock().unwrap();
+                let timeout_secs = *pause_timeout_ref.lock().expect("pause timeout lock");
                 let (tx, rx) = oneshot::channel::<PauseDecision>();
 
                 let request_id = req_info
@@ -384,17 +380,13 @@ impl HttpHandler for InterceptHandler {
                     .unwrap_or_default();
 
                 // Store the sender so a Tauri command can signal us.
-                pause_registry.lock().unwrap().insert(request_id.clone(), tx);
+                pause_registry.lock().expect("pause registry lock").insert(request_id.clone(), tx);
 
                 // Emit the paused event to the frontend.
                 if let Some(ref ri) = req_info {
-                    let timeout_at = std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap_or_default()
-                        .as_secs() as i64
-                        + timeout_secs as i64;
+                    let timeout_at = (now_millis() / 1000) + timeout_secs as i64;
 
-                    let request_body = ri.request_body.lock().unwrap().clone();
+                    let request_body = ri.request_body.lock().expect("request body lock").clone();
                     let paused_event = BreakpointPausedEvent {
                         request_id: request_id.clone(),
                         breakpoint_id: bp.id.clone(),
@@ -417,7 +409,7 @@ impl HttpHandler for InterceptHandler {
                     // 0 means "never" — wait indefinitely.
                     match rx.await {
                         Ok(decision) => {
-                            pause_registry.lock().unwrap().remove(&request_id);
+                            pause_registry.lock().expect("pause registry lock").remove(&request_id);
                             Some(decision)
                         }
                         Err(_) => None,
@@ -425,12 +417,12 @@ impl HttpHandler for InterceptHandler {
                 } else {
                     match tokio::time::timeout(Duration::from_secs(timeout_secs), rx).await {
                         Ok(Ok(decision)) => {
-                            pause_registry.lock().unwrap().remove(&request_id);
+                            pause_registry.lock().expect("pause registry lock").remove(&request_id);
                             Some(decision)
                         }
                         _ => {
                             // Timeout or channel closed → clean up and auto-continue.
-                            pause_registry.lock().unwrap().remove(&request_id);
+                            pause_registry.lock().expect("pause registry lock").remove(&request_id);
                             Some(PauseDecision::Continue)
                         }
                     }
@@ -444,7 +436,7 @@ impl HttpHandler for InterceptHandler {
                 // Emit a "dropped" event so the intercept table shows it.
                 if let Some(ref ri) = req_info {
                     let response_time_ms = ri.started.elapsed().as_millis() as i64;
-                    let request_body = ri.request_body.lock().unwrap().clone();
+                    let request_body = ri.request_body.lock().expect("request body lock").clone();
 
                     response_emit_fn(&InterceptResponseEvent {
                         id: ri.id.clone(),
@@ -552,11 +544,11 @@ impl HttpHandler for InterceptHandler {
             let bp_replaced_body = matched_bp.as_ref().is_some_and(|bp| bp.response_mapping_enabled);
             {
                 let matched_mapping = {
-                    let guard = mappings.lock().unwrap();
+                    let guard = mappings.lock().expect("mappings lock");
                     guard
                         .iter()
                         .filter(|m| m.enabled)
-                        .find(|m| match_url(&url, &m.url_pattern, &m.match_type).matches)
+                        .find(|m| match_url(&url, &m.url_pattern, m.match_type.as_str()).matches)
                         .cloned()
                 };
 
@@ -569,10 +561,10 @@ impl HttpHandler for InterceptHandler {
                     // Stitch chain on the frontend instead of using static rules.
                     let chain_applied = if mapping.use_chain {
                         if let Some(ref chain_id) = mapping.chain_id {
-                            let chain_timeout_secs = *chain_timeout_ref.lock().unwrap();
+                            let chain_timeout_secs = *chain_timeout_ref.lock().expect("chain timeout lock");
                             let (tx, rx) = oneshot::channel::<Option<ChainExecutionResult>>();
 
-                            chain_registry.lock().unwrap().insert(request_id.clone(), tx);
+                            chain_registry.lock().expect("chain registry lock").insert(request_id.clone(), tx);
 
                             // Build the request data to send to the frontend.
                             let chain_body = orig_response_body.clone().unwrap_or_default();
@@ -605,7 +597,7 @@ impl HttpHandler for InterceptHandler {
                             };
 
                             // Clean up the registry entry.
-                            chain_registry.lock().unwrap().remove(&request_id);
+                            chain_registry.lock().expect("chain registry lock").remove(&request_id);
 
                             if let Some(result) = chain_result {
                                 // Apply chain result to response.
@@ -715,10 +707,7 @@ impl HttpHandler for InterceptHandler {
                             "Mapping applied: '{}' matched '{}' — overrides: {:?}",
                             url, mapping.url_pattern, overrides,
                         );
-                        let timestamp = std::time::SystemTime::now()
-                            .duration_since(std::time::UNIX_EPOCH)
-                            .unwrap_or_default()
-                            .as_millis() as i64;
+                        let timestamp = now_millis();
                         mapping_emit_fn(&MappingAppliedEvent {
                             mapping_id: mapping.id.clone(),
                             mapping_name: mapping.id.clone(),
@@ -763,7 +752,7 @@ impl HttpHandler for InterceptHandler {
 
             if let Some(req_info) = req_info {
                 let response_time_ms = req_info.started.elapsed().as_millis() as i64;
-                let request_body = req_info.request_body.lock().unwrap().clone();
+                let request_body = req_info.request_body.lock().expect("request body lock").clone();
 
                 // Emit split response event.
                 let status_text = hudsucker::hyper::StatusCode::from_u16(effective_status_code)

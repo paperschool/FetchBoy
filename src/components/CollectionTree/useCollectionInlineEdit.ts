@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useCollectionStore } from "@/stores/collectionStore";
 import {
   renameCollection as dbRenameCollection,
   renameFolder as dbRenameFolder,
   renameRequest as dbRenameRequest,
 } from "@/lib/collections";
+import { useInlineRename } from "@/hooks/useInlineRename";
 
 type EditingType = "collection" | "folder" | "request";
 
@@ -23,50 +24,69 @@ export type { EditingType };
 
 export function useCollectionInlineEdit(): UseCollectionInlineEditReturn {
   const store = useCollectionStore();
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [editingType, setEditingType] = useState<EditingType | null>(null);
-  const [editingValue, setEditingValue] = useState("");
-  const editRef = useRef<HTMLInputElement>(null);
+  const editingTypeRef = useRef<EditingType | null>(null);
 
-  useEffect(() => {
-    if (editingId) editRef.current?.focus();
-  }, [editingId]);
+  const handleConfirm = useCallback((id: string, newName: string) => {
+    const name = newName.trim();
+    if (!name || !editingTypeRef.current) return;
+    const type = editingTypeRef.current;
+    editingTypeRef.current = null;
+    setEditingType(null);
+    if (type === "collection") {
+      void dbRenameCollection(id, name).then(() => store.renameCollection(id, name));
+    } else if (type === "folder") {
+      void dbRenameFolder(id, name).then(() => store.renameFolder(id, name));
+    } else {
+      void dbRenameRequest(id, name).then(() => store.renameRequest(id, name));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store]);
 
-  const startEdit = useCallback(
-    (type: EditingType, id: string, name: string) => {
-      setEditingType(type);
-      setEditingId(id);
-      setEditingValue(name);
-    },
-    [],
-  );
+  const rename = useInlineRename(handleConfirm);
+
+  const startEdit = useCallback((type: EditingType, id: string, name: string) => {
+    editingTypeRef.current = type;
+    setEditingType(type);
+    rename.startEditing(id, name);
+  }, [rename]);
 
   const cancelEdit = useCallback(() => {
-    setEditingId(null);
+    editingTypeRef.current = null;
     setEditingType(null);
-  }, []);
+    rename.cancelEditing();
+  }, [rename]);
 
   const commitEdit = useCallback(async () => {
-    if (!editingId || !editingType || !editingValue.trim()) {
-      cancelEdit();
-      return;
+    if (rename.editingId && editingTypeRef.current) {
+      const name = rename.editValue.trim();
+      if (!name) { cancelEdit(); return; }
+      const type = editingTypeRef.current;
+      const id = rename.editingId;
+      editingTypeRef.current = null;
+      setEditingType(null);
+      rename.cancelEditing();
+      if (type === "collection") {
+        await dbRenameCollection(id, name);
+        store.renameCollection(id, name);
+      } else if (type === "folder") {
+        await dbRenameFolder(id, name);
+        store.renameFolder(id, name);
+      } else {
+        await dbRenameRequest(id, name);
+        store.renameRequest(id, name);
+      }
     }
-    const name = editingValue.trim();
-    if (editingType === "collection") {
-      await dbRenameCollection(editingId, name);
-      store.renameCollection(editingId, name);
-    } else if (editingType === "folder") {
-      await dbRenameFolder(editingId, name);
-      store.renameFolder(editingId, name);
-    } else {
-      await dbRenameRequest(editingId, name);
-      store.renameRequest(editingId, name);
-    }
-    cancelEdit();
-  }, [editingId, editingType, editingValue, cancelEdit, store]);
+  }, [rename, cancelEdit, store]);
 
   return {
-    editingId, editingType, editingValue, editRef,
-    setEditingValue, startEdit, cancelEdit, commitEdit,
+    editingId: rename.editingId,
+    editingType: editingType,
+    editingValue: rename.editValue,
+    editRef: rename.editRef,
+    setEditingValue: rename.setEditValue,
+    startEdit,
+    cancelEdit,
+    commitEdit,
   };
 }

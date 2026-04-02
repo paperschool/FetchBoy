@@ -5,11 +5,11 @@ import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { ToastContainer } from "@/components/ui/ToastContainer";
 import { useAppTabStore } from "@/stores/appTabStore";
 import { useUiSettingsStore } from "@/stores/uiSettingsStore";
-import { InterceptView } from "@/components/Intercept view/InterceptView";
+import { InterceptView } from "@/components/InterceptView/InterceptView";
 import { DebugView } from "@/components/Debug/DebugView";
 import { SettingsView } from "@/components/SettingsView/SettingsView";
 import { FetchTabActions } from "@/components/TopBar/TopBar";
-import { InterceptTabActions } from "@/components/Intercept view/InterceptTopBar";
+import { InterceptTabActions } from "@/components/InterceptView/InterceptTopBar";
 import { StitchView } from "@/components/StitchView/StitchView";
 import { useChainExecutionListener } from "@/hooks/useChainExecutionListener";
 

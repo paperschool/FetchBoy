@@ -5,10 +5,12 @@ import {
 } from "lucide-react";
 import { BreakpointsTree } from "@/components/Breakpoints/BreakpointsTree";
 import { MappingsTree } from "@/components/Mappings/MappingsTree";
-import { invoke } from "@tauri-apps/api/core";
 import { useUiSettingsStore } from "@/stores/uiSettingsStore";
 import { useInterceptStore } from "@/stores/interceptStore";
 import { saveSetting } from "@/lib/settings";
+import { useProxyConfig } from "@/hooks/useProxyConfig";
+import { useCertificateManagement } from "@/hooks/useCertificateManagement";
+import { useSystemOperations } from "@/hooks/useSystemOperations";
 import { ProxyPortConfig } from "./ProxyPortConfig";
 import { CertificateManagement } from "./CertificateManagement";
 
@@ -35,11 +37,14 @@ export function InterceptSidebar({ collapsed, onToggle }: InterceptSidebarProps)
   const [caCertInfo, setCaCertInfo] = useState<CaCertificateInfo | null>(null);
   const [certStatus, setCertStatus] = useState<ActionStatus>("idle");
   const [certMessage, setCertMessage] = useState("");
+  const { setProxyConfig, unconfigureSystemProxy } = useProxyConfig();
+  const { installCert, uninstallCert, deleteCertFiles, verifyCertInstalled, getCaCertificatePath } = useCertificateManagement();
+  const { openFolder } = useSystemOperations();
 
   useEffect(() => {
-    invoke<CaCertificateInfo>("get_ca_certificate_path").then(setCaCertInfo).catch(() => setCaCertInfo(null));
-    invoke<boolean>("is_ca_installed").then((installed) => setCaInstalled(installed)).catch(() => setCaInstalled(false));
-  }, [setCaInstalled]);
+    getCaCertificatePath().then(setCaCertInfo).catch(() => setCaCertInfo(null));
+    verifyCertInstalled().then((installed) => setCaInstalled(installed)).catch(() => setCaInstalled(false));
+  }, [setCaInstalled, getCaCertificatePath, verifyCertInstalled]);
 
   function handleProxyPortInput(e: React.ChangeEvent<HTMLInputElement>) { setPortInput(e.target.value) }
   function handleProxyPortCommit() {
@@ -47,24 +52,24 @@ export function InterceptSidebar({ collapsed, onToggle }: InterceptSidebarProps)
     const clamped = Math.min(65535, Math.max(1024, isNaN(raw) ? 8080 : raw));
     setPortInput(String(clamped)); setProxyPort(clamped);
     void saveSetting("proxy_port", clamped);
-    void invoke("set_proxy_config", { enabled: proxyEnabled, port: clamped }).catch(() => {});
+    void setProxyConfig(proxyEnabled, clamped);
   }
 
   async function handleInstallCert() {
     setCertStatus("loading"); setCertMessage("");
-    try { await invoke("install_ca_to_system"); setCertStatus("success"); setCertMessage("Certificate installed and trusted successfully."); setCaInstalled(true); }
+    try { await installCert(); setCertStatus("success"); setCertMessage("Certificate installed and trusted successfully."); setCaInstalled(true); }
     catch (err) { setCertStatus("error"); setCertMessage(String(err)); }
   }
 
   async function handleUninstallCert() {
     setCertStatus("loading"); setCertMessage("");
     try {
-      await invoke("uninstall_ca_from_system");
+      await uninstallCert();
       if (proxyEnabled) {
-        await invoke("unconfigure_system_proxy"); await invoke("set_proxy_config", { enabled: false, port: proxyPort });
+        await unconfigureSystemProxy(); await setProxyConfig(false, proxyPort);
         setProxyEnabled(false); clearPauseState(); void saveSetting("proxy_enabled", false);
       }
-      await invoke("delete_ca_files");
+      await deleteCertFiles();
       setCaCertInfo((prev) => prev ? { ...prev, certExists: false } : null);
       setCertStatus("idle"); setCertMessage(""); setCaInstalled(false);
     } catch (err) { setCertStatus("error"); setCertMessage(String(err)); }
@@ -73,7 +78,7 @@ export function InterceptSidebar({ collapsed, onToggle }: InterceptSidebarProps)
   function handleOpenCaFolder() {
     if (caCertInfo?.certPath) {
       const caDir = caCertInfo.certPath.substring(0, caCertInfo.certPath.lastIndexOf("/"));
-      invoke("open_folder", { path: caDir }).catch((err: unknown) => console.error("Failed to open CA folder:", err));
+      openFolder(caDir);
     }
   }
   function handleCopyPath() { if (caCertInfo?.certPath) void navigator.clipboard.writeText(caCertInfo.certPath) }

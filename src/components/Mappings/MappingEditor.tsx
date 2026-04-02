@@ -7,13 +7,14 @@ import { useAppTabStore } from '@/stores/appTabStore';
 import { DEFAULT_MAPPING_CONFIG, DEFAULT_MAPPING_ENTRY_CONFIG, DEFAULT_MAPPING_EXIT_CONFIG } from '@/types/stitch';
 import type { MappingHeader, MappingCookie } from '@/lib/db';
 import { ViewerShell } from '@/components/ui/ViewerShell';
-import { validateUrlPattern, MATCH_TYPES, PLACEHOLDERS } from './MappingEditor.utils';
+import { UrlPatternInput } from '@/components/ui/UrlPatternInput';
+import { validateUrlPattern } from '@/lib/urlPatternConfig';
 import { MappingHeadersEditor } from './MappingHeadersEditor';
 import { MappingCookieEditor } from './MappingCookieEditor';
 import { MappingResponseBodyEditor } from './MappingResponseBodyEditor';
 import { MappingUrlRemapEditor } from './MappingUrlRemapEditor';
 import { useMappingLogStore } from '@/stores/mappingLogStore';
-import { formatTimestamp, OVERRIDE_ICONS } from '@/components/Intercept view/MappingLogTable.utils';
+import { formatTimestamp, OVERRIDE_ICONS } from '@/components/InterceptView/MappingLogTable.utils';
 
 interface Props {
     onClose: () => void;
@@ -174,44 +175,14 @@ export function MappingEditor({ onClose }: Props) {
                                     data-testid="mapping-name-input"
                                 />
                             </div>
-                            <div>
-                                <label className="block text-app-muted text-xs mb-1">URL Pattern</label>
-                                <input
-                                    type="text" value={urlPattern}
-                                    onChange={(e) => edit.urlPattern(e.target.value)}
-                                    placeholder={PLACEHOLDERS[matchType]}
-                                    className="w-full bg-app-main text-app-inverse border border-app-subtle rounded px-2 py-1.5 text-sm font-mono"
-                                    data-testid="mapping-url-input"
-                                />
-                                {urlError && (
-                                    <p className="text-red-400 text-xs mt-1 flex items-center gap-1" data-testid="mapping-url-error">
-                                        <AlertCircle size={12} /> {urlError}
-                                    </p>
-                                )}
-                            </div>
-                            <div>
-                                <label className="block text-app-muted text-xs mb-1">Match Type</label>
-                                <div className="flex gap-1 flex-wrap">
-                                    {MATCH_TYPES.map((type) => (
-                                        <button key={type}
-                                            onClick={() => {
-                                                if (type === 'wildcard' && urlPattern && !urlPattern.startsWith('*') && !/^https?:\/\//.test(urlPattern)) {
-                                                    edit.urlPattern('*' + urlPattern);
-                                                }
-                                                edit.matchType(type);
-                                            }}
-                                            className={`px-3 py-1 text-xs rounded ${
-                                                matchType === type
-                                                    ? 'bg-app-accent text-white'
-                                                    : 'bg-app-subtle text-app-muted hover:text-app-inverse'
-                                            }`}
-                                            data-testid={`match-type-${type}`}
-                                        >
-                                            {type.charAt(0).toUpperCase() + type.slice(1)}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
+                            <UrlPatternInput
+                                urlPattern={urlPattern}
+                                onUrlPatternChange={edit.urlPattern}
+                                matchType={matchType}
+                                onMatchTypeChange={edit.matchType}
+                                urlError={urlError}
+                                testIdPrefix="mapping-"
+                            />
                             <div className="flex items-center gap-2">
                             <button type="button"
                                 onClick={() => edit.enabled()}

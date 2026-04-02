@@ -1,8 +1,5 @@
 import { useState, useCallback, useRef, useEffect, type PointerEvent } from 'react';
-
-const MIN_ZOOM = 0.25;
-const MAX_ZOOM = 2.0;
-const ZOOM_STEP = 0.1;
+import { CANVAS_MIN_ZOOM as MIN_ZOOM, CANVAS_MAX_ZOOM as MAX_ZOOM, CANVAS_ZOOM_STEP as ZOOM_STEP } from '@/lib/constants';
 
 export interface CanvasTransform {
   panX: number;

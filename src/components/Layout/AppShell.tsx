@@ -7,8 +7,8 @@ import { loadAllEnvironments } from '@/lib/environments';
 import { useEnvironmentStore } from '@/stores/environmentStore';
 import { loadAllSettings, saveSetting } from '@/lib/settings';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
-import { invoke } from '@tauri-apps/api/core';
 import { useTheme } from '@/hooks/useTheme';
+import { useProxyConfig } from '@/hooks/useProxyConfig';
 import useTabKeyboardShortcuts from '@/hooks/useTabKeyboardShortcuts';
 import useSidebarKeyboardShortcut from '@/hooks/useSidebarKeyboardShortcut';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
@@ -17,6 +17,7 @@ export function AppShell() {
   useTheme();
   useTabKeyboardShortcuts();
   useSidebarKeyboardShortcut();
+  const { setProxyConfig } = useProxyConfig();
 
   const sidebarCollapsed = useUiSettingsStore((s) => s.sidebarCollapsed);
   const setSidebarCollapsed = useUiSettingsStore((s) => s.setSidebarCollapsed);
@@ -47,7 +48,7 @@ export function AppShell() {
         useUiSettingsStore.getState().setProxyPort(proxyPort);
         // Sync the backend proxy server with the saved enabled/port state.
         // Without this call the proxy always starts enabled regardless of the saved setting.
-        void invoke('set_proxy_config', { enabled: proxyEnabled, port: proxyPort }).catch(() => {});
+        void setProxyConfig(proxyEnabled, proxyPort);
       })
       .catch(() => {}); // defaults already set in store initial state
   }, []);

@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { Trash2, Pin, PinOff } from 'lucide-react'
 import { useDebugStore } from '@/stores/debugStore'
-import { formatTimestamp } from '@/components/Intercept view/InterceptTable.utils'
+import { formatTimestamp } from '@/components/InterceptView/InterceptTable.utils'
 
 const LEVEL_BADGE: Record<string, string> = {
     info: 'bg-blue-500/20 text-blue-400',

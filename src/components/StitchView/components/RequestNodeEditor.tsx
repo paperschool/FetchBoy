@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { Import } from 'lucide-react';
 import { MonacoEditorField } from '@/components/Editor/MonacoEditorField';
 import { HighlightedUrlInput } from '@/components/MainPanel/HighlightedUrlInput';
@@ -6,6 +6,7 @@ import { KeyValueRows } from '@/components/RequestBuilder/KeyValueRows';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import { useStitchStore } from '@/stores/stitchStore';
 import { useEnvironmentStore } from '@/stores/environmentStore';
+import { useAutoSave } from '@/hooks/useAutoSave';
 import { resolveInputShape } from '../utils/inputShapeResolver';
 import { RequestSearchPalette } from './RequestSearchPalette';
 import type { StitchNode, RequestNodeConfig, StitchAuthConfig } from '@/types/stitch';
@@ -43,10 +44,14 @@ export function RequestNodeEditor({ node }: RequestNodeEditorProps): React.React
   const environments = useEnvironmentStore((s) => s.environments);
   const [activeTab, setActiveTab] = useState<EditorTab>('headers');
   const [showSearch, setShowSearch] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingChangesRef = useRef<Partial<RequestNodeConfig> | null>(null);
 
-  // Clean up debounce on unmount
-  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
+  const { trigger: triggerAutoSave } = useAutoSave(() => {
+    if (pendingChangesRef.current) {
+      updateNode(node.id, { config: { ...node.config, ...pendingChangesRef.current } }).catch(() => {});
+      pendingChangesRef.current = null;
+    }
+  }, 300);
 
   const cfg = node.config as unknown as RequestNodeConfig;
   const method = cfg.method ?? 'GET';
@@ -75,12 +80,10 @@ export function RequestNodeEditor({ node }: RequestNodeEditorProps): React.React
 
   const persist = useCallback(
     (changes: Partial<RequestNodeConfig>): void => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => {
-        updateNode(node.id, { config: { ...node.config, ...changes } }).catch(() => {});
-      }, 300);
+      pendingChangesRef.current = { ...pendingChangesRef.current, ...changes };
+      triggerAutoSave();
     },
-    [node.id, node.config, updateNode],
+    [triggerAutoSave],
   );
 
   const persistImmediate = useCallback(

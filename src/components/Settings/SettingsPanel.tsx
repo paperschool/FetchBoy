@@ -1,6 +1,6 @@
 import { Settings } from 'lucide-react';
-import { invoke } from '@tauri-apps/api/core';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
+import { useProxyConfig } from '@/hooks/useProxyConfig';
 import { saveSetting } from '@/lib/settings';
 import { useTourStore } from '@/stores/tourStore';
 import { KEYBOARD_SHORTCUTS, getShortcutDisplay } from '@/lib/keyboardShortcuts';
@@ -24,6 +24,7 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
     const proxyPort = useUiSettingsStore((s) => s.proxyPort);
     const setProxyPort = useUiSettingsStore((s) => s.setProxyPort);
     const resetTour = useTourStore((s) => s.resetTour);
+    const { setProxyConfig } = useProxyConfig();
     const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().includes('MAC');
 
     if (!open) return null;
@@ -64,9 +65,7 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
         const checked = e.target.checked;
         setProxyEnabled(checked);
         void saveSetting('proxy_enabled', checked);
-        void invoke('set_proxy_config', { enabled: checked, port: proxyPort }).catch((err) =>
-            console.error('Failed to update proxy config:', err),
-        );
+        void setProxyConfig(checked, proxyPort);
     }
 
     function handleProxyPortChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -74,9 +73,7 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
         const clamped = Math.min(65535, Math.max(1024, isNaN(raw) ? 8080 : raw));
         setProxyPort(clamped);
         void saveSetting('proxy_port', clamped);
-        void invoke('set_proxy_config', { enabled: proxyEnabled, port: clamped }).catch((err) =>
-            console.error('Failed to update proxy config:', err),
-        );
+        void setProxyConfig(proxyEnabled, clamped);
     }
 
     return (

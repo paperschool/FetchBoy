@@ -152,7 +152,7 @@ describe('BreakpointEditor', () => {
         render(<BreakpointEditor onClose={vi.fn()} />);
         fireEvent.change(screen.getByTestId('bp-url-input'), { target: { value: '[invalid' } });
         expect(screen.getByTestId('bp-url-error')).toBeInTheDocument();
-        fireEvent.click(screen.getByTestId('match-type-partial'));
+        fireEvent.click(screen.getByTestId('bp-match-type-partial'));
         expect(screen.queryByTestId('bp-url-error')).not.toBeInTheDocument();
     });
 
@@ -209,10 +209,10 @@ describe('BreakpointEditor', () => {
 
     it('renders all four match type buttons', () => {
         render(<BreakpointEditor onClose={vi.fn()} />);
-        expect(screen.getByTestId('match-type-exact')).toBeInTheDocument();
-        expect(screen.getByTestId('match-type-partial')).toBeInTheDocument();
-        expect(screen.getByTestId('match-type-wildcard')).toBeInTheDocument();
-        expect(screen.getByTestId('match-type-regex')).toBeInTheDocument();
+        expect(screen.getByTestId('bp-match-type-exact')).toBeInTheDocument();
+        expect(screen.getByTestId('bp-match-type-partial')).toBeInTheDocument();
+        expect(screen.getByTestId('bp-match-type-wildcard')).toBeInTheDocument();
+        expect(screen.getByTestId('bp-match-type-regex')).toBeInTheDocument();
     });
 
     it('does not render a Response tab', () => {

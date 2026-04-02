@@ -1,4 +1,6 @@
-import { useState, useEffect, useRef, type RefObject, type MouseEvent, type ChangeEvent, type KeyboardEvent } from 'react';
+import { useState, useEffect, useCallback, type RefObject, type MouseEvent, type ChangeEvent, type KeyboardEvent } from 'react';
+import { useInlineRename } from '@/hooks/useInlineRename';
+import { TabContextMenu } from './TabContextMenu';
 import { DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, horizontalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -103,11 +105,14 @@ export function TabBar() {
     const method = useTabStore((s) => s.tabs.find((t) => t.id === s.activeTabId)?.requestState.method ?? 'GET');
     const url = useTabStore((s) => s.tabs.find((t) => t.id === s.activeTabId)?.requestState.url ?? '');
 
-    const [editingTabId, setEditingTabId] = useState<string | null>(null);
-    const [editValue, setEditValue] = useState('');
+    const handleRenameCallback = useCallback((tabId: string, newName: string) => {
+        const tab = tabs.find((t) => t.id === tabId);
+        renameTab(tabId, newName.trim() || tab?.label || 'Untitled');
+    }, [tabs, renameTab]);
+
+    const rename = useInlineRename(handleRenameCallback);
     const [tabCtxMenu, setTabCtxMenu] = useState<TabContextMenuState>(null);
     const [blockedTabId, setBlockedTabId] = useState<string | null>(null);
-    const inputRef = useRef<HTMLInputElement>(null);
     const isMac = typeof navigator !== 'undefined' && navigator.platform.startsWith('Mac');
     const tabIds = tabs.map((tab) => tab.id);
 
@@ -121,14 +126,6 @@ export function TabBar() {
     useEffect(() => {
         syncLabelFromRequest(activeTabId, method, url);
     }, [method, url, activeTabId, syncLabelFromRequest]);
-
-    // Auto-focus inline rename input
-    useEffect(() => {
-        if (editingTabId && inputRef.current) {
-            inputRef.current.focus();
-            inputRef.current.select();
-        }
-    }, [editingTabId]);
 
     useEffect(() => {
         const handler = (event: Event) => {
@@ -144,20 +141,6 @@ export function TabBar() {
             window.removeEventListener('tab-close-blocked', handler as EventListener);
         };
     }, []);
-
-    const handleDoubleClick = (tabId: string, currentLabel: string) => {
-        setEditingTabId(tabId);
-        setEditValue(currentLabel);
-    };
-
-    const handleRenameConfirm = (tabId: string, fallbackLabel: string) => {
-        renameTab(tabId, editValue.trim() || fallbackLabel);
-        setEditingTabId(null);
-    };
-
-    const handleRenameCancel = () => {
-        setEditingTabId(null);
-    };
 
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
@@ -180,7 +163,7 @@ export function TabBar() {
                     <SortableContext items={tabIds} strategy={horizontalListSortingStrategy}>
                         {tabs.map((tab) => {
                             const isActive = tab.id === activeTabId;
-                            const isEditing = editingTabId === tab.id;
+                            const isEditing = rename.editingId === tab.id;
 
                             return (
                                 <SortableTabItem
@@ -191,8 +174,8 @@ export function TabBar() {
                                     isBlocked={blockedTabId === tab.id}
                                     isOnly={tabs.length === 1}
                                     isEditing={isEditing}
-                                    editValue={editValue}
-                                    inputRef={inputRef}
+                                    editValue={rename.editValue}
+                                    inputRef={rename.editRef}
                                     onTabClick={() => !isEditing && setActiveTab(tab.id)}
                                     onContextMenu={(e) => {
                                         e.preventDefault();
@@ -201,23 +184,15 @@ export function TabBar() {
                                     }}
                                     onLabelDoubleClick={(e) => {
                                         e.stopPropagation();
-                                        handleDoubleClick(tab.id, tab.label);
+                                        rename.startEditing(tab.id, tab.label);
                                     }}
                                     onCloseClick={(e) => {
                                         e.stopPropagation();
                                         closeTab(tab.id);
                                     }}
-                                    onEditChange={(e) => setEditValue(e.target.value)}
-                                    onEditBlur={() => handleRenameConfirm(tab.id, tab.label)}
-                                    onEditKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            e.preventDefault();
-                                            handleRenameConfirm(tab.id, tab.label);
-                                        } else if (e.key === 'Escape') {
-                                            e.preventDefault();
-                                            handleRenameCancel();
-                                        }
-                                    }}
+                                    onEditChange={(e) => rename.setEditValue(e.target.value)}
+                                    onEditBlur={rename.handleBlur}
+                                    onEditKeyDown={rename.handleKeyDown}
                                 />
                             );
                         })}
@@ -234,73 +209,17 @@ export function TabBar() {
                 </div>
             </DndContext>
 
-            {tabCtxMenu && (
-                <>
-                    <div className="fixed inset-0 z-40" onClick={closeMenu} />
-                    <ul
-                        role="menu"
-                        className="fixed z-50 min-w-[10rem] rounded-md border border-app-subtle bg-app-main py-1 shadow-lg text-sm text-app-primary"
-                        style={{ top: tabCtxMenu.y, left: tabCtxMenu.x }}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <li
-                            role="menuitem"
-                            className="flex cursor-pointer items-center px-3 py-1.5 hover:bg-app-subtle"
-                            onClick={() => {
-                                addTab();
-                                closeMenu();
-                            }}
-                        >
-                            <span>New Tab</span>
-                            <span className="ml-auto text-xs text-app-muted">{isMac ? '⌘T' : 'Ctrl+T'}</span>
-                        </li>
-                        <li
-                            role="menuitem"
-                            className="px-3 py-1.5 hover:bg-app-subtle cursor-pointer"
-                            onClick={() => {
-                                duplicateTab(tabCtxMenu.tabId);
-                                closeMenu();
-                            }}
-                        >
-                            Duplicate Tab
-                        </li>
-                        <li
-                            role="menuitem"
-                            className="flex cursor-pointer items-center px-3 py-1.5 hover:bg-app-subtle"
-                            onClick={() => {
-                                closeTab(tabCtxMenu.tabId);
-                                closeMenu();
-                            }}
-                        >
-                            <span>Close Tab</span>
-                            <span className="ml-auto text-xs text-app-muted">{isMac ? '⌘W' : 'Ctrl+W'}</span>
-                        </li>
-                        <li
-                            role="menuitem"
-                            className={`px-3 py-1.5 ${
-                                tabs.length === 1 ? 'cursor-not-allowed text-app-muted' : 'cursor-pointer hover:bg-app-subtle'
-                            }`}
-                            onClick={() => {
-                                if (tabs.length === 1) return;
-                                closeOtherTabs(tabCtxMenu.tabId);
-                                closeMenu();
-                            }}
-                        >
-                            Close Other Tabs
-                        </li>
-                        <li
-                            role="menuitem"
-                            className="px-3 py-1.5 hover:bg-app-subtle cursor-pointer"
-                            onClick={() => {
-                                closeAllTabs();
-                                closeMenu();
-                            }}
-                        >
-                            Close All Tabs
-                        </li>
-                    </ul>
-                </>
-            )}
+            <TabContextMenu
+                menu={tabCtxMenu}
+                onClose={closeMenu}
+                isMac={isMac}
+                tabCount={tabs.length}
+                onNewTab={addTab}
+                onDuplicateTab={duplicateTab}
+                onCloseTab={closeTab}
+                onCloseOtherTabs={closeOtherTabs}
+                onCloseAllTabs={closeAllTabs}
+            />
         </>
     );
 }

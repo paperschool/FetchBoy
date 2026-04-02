@@ -2,7 +2,7 @@ import { Loader2, Radio } from "lucide-react";
 import { useUiSettingsStore } from "@/stores/uiSettingsStore";
 import { useInterceptStore } from "@/stores/interceptStore";
 import { saveSetting } from "@/lib/settings";
-import { invoke } from "@tauri-apps/api/core";
+import { useProxyConfig } from "@/hooks/useProxyConfig";
 
 export function InterceptTabActions(): React.ReactElement {
   const proxyEnabled = useUiSettingsStore((s) => s.proxyEnabled);
@@ -15,6 +15,7 @@ export function InterceptTabActions(): React.ReactElement {
   const proxyShuttingDown = useUiSettingsStore((s) => s.proxyShuttingDown);
   const setProxyShuttingDown = useUiSettingsStore((s) => s.setProxyShuttingDown);
   const clearPauseState = useInterceptStore((s) => s.clearPauseState);
+  const { setProxyConfig, configureSystemProxy, unconfigureSystemProxy } = useProxyConfig();
 
   async function handleToggleProxy(): Promise<void> {
     if (proxyShuttingDown) return;
@@ -31,8 +32,8 @@ export function InterceptTabActions(): React.ReactElement {
     if (proxyEnabled) {
       setProxyShuttingDown(true);
       try {
-        await invoke("unconfigure_system_proxy");
-        await invoke("set_proxy_config", { enabled: false, port: proxyPort });
+        await unconfigureSystemProxy();
+        await setProxyConfig(false, proxyPort);
         setProxyEnabled(false);
         clearPauseState();
         void saveSetting("proxy_enabled", false);
@@ -43,8 +44,8 @@ export function InterceptTabActions(): React.ReactElement {
       }
     } else {
       try {
-        await invoke("configure_system_proxy", { port: proxyPort });
-        await invoke("set_proxy_config", { enabled: true, port: proxyPort });
+        await configureSystemProxy(proxyPort);
+        await setProxyConfig(true, proxyPort);
         setProxyEnabled(true);
         void saveSetting("proxy_enabled", true);
       } catch (err) {

@@ -1,0 +1,16 @@
+export const breakpoints = {
+  'breakpoints.title': 'Breakpoints',
+  'breakpoints.new': 'New Breakpoint',
+  'breakpoints.edit': 'Edit Breakpoint',
+  'breakpoints.name': 'Name',
+  'breakpoints.urlPattern': 'URL Pattern',
+  'breakpoints.matchType': 'Match Type',
+  'breakpoints.enabled': 'Enabled',
+  'breakpoints.disabled': 'Disabled',
+  'breakpoints.clickToDisable': 'Click to disable this breakpoint',
+  'breakpoints.clickToEnable': 'Click to enable this breakpoint',
+  'breakpoints.historyMatches': 'History matches',
+  'breakpoints.save': 'Save',
+  'breakpoints.noBreakpoints': 'No breakpoints yet.',
+  'breakpoints.addBreakpoint': 'Add Breakpoint',
+} as const;

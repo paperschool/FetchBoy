@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { Trash2, Pin, PinOff } from 'lucide-react'
 import { useDebugStore } from '@/stores/debugStore'
-import { formatTimestamp, formatMethod, formatStatusCode, CopyButton } from '@/components/Intercept view/InterceptTable.utils'
+import { formatTimestamp, formatMethod, formatStatusCode, CopyButton } from '@/components/InterceptView/InterceptTable.utils'
 
 const columns = [
     { id: 'time', label: 'Time', className: 'w-[100px] shrink-0' },

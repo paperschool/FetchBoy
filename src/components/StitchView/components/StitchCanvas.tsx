@@ -10,8 +10,9 @@ import { ConnectionLayer } from './ConnectionLayer';
 import { StitchConnectionDragProvider, useConnectionDrag } from './StitchConnectionDragContext';
 import { validateConnection } from '../utils/connectionValidator';
 import { computeLoopChildPositions } from '../utils/loopLayout';
+import { getDefaultConfig, generateNodeLabel } from '../utils/nodeFactory';
 import type { StitchNodeType } from '@/types/stitch';
-import { DEFAULT_JSON_OBJECT_CONFIG, DEFAULT_JS_SNIPPET_CONFIG, DEFAULT_REQUEST_NODE_CONFIG, DEFAULT_SLEEP_NODE_CONFIG, DEFAULT_LOOP_NODE_CONFIG, DEFAULT_MERGE_NODE_CONFIG, DEFAULT_CONDITION_NODE_CONFIG, DEFAULT_MAPPING_CONFIG, DEFAULT_MAPPING_ENTRY_CONFIG, DEFAULT_MAPPING_EXIT_CONFIG } from '@/types/stitch';
+import { DEFAULT_MAPPING_ENTRY_CONFIG, DEFAULT_MAPPING_EXIT_CONFIG } from '@/types/stitch';
 import { computeMappingChildPositions } from '../utils/mappingLayout';
 
 export function StitchCanvas(): React.ReactElement {
@@ -318,20 +319,10 @@ function StitchCanvasInner(): React.ReactElement {
   const handleAddNode = useCallback(
     (type: StitchNodeType): void => {
       if (!activeChainId || isMapperChain) return;
-      const existingOfType = nodes.filter((n) => n.type === type).length;
-      const labelMap: Record<string, string> = { 'js-snippet': 'Snippet', 'json-object': 'JSON', sleep: 'Sleep', loop: 'Loop', request: 'Request', merge: 'Merge', condition: 'Condition', mapping: 'Mapping' };
-      const label = `${labelMap[type] ?? type} ${existingOfType + 1}`;
+      const label = generateNodeLabel(type, nodes);
       const centerX = (-transform.panX + 300) / transform.zoom;
       const centerY = (-transform.panY + 200) / transform.zoom;
-      const config = type === 'json-object' ? { ...DEFAULT_JSON_OBJECT_CONFIG }
-        : type === 'js-snippet' ? { ...DEFAULT_JS_SNIPPET_CONFIG }
-        : type === 'request' ? { ...DEFAULT_REQUEST_NODE_CONFIG }
-        : type === 'sleep' ? { ...DEFAULT_SLEEP_NODE_CONFIG }
-        : type === 'loop' ? { ...DEFAULT_LOOP_NODE_CONFIG }
-        : type === 'merge' ? { ...DEFAULT_MERGE_NODE_CONFIG }
-        : type === 'condition' ? { ...DEFAULT_CONDITION_NODE_CONFIG }
-        : type === 'mapping' ? { ...DEFAULT_MAPPING_CONFIG }
-        : {};
+      const config = getDefaultConfig(type);
       addNode({
         chainId: activeChainId,
         type,
@@ -400,18 +391,8 @@ function StitchCanvasInner(): React.ReactElement {
 
   const handleContextAdd = useCallback((type: StitchNodeType): void => {
     if (!activeChainId || !contextMenu) return;
-    const existingOfType = nodes.filter((n) => n.type === type).length;
-    const ctxLabelMap: Record<string, string> = { 'js-snippet': 'Snippet', 'json-object': 'JSON', sleep: 'Sleep', loop: 'Loop', request: 'Request', merge: 'Merge', condition: 'Condition', mapping: 'Mapping' };
-    const label = `${ctxLabelMap[type] ?? type} ${existingOfType + 1}`;
-    const config = type === 'json-object' ? { ...DEFAULT_JSON_OBJECT_CONFIG }
-      : type === 'js-snippet' ? { ...DEFAULT_JS_SNIPPET_CONFIG }
-      : type === 'request' ? { ...DEFAULT_REQUEST_NODE_CONFIG }
-      : type === 'sleep' ? { ...DEFAULT_SLEEP_NODE_CONFIG }
-      : type === 'loop' ? { ...DEFAULT_LOOP_NODE_CONFIG }
-      : type === 'merge' ? { ...DEFAULT_MERGE_NODE_CONFIG }
-      : type === 'condition' ? { ...DEFAULT_CONDITION_NODE_CONFIG }
-      : type === 'mapping' ? { ...DEFAULT_MAPPING_CONFIG }
-      : {};
+    const label = generateNodeLabel(type, nodes);
+    const config = getDefaultConfig(type);
     const pending = contextMenu.pendingSource;
     const inheritedParent = pending?.parentNodeId ?? null;
     // Don't allow creating container nodes inside other containers

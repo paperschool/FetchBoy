@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.19.0] - 2026-04-02
+
+- refactor: Epic 16 — code quality hardening across 16 stories: constants extraction, i18n foundation, shared hooks/components, module decomposition
+- refactor: Split stitchEngine.ts (885 lines) into 14 focused modules; split useSendRequest into composition hooks
+- refactor: Rust types.rs decomposed into 8 modules with MatchType enum; 16 unwrap() calls replaced with expect()
+- feat: i18n infrastructure with t(key, params) helper, typed keys, and 14 populated namespace files (~260 strings)
+- refactor: Renamed "Intercept view/" to "InterceptView/", extracted shared hooks (useAutoSave, useEventBuffer, useInlineRename), Tauri IPC wrapper hooks, shared UI components
+
 ## [0.18.19] - 2026-04-01
 
 - feat: Import post-processing options — flatten single-child folders, depth limiting, folder selection, and same-name merge

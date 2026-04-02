@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useRef } from "react";
 import { useRequestProgressStore } from "@/hooks/useRequestProgress";
 import { useTabStore } from "@/stores/tabStore";
+import { PROGRESS_MAX_BEFORE_COMPLETE, PROGRESS_INCREMENT_PER_TICK, PROGRESS_UPDATE_INTERVAL_MS } from "@/lib/constants";
 
 interface UseProgressBarParams {
   isSending: boolean;
@@ -40,10 +41,10 @@ export function useProgressBar(params: UseProgressBarParams): UseProgressBarRetu
 
     progressRef.current = setInterval(() => {
       const current = useRequestProgressStore.getState().requestProgress;
-      if (current < 80) {
-        useRequestProgressStore.getState().updateProgress(current + 10);
+      if (current < PROGRESS_MAX_BEFORE_COMPLETE) {
+        useRequestProgressStore.getState().updateProgress(current + PROGRESS_INCREMENT_PER_TICK);
       }
-    }, 200);
+    }, PROGRESS_UPDATE_INTERVAL_MS);
   };
 
   const stopProgress = (): void => {

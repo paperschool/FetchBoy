@@ -1,6 +1,17 @@
 {
   "changelog": [
     {
+      "version": "0.19.0",
+      "date": "2026-04-02",
+      "changes": [
+        "Epic 16 code quality hardening — extracted constants, shared hooks, shared components, and module decompositions across 16 stories",
+        "Localisation infrastructure with t() helper and 14 namespace files covering all feature domains (~260 strings)",
+        "Decomposed stitchEngine.ts (885 lines) into 14 focused modules; split useSendRequest into composition hooks",
+        "Rust backend: types module decomposed, MatchType enum, 16 unwrap() calls replaced with descriptive expect()",
+        "Renamed InterceptView directory, extracted Tauri IPC wrapper hooks, 66 new tests added"
+      ]
+    },
+    {
       "version": "0.17.0",
       "date": "2026-03-27",
       "changes": [
