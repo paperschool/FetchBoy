@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Plus, ChevronRight, FolderInput } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Folder } from 'lucide-react';
+import { t } from '@/lib/i18n';
 import { CollectionRow } from './CollectionRow';
 import { useCollectionTreeState } from './useCollectionTreeState';
 import {
@@ -98,7 +99,7 @@ export function CollectionTree() {
                 {/* Header */}
                 <div className="flex items-center justify-between mb-2 px-1">
                     <div className="flex items-center gap-1">
-                        <span className="text-app-muted text-[10px]">Create:</span>
+                        <span className="text-app-muted text-[10px]">{t('collections.create')}</span>
                         <button
                             onClick={() => void handleAddCollection()}
                             aria-label="Add Collection"
@@ -109,7 +110,7 @@ export function CollectionTree() {
                         </button>
                     </div>
                     <div className="flex items-center gap-1">
-                        <span className="text-app-muted text-[10px]">Import:</span>
+                        <span className="text-app-muted text-[10px]">{t('collections.importLabel')}</span>
                         <button
                             onClick={() => setImportWizardOpen(true)}
                             aria-label="Import collection"
@@ -126,9 +127,9 @@ export function CollectionTree() {
                     <div data-testid="empty-state">
                         <EmptyState
                             icon={Folder}
-                            label="No collections yet — create one to get started"
+                            label={t('collections.noCollections')}
                             action={() => void handleAddCollection()}
-                            actionLabel="Create Collection"
+                            actionLabel={t('collections.createCollection')}
                         />
                     </div>
                 )}

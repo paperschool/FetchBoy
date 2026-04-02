@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Sparkles, ChevronDown, ArrowUpCircle } from 'lucide-react';
 import { fetchLatestRelease, compareSemver, type LatestReleaseInfo } from '@/lib/appVersion';
+import { t } from '@/lib/i18n';
 
 export interface ChangelogEntry {
     version: string;
@@ -46,7 +47,7 @@ export function WhatsNewModal({ version, changelog, onDismiss }: WhatsNewModalPr
             >
                 <div className="flex items-center gap-2 mb-4 shrink-0">
                     <Sparkles className="text-amber-500" size={24} />
-                    <h2 className="text-app-primary font-semibold text-xl">What's New</h2>
+                    <h2 className="text-app-primary font-semibold text-xl">{t('common.whatsNew')}</h2>
                     <span className="ml-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded text-sm font-medium">
                         v{version}
                     </span>
@@ -104,7 +105,7 @@ export function WhatsNewModal({ version, changelog, onDismiss }: WhatsNewModalPr
                         className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
                         data-testid="whats-new-dismiss"
                     >
-                        Got it
+                        {t('common.gotIt')}
                     </button>
                 </div>
             </div>

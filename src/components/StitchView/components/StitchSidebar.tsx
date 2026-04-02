@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useStitchStore } from '@/stores/stitchStore';
 import { StitchSidebarEntry } from './StitchSidebarEntry';
+import { t } from '@/lib/i18n';
 
 interface StitchSidebarProps {
   collapsed: boolean;
@@ -112,11 +113,11 @@ export function StitchSidebar({ collapsed, onToggleCollapse }: StitchSidebarProp
           <ChevronLeft size={18} className="text-app-muted" />
         </button>
         <span className="rounded bg-amber-500/15 px-2 py-0.5 text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-          Beta
+          {t('stitch.beta')}
         </span>
       </div>
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-app-muted">Chains</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-app-muted">{t('stitch.chains')}</h2>
         <button
           className="rounded p-0.5 text-green-500 hover:bg-app-hover"
           onClick={handleCreate}
@@ -129,13 +130,13 @@ export function StitchSidebar({ collapsed, onToggleCollapse }: StitchSidebarProp
 
       {chains.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center" data-testid="empty-chains">
-          <p className="text-xs text-app-muted">No chains yet</p>
+          <p className="text-xs text-app-muted">{t('stitch.noChains')}</p>
           <button
             className="rounded bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-500"
             onClick={handleCreate}
             data-testid="create-first-chain"
           >
-            Create Chain
+            {t('stitch.createChain')}
           </button>
         </div>
       ) : (
@@ -158,9 +159,9 @@ export function StitchSidebar({ collapsed, onToggleCollapse }: StitchSidebarProp
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" data-testid="delete-dialog">
           <div className="mx-4 w-full max-w-sm rounded-lg border border-app-subtle bg-app-main p-4 shadow-xl">
-            <h3 className="text-sm font-semibold text-app-primary">Delete chain?</h3>
+            <h3 className="text-sm font-semibold text-app-primary">{t('stitch.deleteChainTitle')}</h3>
             <p className="mt-2 text-xs text-app-muted">
-              Delete &ldquo;{deleteChainName}&rdquo;? This cannot be undone.
+              {t('stitch.deleteChainMessage', { name: deleteChainName ?? '' })}
             </p>
             <div className="mt-4 flex justify-end gap-2">
               <button
@@ -168,14 +169,14 @@ export function StitchSidebar({ collapsed, onToggleCollapse }: StitchSidebarProp
                 onClick={() => setDeleteConfirm(null)}
                 data-testid="delete-cancel"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 className="rounded bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500"
                 onClick={handleDeleteConfirm}
                 data-testid="delete-confirm"
               >
-                Delete
+                {t('common.delete')}
               </button>
             </div>
           </div>

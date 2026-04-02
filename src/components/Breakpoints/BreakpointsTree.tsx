@@ -4,6 +4,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { FolderRow } from './FolderRow';
 import { BreakpointRow } from './BreakpointRow';
 import { useBreakpointsStore } from '@/stores/breakpointsStore';
+import { t } from '@/lib/i18n';
 import {
     loadAllBreakpoints,
     createBreakpointFolder,
@@ -102,7 +103,7 @@ export function BreakpointsTree() {
     const header = (
         <div className="flex items-center justify-between mb-2 px-1">
             <div className="flex items-center gap-1">
-                <span className="text-app-muted text-[10px]">Create:</span>
+                <span className="text-app-muted text-[10px]">{t('breakpoints.create')}</span>
                 <button
                     onClick={() => handleAddBreakpoint(null)}
                     aria-label="New Breakpoint"
@@ -160,9 +161,9 @@ export function BreakpointsTree() {
                     <div data-testid="empty-state">
                         <EmptyState
                             icon={Bug}
-                            label="No breakpoints yet"
+                            label={t('breakpoints.noBreakpointsYet')}
                             action={handleStartCreateFolder}
-                            actionLabel="Create Folder"
+                            actionLabel={t('breakpoints.createFolder')}
                         />
                     </div>
                 )}

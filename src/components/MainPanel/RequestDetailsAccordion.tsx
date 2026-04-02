@@ -1,3 +1,4 @@
+import { t } from '@/lib/i18n';
 import { MonacoEditorField } from "@/components/Editor/MonacoEditorField";
 import { KeyValueRows } from "@/components/RequestBuilder/KeyValueRows";
 import { AuthPanel } from "@/components/AuthPanel/AuthPanel";
@@ -12,13 +13,13 @@ import type { Dispatch, SetStateAction } from "react";
 const HTTP_METHODS: HttpMethod[] = [
   "GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS",
 ];
-const REQUEST_TABS: Array<{ id: RequestTab; label: string }> = [
-  { id: "headers", label: "Headers" },
-  { id: "query", label: "Query Params" },
-  { id: "body", label: "Body" },
-  { id: "auth", label: "Auth" },
-  { id: "scripts", label: "Scripts" },
-  { id: "options", label: "Options" },
+const REQUEST_TABS: Array<{ id: RequestTab; label: () => string }> = [
+  { id: "headers", label: () => t('common.headers') },
+  { id: "query", label: () => t('common.queryParams') },
+  { id: "body", label: () => t('common.body') },
+  { id: "auth", label: () => t('common.auth') },
+  { id: "scripts", label: () => t('common.scripts') },
+  { id: "options", label: () => t('common.options') },
 ];
 
 export { HTTP_METHODS };
@@ -180,7 +181,7 @@ export function RequestDetailsAccordion(props: RequestDetailsAccordionProps): Re
                         : "text-app-muted hover:text-app-primary"
                     }`}
                   >
-                    {tab.label}
+                    {tab.label()}
                   </button>
                 );
               })}

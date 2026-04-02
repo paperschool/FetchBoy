@@ -340,8 +340,8 @@ export const StitchNode = React.memo(function StitchNode({
         </div>
       )}
 
-      {/* Output ports */}
-      {hasDynamicPorts && !hasError && outputKeys.length > 0 ? (
+      {/* Output ports — mapping-exit is terminal, no output port needed */}
+      {node.type === 'mapping-exit' ? null : hasDynamicPorts && !hasError && outputKeys.length > 0 ? (
         <div className="relative h-3">
           {outputKeys.map((key, i) => {
             const offset = outputKeys.length === 1 ? 0.5 : i / (outputKeys.length - 1);

@@ -3,6 +3,7 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useDroppable } from '@dnd-kit/core';
 import { RequestRow } from './RequestRow';
 import { FolderRow } from './FolderRow';
+import { t } from '@/lib/i18n';
 
 export interface CollectionRowProps {
     collection: {
@@ -140,7 +141,7 @@ export function CollectionRow({
                             onAddFolder();
                         }}
                         aria-label="Add folder to collection"
-                        title="New Folder"
+                        title={t('collections.newFolderTitle')}
                         className="p-1 rounded hover:text-white cursor-pointer"
                         draggable={false}
                     >
@@ -153,7 +154,7 @@ export function CollectionRow({
                             onAddRequest();
                         }}
                         aria-label="Add request to collection"
-                        title="New Request"
+                        title={t('collections.newRequestTitle')}
                         className="p-1 rounded hover:text-white cursor-pointer"
                         draggable={false}
                     >
@@ -167,7 +168,7 @@ export function CollectionRow({
                             onExport();
                         }}
                         aria-label={`Export ${collection.name}`}
-                        title="Export collection"
+                        title={t('collections.exportCollection')}
                         className="p-1 rounded hover:text-white cursor-pointer"
                         draggable={false}
                     >
@@ -180,7 +181,7 @@ export function CollectionRow({
                             onDeleteCollection();
                         }}
                         aria-label="Delete collection"
-                        title="Delete"
+                        title={t('common.delete')}
                         className="p-1 rounded text-red-400 hover:text-red-300 cursor-pointer"
                         draggable={false}
                     >
@@ -199,7 +200,7 @@ export function CollectionRow({
                     >
                         {isOverRoot && requests.length === 0 && (
                             <div className="text-xs text-blue-400/70 px-2 py-1 text-center pointer-events-none">
-                                Drop here to remove from folder
+                                {t('collections.dropHere')}
                             </div>
                         )}
                         <SortableContext items={directReqIds} strategy={verticalListSortingStrategy}>

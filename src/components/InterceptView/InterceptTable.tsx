@@ -22,6 +22,7 @@ import {
   CopyButton,
 } from "./InterceptTable.utils";
 import { openInFetch } from "./openInFetch";
+import { t } from "@/lib/i18n";
 import type { InterceptRequest } from "@/stores/interceptStore";
 
 function deriveBreakpointName(req: InterceptRequest): string {
@@ -152,17 +153,17 @@ export function InterceptTable() {
       <div className="flex items-center justify-between px-3 py-2 bg-app-main border-b border-app-subtle shrink-0">
         <span className="text-xs text-app-muted">
           {hasItems
-            ? `${filteredRequests.length} of ${requests.length} request${requests.length !== 1 ? "s" : ""}`
-            : "No requests"}
+            ? t('intercept.requestCount', { filtered: filteredRequests.length, total: requests.length, plural: requests.length !== 1 ? 's' : '' })
+            : t('intercept.noRequestsShort')}
         </span>
         {hasItems && (
           <button
             onClick={clearRequests}
             className="flex items-center gap-1.5 px-2 py-1 text-xs text-app-muted hover:text-red-400 hover:bg-app-subtle rounded transition-colors cursor-pointer"
-            title="Clear all requests"
+            title={t('intercept.clearAll')}
           >
             <Trash2 size={14} />
-            Clear
+            {t('common.clear')}
           </button>
         )}
       </div>
@@ -176,7 +177,7 @@ export function InterceptTable() {
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder={searchMode === "regex" ? "Regex filter..." : "Search..."}
+          placeholder={searchMode === "regex" ? t('intercept.regexFilter') : t('intercept.search')}
           className="flex-1 bg-app-subtle border border-app-subtle rounded px-2 py-1 text-xs text-app-primary placeholder:text-app-muted outline-none focus:border-blue-500/50"
           aria-label="Search requests"
         />
@@ -196,7 +197,7 @@ export function InterceptTable() {
           className="select-flat border-app-subtle bg-app-main text-app-primary h-8 rounded-md border pl-2 pr-7 text-xs"
           aria-label="Filter by method"
         >
-          <option value="">All methods</option>
+          <option value="">{t('intercept.allMethods')}</option>
           {HTTP_VERBS.map((v) => (
             <option key={v} value={v}>
               {v}
@@ -209,7 +210,7 @@ export function InterceptTable() {
           className="select-flat border-app-subtle bg-app-main text-app-primary h-8 rounded-md border pl-2 pr-7 text-xs"
           aria-label="Filter by status"
         >
-          <option value="">All statuses</option>
+          <option value="">{t('intercept.allStatuses')}</option>
           {STATUS_FILTERS.map((s) => (
             <option key={s.value} value={s.value}>
               {s.label}
@@ -220,7 +221,7 @@ export function InterceptTable() {
 
       {hasItems && filteredRequests.length === 0 && (
         <div className="flex-1 flex items-center justify-center text-app-muted text-sm">
-          No requests match filters
+          {t('intercept.noRequestsMatch')}
         </div>
       )}
 
@@ -300,25 +301,25 @@ export function InterceptTable() {
                           openInFetch(req);
                         }}
                         className="opacity-0 group-hover:opacity-100 rounded px-1.5 py-0.5 text-xs font-medium bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-all cursor-pointer"
-                        title="Open in Fetch tab"
+                        title={t('intercept.openInFetch')}
                       >
-                        Fetch
+                        {t('intercept.fetch')}
                       </button>
                       <button
                         type="button"
                         onClick={(e) => handleMapClick(e, req)}
                         className="opacity-0 group-hover:opacity-100 rounded px-1.5 py-0.5 text-xs font-medium bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 transition-all cursor-pointer"
-                        title="Save as mapping"
+                        title={t('intercept.saveAsMapping')}
                       >
-                        Map
+                        {t('intercept.map')}
                       </button>
                       <button
                         type="button"
                         onClick={(e) => handleBreakClick(e, req)}
                         className="opacity-0 group-hover:opacity-100 rounded px-1.5 py-0.5 text-xs font-medium bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-all cursor-pointer"
-                        title="Save as breakpoint"
+                        title={t('intercept.saveAsBreakpoint')}
                       >
-                        Break
+                        {t('intercept.break')}
                       </button>
                     </div>
                     {/* Method */}
@@ -356,7 +357,7 @@ export function InterceptTable() {
 
       {!hasItems && (
         <div className="flex-1 flex items-center justify-center text-app-muted">
-          No intercepted requests yet
+          {t('intercept.noRequests')}
         </div>
       )}
 

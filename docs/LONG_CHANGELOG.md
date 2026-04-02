@@ -1,5 +1,13 @@
 # Long Changelog
 
+## [0.19.1] - 2026-04-02
+
+- feat: comprehensive i18n `t()` migration across 38 component files — replaced hardcoded English text with typed translation keys in SettingsPanel, AuthPanel, BreakpointEditor, MappingEditor, InterceptTopBar, CertificateManagement, PausedRequestDetail, TabContextMenu, InterceptTable, InterceptSidebar, RequestDetailView/Headers/Body, HistoryPanel, CollectionTree, Debug tables, ResponseViewer, all Save dialogs, EnvironmentPanel, MainPanel, RequestDetailsAccordion, KeyValueRows, MappingCookieEditor, MappingLogTable, AppTabs, StitchSidebar/EmptyState, BreakpointsTree, MappingsTree, SettingsAccordion, Sidebar, TopBar, WhatsNewModal, KeyboardShortcutsModal
+- feat: ~378 translation keys across 14 namespace files — added keys for intercept (28 new), breakpoints (10 new), mappings (10 new), stitch (11 new), common (6 new), fetch (18 new), collections (8 new), settings (3 new), history (3 new)
+- fix: loop/mapping container node drag no longer causes child nodes to wiggle — removed the 200ms rebalance timer from `handleUpdatePosition` that fired mid-drag, added `handleContainerDragEnd` callback that triggers rebalance only on pointer release via new `onDragEnd` prop on StitchLoopNode and StitchMappingNode
+- feat: stitch node execution success highlight now fades out with a 3s `stitch-success-fade` CSS animation — holds bright green-400 glow for 60% of duration then smoothly fades to transparent, replacing the abrupt static highlight
+- fix: mapping-exit node no longer renders an output port dot — terminal node in the mapping chain has no downstream connections
+
 ## [0.19.0] - 2026-04-02
 
 ### Epic 16: Code Quality Hardening, Constants, & Localisation

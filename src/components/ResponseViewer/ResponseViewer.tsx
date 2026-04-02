@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { HeadersTable } from '@/components/ui/HeadersTable';
 import { ViewerShell } from '@/components/ui/ViewerShell';
+import { t } from '@/lib/i18n';
 
 export interface ResponseHeaderRow {
   key: string;
@@ -85,18 +86,18 @@ export function ImageViewer({ contentType, body }: { contentType?: string; body:
   return (
     <div className="flex flex-col gap-2 h-full">
       <div className="flex items-center gap-2 pb-2 border-b border-app-subtle">
-        <button type="button" onClick={handleZoomOut} className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-app-subtle hover:bg-gray-100 dark:hover:bg-gray-700 text-app-primary" title="Zoom out">
+        <button type="button" onClick={handleZoomOut} className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-app-subtle hover:bg-gray-100 dark:hover:bg-gray-700 text-app-primary" title={t('fetch.zoomOut')}>
           <ZoomOut size={14} />
         </button>
         <span className="text-xs text-app-secondary min-w-[3rem] text-center">{zoom}%</span>
-        <button type="button" onClick={handleZoomIn} className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-app-subtle hover:bg-gray-100 dark:hover:bg-gray-700 text-app-primary" title="Zoom in">
+        <button type="button" onClick={handleZoomIn} className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-app-subtle hover:bg-gray-100 dark:hover:bg-gray-700 text-app-primary" title={t('fetch.zoomIn')}>
           <ZoomIn size={14} />
         </button>
-        <button type="button" onClick={handleReset} className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-app-subtle hover:bg-gray-100 dark:hover:bg-gray-700 text-app-primary ml-2" title="Reset view">
+        <button type="button" onClick={handleReset} className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-app-subtle hover:bg-gray-100 dark:hover:bg-gray-700 text-app-primary ml-2" title={t('fetch.resetView')}>
           <RotateCcw size={14} />
-          Reset
+          {t('fetch.reset')}
         </button>
-        <span className="text-xs text-app-muted ml-auto">Scroll to pan • Ctrl+scroll to zoom</span>
+        <span className="text-xs text-app-muted ml-auto">{t('fetch.zoomHint')}</span>
       </div>
       <div className="flex-1 overflow-auto bg-app-main border border-app-subtle rounded-md cursor-grab active:cursor-grabbing" onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp} onWheel={handleWheel}>
         <div className="flex items-center justify-center min-h-full p-4" style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'center center' }}>
@@ -126,9 +127,9 @@ export function ResponseViewer({ response, error, logs = [], onClearLogs, reques
   }, [formattedJsonBody]);
 
   const tabs = [
-    { id: 'body', label: 'Body' },
-    { id: 'headers', label: 'Headers' },
-    { id: 'logs', label: logs.length > 0 ? `Logs (${logs.length})` : 'Logs' },
+    { id: 'body', label: t('common.body') },
+    { id: 'headers', label: t('common.headers') },
+    { id: 'logs', label: logs.length > 0 ? t('fetch.logsCount', { count: String(logs.length) }) : t('fetch.logs') },
   ];
 
   const header = (
@@ -137,38 +138,38 @@ export function ResponseViewer({ response, error, logs = [], onClearLogs, reques
         <div className="space-y-1">
           {requestedUrl && (
             <p className="font-medium text-sm">
-              Requested Url:{' '}
+              {t('fetch.requestedUrl')}{' '}
               <span className="text-app-muted break-all text-xs">{requestedUrl}</span>
             </p>
           )}
           <div className="flex flex-wrap items-center gap-4 text-sm">
             <p className="font-medium">
-              Status:{' '}
+              {t('fetch.status')}:{' '}
               <span className={getStatusColorClass(response.status)}>
                 {response.status} {response.statusText}
               </span>
             </p>
-            <p className="text-app-secondary">Time: {response.responseTimeMs} ms</p>
-            <p className="text-app-secondary">Size: {response.responseSizeBytes} bytes</p>
+            <p className="text-app-secondary">{t('fetch.time')}: {response.responseTimeMs} ms</p>
+            <p className="text-app-secondary">{t('fetch.size')}: {response.responseSizeBytes} bytes</p>
           </div>
         </div>
       )}
       {error && (
         <>
-          <p className="text-sm font-medium text-red-600">Request Error</p>
+          <p className="text-sm font-medium text-red-600">{t('fetch.requestError')}</p>
           <p className="text-sm text-red-600">{error}</p>
         </>
       )}
       {wasCancelled && !response && !error && (
         <div className="flex items-center gap-2 text-app-secondary text-sm py-2">
           <X size={14} className="text-app-muted" />
-          <span>Request cancelled</span>
+          <span>{t('fetch.requestCancelled')}</span>
         </div>
       )}
       {wasTimedOut && !response && !error && (
         <div className="flex items-center gap-2 text-app-secondary text-sm py-2">
           <X size={14} className="text-app-muted" />
-          <span>{timedOutAfterSec !== null ? `Timed out after ${timedOutAfterSec}s` : 'Request timed out'}</span>
+          <span>{timedOutAfterSec !== null ? t('fetch.timedOutAfter', { seconds: String(timedOutAfterSec) }) : t('fetch.requestTimedOut')}</span>
         </div>
       )}
     </>
@@ -177,7 +178,7 @@ export function ResponseViewer({ response, error, logs = [], onClearLogs, reques
   if (!response && !error && logs.length === 0 && !wasCancelled && !wasTimedOut) {
     return (
       <ViewerShell testId="response-viewer">
-        <EmptyState icon={Send} label="Hit Send to see your response" />
+        <EmptyState icon={Send} label={t('fetch.hitSend')} />
       </ViewerShell>
     );
   }
@@ -197,17 +198,17 @@ export function ResponseViewer({ response, error, logs = [], onClearLogs, reques
           )}
           {isPdfContentType(response.contentType) && (
             <div className="p-4 space-y-3">
-              <p className="text-app-muted text-sm">PDF response received</p>
+              <p className="text-app-muted text-sm">{t('fetch.pdfReceived')}</p>
               <a href={`data:application/pdf;base64,${response.body}`} download="response.pdf" className="inline-flex items-center gap-2 rounded-md bg-blue-500 px-4 py-2 text-sm text-white hover:bg-blue-600">
-                <Download size={14} />Download PDF
+                <Download size={14} />{t('fetch.downloadPdf')}
               </a>
             </div>
           )}
           {isBinaryContentType(response.contentType) && !isImageContentType(response.contentType) && !isPdfContentType(response.contentType) && (
             <div className="p-4 space-y-3">
-              <p className="text-app-muted text-sm">Binary file detected ({response.contentType})</p>
+              <p className="text-app-muted text-sm">{t('fetch.binaryDetected', { contentType: response.contentType ?? '' })}</p>
               <a href={`data:${response.contentType};base64,${response.body}`} download="response.bin" className="inline-flex items-center gap-2 rounded-md bg-blue-500 px-4 py-2 text-sm text-white hover:bg-blue-600">
-                <Download size={14} />Download File
+                <Download size={14} />{t('fetch.downloadFile')}
               </a>
             </div>
           )}
@@ -244,26 +245,26 @@ export function ResponseViewer({ response, error, logs = [], onClearLogs, reques
           )}
         </div>
       ) : activeTab === 'body' ? (
-        <p className="text-app-muted text-sm">Send a request to see the response body.</p>
+        <p className="text-app-muted text-sm">{t('fetch.sendToSeeBody')}</p>
       ) : null}
 
       {activeTab === 'headers' && response ? (
         <div className="min-h-0 flex-1 overflow-y-auto">
-          <HeadersTable headers={response.headers} emptyMessage="No headers returned." />
+          <HeadersTable headers={response.headers} emptyMessage={t('fetch.noHeadersReturned')} />
         </div>
       ) : activeTab === 'headers' ? (
-        <p className="text-app-muted text-sm">Send a request to see response headers.</p>
+        <p className="text-app-muted text-sm">{t('fetch.sendToSeeHeaders')}</p>
       ) : null}
 
       {activeTab === 'logs' && (
         <div className="relative min-h-0 flex-1">
           <div className="absolute top-2 right-2 z-10">
             <button type="button" onClick={onClearLogs} className="border-app-subtle text-app-secondary rounded-md border px-2 py-1 text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-800">
-              Clear Logs
+              {t('fetch.clearLogs')}
             </button>
           </div>
           {logs.length === 0 ? (
-            <p className="text-app-muted text-xs">No logs yet. Click Send to capture runtime details.</p>
+            <p className="text-app-muted text-xs">{t('fetch.noLogsYet')}</p>
           ) : (
             <pre className="bg-app-main text-app-secondary h-full overflow-auto rounded-md p-2 text-xs whitespace-pre-wrap">{logs.join('\n')}</pre>
           )}

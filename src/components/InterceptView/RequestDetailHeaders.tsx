@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { t } from '@/lib/i18n'
 import { HeadersTable } from '@/components/ui/HeadersTable'
 import type { BreakpointModifications } from '@/stores/interceptStore'
 
@@ -24,12 +25,12 @@ export function RequestDetailHeaders({
     return (
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
         <div>
-          <p className="text-xs font-medium text-app-secondary mb-2">Request Headers</p>
-          <HeadersTable headers={requestHeaders} emptyMessage="No request headers" />
+          <p className="text-xs font-medium text-app-secondary mb-2">{t('intercept.requestHeaders')}</p>
+          <HeadersTable headers={requestHeaders} emptyMessage={t('intercept.noRequestHeaders')} />
         </div>
         <div>
-          <p className="text-xs font-medium text-app-secondary mb-2">Response Headers</p>
-          <HeadersTable headers={responseHeaders} emptyMessage="No response headers" />
+          <p className="text-xs font-medium text-app-secondary mb-2">{t('intercept.responseHeaders')}</p>
+          <HeadersTable headers={responseHeaders} emptyMessage={t('intercept.noResponseHeaders')} />
         </div>
       </div>
     )
@@ -38,7 +39,7 @@ export function RequestDetailHeaders({
   return (
     <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
       <div>
-        <p className="text-xs font-medium text-amber-400 mb-2">Response Headers</p>
+        <p className="text-xs font-medium text-amber-400 mb-2">{t('intercept.responseHeaders')}</p>
         {(pendingMods.extraHeaders ?? []).map(([k, v], i) => (
           <div key={i} className="flex gap-1 mb-1">
             <input type="text" value={k}
@@ -71,11 +72,11 @@ export function RequestDetailHeaders({
               onModsChange?.({ extraHeaders: [...(pendingMods.extraHeaders ?? []), [newKey.trim(), newValue]] })
               setNewKey(''); setNewValue('')
             }}
-            className="shrink-0 px-2 py-0.5 bg-amber-700/60 hover:bg-amber-600/70 rounded text-xs text-white transition-colors">Add</button>
+            className="shrink-0 px-2 py-0.5 bg-amber-700/60 hover:bg-amber-600/70 rounded text-xs text-white transition-colors">{t('common.add')}</button>
         </div>
         <div className="mt-4">
-          <p className="text-xs font-medium text-app-secondary mb-2">Request Headers (read-only)</p>
-          <HeadersTable headers={requestHeaders} emptyMessage="No request headers" />
+          <p className="text-xs font-medium text-app-secondary mb-2">{t('intercept.requestHeaders')} (read-only)</p>
+          <HeadersTable headers={requestHeaders} emptyMessage={t('intercept.noRequestHeaders')} />
         </div>
       </div>
     </div>

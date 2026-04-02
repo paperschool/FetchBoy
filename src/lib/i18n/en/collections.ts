@@ -10,4 +10,13 @@ export const collections = {
   'collections.emptyState': 'No collections yet. Create one to organise your requests.',
   'collections.deleteConfirm': 'Are you sure you want to delete this collection?',
   'collections.openInNewTab': 'Open in New Tab',
+  'collections.create': 'Create:',
+  'collections.importLabel': 'Import:',
+  'collections.createCollection': 'Create Collection',
+  'collections.noCollections': 'No collections yet \u2014 create one to get started',
+  'collections.newFolderTitle': 'New Folder',
+  'collections.newRequestTitle': 'New Request',
+  'collections.exportCollection': 'Export collection',
+  'collections.dropHere': 'Drop here to remove from folder',
+  'collections.noConfigured': 'No {section} configured yet.',
 } as const;

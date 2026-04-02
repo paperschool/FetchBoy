@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useBreakpointsStore } from '@/stores/breakpointsStore';
+import { t } from '@/lib/i18n';
 
 interface Props {
     open: boolean;
@@ -54,13 +55,13 @@ export function SaveBreakpointDialog({ open, onClose, onSave, defaultName = '', 
                 aria-labelledby="save-bp-dialog-title"
             >
                 <h2 id="save-bp-dialog-title" className="text-app-primary text-sm font-semibold">
-                    Save as Breakpoint
+                    {t('breakpoints.new')}
                 </h2>
 
                 <div className="space-y-3">
                     <div>
                         <label htmlFor="bp-name" className="text-app-secondary mb-1 block text-xs font-medium">
-                            Name
+                            {t('breakpoints.name')}
                         </label>
                         <input
                             id="bp-name"
@@ -76,7 +77,7 @@ export function SaveBreakpointDialog({ open, onClose, onSave, defaultName = '', 
 
                     <div>
                         <label htmlFor="bp-url-pattern" className="text-app-secondary mb-1 block text-xs font-medium">
-                            URL Pattern
+                            {t('breakpoints.urlPattern')}
                         </label>
                         <input
                             id="bp-url-pattern"
@@ -92,7 +93,7 @@ export function SaveBreakpointDialog({ open, onClose, onSave, defaultName = '', 
 
                     <div>
                         <label htmlFor="bp-folder" className="text-app-secondary mb-1 block text-xs font-medium">
-                            Folder
+                            {t('common.folder')}
                         </label>
                         <select
                             id="bp-folder"
@@ -101,7 +102,7 @@ export function SaveBreakpointDialog({ open, onClose, onSave, defaultName = '', 
                             className="select-flat border-app-subtle bg-app-main text-app-primary h-9 w-full rounded-md border pl-2 pr-7 text-sm"
                             data-testid="save-bp-folder-select"
                         >
-                            <option value="">Root (no folder)</option>
+                            <option value="">{t('common.rootNoFolder')}</option>
                             {folders.map((f) => (
                                 <option key={f.id} value={f.id}>{f.name}</option>
                             ))}
@@ -115,7 +116,7 @@ export function SaveBreakpointDialog({ open, onClose, onSave, defaultName = '', 
                         onClick={onClose}
                         className="border-app-subtle text-app-secondary h-9 rounded-md border px-4 text-sm"
                     >
-                        Cancel
+                        {t('common.cancel')}
                     </button>
                     <button
                         type="button"
@@ -124,7 +125,7 @@ export function SaveBreakpointDialog({ open, onClose, onSave, defaultName = '', 
                         className="bg-app-topbar text-app-inverse disabled:text-app-muted h-9 rounded-md px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-70"
                         data-testid="save-bp-confirm-button"
                     >
-                        {saving ? 'Saving…' : 'Save & Edit'}
+                        {saving ? t('common.saving') : t('common.saveAndEdit')}
                     </button>
                 </div>
             </div>

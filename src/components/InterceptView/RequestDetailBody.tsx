@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
+import { t } from '@/lib/i18n'
 import { MonacoEditorField } from '@/components/Editor/MonacoEditorField'
 import { SaveContentButton } from '@/components/Editor/SaveContentButton'
 import { isImageContentType, ImageViewer } from '@/components/ResponseViewer/ResponseViewer'
@@ -40,7 +41,7 @@ export function RequestDetailBody({
   if (selectedRequest.isPending && !editMode) {
     return (
       <div className="flex-1 flex items-center justify-center text-yellow-400/70 text-sm">
-        <span className="animate-pulse">Awaiting response...</span>
+        <span className="animate-pulse">{t('intercept.awaitingResponse')}</span>
       </div>
     )
   }

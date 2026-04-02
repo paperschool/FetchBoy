@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useCollectionStore } from '@/stores/collectionStore';
+import { t } from '@/lib/i18n';
 
 interface Props {
     open: boolean;
@@ -55,7 +56,7 @@ export function SaveRequestDialog({ open, onClose, onSave }: Props) {
                 aria-labelledby="save-dialog-title"
             >
                 <h2 id="save-dialog-title" className="text-app-primary text-sm font-semibold">
-                    Save Request
+                    {t('fetch.saveRequest')}
                 </h2>
 
                 <div className="space-y-3">
@@ -64,7 +65,7 @@ export function SaveRequestDialog({ open, onClose, onSave }: Props) {
                             htmlFor="save-request-name"
                             className="text-app-secondary mb-1 block text-xs font-medium"
                         >
-                            Request Name
+                            {t('fetch.requestName')}
                         </label>
                         <input
                             id="save-request-name"
@@ -82,7 +83,7 @@ export function SaveRequestDialog({ open, onClose, onSave }: Props) {
                             htmlFor="save-collection"
                             className="text-app-secondary mb-1 block text-xs font-medium"
                         >
-                            Collection
+                            {t('common.collection')}
                         </label>
                         <select
                             id="save-collection"
@@ -93,7 +94,7 @@ export function SaveRequestDialog({ open, onClose, onSave }: Props) {
                             }}
                             className="select-flat border-app-subtle bg-app-main text-app-primary h-9 w-full rounded-md border pl-2 pr-7 text-sm"
                         >
-                            <option value="">Select a collection...</option>
+                            <option value="">{t('common.selectCollection')}</option>
                             {collections.map((c) => (
                                 <option key={c.id} value={c.id}>
                                     {c.name}
@@ -108,7 +109,7 @@ export function SaveRequestDialog({ open, onClose, onSave }: Props) {
                                 htmlFor="save-folder"
                                 className="text-app-secondary mb-1 block text-xs font-medium"
                             >
-                                Folder (optional)
+                                {t('common.folderOptional')}
                             </label>
                             <select
                                 id="save-folder"
@@ -116,7 +117,7 @@ export function SaveRequestDialog({ open, onClose, onSave }: Props) {
                                 onChange={(e) => setFolderId(e.target.value || null)}
                                 className="select-flat border-app-subtle bg-app-main text-app-primary h-9 w-full rounded-md border pl-2 pr-7 text-sm"
                             >
-                                <option value="">No folder</option>
+                                <option value="">{t('common.noFolder')}</option>
                                 {availableFolders.map((f) => (
                                     <option key={f.id} value={f.id}>
                                         {f.name}
@@ -133,7 +134,7 @@ export function SaveRequestDialog({ open, onClose, onSave }: Props) {
                         onClick={onClose}
                         className="border-app-subtle text-app-secondary h-9 rounded-md border px-4 text-sm"
                     >
-                        Cancel
+                        {t('common.cancel')}
                     </button>
                     <button
                         type="button"
@@ -141,7 +142,7 @@ export function SaveRequestDialog({ open, onClose, onSave }: Props) {
                         disabled={!canSave || saving}
                         className="bg-app-topbar text-app-inverse disabled:text-app-muted h-9 rounded-md px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-70"
                     >
-                        {saving ? 'Saving...' : 'Save'}
+                        {saving ? t('common.saving') : t('common.save')}
                     </button>
                 </div>
             </div>

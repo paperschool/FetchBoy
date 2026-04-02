@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Folder, Clock, Settings as SettingsIcon } from 'lucide-react';
+import { t } from '@/lib/i18n';
 import { CollectionTree } from '@/components/CollectionTree/CollectionTree';
 import { HistoryPanel } from '@/components/HistoryPanel/HistoryPanel';
 import { SettingsAccordion } from './SettingsAccordion';
@@ -108,7 +109,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     }`}
                     aria-label="Collections panel"
                 >
-                    Collections
+                    {t('sidebar.collections')}
                 </button>
                 <button
                     type="button"
@@ -120,7 +121,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     }`}
                     aria-label="History panel"
                 >
-                    History
+                    {t('sidebar.history')}
                 </button>
             </div>
 

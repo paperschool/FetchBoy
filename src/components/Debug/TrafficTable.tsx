@@ -3,13 +3,14 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { Trash2, Pin, PinOff } from 'lucide-react'
 import { useDebugStore } from '@/stores/debugStore'
 import { formatTimestamp, formatMethod, formatStatusCode, CopyButton } from '@/components/InterceptView/InterceptTable.utils'
+import { t } from '@/lib/i18n'
 
 const columns = [
-    { id: 'time', label: 'Time', className: 'w-[100px] shrink-0' },
-    { id: 'method', label: 'Method', className: 'w-[85px] shrink-0' },
-    { id: 'url', label: 'URL', className: 'flex-1 min-w-0' },
-    { id: 'status', label: 'Status', className: 'w-[80px] shrink-0' },
-    { id: 'duration', label: 'Duration', className: 'w-[80px] shrink-0' },
+    { id: 'time', key: 'intercept.colTime' as const, className: 'w-[100px] shrink-0' },
+    { id: 'method', key: 'intercept.colMethod' as const, className: 'w-[85px] shrink-0' },
+    { id: 'url', key: 'intercept.colUrl' as const, className: 'flex-1 min-w-0' },
+    { id: 'status', key: 'intercept.colStatus' as const, className: 'w-[80px] shrink-0' },
+    { id: 'duration', key: 'intercept.colDuration' as const, className: 'w-[80px] shrink-0' },
 ]
 
 const ROW_HEIGHT = 32
@@ -43,30 +44,30 @@ export function TrafficTable() {
     return (
         <div className="flex flex-col h-full min-h-0">
             <div className="flex items-center gap-2 px-2 py-1.5 border-b border-app-subtle shrink-0">
-                <span className="text-xs font-semibold text-app-muted uppercase tracking-wider">Traffic</span>
+                <span className="text-xs font-semibold text-app-muted uppercase tracking-wider">{t('intercept.debugTraffic')}</span>
                 <input
                     type="text"
                     value={filter}
                     onChange={(e) => setFilter(e.target.value)}
-                    placeholder="Filter..."
+                    placeholder={t('intercept.debugFilter')}
                     className="flex-1 bg-app-main text-app-inverse text-xs border border-app-subtle rounded px-2 py-1"
                 />
-                <button onClick={() => setPinned((p) => !p)} title={pinned ? 'Unpin scroll' : 'Pin scroll'} className="text-app-muted hover:text-app-inverse p-1 cursor-pointer">
+                <button onClick={() => setPinned((p) => !p)} title={pinned ? t('intercept.unpinScroll') : t('intercept.pinScroll')} className="text-app-muted hover:text-app-inverse p-1 cursor-pointer">
                     {pinned ? <PinOff size={12} /> : <Pin size={12} />}
                 </button>
-                <button onClick={clearTraffic} title="Clear" className="text-app-muted hover:text-app-inverse p-1 cursor-pointer">
+                <button onClick={clearTraffic} title={t('common.clear')} className="text-app-muted hover:text-app-inverse p-1 cursor-pointer">
                     <Trash2 size={12} />
                 </button>
             </div>
 
             {filtered.length === 0 ? (
-                <div className="flex-1 flex items-center justify-center text-app-muted text-xs">No traffic</div>
+                <div className="flex-1 flex items-center justify-center text-app-muted text-xs">{t('intercept.noTraffic')}</div>
             ) : (
                 <>
                     <div className="flex bg-app-main border-b border-app-subtle shrink-0">
                         {columns.map((col) => (
                             <div key={col.id} className={`px-2 py-1.5 text-left text-xs font-medium text-app-secondary uppercase ${col.className}`}>
-                                {col.label}
+                                {t(col.key)}
                             </div>
                         ))}
                     </div>

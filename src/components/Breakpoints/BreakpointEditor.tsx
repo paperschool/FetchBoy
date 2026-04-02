@@ -8,6 +8,7 @@ import { ViewerShell } from '@/components/ui/ViewerShell';
 import { UrlPatternInput } from '@/components/ui/UrlPatternInput';
 import { validateUrlPattern } from '@/lib/urlPatternConfig';
 import type { MatchType } from '@/lib/urlPatternConfig';
+import { t } from '@/lib/i18n';
 
 interface Props {
     onClose: () => void;
@@ -63,13 +64,13 @@ export function BreakpointEditor({ onClose }: Props) {
 
     return (
         <ViewerShell
-            header={<h3 className="text-app-inverse font-medium text-sm">{isNew ? 'New Breakpoint' : 'Edit Breakpoint'}</h3>}
+            header={<h3 className="text-app-inverse font-medium text-sm">{isNew ? t('breakpoints.new') : t('breakpoints.edit')}</h3>}
             testId="breakpoint-editor"
         >
             <>
                 <div className="flex-1 overflow-y-auto space-y-3 pb-3">
                     <div>
-                        <label className="block text-app-muted text-xs mb-1">Name</label>
+                        <label className="block text-app-muted text-xs mb-1">{t('breakpoints.name')}</label>
                         <input
                             type="text"
                             value={name}
@@ -100,10 +101,10 @@ export function BreakpointEditor({ onClose }: Props) {
                                 ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
                                 : 'bg-gray-500/20 text-app-muted hover:bg-gray-500/30'
                         }`}
-                        title={enabled ? 'Click to disable this breakpoint' : 'Click to enable this breakpoint'}
+                        title={enabled ? t('breakpoints.clickToDisable') : t('breakpoints.clickToEnable')}
                     >
                         {enabled ? <Pause size={13} /> : <Play size={13} />}
-                        {enabled ? 'Enabled' : 'Disabled'}
+                        {enabled ? t('breakpoints.enabled') : t('breakpoints.disabled')}
                     </button>
                 </div>
 
@@ -112,7 +113,7 @@ export function BreakpointEditor({ onClose }: Props) {
                         onClick={onClose}
                         className="px-4 py-1.5 text-sm text-app-muted hover:text-app-inverse"
                     >
-                        Cancel
+                        {t('common.cancel')}
                     </button>
                     <button
                         onClick={() => void handleSave()}
@@ -121,7 +122,7 @@ export function BreakpointEditor({ onClose }: Props) {
                         data-testid="bp-save-button"
                     >
                         <Check size={14} />
-                        {saving ? 'Saving…' : 'Save'}
+                        {saving ? t('common.saving') : t('breakpoints.save')}
                     </button>
                 </div>
             </>

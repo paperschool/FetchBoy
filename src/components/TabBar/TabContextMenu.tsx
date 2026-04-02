@@ -1,3 +1,5 @@
+import { t } from '@/lib/i18n';
+
 type TabContextMenuState = { x: number; y: number; tabId: string } | null;
 
 interface TabContextMenuProps {
@@ -36,26 +38,26 @@ export function TabContextMenu({
       >
         <li role="menuitem" className="flex cursor-pointer items-center px-3 py-1.5 hover:bg-app-subtle"
           onClick={() => { onNewTab(); onClose(); }}>
-          <span>New Tab</span>
+          <span>{t('common.newTab')}</span>
           <span className="ml-auto text-xs text-app-muted">{isMac ? '⌘T' : 'Ctrl+T'}</span>
         </li>
         <li role="menuitem" className="px-3 py-1.5 hover:bg-app-subtle cursor-pointer"
           onClick={() => { onDuplicateTab(menu.tabId); onClose(); }}>
-          Duplicate Tab
+          {t('common.duplicateTab')}
         </li>
         <li role="menuitem" className="flex cursor-pointer items-center px-3 py-1.5 hover:bg-app-subtle"
           onClick={() => { onCloseTab(menu.tabId); onClose(); }}>
-          <span>Close Tab</span>
+          <span>{t('common.closeTab')}</span>
           <span className="ml-auto text-xs text-app-muted">{isMac ? '⌘W' : 'Ctrl+W'}</span>
         </li>
         <li role="menuitem"
           className={`px-3 py-1.5 ${tabCount === 1 ? 'cursor-not-allowed text-app-muted' : 'cursor-pointer hover:bg-app-subtle'}`}
           onClick={() => { if (tabCount > 1) { onCloseOtherTabs(menu.tabId); onClose(); } }}>
-          Close Other Tabs
+          {t('common.closeOtherTabs')}
         </li>
         <li role="menuitem" className="px-3 py-1.5 hover:bg-app-subtle cursor-pointer"
           onClick={() => { onCloseAllTabs(); onClose(); }}>
-          Close All Tabs
+          {t('common.closeAllTabs')}
         </li>
       </ul>
     </>

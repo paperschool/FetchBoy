@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { X, Plus, Trash2 } from 'lucide-react'
 import type { InterceptRequest, BreakpointModifications } from '@/stores/interceptStore'
+import { t } from '@/lib/i18n'
 
 interface Props {
   request: InterceptRequest
@@ -55,7 +56,7 @@ export function RequestEditDialog({ request, onConfirm, onCancel }: Props) {
       <div className="bg-app-sidebar border border-app-subtle rounded-lg w-[560px] max-h-[80vh] flex flex-col shadow-xl">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-app-subtle shrink-0">
-          <h2 className="text-sm font-semibold text-app-inverse">Edit &amp; Continue</h2>
+          <h2 className="text-sm font-semibold text-app-inverse">{t('breakpoints.editAndContinue')}</h2>
           <button
             type="button"
             onClick={onCancel}
@@ -71,7 +72,7 @@ export function RequestEditDialog({ request, onConfirm, onCancel }: Props) {
           {/* Status code */}
           <div>
             <label className="block text-xs font-medium text-app-secondary mb-1">
-              Response Status Code
+              {t('breakpoints.responseStatusCode')}
             </label>
             <input
               type="number"
@@ -85,7 +86,7 @@ export function RequestEditDialog({ request, onConfirm, onCancel }: Props) {
           {/* Content-Type */}
           <div>
             <label className="block text-xs font-medium text-app-secondary mb-1">
-              Content-Type
+              {t('breakpoints.contentType')}
             </label>
             <input
               type="text"
@@ -99,7 +100,7 @@ export function RequestEditDialog({ request, onConfirm, onCancel }: Props) {
           {/* Response body */}
           <div>
             <label className="block text-xs font-medium text-app-secondary mb-1">
-              Response Body
+              {t('breakpoints.responseBody')}
             </label>
             <textarea
               value={responseBody}
@@ -114,7 +115,7 @@ export function RequestEditDialog({ request, onConfirm, onCancel }: Props) {
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="text-xs font-medium text-app-secondary">
-                Extra Headers
+                {t('breakpoints.extraHeaders')}
               </label>
               <button
                 type="button"
@@ -122,12 +123,12 @@ export function RequestEditDialog({ request, onConfirm, onCancel }: Props) {
                 className="flex items-center gap-1 text-xs text-app-muted hover:text-app-inverse transition-colors"
                 aria-label="Add header"
               >
-                <Plus size={12} /> Add
+                <Plus size={12} /> {t('common.add')}
               </button>
             </div>
 
             {headers.length === 0 && (
-              <p className="text-xs text-app-muted">No extra headers added.</p>
+              <p className="text-xs text-app-muted">{t('breakpoints.noExtraHeaders')}</p>
             )}
 
             {headers.map(([key, value], i) => (
@@ -136,14 +137,14 @@ export function RequestEditDialog({ request, onConfirm, onCancel }: Props) {
                   type="text"
                   value={key}
                   onChange={(e) => updateHeader(i, 0, e.target.value)}
-                  placeholder="Header name"
+                  placeholder={t('breakpoints.headerName')}
                   className="flex-1 bg-app-main border border-app-subtle rounded px-2 py-1 text-xs text-app-inverse outline-none focus:border-blue-500/50"
                 />
                 <input
                   type="text"
                   value={value}
                   onChange={(e) => updateHeader(i, 1, e.target.value)}
-                  placeholder="Value"
+                  placeholder={t('common.value')}
                   className="flex-1 bg-app-main border border-app-subtle rounded px-2 py-1 text-xs text-app-inverse outline-none focus:border-blue-500/50"
                 />
                 <button
@@ -166,14 +167,14 @@ export function RequestEditDialog({ request, onConfirm, onCancel }: Props) {
             onClick={onCancel}
             className="px-3 py-1.5 text-xs text-app-muted hover:text-app-inverse border border-app-subtle rounded transition-colors"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             type="button"
             onClick={handleConfirm}
             className="px-4 py-1.5 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded font-medium transition-colors"
           >
-            Apply &amp; Continue
+            {t('breakpoints.applyAndContinue')}
           </button>
         </div>
       </div>

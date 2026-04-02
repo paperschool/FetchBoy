@@ -1,5 +1,6 @@
 import type { AuthState } from '@/stores/requestStore';
 import { isAuthType } from '@/lib/validators';
+import { t } from '@/lib/i18n';
 
 interface AuthPanelProps {
   auth: AuthState;
@@ -24,7 +25,7 @@ export function AuthPanel({ auth, onAuthChange }: AuthPanelProps) {
     <div className="space-y-3">
       <div>
         <label htmlFor="auth-type" className="text-app-secondary mb-1 block text-xs font-medium">
-          Auth Type
+          {t('auth.type')}
         </label>
         <select
           id="auth-type"
@@ -32,10 +33,10 @@ export function AuthPanel({ auth, onAuthChange }: AuthPanelProps) {
           onChange={(e) => { const v = e.target.value; if (isAuthType(v)) handleTypeChange(v); }}
           className="select-flat border-app-subtle bg-app-main text-app-primary h-9 rounded-md border pl-2 pr-7 text-sm"
         >
-          <option value="none">No Auth</option>
-          <option value="bearer">Bearer Token</option>
-          <option value="basic">Basic Auth</option>
-          <option value="api-key">API Key</option>
+          <option value="none">{t('auth.none')}</option>
+          <option value="bearer">{t('auth.bearer')}</option>
+          <option value="basic">{t('auth.basic')}</option>
+          <option value="api-key">{t('auth.apiKey')}</option>
         </select>
       </div>
 
@@ -46,14 +47,14 @@ export function AuthPanel({ auth, onAuthChange }: AuthPanelProps) {
       {auth.type === 'bearer' && (
         <div>
           <label htmlFor="auth-bearer-token" className="text-app-secondary mb-1 block text-xs font-medium">
-            Token
+            {t('auth.token')}
           </label>
           <input
             id="auth-bearer-token"
             type="text"
             value={auth.token}
             onChange={(e) => onAuthChange({ ...auth, token: e.target.value })}
-            placeholder="Enter bearer token"
+            placeholder={t('auth.tokenPlaceholder')}
             className="border-app-subtle bg-app-main text-app-primary h-9 w-full rounded-md border px-2 text-sm"
           />
         </div>
@@ -63,7 +64,7 @@ export function AuthPanel({ auth, onAuthChange }: AuthPanelProps) {
         <div className="space-y-2">
           <div>
             <label htmlFor="auth-basic-username" className="text-app-secondary mb-1 block text-xs font-medium">
-              Username
+              {t('auth.username')}
             </label>
             <input
               id="auth-basic-username"
@@ -75,7 +76,7 @@ export function AuthPanel({ auth, onAuthChange }: AuthPanelProps) {
           </div>
           <div>
             <label htmlFor="auth-basic-password" className="text-app-secondary mb-1 block text-xs font-medium">
-              Password
+              {t('auth.password')}
             </label>
             <input
               id="auth-basic-password"
@@ -92,20 +93,20 @@ export function AuthPanel({ auth, onAuthChange }: AuthPanelProps) {
         <div className="space-y-2">
           <div>
             <label htmlFor="auth-apikey-name" className="text-app-secondary mb-1 block text-xs font-medium">
-              Key Name
+              {t('auth.key')}
             </label>
             <input
               id="auth-apikey-name"
               type="text"
               value={auth.key}
               onChange={(e) => onAuthChange({ ...auth, key: e.target.value })}
-              placeholder="e.g. X-API-Key"
+              placeholder={t('auth.keyPlaceholder')}
               className="border-app-subtle bg-app-main text-app-primary h-9 w-full rounded-md border px-2 text-sm"
             />
           </div>
           <div>
             <label htmlFor="auth-apikey-value" className="text-app-secondary mb-1 block text-xs font-medium">
-              Key Value
+              {t('auth.value')}
             </label>
             <input
               id="auth-apikey-value"
@@ -117,7 +118,7 @@ export function AuthPanel({ auth, onAuthChange }: AuthPanelProps) {
           </div>
           <div>
             <label htmlFor="auth-apikey-in" className="text-app-secondary mb-1 block text-xs font-medium">
-              Location
+              {t('auth.addTo')}
             </label>
             <select
               id="auth-apikey-in"
@@ -125,8 +126,8 @@ export function AuthPanel({ auth, onAuthChange }: AuthPanelProps) {
               onChange={(e) => onAuthChange({ ...auth, in: e.target.value as 'header' | 'query' })}
               className="select-flat border-app-subtle bg-app-main text-app-primary h-9 rounded-md border pl-2 pr-7 text-sm"
             >
-              <option value="header">Header</option>
-              <option value="query">Query Param</option>
+              <option value="header">{t('auth.header')}</option>
+              <option value="query">{t('auth.queryParam')}</option>
             </select>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
+import { t } from '@/lib/i18n'
 import type { InterceptRequest, BreakpointModifications } from '@/stores/interceptStore'
 import { useInterceptStore } from '@/stores/interceptStore'
 import { useUiSettingsStore } from '@/stores/uiSettingsStore'
@@ -19,10 +20,10 @@ import { RequestDetailBody } from './RequestDetailBody'
 type DetailTab = 'body' | 'headers' | 'params' | 'options'
 
 const TABS = [
-  { id: 'body', label: 'Body' },
-  { id: 'headers', label: 'Headers' },
-  { id: 'params', label: 'Params' },
-  { id: 'options', label: 'Options' },
+  { id: 'body', get label() { return t('intercept.body') } },
+  { id: 'headers', get label() { return t('intercept.headers') } },
+  { id: 'params', get label() { return t('intercept.params') } },
+  { id: 'options', get label() { return t('intercept.options') } },
 ]
 
 interface RequestDetailViewProps {
@@ -72,7 +73,7 @@ export function RequestDetailView({ selectedRequest, editMode = false, pendingMo
     return (
       <ViewerShell testId="intercept-detail-viewer">
         <div className="flex-1 flex items-center justify-center text-app-muted text-sm">
-          Select a request to view details
+          {t('intercept.selectRequest')}
         </div>
       </ViewerShell>
     )
@@ -88,10 +89,10 @@ export function RequestDetailView({ selectedRequest, editMode = false, pendingMo
       <div className="flex items-center gap-2">
         <span className="text-xs text-app-muted font-mono truncate flex-1" title={fullUrl}>{fullUrl}</span>
         <CopyButton text={fullUrl} />
-        <button type="button" onClick={() => openInFetch(selectedRequest)} className="shrink-0 rounded px-2 py-0.5 text-xs font-medium bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors cursor-pointer" title="Open in Fetch tab">Open in Fetch</button>
-        <button type="button" onClick={() => setMapDialogOpen(true)} className="shrink-0 rounded px-2 py-0.5 text-xs font-medium bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 transition-colors cursor-pointer" title="Add mapping for this URL">Add Mapping</button>
+        <button type="button" onClick={() => openInFetch(selectedRequest)} className="shrink-0 rounded px-2 py-0.5 text-xs font-medium bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors cursor-pointer" title="Open in Fetch tab">{t('intercept.openInFetch')}</button>
+        <button type="button" onClick={() => setMapDialogOpen(true)} className="shrink-0 rounded px-2 py-0.5 text-xs font-medium bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 transition-colors cursor-pointer" title="Add mapping for this URL">{t('intercept.addMapping')}</button>
         {!isPaused && (
-          <button type="button" onClick={() => setBreakDialogOpen(true)} className="shrink-0 rounded px-2 py-0.5 text-xs font-medium bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors cursor-pointer" title="Add breakpoint for this URL">Add Breakpoint</button>
+          <button type="button" onClick={() => setBreakDialogOpen(true)} className="shrink-0 rounded px-2 py-0.5 text-xs font-medium bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors cursor-pointer" title="Add breakpoint for this URL">{t('intercept.addBreakpoint')}</button>
         )}
       </div>
       <div className="flex flex-wrap items-center gap-3 text-xs">
@@ -99,7 +100,7 @@ export function RequestDetailView({ selectedRequest, editMode = false, pendingMo
         {editMode ? (
           <input type="number" value={pendingMods.statusCode ?? selectedRequest.statusCode ?? ''} onChange={(e) => onModsChange?.({ statusCode: e.target.value ? Number(e.target.value) : undefined })} className="w-20 px-2 py-0.5 rounded border border-amber-500/50 bg-amber-900/20 text-amber-200 text-xs font-mono focus:outline-none focus:border-amber-400" placeholder="Status" min={100} max={599} aria-label="Status code" />
         ) : selectedRequest.isPending ? (
-          <span className="px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400 animate-pulse">Pending</span>
+          <span className="px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400 animate-pulse">{t('intercept.pending')}</span>
         ) : (
           selectedRequest.statusCode !== undefined && (
             <span className={`px-2 py-0.5 rounded ${getStatusBadgeClass(selectedRequest.statusCode)}`}>{selectedRequest.statusCode}</span>

@@ -17,4 +17,7 @@ export const settings = {
   'settings.restartTutorial': 'Restart Tutorial',
   'settings.keyboardShortcuts': 'Keyboard Shortcuts',
   'settings.closeSettings': 'Close settings',
+  'settings.general': 'General',
+  'settings.request': 'Request',
+  'settings.tabs': 'Tabs',
 } as const;

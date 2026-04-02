@@ -1,5 +1,6 @@
 import { FolderOpen, Copy, ShieldCheck, Globe } from "lucide-react";
 import { useSystemOperations } from "@/hooks/useSystemOperations";
+import { t } from "@/lib/i18n";
 
 interface CaCertificateInfo {
   certPath: string;
@@ -36,16 +37,16 @@ export function CertificateManagement({
       {/* CA Certificate paths */}
       {caCertInfo?.certExists && (
         <div className="space-y-1 pt-2 border-t border-gray-700">
-          <p className="text-app-muted text-xs font-medium">CA Certificate</p>
+          <p className="text-app-muted text-xs font-medium">{t('intercept.caCertificate')}</p>
           <div className="flex items-center gap-1 flex-wrap">
             <button onClick={onOpenFolder} className="flex items-center gap-1 px-2 py-1 text-xs text-app-muted hover:text-app-inverse hover:bg-gray-700 rounded transition-colors cursor-pointer">
-              <FolderOpen size={12} /> Open Folder
+              <FolderOpen size={12} /> {t('intercept.openFolder')}
             </button>
-            <button onClick={openProxySettings} className="flex items-center gap-1 px-2 py-1 text-xs text-app-muted hover:text-app-inverse hover:bg-gray-700 rounded transition-colors cursor-pointer" title="Open OS Proxy Settings">
-              <Globe size={12} /> Proxy Settings
+            <button onClick={openProxySettings} className="flex items-center gap-1 px-2 py-1 text-xs text-app-muted hover:text-app-inverse hover:bg-gray-700 rounded transition-colors cursor-pointer" title={t('intercept.proxySettings')}>
+              <Globe size={12} /> {t('intercept.proxySettings')}
             </button>
-            <button onClick={openCertManager} className="flex items-center gap-1 px-2 py-1 text-xs text-app-muted hover:text-app-inverse hover:bg-gray-700 rounded transition-colors cursor-pointer" title="Open Certificate Manager">
-              <ShieldCheck size={12} /> Cert Manager
+            <button onClick={openCertManager} className="flex items-center gap-1 px-2 py-1 text-xs text-app-muted hover:text-app-inverse hover:bg-gray-700 rounded transition-colors cursor-pointer" title={t('intercept.certManager')}>
+              <ShieldCheck size={12} /> {t('intercept.certManager')}
             </button>
           </div>
           <div className="flex items-center gap-1">
@@ -59,20 +60,20 @@ export function CertificateManagement({
 
       {/* Install / Uninstall */}
       <div className="space-y-1 pt-2 border-t border-gray-700">
-        <p className="text-app-muted text-xs font-medium">Setup</p>
+        <p className="text-app-muted text-xs font-medium">{t('intercept.setup')}</p>
         {caInstalled ? (
           <button type="button" onClick={onUninstall} disabled={certStatus === "loading"}
             className="flex items-center gap-1 px-2 py-1 text-xs text-red-400 hover:text-red-300 hover:bg-gray-700 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            title="Remove CA certificate from OS trust store">
+            title={t('intercept.uninstallCertificate')}>
             <ShieldCheck size={12} />
-            {certStatus === "loading" ? "Removing…" : "Uninstall Certificate"}
+            {certStatus === "loading" ? t('intercept.removing') : t('intercept.uninstallCertificate')}
           </button>
         ) : (
           <button type="button" data-tour="install-cert" onClick={onInstall} disabled={certStatus === "loading"}
             className="flex items-center gap-1 px-2 py-1 text-xs text-app-muted hover:text-app-inverse hover:bg-gray-700 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            title="Install CA certificate to OS trust store">
+            title={t('intercept.installCertificate')}>
             <ShieldCheck size={12} />
-            {certStatus === "loading" ? "Installing…" : "Install Certificate"}
+            {certStatus === "loading" ? t('intercept.installing') : t('intercept.installCertificate')}
           </button>
         )}
         {certMessage && (

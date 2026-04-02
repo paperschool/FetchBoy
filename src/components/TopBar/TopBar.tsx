@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Globe } from "lucide-react";
+import { t } from '@/lib/i18n';
 import { useEnvironmentStore } from "@/stores/environmentStore";
 import { setActiveEnvironment } from "@/lib/environments";
 import { EnvironmentPanel } from "@/components/EnvironmentPanel/EnvironmentPanel";
@@ -28,7 +29,7 @@ export function FetchTabActions() {
           onChange={(e) => void handleEnvChange(e)}
           className="select-flat border-app-subtle bg-app-main text-app-primary h-7 rounded-md border pl-2 pr-6 text-xs"
         >
-          <option value="">No Environment</option>
+          <option value="">{t('common.noEnvironment')}</option>
           {environments.map((env) => (
             <option key={env.id} value={env.id}>
               {env.name}

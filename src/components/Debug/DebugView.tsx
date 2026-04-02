@@ -1,6 +1,7 @@
 import { FolderOpen } from 'lucide-react'
 import { useDebugEvents } from '@/hooks/useDebugEvents'
 import { useSystemOperations } from '@/hooks/useSystemOperations'
+import { t } from '@/lib/i18n'
 import { InternalEventTable } from './InternalEventTable'
 import { TrafficTable } from './TrafficTable'
 import { ProxyFlowDiagram } from './ProxyFlowDiagram'
@@ -17,7 +18,7 @@ export function DebugView() {
                     className="flex items-center gap-1 px-2 py-1 text-xs text-app-muted hover:text-app-inverse hover:bg-gray-700 rounded transition-colors"
                     title="Open log files directory"
                 >
-                    <FolderOpen size={12} /> Open Log Folder
+                    <FolderOpen size={12} /> {t('intercept.openLogFolder')}
                 </button>
             </div>
             <div className="flex flex-col flex-1 min-h-0">

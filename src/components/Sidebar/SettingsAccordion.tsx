@@ -3,6 +3,7 @@ import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import { saveSetting } from '@/lib/settings';
 import { useTourStore } from '@/stores/tourStore';
 import { KEYBOARD_SHORTCUTS, getShortcutDisplay } from '@/lib/keyboardShortcuts';
+import { t } from '@/lib/i18n';
 
 interface SettingsAccordionProps {
     isExpanded: boolean;
@@ -65,7 +66,7 @@ export function SettingsAccordion({ isExpanded, onToggle }: SettingsAccordionPro
             >
                 {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                 <SettingsIcon size={16} />
-                <span className="text-xs font-medium">Settings</span>
+                <span className="text-xs font-medium">{t('settings.title')}</span>
             </button>
 
             {isExpanded && (
@@ -76,7 +77,7 @@ export function SettingsAccordion({ isExpanded, onToggle }: SettingsAccordionPro
                 >
                     {/* Theme */}
                     <div className="space-y-1">
-                        <p className="text-app-muted text-xs font-medium">Theme</p>
+                        <p className="text-app-muted text-xs font-medium">{t('settings.theme')}</p>
                         <div className="flex gap-3 flex-wrap">
                             {(['light', 'dark', 'system'] as const).map((option) => (
                                 <label
@@ -99,7 +100,7 @@ export function SettingsAccordion({ isExpanded, onToggle }: SettingsAccordionPro
 
                     {/* Request timeout */}
                     <div className="space-y-1">
-                        <p className="text-app-muted text-xs font-medium">Request Timeout (ms)</p>
+                        <p className="text-app-muted text-xs font-medium">{t('settings.requestTimeout')}</p>
                         <input
                             type="number"
                             min={100}
@@ -121,13 +122,13 @@ export function SettingsAccordion({ isExpanded, onToggle }: SettingsAccordionPro
                                 onChange={handleSslVerifyChange}
                                 data-testid="sidebar-ssl-verify-checkbox"
                             />
-                            Verify SSL Certificates
+                            {t('settings.sslVerify')}
                         </label>
                     </div>
 
                     {/* Editor font size */}
                     <div className="space-y-1">
-                        <p className="text-app-muted text-xs font-medium">Editor Font Size</p>
+                        <p className="text-app-muted text-xs font-medium">{t('settings.editorFontSize')}</p>
                         <div className="flex items-center gap-2">
                             <button
                                 type="button"
@@ -158,20 +159,20 @@ export function SettingsAccordion({ isExpanded, onToggle }: SettingsAccordionPro
 
                     {/* Tutorial */}
                     <div className="space-y-1" data-testid="sidebar-tutorial-section">
-                        <p className="text-app-muted text-xs font-medium">Tutorial</p>
+                        <p className="text-app-muted text-xs font-medium">{t('settings.tutorial')}</p>
                         <button
                             type="button"
                             onClick={resetTour}
                             className="w-full text-left px-2 py-1 text-xs border border-gray-700 rounded text-app-muted hover:bg-gray-700 cursor-pointer transition-colors"
                             data-testid="sidebar-restart-tutorial-button"
                         >
-                            Restart Tutorial
+                            {t('settings.restartTutorial')}
                         </button>
                     </div>
 
                     {/* Keyboard shortcuts */}
                     <div className="space-y-1" data-testid="sidebar-keyboard-shortcuts-section">
-                        <p className="text-app-muted text-xs font-medium">Keyboard Shortcuts</p>
+                        <p className="text-app-muted text-xs font-medium">{t('settings.keyboardShortcuts')}</p>
                         <dl className="space-y-0.5 text-xs" data-testid="sidebar-keyboard-shortcuts-list">
                             {KEYBOARD_SHORTCUTS.map((shortcut) => (
                                 <div key={shortcut.id} className="flex justify-between">

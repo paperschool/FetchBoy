@@ -4,6 +4,7 @@ import { useProxyConfig } from '@/hooks/useProxyConfig';
 import { saveSetting } from '@/lib/settings';
 import { useTourStore } from '@/stores/tourStore';
 import { KEYBOARD_SHORTCUTS, getShortcutDisplay } from '@/lib/keyboardShortcuts';
+import { t } from '@/lib/i18n';
 
 interface SettingsPanelProps {
     open: boolean;
@@ -90,7 +91,7 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <Settings size={22} className="text-app-primary" />
-                        <h2 className="text-app-primary font-semibold text-base">Settings</h2>
+                        <h2 className="text-app-primary font-semibold text-base">{t('settings.title')}</h2>
                     </div>
                     <button
                         aria-label="Close settings"
@@ -103,7 +104,7 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
 
                 {/* Theme section */}
                 <div className="space-y-2">
-                    <p className="text-app-primary text-sm font-medium">Theme</p>
+                    <p className="text-app-primary text-sm font-medium">{t('settings.theme')}</p>
                     <div className="flex gap-4">
                         {(['light', 'dark', 'system'] as const).map((option) => (
                             <label key={option} className="flex items-center gap-1.5 text-app-primary text-sm cursor-pointer">
@@ -123,7 +124,7 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
 
                 {/* Request timeout section */}
                 <div className="space-y-2">
-                    <p className="text-app-primary text-sm font-medium">Request Timeout (ms)</p>
+                    <p className="text-app-primary text-sm font-medium">{t('settings.requestTimeout')}</p>
                     <input
                         type="number"
                         min={100}
@@ -145,13 +146,13 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
                             onChange={handleSslVerifyChange}
                             data-testid="ssl-verify-checkbox"
                         />
-                        Verify SSL Certificates
+                        {t('settings.sslVerify')}
                     </label>
                 </div>
 
                 {/* Editor font size section */}
                 <div className="space-y-2">
-                    <p className="text-app-primary text-sm font-medium">Editor Font Size</p>
+                    <p className="text-app-primary text-sm font-medium">{t('settings.editorFontSize')}</p>
                     <div className="flex items-center gap-3">
                         <button
                             aria-label="Decrease font size"
@@ -177,7 +178,7 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
 
                 {/* Proxy intercept section */}
                 <div className="space-y-2" data-testid="proxy-section">
-                    <p className="text-app-primary text-sm font-medium">Proxy Intercept</p>
+                    <p className="text-app-primary text-sm font-medium">{t('settings.proxyIntercept')}</p>
                     <label className="flex items-center gap-2 text-app-primary text-sm cursor-pointer">
                         <input
                             type="checkbox"
@@ -185,10 +186,10 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
                             onChange={handleProxyEnabledChange}
                             data-testid="proxy-enabled-checkbox"
                         />
-                        Enable MITM Proxy
+                        {t('settings.enableMitmProxy')}
                     </label>
                     <div className="flex items-center gap-2">
-                        <label className="text-app-secondary text-sm w-10">Port</label>
+                        <label className="text-app-secondary text-sm w-10">{t('settings.port')}</label>
                         <input
                             type="number"
                             min={1024}
@@ -201,27 +202,26 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
                         />
                     </div>
                     <p className="text-app-secondary text-xs">
-                        Configure your system to use <span className="font-mono">127.0.0.1:{proxyPort}</span> as
-                        an HTTP proxy to capture traffic.
+                        {t('settings.proxyConfigHint', { port: String(proxyPort) })}
                     </p>
                 </div>
 
                 {/* Tutorial section */}
                 <div className="space-y-2" data-testid="tutorial-section">
-                    <p className="text-app-primary text-sm font-medium">Tutorial</p>
+                    <p className="text-app-primary text-sm font-medium">{t('settings.tutorial')}</p>
                     <button
                         type="button"
                         onClick={() => { resetTour(); onClose(); }}
                         className="w-full text-left px-3 py-2 text-sm border border-app-subtle rounded text-app-primary hover:bg-black/10 cursor-pointer transition-colors"
                         data-testid="restart-tutorial-button"
                     >
-                        Restart Tutorial
+                        {t('settings.restartTutorial')}
                     </button>
                 </div>
 
                 {/* Keyboard shortcuts section */}
                 <div className="space-y-2" data-testid="keyboard-shortcuts-section">
-                    <p className="text-app-primary text-sm font-medium">Keyboard Shortcuts</p>
+                    <p className="text-app-primary text-sm font-medium">{t('settings.keyboardShortcuts')}</p>
                     <dl className="space-y-1 text-sm" data-testid="keyboard-shortcuts-list">
                         {KEYBOARD_SHORTCUTS.map((shortcut) => (
                             <div key={shortcut.id} className="flex justify-between">

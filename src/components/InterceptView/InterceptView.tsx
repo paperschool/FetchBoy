@@ -16,6 +16,7 @@ import { useInterceptEvents } from "@/hooks/useInterceptEvents";
 import { useMappingLogEvents } from "@/hooks/useMappingLogEvents";
 import { useSplitPane } from "@/hooks/useSplitPane";
 import { saveSetting } from "@/lib/settings";
+import { t } from "@/lib/i18n";
 
 export function InterceptView() {
   // Hook to listen for intercepted requests and mapping events from the backend
@@ -66,7 +67,7 @@ export function InterceptView() {
                 ? 'text-app-inverse font-medium border-b-2 border-app-accent'
                 : 'text-app-muted hover:text-app-inverse'
             }`}>
-            {tab === 'requests' ? 'Requests' : 'Overrides'}
+            {tab === 'requests' ? t('intercept.requests') : t('intercept.overrides')}
           </button>
         ))}
       </div>

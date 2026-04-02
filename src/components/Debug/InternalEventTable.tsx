@@ -3,6 +3,7 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { Trash2, Pin, PinOff } from 'lucide-react'
 import { useDebugStore } from '@/stores/debugStore'
 import { formatTimestamp } from '@/components/InterceptView/InterceptTable.utils'
+import { t } from '@/lib/i18n'
 
 const LEVEL_BADGE: Record<string, string> = {
     info: 'bg-blue-500/20 text-blue-400',
@@ -11,10 +12,10 @@ const LEVEL_BADGE: Record<string, string> = {
 }
 
 const columns = [
-    { id: 'time', label: 'Time', className: 'w-[100px] shrink-0' },
-    { id: 'level', label: 'Level', className: 'w-[80px] shrink-0' },
-    { id: 'source', label: 'Source', className: 'w-[120px] shrink-0' },
-    { id: 'message', label: 'Message', className: 'flex-1 min-w-0' },
+    { id: 'time', key: 'intercept.colTime' as const, className: 'w-[100px] shrink-0' },
+    { id: 'level', key: 'intercept.colLevel' as const, className: 'w-[80px] shrink-0' },
+    { id: 'source', key: 'intercept.colSource' as const, className: 'w-[120px] shrink-0' },
+    { id: 'message', key: 'intercept.colMessage' as const, className: 'flex-1 min-w-0' },
 ]
 
 const ROW_HEIGHT = 32
@@ -48,30 +49,30 @@ export function InternalEventTable() {
     return (
         <div className="flex flex-col h-full min-h-0">
             <div className="flex items-center gap-2 px-2 py-1.5 border-b border-app-subtle shrink-0">
-                <span className="text-xs font-semibold text-app-muted uppercase tracking-wider">Internal</span>
+                <span className="text-xs font-semibold text-app-muted uppercase tracking-wider">{t('intercept.debugInternal')}</span>
                 <input
                     type="text"
                     value={filter}
                     onChange={(e) => setFilter(e.target.value)}
-                    placeholder="Filter..."
+                    placeholder={t('intercept.debugFilter')}
                     className="flex-1 bg-app-main text-app-inverse text-xs border border-app-subtle rounded px-2 py-1"
                 />
-                <button onClick={() => setPinned((p) => !p)} title={pinned ? 'Unpin scroll' : 'Pin scroll'} className="text-app-muted hover:text-app-inverse p-1 cursor-pointer">
+                <button onClick={() => setPinned((p) => !p)} title={pinned ? t('intercept.unpinScroll') : t('intercept.pinScroll')} className="text-app-muted hover:text-app-inverse p-1 cursor-pointer">
                     {pinned ? <PinOff size={12} /> : <Pin size={12} />}
                 </button>
-                <button onClick={clearInternal} title="Clear" className="text-app-muted hover:text-app-inverse p-1 cursor-pointer">
+                <button onClick={clearInternal} title={t('common.clear')} className="text-app-muted hover:text-app-inverse p-1 cursor-pointer">
                     <Trash2 size={12} />
                 </button>
             </div>
 
             {filtered.length === 0 ? (
-                <div className="flex-1 flex items-center justify-center text-app-muted text-xs">No events</div>
+                <div className="flex-1 flex items-center justify-center text-app-muted text-xs">{t('intercept.noEvents')}</div>
             ) : (
                 <>
                     <div className="flex bg-app-main border-b border-app-subtle shrink-0">
                         {columns.map((col) => (
                             <div key={col.id} className={`px-2 py-1.5 text-left text-xs font-medium text-app-secondary uppercase ${col.className}`}>
-                                {col.label}
+                                {t(col.key)}
                             </div>
                         ))}
                     </div>

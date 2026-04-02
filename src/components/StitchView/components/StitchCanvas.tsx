@@ -126,13 +126,6 @@ function StitchCanvasInner(): React.ReactElement {
     [selectedConnectionId, removeConnection],
   );
 
-  const rebalanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Clear any pending rebalance when switching chains
-  useEffect(() => {
-    return () => { if (rebalanceTimerRef.current) clearTimeout(rebalanceTimerRef.current); };
-  }, [activeChainId]);
-
   const rebalanceLoop = useCallback(
     (loopNodeId: string): void => {
       const freshNodes = useStitchStore.getState().nodes;
@@ -176,14 +169,25 @@ function StitchCanvasInner(): React.ReactElement {
         for (const child of children) {
           updateNode(child.id, { positionX: child.positionX + dx, positionY: child.positionY + dy }).catch(() => {});
         }
-        if (rebalanceTimerRef.current) clearTimeout(rebalanceTimerRef.current);
-        const rebalanceFn = movedNode.type === 'mapping' ? rebalanceMapping : rebalanceLoop;
-        rebalanceTimerRef.current = setTimeout(() => rebalanceFn(id), 200);
+        // No rebalance here — deferred to handleContainerDragEnd so children
+        // don't wiggle from layout corrections firing mid-drag.
       }
 
       updateNode(id, { positionX: x, positionY: y }).catch(() => {});
     },
-    [updateNode, rebalanceLoop, rebalanceMapping],
+    [updateNode],
+  );
+
+  // Rebalance children only after a container (loop/mapping) stops being dragged
+  const handleContainerDragEnd = useCallback(
+    (id: string): void => {
+      const freshNodes = useStitchStore.getState().nodes;
+      const container = freshNodes.find((n) => n.id === id);
+      if (!container) return;
+      if (container.type === 'mapping') rebalanceMapping(id);
+      else if (container.type === 'loop') rebalanceLoop(id);
+    },
+    [rebalanceLoop, rebalanceMapping],
   );
 
   // Check loop/mapping containment after a node drag ends
@@ -551,6 +555,7 @@ function StitchCanvasInner(): React.ReactElement {
                 onUpdateLabel={handleUpdateLabel}
                 onDelete={handleDelete}
                 onConnectionDrop={handleConnectionDrop}
+                onDragEnd={handleContainerDragEnd}
                 executionStatus={nodeExecStatus}
                 connections={connections}
               />
@@ -578,6 +583,7 @@ function StitchCanvasInner(): React.ReactElement {
                 onUpdateLabel={handleUpdateLabel}
                 onDelete={handleDelete}
                 onConnectionDrop={handleConnectionDrop}
+                onDragEnd={handleContainerDragEnd}
                 executionStatus={nodeExecStatus}
                 connections={connections}
               />

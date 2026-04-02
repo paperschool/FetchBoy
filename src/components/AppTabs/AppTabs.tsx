@@ -1,6 +1,7 @@
 import { type ReactNode } from "react";
 import type React from "react";
 import { Send, Wifi, Link2, Bug, Settings } from "lucide-react";
+import { t } from '@/lib/i18n';
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { ToastContainer } from "@/components/ui/ToastContainer";
 import { useAppTabStore } from "@/stores/appTabStore";
@@ -15,12 +16,12 @@ import { useChainExecutionListener } from "@/hooks/useChainExecutionListener";
 
 type AppTab = "fetch" | "intercept" | "stitch" | "debug" | "settings";
 
-const TAB_CONFIG: Record<AppTab, { label: string; icon: React.ReactNode }> = {
-  fetch: { label: "Fetch", icon: <Send size={13} /> },
-  intercept: { label: "Intercept", icon: <Wifi size={13} /> },
-  stitch: { label: "Stitch", icon: <Link2 size={13} /> },
-  debug: { label: "", icon: <Bug size={13} /> },
-  settings: { label: "", icon: <Settings size={13} /> },
+const TAB_CONFIG: Record<AppTab, { label: () => string; icon: React.ReactNode }> = {
+  fetch: { label: () => t('fetch.requestBuilder'), icon: <Send size={13} /> },
+  intercept: { label: () => t('intercept.requests'), icon: <Wifi size={13} /> },
+  stitch: { label: () => t('stitch.title'), icon: <Link2 size={13} /> },
+  debug: { label: () => "", icon: <Bug size={13} /> },
+  settings: { label: () => "", icon: <Settings size={13} /> },
 };
 
 interface AppTabsProps {
@@ -58,7 +59,7 @@ export function AppTabs({ children }: AppTabsProps) {
               }`}
             >
               {TAB_CONFIG[tab].icon}
-              {TAB_CONFIG[tab].label}
+              {TAB_CONFIG[tab].label()}
               {tab === "intercept" && (
                 <span
                   className={`h-2 w-2 rounded-full transition-colors ${

@@ -3,6 +3,7 @@ import { useUiSettingsStore } from "@/stores/uiSettingsStore";
 import { useInterceptStore } from "@/stores/interceptStore";
 import { saveSetting } from "@/lib/settings";
 import { useProxyConfig } from "@/hooks/useProxyConfig";
+import { t } from "@/lib/i18n";
 
 export function InterceptTabActions(): React.ReactElement {
   const proxyEnabled = useUiSettingsStore((s) => s.proxyEnabled);
@@ -71,12 +72,12 @@ export function InterceptTabActions(): React.ReactElement {
       }`}
       title={
         proxyShuttingDown
-          ? "Proxy is shutting down..."
+          ? t('intercept.stopping')
           : proxyEnabled
-            ? "Stop intercepting traffic and remove OS proxy configuration"
+            ? t('intercept.stopIntercepting')
             : certMissing
-              ? "Install CA certificate first to start the proxy"
-              : "Configure OS proxy and start intercepting traffic"
+              ? t('intercept.installCertFirst')
+              : t('intercept.configureProxy')
       }
     >
       {proxyShuttingDown ? (
@@ -84,7 +85,7 @@ export function InterceptTabActions(): React.ReactElement {
       ) : (
         <Radio size={13} className={proxyEnabled ? "animate-pulse" : ""} />
       )}
-      {proxyShuttingDown ? "Stopping..." : proxyEnabled ? "Stop Proxy" : "Start Proxy"}
+      {proxyShuttingDown ? t('intercept.stopping') : proxyEnabled ? t('intercept.stopProxy') : t('intercept.startProxy')}
     </button>
   );
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Download, Globe, Lock, Trash2, Upload } from 'lucide-react';
+import { t } from '@/lib/i18n';
 import { save, open as openDialog } from '@tauri-apps/plugin-dialog';
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
 import {
@@ -55,13 +56,13 @@ export function EnvironmentPanel({ open, onClose }: EnvironmentPanelProps) {
     // ─── Environment list handlers ────────────────────────────────────────────
 
     async function handleNewEnvironment() {
-        const env = await createEnvironment('New Environment');
+        const env = await createEnvironment(t('environment.newEnvironment'));
         storeAddEnvironment(env);
         setSelectedEnvId(env.id);
     }
 
     function handleDeleteEnvironment(id: string, _name: string) {
-        if (!window.confirm('Delete this environment?')) return;
+        if (!window.confirm(t('environment.delete'))) return;
         void deleteEnvironment(id).then(() => {
             storeDeleteEnvironment(id);
             if (selectedEnvId === id) setSelectedEnvId(null);
@@ -248,7 +249,7 @@ export function EnvironmentPanel({ open, onClose }: EnvironmentPanelProps) {
                                     className="text-app-muted hover:text-app-primary flex-1 rounded px-2 py-1 text-left text-xs"
                                     onClick={handleNewEnvironment}
                                 >
-                                    + New Environment
+                                    + {t('environment.newEnvironment')}
                                 </button>
                                 <button
                                     className="text-app-muted hover:text-app-primary rounded p-1 text-xs"

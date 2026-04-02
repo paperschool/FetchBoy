@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Trash2 } from 'lucide-react';
 import type { KeyValuePair } from '@/lib/db';
 import { unresolvedTokens } from '@/lib/interpolate';
+import { t } from '@/lib/i18n';
 
 function getVariableRingClass(value: string, activeVariables?: KeyValuePair[]): string {
   if (!activeVariables || !value.includes('{{')) return '';
@@ -61,7 +62,7 @@ export function KeyValueRows({
       </div>
 
       {rows.length === 0 ? (
-        <p className="text-app-muted text-sm">No {sectionName} configured yet.</p>
+        <p className="text-app-muted text-sm">{t('collections.noConfigured', { section: sectionName })}</p>
       ) : null}
 
       <div className={rowsContainerClassName}>
@@ -74,20 +75,20 @@ export function KeyValueRows({
                 onChange={() => onToggleEnabled(index)}
                 aria-label={`${sectionName}-enabled-${index}`}
               />
-              On
+              {t('common.on')}
             </label>
             <input
               aria-label={`${sectionName}-key-${index}`}
               value={row.key}
               onChange={(event) => onUpdate(index, 'key', event.target.value)}
-              placeholder="Key"
+              placeholder={t('common.key')}
               className="border-app-subtle bg-app-main text-app-primary h-9 rounded-md border px-2 text-sm"
             />
             <input
               aria-label={`${sectionName}-value-${index}`}
               value={row.value}
               onChange={(event) => onUpdate(index, 'value', event.target.value)}
-              placeholder="Value"
+              placeholder={t('common.value')}
               className={`border-app-subtle bg-app-main text-app-primary h-9 rounded-md border px-2 text-sm ${getVariableRingClass(row.value, activeVariables)}`}
             />
             <button
@@ -95,7 +96,7 @@ export function KeyValueRows({
               onClick={() => onRemove(index)}
               className="border-app-subtle text-app-primary hover-bg-app-surface inline-flex h-9 w-9 items-center justify-center rounded-md border"
               aria-label={`${sectionName}-remove-${index}`}
-              title="Remove"
+              title={t('common.remove')}
             >
               <Trash2 size={14} />
             </button>

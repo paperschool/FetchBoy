@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.19.1] - 2026-04-02
+
+- feat: Comprehensive i18n migration — 38 components now use t() calls with ~378 translation keys across 14 namespaces
+- fix: Loop/mapping container drag no longer causes child node wiggling — rebalance deferred to drag end
+- feat: Stitch node execution success highlight fades out smoothly over 3s instead of abruptly disappearing
+- fix: Mapping-exit node no longer renders an unnecessary output port dot
+- refactor: i18n coverage for all major UI surfaces — Settings, Auth, Breakpoints, Mappings, Intercept, Stitch, Collections, History, Dialogs
+
 ## [0.19.0] - 2026-04-02
 
 - refactor: Epic 16 — code quality hardening across 16 stories: constants extraction, i18n foundation, shared hooks/components, module decomposition

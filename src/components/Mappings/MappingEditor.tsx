@@ -9,6 +9,7 @@ import type { MappingHeader, MappingCookie } from '@/lib/db';
 import { ViewerShell } from '@/components/ui/ViewerShell';
 import { UrlPatternInput } from '@/components/ui/UrlPatternInput';
 import { validateUrlPattern } from '@/lib/urlPatternConfig';
+import { t } from '@/lib/i18n';
 import { MappingHeadersEditor } from './MappingHeadersEditor';
 import { MappingCookieEditor } from './MappingCookieEditor';
 import { MappingResponseBodyEditor } from './MappingResponseBodyEditor';
@@ -158,7 +159,7 @@ export function MappingEditor({ onClose }: Props) {
 
     return (
         <ViewerShell tabs={TABS} activeTab={activeTab} onTabChange={(id) => setActiveTab(id as EditorTab)}
-            header={<h3 className="text-app-inverse font-medium text-sm">{isNew ? 'New Mapping' : 'Edit Mapping'}</h3>}
+            header={<h3 className="text-app-inverse font-medium text-sm">{isNew ? t('mappings.new') : t('mappings.edit')}</h3>}
             testId="mapping-editor"
             data-tour="mapping-editor"
         >
@@ -167,7 +168,7 @@ export function MappingEditor({ onClose }: Props) {
                     {activeTab === 'match' && (
                         <>
                             <div>
-                                <label className="block text-app-muted text-xs mb-1">Name</label>
+                                <label className="block text-app-muted text-xs mb-1">{t('mappings.name')}</label>
                                 <input
                                     type="text" value={name}
                                     onChange={(e) => edit.name(e.target.value)}
@@ -302,17 +303,17 @@ export function MappingEditor({ onClose }: Props) {
                 <div className="flex items-center justify-between pt-3 border-t border-app-subtle">
                     <div className="flex items-center gap-1.5 text-xs h-6" data-testid="mapping-save-status">
                         {saveStatus === 'saving' && (
-                            <><Loader2 size={13} className="animate-spin text-blue-400" /><span className="text-app-muted">Saving…</span></>
+                            <><Loader2 size={13} className="animate-spin text-blue-400" /><span className="text-app-muted">{t('common.saving')}</span></>
                         )}
                         {saveStatus === 'saved' && (
-                            <><Check size={13} className="text-emerald-400" /><span className="text-emerald-400">Saved</span></>
+                            <><Check size={13} className="text-emerald-400" /><span className="text-emerald-400">{t('common.saved')}</span></>
                         )}
                         {saveStatus === 'error' && (
-                            <><AlertCircle size={13} className="text-red-400" /><span className="text-red-400">Save failed</span></>
+                            <><AlertCircle size={13} className="text-red-400" /><span className="text-red-400">{t('mappings.saveFailed')}</span></>
                         )}
                     </div>
                     <button onClick={onClose} className="px-4 py-1.5 text-sm text-app-muted hover:text-app-inverse">
-                        Close
+                        {t('common.close')}
                     </button>
                 </div>
             </>

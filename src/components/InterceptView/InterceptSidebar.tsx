@@ -3,6 +3,7 @@ import {
   Bug, ChevronDown, ChevronLeft, ChevronRight, Route,
   Settings as SettingsIcon,
 } from "lucide-react";
+import { t } from '@/lib/i18n';
 import { BreakpointsTree } from "@/components/Breakpoints/BreakpointsTree";
 import { MappingsTree } from "@/components/Mappings/MappingsTree";
 import { useUiSettingsStore } from "@/stores/uiSettingsStore";
@@ -88,10 +89,10 @@ export function InterceptSidebar({ collapsed, onToggle }: InterceptSidebarProps)
     return (
       <aside data-testid="sidebar" className="bg-app-sidebar text-app-inverse overflow-hidden p-2 flex flex-col items-center gap-2 h-full">
         <button type="button" onClick={onToggle} className="p-2 hover:bg-gray-700 rounded transition-colors cursor-pointer" aria-label="Expand sidebar" title="Expand sidebar (Cmd/Ctrl+B)"><ChevronRight size={20} className="text-app-muted" /></button>
-        <div className={`w-2 h-2 rounded-full mt-2 ${proxyEnabled ? "bg-green-500" : "bg-gray-500"}`} title={proxyEnabled ? "Proxy Active" : "Proxy Inactive"} />
-        <button type="button" onClick={() => { setActivePanel("breakpoints"); onToggle() }} className="p-2 hover:bg-gray-700 rounded transition-colors cursor-pointer" aria-label="Breakpoints" title="Breakpoints"><Bug size={20} className="text-app-muted" /></button>
-        <button type="button" onClick={() => { setActivePanel("mappings"); onToggle() }} className="p-2 hover:bg-gray-700 rounded transition-colors cursor-pointer" aria-label="Mappings" title="Mappings"><Route size={20} className="text-app-muted" /></button>
-        <button type="button" onClick={() => { setSidebarSettingsExpanded(true); void saveSetting("sidebar_settings_expanded", true); onToggle() }} className="p-2 hover:bg-gray-700 rounded transition-colors cursor-pointer mt-auto" aria-label="Settings" title="Settings" data-testid="collapsed-settings-button"><SettingsIcon size={20} className="text-app-muted" /></button>
+        <div className={`w-2 h-2 rounded-full mt-2 ${proxyEnabled ? "bg-green-500" : "bg-gray-500"}`} title={proxyEnabled ? t('intercept.proxyActive') : t('intercept.proxyInactive')} />
+        <button type="button" onClick={() => { setActivePanel("breakpoints"); onToggle() }} className="p-2 hover:bg-gray-700 rounded transition-colors cursor-pointer" aria-label="Breakpoints" title={t('breakpoints.title')}><Bug size={20} className="text-app-muted" /></button>
+        <button type="button" onClick={() => { setActivePanel("mappings"); onToggle() }} className="p-2 hover:bg-gray-700 rounded transition-colors cursor-pointer" aria-label="Mappings" title={t('mappings.title')}><Route size={20} className="text-app-muted" /></button>
+        <button type="button" onClick={() => { setSidebarSettingsExpanded(true); void saveSetting("sidebar_settings_expanded", true); onToggle() }} className="p-2 hover:bg-gray-700 rounded transition-colors cursor-pointer mt-auto" aria-label="Settings" title={t('settings.title')} data-testid="collapsed-settings-button"><SettingsIcon size={20} className="text-app-muted" /></button>
       </aside>
     );
   }
@@ -102,13 +103,13 @@ export function InterceptSidebar({ collapsed, onToggle }: InterceptSidebarProps)
         <button type="button" onClick={onToggle} className="p-1.5 hover:bg-gray-700 rounded transition-colors cursor-pointer" aria-label="Collapse sidebar" title="Collapse sidebar (Cmd/Ctrl+B)"><ChevronLeft size={18} className="text-app-muted" /></button>
         <div className="flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full ${proxyEnabled ? "bg-green-500" : "bg-gray-500"}`} />
-          {proxyEnabled ? <span className="text-xs text-green-500 font-medium">Proxy Active</span> : <span className="text-xs text-app-muted">:{proxyPort}</span>}
+          {proxyEnabled ? <span className="text-xs text-green-500 font-medium">{t('intercept.proxyActive')}</span> : <span className="text-xs text-app-muted">:{proxyPort}</span>}
         </div>
       </div>
 
       <div className="flex shrink-0 mb-3 rounded overflow-hidden border border-gray-700">
-        <button type="button" onClick={() => setActivePanel("breakpoints")} data-tour="breakpoints-panel" className={`flex-1 py-1.5 text-xs cursor-pointer ${activePanel === "breakpoints" ? "bg-gray-700 text-app-inverse font-medium" : "text-app-muted hover:text-app-inverse"}`} aria-label="Breakpoints panel">Breakpoints</button>
-        <button type="button" onClick={() => setActivePanel("mappings")} data-tour="mappings-panel" className={`flex-1 py-1.5 text-xs cursor-pointer ${activePanel === "mappings" ? "bg-gray-700 text-app-inverse font-medium" : "text-app-muted hover:text-app-inverse"}`} aria-label="Mappings panel">Mappings</button>
+        <button type="button" onClick={() => setActivePanel("breakpoints")} data-tour="breakpoints-panel" className={`flex-1 py-1.5 text-xs cursor-pointer ${activePanel === "breakpoints" ? "bg-gray-700 text-app-inverse font-medium" : "text-app-muted hover:text-app-inverse"}`} aria-label="Breakpoints panel">{t('breakpoints.title')}</button>
+        <button type="button" onClick={() => setActivePanel("mappings")} data-tour="mappings-panel" className={`flex-1 py-1.5 text-xs cursor-pointer ${activePanel === "mappings" ? "bg-gray-700 text-app-inverse font-medium" : "text-app-muted hover:text-app-inverse"}`} aria-label="Mappings panel">{t('mappings.title')}</button>
       </div>
 
       {activePanel === "breakpoints" && <div className="flex-1 min-h-0 overflow-y-auto"><BreakpointsTree /></div>}
@@ -118,7 +119,7 @@ export function InterceptSidebar({ collapsed, onToggle }: InterceptSidebarProps)
         <div data-tour="intercept-settings" className="shrink-0 border-t border-gray-700">
           <button type="button" className="w-full flex items-center gap-2 p-2 text-app-muted hover:text-app-inverse hover:bg-gray-700 rounded transition-colors cursor-pointer" onClick={handleSettingsToggle} aria-expanded={sidebarSettingsExpanded} aria-controls="settings-accordion-content" data-testid="settings-accordion-toggle">
             {sidebarSettingsExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-            <SettingsIcon size={16} /><span className="text-xs font-medium">Settings</span>
+            <SettingsIcon size={16} /><span className="text-xs font-medium">{t('settings.title')}</span>
           </button>
           {sidebarSettingsExpanded && (
             <div id="settings-accordion-content" className="p-2 space-y-4 overflow-y-auto" data-testid="settings-accordion-content">

@@ -4,6 +4,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { MappingFolderRow } from './MappingFolderRow';
 import { MappingRow } from './MappingRow';
 import { useMappingsStore } from '@/stores/mappingsStore';
+import { t } from '@/lib/i18n';
 import {
     loadAllMappings,
     createMappingFolder,
@@ -87,7 +88,7 @@ export function MappingsTree() {
     const header = (
         <div className="flex items-center justify-between mb-2 px-1">
             <div className="flex items-center gap-1">
-                <span className="text-app-muted text-[10px]">Create:</span>
+                <span className="text-app-muted text-[10px]">{t('mappings.create')}</span>
                 <button onClick={() => handleAddMapping(null)} aria-label="New Mapping" title="New mapping"
                     className="text-green-400 hover:text-green-300 p-1 rounded cursor-pointer">
                     <Plus size={14} />
@@ -133,7 +134,7 @@ export function MappingsTree() {
                 {newFolderInput}
                 {!creatingFolder && (
                     <div data-testid="empty-state">
-                        <EmptyState icon={Route} label="No mappings yet" action={handleStartCreateFolder} actionLabel="Create Folder" />
+                        <EmptyState icon={Route} label={t('mappings.noMappingsYet')} action={handleStartCreateFolder} actionLabel={t('mappings.createFolder')} />
                     </div>
                 )}
             </div>

@@ -18,6 +18,7 @@ interface StitchMappingNodeProps {
   onUpdateLabel: (id: string, label: string) => void;
   onDelete: (id: string) => void;
   onConnectionDrop?: (targetNodeId: string, targetSlot?: string) => void;
+  onDragEnd?: (id: string) => void;
   executionStatus?: ExecutionNodeStatus | null;
   connections?: StitchConnection[];
 }
@@ -32,6 +33,7 @@ export const StitchMappingNode = React.memo(function StitchMappingNode({
   onUpdateLabel,
   onDelete: _onDelete,
   onConnectionDrop: _onConnectionDrop,
+  onDragEnd,
   executionStatus = null,
 }: StitchMappingNodeProps): React.ReactElement {
   const nodeRef = useRef<HTMLDivElement>(null);
@@ -78,8 +80,9 @@ export const StitchMappingNode = React.memo(function StitchMappingNode({
   }, [dragging, zoom, node.id, onUpdatePosition]);
 
   const handlePointerUp = useCallback((): void => {
+    if (dragging) onDragEnd?.(node.id);
     setDragging(false);
-  }, []);
+  }, [dragging, node.id, onDragEnd]);
 
   const handleDoubleClick = useCallback((): void => {
     setEditValue(node.label ?? '');

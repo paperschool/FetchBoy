@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { X } from 'lucide-react';
 import { KEYBOARD_SHORTCUTS, KeyboardShortcut } from '@/lib/keyboardShortcuts';
+import { t } from '@/lib/i18n';
 
 interface KeyboardShortcutsModalProps {
   open: boolean;
@@ -50,7 +51,7 @@ export function KeyboardShortcutsModal({ open, onClose }: KeyboardShortcutsModal
         data-testid="keyboard-shortcuts-modal"
       >
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-app-primary font-semibold text-lg">Keyboard Shortcuts</h2>
+          <h2 className="text-app-primary font-semibold text-lg">{t('settings.keyboardShortcuts')}</h2>
           <button
             aria-label="Close"
             onClick={onClose}

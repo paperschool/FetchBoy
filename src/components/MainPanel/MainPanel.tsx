@@ -25,6 +25,7 @@ import { useSendRequest } from "@/hooks/useSendRequest";
 import { useProgressBar } from "@/hooks/useProgressBar";
 import { useCallback, useEffect, useRef, useState } from "react";
 import useSendRequestKeyboardShortcut from "@/hooks/useSendRequestKeyboardShortcut";
+import { t } from "@/lib/i18n";
 
 export function MainPanel(): React.ReactElement {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
@@ -163,7 +164,7 @@ export function MainPanel(): React.ReactElement {
       />
       <main data-testid="main-panel" className="bg-app-main text-app-primary flex flex-col overflow-hidden p-4 h-full">
         <div className="flex min-h-0 flex-1 flex-col gap-4">
-          <p className="text-app-muted text-sm">Request Builder</p>
+          <p className="text-app-muted text-sm">{t('fetch.requestBuilder')}</p>
 
           <div className="grid grid-cols-[8rem_1fr_auto] items-start gap-3" data-tour="request-builder">
             <div>
@@ -194,11 +195,11 @@ export function MainPanel(): React.ReactElement {
               <div className="flex items-center gap-2" data-tour="request-controls">
                 {isSending ? (
                   <button type="button" onClick={handleCancelRequest} className="flex items-center gap-1.5 h-9 rounded-md border border-amber-500 bg-amber-500 px-4 text-sm font-medium text-white hover:bg-amber-600 hover:border-amber-600 cursor-pointer transition-colors" aria-label="Cancel request">
-                    <Loader2 size={14} className="animate-spin" /> Cancel
+                    <Loader2 size={14} className="animate-spin" /> {t('common.cancel')}
                   </button>
                 ) : (
                   <button type="button" onClick={handleSendRequest} className="flex items-center gap-1.5 h-9 rounded-md border border-green-600 bg-green-600 px-4 text-sm font-medium text-white hover:bg-green-700 hover:border-green-700 cursor-pointer transition-colors">
-                    <Send size={14} /> Send
+                    <Send size={14} /> {t('fetch.send')}
                   </button>
                 )}
                 <span className="w-px self-stretch bg-app-subtle opacity-50" aria-hidden="true" />
@@ -247,12 +248,12 @@ export function MainPanel(): React.ReactElement {
           />
 
           <section className="border-app-subtle flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border p-2" data-testid="response-panel" data-tour="response-panel">
-            <p className="text-app-secondary text-sm font-medium">Response</p>
+            <p className="text-app-secondary text-sm font-medium">{t('common.response')}</p>
             <div className="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden">
               {responseData || requestError || verboseLogs.length > 0 || wasCancelled || wasTimedOut ? (
                 <ResponseViewer response={responseData} error={requestError} logs={verboseLogs} wasCancelled={wasCancelled} wasTimedOut={wasTimedOut} timedOutAfterSec={timedOutAfterSec} onClearLogs={() => updateRes({ verboseLogs: [] })} requestedUrl={sentUrl ?? undefined} />
               ) : (
-                <p className="text-app-muted text-sm">Send a request to see response details.</p>
+                <p className="text-app-muted text-sm">{t('fetch.sendResponseHint')}</p>
               )}
             </div>
           </section>

@@ -1,4 +1,5 @@
 import { Plus } from 'lucide-react';
+import { t } from '@/lib/i18n';
 
 interface StitchEmptyStateProps {
   hasChain: boolean;
@@ -11,7 +12,7 @@ export function StitchEmptyState({ hasChain, onCreateChain }: StitchEmptyStatePr
     return (
       <div className="flex h-full items-center justify-center" data-testid="empty-canvas">
         <div className="text-center">
-          <p className="text-sm text-app-muted">Add a node to get started</p>
+          <p className="text-sm text-app-muted">{t('stitch.addNodeToStart')}</p>
         </div>
       </div>
     );
@@ -22,10 +23,10 @@ export function StitchEmptyState({ hasChain, onCreateChain }: StitchEmptyStatePr
     <div className="flex h-full items-center justify-center" data-testid="empty-no-chain">
       <div className="text-center">
         <h1 className="text-lg font-semibold text-app-primary">
-          Stitch — Request Chain Builder
+          {t('stitch.chainBuilder')}
         </h1>
         <p className="mt-1 text-sm text-app-muted">
-          Select a chain or create one to get started
+          {t('stitch.selectOrCreate')}
         </p>
         <button
           className="mt-4 inline-flex items-center gap-1.5 rounded bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-500"
@@ -33,7 +34,7 @@ export function StitchEmptyState({ hasChain, onCreateChain }: StitchEmptyStatePr
           data-testid="create-chain-cta"
         >
           <Plus size={14} />
-          Create your first Stitch chain
+          {t('stitch.createFirstChain')}
         </button>
       </div>
     </div>

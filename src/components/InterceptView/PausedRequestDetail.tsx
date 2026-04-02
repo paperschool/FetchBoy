@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Clock, Play, Square, Pencil } from 'lucide-react'
 import { useInterceptStore } from '@/stores/interceptStore'
+import { t } from '@/lib/i18n'
 
 function useCountdown(timeoutAt: number): number {
   const [remaining, setRemaining] = useState(() =>
@@ -65,7 +66,7 @@ export function PausedRequestDetail() {
         <div className="flex items-center justify-between px-3 py-2 border-b border-amber-500/40 mb-2">
         <span className="text-amber-400 text-xs font-medium flex items-center gap-1.5">
           <Pencil size={12} />
-          Editing response — changes will be sent to client
+          {t('intercept.editingResponse')}
         </span>
         <div className="flex gap-2">
           <button
@@ -73,20 +74,20 @@ export function PausedRequestDetail() {
             onClick={() => void dropRequest()}
             disabled={isResuming}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-red-700/70 hover:bg-red-600/80 disabled:opacity-50 rounded text-white text-xs font-medium transition-colors"
-            title="Drop this response (client receives 502)"
+            title={t('intercept.dropTooltip')}
           >
             <Square size={13} />
-            Drop
+            {t('intercept.drop')}
           </button>
           <button
             type="button"
             onClick={() => void editAndResume()}
             disabled={isResuming}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-green-700/70 hover:bg-green-600/80 disabled:opacity-50 rounded text-white text-xs font-medium transition-colors"
-            title="Send edited response to client"
+            title={t('intercept.continueTooltip')}
           >
             <Play size={13} />
-            Continue
+            {t('intercept.continue')}
           </button>
         </div>
         </div>
@@ -100,7 +101,7 @@ export function PausedRequestDetail() {
       <div className="flex items-center justify-between px-3 py-2 border-b border-amber-500/40 mb-2">
       <div className="flex items-center gap-2 text-amber-400 text-xs">
         <Clock size={13} />
-        <span className="font-medium">Paused</span>
+        <span className="font-medium">{t('intercept.paused')}</span>
         {pausedRequest.timeoutAt > 0 && (
           <span className="text-amber-300" data-testid="countdown-timer">
             {remaining}s
@@ -113,10 +114,10 @@ export function PausedRequestDetail() {
           onClick={() => void continueRequest()}
           disabled={isResuming}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-green-700/70 hover:bg-green-600/80 disabled:opacity-50 rounded text-white text-xs font-medium transition-colors"
-          title="Apply breakpoint modifications and send response to client"
+          title={t('intercept.applyTooltip')}
         >
           <Play size={13} />
-          Continue
+          {t('intercept.continue')}
         </button>
 
         <button
@@ -124,10 +125,10 @@ export function PausedRequestDetail() {
           onClick={() => void dropRequest()}
           disabled={isResuming}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-red-700/70 hover:bg-red-600/80 disabled:opacity-50 rounded text-white text-xs font-medium transition-colors"
-          title="Drop this response (client receives 502)"
+          title={t('intercept.dropTooltip')}
         >
           <Square size={13} />
-          Drop
+          {t('intercept.drop')}
         </button>
 
         <button
@@ -135,14 +136,14 @@ export function PausedRequestDetail() {
           onClick={enterEditMode}
           disabled={isResuming}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-700/70 hover:bg-blue-600/80 disabled:opacity-50 rounded text-white text-xs font-medium transition-colors"
-          title="Edit response before continuing"
+          title={t('intercept.editTooltip')}
         >
           <Pencil size={13} />
-          Continue with Edits
+          {t('intercept.continueWithEdits')}
         </button>
 
         {isResuming && (
-          <span className="text-app-muted text-xs self-center ml-1">Resuming…</span>
+          <span className="text-app-muted text-xs self-center ml-1">{t('intercept.resuming')}</span>
         )}
       </div>
       </div>
