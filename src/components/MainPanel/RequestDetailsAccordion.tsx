@@ -7,6 +7,7 @@ import { ScriptsTab } from "./components/ScriptsTab";
 import { extractQueryParamsFromUrl } from "@/lib/extractQueryParamsFromUrl";
 import { areQueryParamsEqual, buildUrlFromQueryParams } from "@/lib/urlUtils";
 import type { AuthState, HttpMethod, RequestTab } from "@/stores/requestStore";
+import type { ScriptDebugState } from "@/stores/tabStore";
 import { useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 
@@ -47,8 +48,12 @@ interface RequestDetailsAccordionProps {
   setBodyRaw: (raw: string) => void;
   preRequestScript: string;
   preRequestScriptEnabled: boolean;
+  scriptKeepOpen: boolean;
   onScriptChange: (script: string) => void;
   onScriptEnabledChange: (enabled: boolean) => void;
+  onScriptKeepOpenChange: (keepOpen: boolean) => void;
+  scriptDebugState?: ScriptDebugState;
+  onDebugClose?: () => void;
   banner?: React.ReactNode;
   activeVariables?: import('@/lib/db').KeyValuePair[];
 }
@@ -77,8 +82,12 @@ export function RequestDetailsAccordion(props: RequestDetailsAccordionProps): Re
     setBodyRaw,
     preRequestScript,
     preRequestScriptEnabled,
+    scriptKeepOpen,
     onScriptChange,
     onScriptEnabledChange,
+    onScriptKeepOpenChange,
+    scriptDebugState,
+    onDebugClose,
     banner,
     activeVariables,
   } = props;
@@ -294,9 +303,13 @@ export function RequestDetailsAccordion(props: RequestDetailsAccordionProps): Re
             <ScriptsTab
               script={preRequestScript}
               enabled={preRequestScriptEnabled}
+              keepOpen={scriptKeepOpen}
               onScriptChange={onScriptChange}
               onEnabledChange={onScriptEnabledChange}
+              onKeepOpenChange={onScriptKeepOpenChange}
               editorFontSize={editorFontSize}
+              scriptDebugState={scriptDebugState}
+              onDebugClose={onDebugClose}
             />
           ) : null}
 

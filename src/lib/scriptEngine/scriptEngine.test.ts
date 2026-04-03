@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { executePreRequestScript, type ScriptContext } from './scriptEngine';
+import { executePreRequestScript, type ScriptContext, type HttpSender } from './index';
 
 const makeContext = (overrides: Partial<ScriptContext> = {}): ScriptContext => ({
     url: 'https://api.example.com/users',
@@ -20,6 +20,8 @@ describe('executePreRequestScript', () => {
         expect(result.queryParams).toEqual(ctx.queryParams);
         expect(result.body).toBe(ctx.body);
         expect(result.envMutations).toEqual({});
+        expect(result.consoleLogs).toEqual([]);
+        expect(result.httpLogs).toEqual([]);
     });
 
     it('allows modifying the request URL', async () => {
@@ -177,9 +179,159 @@ describe('executePreRequestScript', () => {
                 'fb.request.body = fb.utils.hmacSha256("key", "message");',
                 ctx,
             );
-            // Known HMAC-SHA256("key", "message") value
             expect(result.body).toHaveLength(64);
             expect(result.body).toMatch(/^[0-9a-f]{64}$/);
+        });
+    });
+
+    describe('console capture', () => {
+        it('captures console.log output', async () => {
+            const ctx = makeContext();
+            const result = await executePreRequestScript(
+                'console.log("hello", "world");',
+                ctx,
+            );
+            expect(result.consoleLogs).toHaveLength(1);
+            expect(result.consoleLogs[0].level).toBe('log');
+            expect(result.consoleLogs[0].args).toContain('hello');
+            expect(result.consoleLogs[0].args).toContain('world');
+            expect(result.consoleLogs[0].timestamp).toBeGreaterThan(0);
+        });
+
+        it('captures console.warn and console.error', async () => {
+            const ctx = makeContext();
+            const result = await executePreRequestScript(
+                'console.warn("caution"); console.error("bad");',
+                ctx,
+            );
+            expect(result.consoleLogs).toHaveLength(2);
+            expect(result.consoleLogs[0].level).toBe('warn');
+            expect(result.consoleLogs[0].args).toContain('caution');
+            expect(result.consoleLogs[1].level).toBe('error');
+            expect(result.consoleLogs[1].args).toContain('bad');
+        });
+
+        it('captures multiple console calls', async () => {
+            const ctx = makeContext();
+            const result = await executePreRequestScript(
+                'for (let i = 0; i < 3; i++) console.log("item " + i);',
+                ctx,
+            );
+            expect(result.consoleLogs).toHaveLength(3);
+        });
+    });
+
+    describe('fb.http', () => {
+        const mockSender: HttpSender = async (method, url) => ({
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ token: 'test-bearer-token', method, url }),
+        });
+
+        it('makes a GET request and uses response to set env var', async () => {
+            const ctx = makeContext();
+            const result = await executePreRequestScript(
+                `
+                var res = fb.http.get("https://auth.example.com/token");
+                var data = JSON.parse(res.body);
+                fb.env.set("BEARER", data.token);
+                `,
+                ctx,
+                { httpSender: mockSender },
+            );
+            expect(result.envMutations).toEqual({ BEARER: 'test-bearer-token' });
+            expect(result.httpLogs).toHaveLength(1);
+            expect(result.httpLogs[0].method).toBe('GET');
+            expect(result.httpLogs[0].url).toBe('https://auth.example.com/token');
+            expect(result.httpLogs[0].status).toBe(200);
+        });
+
+        it('makes a POST request with body', async () => {
+            const ctx = makeContext();
+            const result = await executePreRequestScript(
+                `
+                var res = fb.http.post("https://api.example.com/login", {
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ user: "test" }),
+                });
+                fb.request.body = res.body;
+                `,
+                ctx,
+                { httpSender: mockSender },
+            );
+            const body = JSON.parse(result.body);
+            expect(body.method).toBe('POST');
+            expect(result.httpLogs).toHaveLength(1);
+            expect(result.httpLogs[0].method).toBe('POST');
+        });
+
+        it('logs HTTP sub-requests', async () => {
+            const ctx = makeContext();
+            const result = await executePreRequestScript(
+                `
+                fb.http.get("https://a.com");
+                fb.http.post("https://b.com");
+                fb.http.put("https://c.com");
+                `,
+                ctx,
+                { httpSender: mockSender },
+            );
+            expect(result.httpLogs).toHaveLength(3);
+            expect(result.httpLogs.map(l => l.method)).toEqual(['GET', 'POST', 'PUT']);
+        });
+
+        it('handles HTTP errors gracefully', async () => {
+            const failingSender: HttpSender = async () => {
+                throw new Error('Network error');
+            };
+            const ctx = makeContext();
+            await expect(
+                executePreRequestScript(
+                    'fb.http.get("https://failing.com");',
+                    ctx,
+                    { httpSender: failingSender },
+                ),
+            ).rejects.toMatchObject({
+                message: expect.stringContaining(''),
+            });
+        });
+
+        it('errors when no httpSender provided', async () => {
+            const ctx = makeContext();
+            await expect(
+                executePreRequestScript(
+                    'fb.http.get("https://example.com");',
+                    ctx,
+                ),
+            ).rejects.toMatchObject({
+                message: expect.stringContaining(''),
+            });
+        });
+    });
+
+    describe('env integration with http', () => {
+        it('script sets env var from HTTP response, next request resolves it', async () => {
+            const mockSender: HttpSender = async () => ({
+                status: 200,
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ token: 'fresh-token-123' }),
+            });
+            const ctx = makeContext({ envVars: { API_KEY: 'old' } });
+            const result = await executePreRequestScript(
+                `
+                var res = fb.http.get("https://auth.example.com/token");
+                var data = JSON.parse(res.body);
+                fb.env.set("API_KEY", data.token);
+                fb.request.headers = [{ key: "Authorization", value: "Bearer " + fb.env.get("API_KEY"), enabled: true }];
+                `,
+                ctx,
+                { httpSender: mockSender },
+            );
+            expect(result.envMutations).toEqual({ API_KEY: 'fresh-token-123' });
+            expect(result.headers).toEqual([
+                { key: 'Authorization', value: 'Bearer fresh-token-123', enabled: true },
+            ]);
+            expect(result.httpLogs).toHaveLength(1);
         });
     });
 

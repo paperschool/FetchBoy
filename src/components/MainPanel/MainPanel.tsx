@@ -8,6 +8,7 @@ import {
 } from "@/components/ResponseViewer/ResponseViewer";
 import { SaveRequestDialog } from "@/components/SaveRequestDialog/SaveRequestDialog";
 import { ProgressBar } from "@/components/ProgressBar/ProgressBar";
+import { createDefaultScriptDebugState } from "@/stores/tabStore";
 import { createFullSavedRequest, updateSavedRequest } from "@/lib/collections";
 import { authStateToConfig, areQueryParamsEqual } from "@/lib/urlUtils";
 import { extractQueryParamsFromUrl } from "@/lib/extractQueryParamsFromUrl";
@@ -36,6 +37,7 @@ export function MainPanel(): React.ReactElement {
   const sslVerify = useUiSettingsStore((s) => s.sslVerify);
 
   const activeTabId = useTabStore((s) => s.activeTabId);
+  const scriptDebugState = useTabStore((s) => s.tabs.find((tab) => tab.id === s.activeTabId)?.scriptDebugState);
   const openedFromIntercept = useTabStore((s) => s.tabs.find((t) => t.id === s.activeTabId)?.openedFromIntercept);
   const clearOpenedFromIntercept = useTabStore((s) => s.clearOpenedFromIntercept);
   const [bannerTabId, setBannerTabId] = useState<string | null>(null);
@@ -67,7 +69,7 @@ export function MainPanel(): React.ReactElement {
   const { state: req, update: updateReq } = useActiveRequestState();
   const { state: res, update: updateRes } = useActiveResponseState();
 
-  const { method, url, headers, queryParams, body, auth, activeTab, timeout, preRequestScript, preRequestScriptEnabled } = req;
+  const { method, url, headers, queryParams, body, auth, activeTab, timeout, preRequestScript, preRequestScriptEnabled, scriptKeepOpen } = req;
   const { isSending, responseData, requestError, sentUrl, verboseLogs, requestBodyLanguage, wasCancelled, wasTimedOut, timedOutAfterSec } = res;
 
   const setMethod = (m: HttpMethod): void => updateReq({ method: m, isDirty: true });
@@ -93,7 +95,7 @@ export function MainPanel(): React.ReactElement {
     url, method, headers, queryParams, body, auth,
     syncQueryParams, applyEnv, timeout, sslVerify, activeTabId,
     abortControllerRef, updateRes, setRequestDetailsOpen,
-    preRequestScript, preRequestScriptEnabled,
+    preRequestScript, preRequestScriptEnabled, scriptKeepOpen,
   });
 
   useSendRequestKeyboardShortcut(handleSendRequest);
@@ -236,6 +238,13 @@ export function MainPanel(): React.ReactElement {
             preRequestScriptEnabled={preRequestScriptEnabled}
             onScriptChange={(script) => updateReq({ preRequestScript: script, isDirty: true })}
             onScriptEnabledChange={(enabled) => updateReq({ preRequestScriptEnabled: enabled, isDirty: true })}
+            scriptKeepOpen={scriptKeepOpen}
+            onScriptKeepOpenChange={(keepOpen) => updateReq({ scriptKeepOpen: keepOpen })}
+            scriptDebugState={scriptDebugState}
+            onDebugClose={() => {
+              const { updateTabScriptDebugState } = useTabStore.getState();
+              updateTabScriptDebugState(activeTabId, createDefaultScriptDebugState());
+            }}
             activeVariables={activeVariables}
             banner={bannerTabId === activeTabId ? (
               <span className="flex items-center gap-1.5 rounded bg-blue-500/15 px-2 py-0.5 text-xs text-blue-400 font-normal animate-pulse" onClick={(e) => e.preventDefault()}>
@@ -248,7 +257,9 @@ export function MainPanel(): React.ReactElement {
           />
 
           <section className="border-app-subtle flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border p-2" data-testid="response-panel" data-tour="response-panel">
-            <p className="text-app-secondary text-sm font-medium">{t('common.response')}</p>
+            <div className="flex items-center justify-between">
+              <p className="text-app-secondary text-sm font-medium">{t('common.response')}</p>
+            </div>
             <div className="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden">
               {responseData || requestError || verboseLogs.length > 0 || wasCancelled || wasTimedOut ? (
                 <ResponseViewer response={responseData} error={requestError} logs={verboseLogs} wasCancelled={wasCancelled} wasTimedOut={wasTimedOut} timedOutAfterSec={timedOutAfterSec} onClearLogs={() => updateRes({ verboseLogs: [] })} requestedUrl={sentUrl ?? undefined} />

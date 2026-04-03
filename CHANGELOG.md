@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.19.2] - 2026-04-03
+
+- feat: Pre-request script debug view moved into Scripts tab — shows inline below editor
+- feat: "Keep Open" checkbox on Scripts tab — keeps accordion open after send to see debug output
+- feat: Script template sidebar — collapsible panel to the left of the editor with save form and template library
+- fix: Environment variables set via fb.env.set() now re-interpolate in the current request
+- fix: Frozen immer env variable mutation error, registered script_templates migration (013)
+
 ## [0.19.1] - 2026-04-02
 
 - feat: Comprehensive i18n migration — 38 components now use t() calls with ~378 translation keys across 14 namespaces

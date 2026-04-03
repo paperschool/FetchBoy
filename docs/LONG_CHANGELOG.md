@@ -1,5 +1,13 @@
 # Long Changelog
 
+## [0.19.2] - 2026-04-03
+
+- feat: moved PreRequestDebugLog from standalone panel in MainPanel into ScriptsTab — debug output now renders inline below the Monaco editor when script status is non-idle, with scriptDebugState and onDebugClose props threaded through RequestDetailsAccordion
+- feat: added `scriptKeepOpen` boolean to RequestSnapshot — "Keep Open" checkbox in ScriptsTab prevents accordion from closing on send; useSendRequest switches to scripts tab instead of collapsing when enabled
+- feat: restructured ScriptsTab layout to horizontal `[sidebar | editor+debug]` — collapsible 256px sidebar with PanelLeftOpen/PanelLeftClose toggle contains save-as-template form and embedded ScriptTemplatePanel; ScriptTemplatePanel gains `embedded` prop to skip outer chrome
+- fix: environment variables set via `fb.env.set()` during pre-request script execution now re-interpolate in the current request — useSendRequest reads fresh variables from useEnvironmentStore.getState() after script completes instead of using stale `applyEnv` closure
+- fix: `usePreRequestScript` env mutation persistence no longer throws "Attempted to assign to readonly property" — shallow-copied immer-frozen variable objects with spread before mutating; registered migration 013 (script_templates table) in db.rs
+
 ## [0.19.1] - 2026-04-02
 
 - feat: comprehensive i18n `t()` migration across 38 component files — replaced hardcoded English text with typed translation keys in SettingsPanel, AuthPanel, BreakpointEditor, MappingEditor, InterceptTopBar, CertificateManagement, PausedRequestDetail, TabContextMenu, InterceptTable, InterceptSidebar, RequestDetailView/Headers/Body, HistoryPanel, CollectionTree, Debug tables, ResponseViewer, all Save dialogs, EnvironmentPanel, MainPanel, RequestDetailsAccordion, KeyValueRows, MappingCookieEditor, MappingLogTable, AppTabs, StitchSidebar/EmptyState, BreakpointsTree, MappingsTree, SettingsAccordion, Sidebar, TopBar, WhatsNewModal, KeyboardShortcutsModal

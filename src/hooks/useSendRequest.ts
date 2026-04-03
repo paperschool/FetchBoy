@@ -8,10 +8,12 @@ import {
   buildRequestedUrlForDisplay,
 } from "@/lib/urlUtils";
 import { interpolateRequestFields } from "@/lib/interpolateRequest";
+import { interpolate } from "@/lib/interpolate";
 import { usePreRequestScript, type ScriptError } from "@/hooks/usePreRequestScript";
+import { useEnvironmentStore } from "@/stores/environmentStore";
 import { useHistoryPersistence } from "@/hooks/useHistoryPersistence";
 import type { AuthState, HttpMethod } from "@/stores/requestStore";
-import { useTabStore } from "@/stores/tabStore";
+import { useTabStore, createDefaultScriptDebugState } from "@/stores/tabStore";
 import { useDebugStore } from "@/stores/debugStore";
 
 function emitDebug(level: 'info' | 'warn' | 'error', message: string): void {
@@ -41,6 +43,7 @@ interface UseSendRequestParams {
   setRequestDetailsOpen: (open: boolean) => void;
   preRequestScript: string;
   preRequestScriptEnabled: boolean;
+  scriptKeepOpen: boolean;
 }
 
 function invokeWithTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
@@ -60,7 +63,8 @@ export function useSendRequest(params: UseSendRequestParams): {
 } {
   const { url, method, headers, queryParams, body, auth, syncQueryParams,
     applyEnv, timeout, sslVerify, activeTabId, abortControllerRef,
-    updateRes, setRequestDetailsOpen, preRequestScript, preRequestScriptEnabled } = params;
+    updateRes, setRequestDetailsOpen, preRequestScript, preRequestScriptEnabled,
+    scriptKeepOpen } = params;
 
   const { executePreScript } = usePreRequestScript();
   const { persistToHistory } = useHistoryPersistence();
@@ -99,20 +103,43 @@ export function useSendRequest(params: UseSendRequestParams): {
     if (preRequestScript.trim() && preRequestScriptEnabled) {
       emitDebug('info', 'Executing pre-request script');
       appendLog("Executing pre-request script...");
+
+      const inputSnap = { url: sendUrlForRequest, method, headers: sendHeaders, queryParams: sendQueryParams, body: sendBody.raw };
+      const { updateTabScriptDebugState } = useTabStore.getState();
+      updateTabScriptDebugState(activeTabId, {
+        ...createDefaultScriptDebugState(), status: 'running', startTime: Date.now(), inputSnapshot: inputSnap,
+      });
+
       try {
         const result = await executePreScript(preRequestScript, {
           url: sendUrlForRequest, method, headers: sendHeaders, queryParams: sendQueryParams, body: sendBody.raw,
         });
-        sendUrlForRequest = result.url;
-        sendHeaders = result.headers;
-        sendQueryParams = result.queryParams;
-        sendBody = { ...sendBody, raw: result.body };
+        // Re-interpolate with fresh env vars (fb.env.set mutations are persisted before we get here)
+        const freshEnv = useEnvironmentStore.getState();
+        const activeEnv = freshEnv.environments.find((e) => e.id === freshEnv.activeEnvironmentId);
+        const freshVars = activeEnv?.variables ?? [];
+        const reInterpolate = (s: string) => interpolate(s, freshVars);
+
+        sendUrlForRequest = reInterpolate(result.url);
+        sendHeaders = result.headers.map((h) => ({ ...h, value: reInterpolate(h.value) }));
+        sendQueryParams = result.queryParams.map((q) => ({ ...q, value: reInterpolate(q.value) }));
+        sendBody = { ...sendBody, raw: reInterpolate(result.body) };
+
+        const outputSnap = { url: result.url, headers: result.headers, queryParams: result.queryParams, body: result.body };
+        updateTabScriptDebugState(activeTabId, {
+          status: 'completed', endTime: Date.now(),
+          consoleLogs: result.consoleLogs, httpLogs: result.httpLogs, outputSnapshot: outputSnap,
+        });
         emitDebug('info', 'Pre-request script completed');
         appendLog("Pre-request script completed successfully.");
       } catch (scriptError) {
-        const err = scriptError as ScriptError;
+        const err = scriptError as ScriptError & { consoleLogs?: unknown[]; httpLogs?: unknown[] };
         const lineInfo = err.lineNumber ? ` (line ${err.lineNumber})` : '';
         const message = `Pre-request script error${lineInfo}: ${err.message}`;
+        updateTabScriptDebugState(activeTabId, {
+          status: 'error', endTime: Date.now(), error: { message: err.message, lineNumber: err.lineNumber },
+          consoleLogs: (err.consoleLogs ?? []) as never[], httpLogs: (err.httpLogs ?? []) as never[],
+        });
         emitDebug('error', message);
         updateRes({ requestError: message, responseData: null, isSending: false });
         appendLog(`Script error: ${message}`);
@@ -128,7 +155,11 @@ export function useSendRequest(params: UseSendRequestParams): {
       isSending: true, requestError: null, responseData: null,
       wasCancelled: false, wasTimedOut: false, timedOutAfterSec: null, sentUrl: requestedUrlForDisplay,
     });
-    setRequestDetailsOpen(false);
+    if (scriptKeepOpen) {
+      useTabStore.getState().updateTabRequestState(activeTabId, { activeTab: 'scripts' });
+    } else {
+      setRequestDetailsOpen(false);
+    }
 
     const requestSnapshot = {
       id: crypto.randomUUID(), collection_id: null, folder_id: null, name: "Untitled Request",
@@ -189,7 +220,7 @@ export function useSendRequest(params: UseSendRequestParams): {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url, method, headers, queryParams, body, auth, syncQueryParams, applyEnv,
-    timeout, sslVerify, activeTabId, preRequestScript, preRequestScriptEnabled]);
+    timeout, sslVerify, activeTabId, preRequestScript, preRequestScriptEnabled, scriptKeepOpen]);
 
   return { handleSendRequest };
 }

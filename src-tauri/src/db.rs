@@ -77,5 +77,11 @@ pub fn migrations() -> Vec<Migration> {
             sql: include_str!("../migrations/012_mapping_chain.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 13,
+            description: "create_script_templates_table",
+            sql: include_str!("../migrations/013_script_templates.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }

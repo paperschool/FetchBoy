@@ -52,5 +52,6 @@ export function buildSnapshotFromSaved(request: Request): RequestSnapshot {
         timeout: 0,
         preRequestScript: request.pre_request_script ?? '',
         preRequestScriptEnabled: request.pre_request_script_enabled ?? true,
+        scriptKeepOpen: false,
     };
 }

@@ -3,7 +3,34 @@ import { immer } from 'zustand/middleware/immer';
 import { current } from 'immer';
 import type { HttpMethod, RequestTab, AuthState, BodyMode, KeyValueRow } from './requestStore';
 import type { ResponseData } from '@/components/ResponseViewer/ResponseViewer';
+import type { ConsoleLogEntry, HttpLogEntry, ScriptError } from '@/lib/scriptEngine';
 import { useUiSettingsStore } from './uiSettingsStore';
+
+// ─── Script Debug State ──────────────────────────────────────────────────────
+
+export interface ScriptDebugState {
+    status: 'idle' | 'running' | 'completed' | 'error';
+    consoleLogs: ConsoleLogEntry[];
+    httpLogs: HttpLogEntry[];
+    error: ScriptError | null;
+    startTime: number | null;
+    endTime: number | null;
+    inputSnapshot: Record<string, unknown> | null;
+    outputSnapshot: Record<string, unknown> | null;
+}
+
+export function createDefaultScriptDebugState(): ScriptDebugState {
+    return {
+        status: 'idle',
+        consoleLogs: [],
+        httpLogs: [],
+        error: null,
+        startTime: null,
+        endTime: null,
+        inputSnapshot: null,
+        outputSnapshot: null,
+    };
+}
 
 // ─── Per-tab Data Snapshots ───────────────────────────────────────────────────
 
@@ -19,6 +46,7 @@ export interface RequestSnapshot {
     timeout: number; // milliseconds; 0 = no timeout
     preRequestScript: string;
     preRequestScriptEnabled: boolean;
+    scriptKeepOpen: boolean;
 }
 
 export interface ResponseSnapshot {
@@ -46,6 +74,7 @@ export function createDefaultRequestSnapshot(): RequestSnapshot {
         timeout: useUiSettingsStore.getState().requestTimeoutMs,
         preRequestScript: '',
         preRequestScriptEnabled: true,
+        scriptKeepOpen: false,
     };
 }
 
@@ -71,6 +100,7 @@ export interface TabEntry {
     isCustomLabel: boolean;
     requestState: RequestSnapshot;
     responseState: ResponseSnapshot;
+    scriptDebugState: ScriptDebugState;
     openedFromIntercept?: boolean;
 }
 
@@ -91,6 +121,7 @@ interface TabStore {
     syncLabelFromRequest: (id: string, method: string, url: string) => void;
     updateTabRequestState: (id: string, patch: Partial<RequestSnapshot>) => void;
     updateTabResponseState: (id: string, patch: Partial<ResponseSnapshot>) => void;
+    updateTabScriptDebugState: (id: string, patch: Partial<ScriptDebugState>) => void;
     appendResponseLog: (id: string, log: string) => void;
     openRequestInNewTab: (snapshot: RequestSnapshot, label: string, meta?: { openedFromIntercept?: boolean }) => void;
     clearOpenedFromIntercept: (id: string) => void;
@@ -102,6 +133,7 @@ const createInitialTab = (): TabEntry => ({
     isCustomLabel: false,
     requestState: createDefaultRequestSnapshot(),
     responseState: createDefaultResponseSnapshot(),
+    scriptDebugState: createDefaultScriptDebugState(),
 });
 
 const initialTab = createInitialTab();
@@ -119,6 +151,7 @@ export const useTabStore = create<TabStore>()(
                     isCustomLabel: false,
                     requestState: createDefaultRequestSnapshot(),
                     responseState: createDefaultResponseSnapshot(),
+                    scriptDebugState: createDefaultScriptDebugState(),
                 };
                 state.tabs.push(newTab);
                 state.activeTabId = newTab.id;
@@ -168,6 +201,7 @@ export const useTabStore = create<TabStore>()(
                     isCustomLabel: true,
                     requestState: structuredClone(current(source.requestState)),
                     responseState: createDefaultResponseSnapshot(),
+                    scriptDebugState: createDefaultScriptDebugState(),
                 };
 
                 state.tabs.splice(sourceIdx + 1, 0, duplicated);
@@ -227,6 +261,12 @@ export const useTabStore = create<TabStore>()(
                 if (tab) Object.assign(tab.responseState, patch);
             }),
 
+        updateTabScriptDebugState: (id, patch) =>
+            set((state) => {
+                const tab = state.tabs.find((t) => t.id === id);
+                if (tab) Object.assign(tab.scriptDebugState, patch);
+            }),
+
         appendResponseLog: (id, log) =>
             set((state) => {
                 const tab = state.tabs.find((t) => t.id === id);
@@ -241,6 +281,7 @@ export const useTabStore = create<TabStore>()(
                     isCustomLabel: true,
                     requestState: { ...snapshot },
                     responseState: createDefaultResponseSnapshot(),
+                    scriptDebugState: createDefaultScriptDebugState(),
                     openedFromIntercept: meta?.openedFromIntercept,
                 };
                 state.tabs.push(newTab);
