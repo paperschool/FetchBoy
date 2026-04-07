@@ -47,6 +47,8 @@ export interface RequestSnapshot {
     preRequestScript: string;
     preRequestScriptEnabled: boolean;
     scriptKeepOpen: boolean;
+    preRequestChainId: string | null;
+    preRequestMode: 'none' | 'javascript' | 'chain';
 }
 
 export interface ResponseSnapshot {
@@ -75,6 +77,8 @@ export function createDefaultRequestSnapshot(): RequestSnapshot {
         preRequestScript: '',
         preRequestScriptEnabled: true,
         scriptKeepOpen: false,
+        preRequestChainId: null,
+        preRequestMode: 'none',
     };
 }
 

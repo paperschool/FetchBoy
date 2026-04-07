@@ -228,20 +228,25 @@ export function MappingEditor({ onClose }: Props) {
                                                 return;
                                             }
                                         }
+                                        // Delete previous chain if one exists before creating new
+                                        if (chainId) {
+                                            await stitchStore.deleteChain(chainId).catch(() => {});
+                                        }
                                         // Create a new bound chain with entry/exit nodes
                                         const chain = await stitchStore.createChain(`Mapping: ${name}`, editForm.id);
                                         await stitchStore.loadChain(chain.id);
-                                        const mappingNode = await stitchStore.addNode({
-                                            chainId: chain.id, type: 'mapping', positionX: 100, positionY: 100,
+                                        // Mapping node is engine-only (hidden) — entry/exit are top-level
+                                        await stitchStore.addNode({
+                                            chainId: chain.id, type: 'mapping', positionX: -9999, positionY: -9999,
                                             config: { ...DEFAULT_MAPPING_CONFIG, urlPattern, matchType }, label: name, parentNodeId: null,
                                         });
                                         const entry = await stitchStore.addNode({
-                                            chainId: chain.id, type: 'mapping-entry', positionX: 130, positionY: 150,
-                                            config: { ...DEFAULT_MAPPING_ENTRY_CONFIG }, label: 'Entry', parentNodeId: mappingNode.id,
+                                            chainId: chain.id, type: 'mapping-entry', positionX: 200, positionY: 80,
+                                            config: { ...DEFAULT_MAPPING_ENTRY_CONFIG }, label: 'Entry', parentNodeId: null,
                                         });
                                         const exit = await stitchStore.addNode({
-                                            chainId: chain.id, type: 'mapping-exit', positionX: 340, positionY: 150,
-                                            config: { ...DEFAULT_MAPPING_EXIT_CONFIG }, label: 'Exit', parentNodeId: mappingNode.id,
+                                            chainId: chain.id, type: 'mapping-exit', positionX: 200, positionY: 350,
+                                            config: { ...DEFAULT_MAPPING_EXIT_CONFIG }, label: 'Exit', parentNodeId: null,
                                         });
                                         for (const key of ['status', 'headers', 'body', 'cookies']) {
                                             await stitchStore.addConnection({

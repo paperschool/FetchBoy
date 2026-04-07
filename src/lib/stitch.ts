@@ -17,6 +17,9 @@ function deserializeChain(raw: RawStitchChain): StitchChain {
     id: raw.id,
     name: raw.name,
     mappingId: raw.mapping_id ?? null,
+    requestId: raw.request_id ?? null,
+    folderId: raw.folder_id ?? null,
+    sortOrder: raw.sort_order ?? 0,
     createdAt: raw.created_at,
     updatedAt: raw.updated_at,
   };
@@ -85,21 +88,27 @@ export async function loadChainWithNodes(
   };
 }
 
-export async function insertChain(name: string, mappingId?: string | null): Promise<StitchChain> {
+export async function insertChain(
+  name: string,
+  mappingId?: string | null,
+  folderId?: string | null,
+  requestId?: string | null,
+): Promise<StitchChain> {
   const chain: StitchChain = {
     id: crypto.randomUUID(),
     name,
     mappingId: mappingId ?? null,
+    requestId: requestId ?? null,
+    folderId: folderId ?? null,
+    sortOrder: 0,
     createdAt: now(),
     updatedAt: now(),
   };
-  await insertOne('stitch_chains', ['id', 'name', 'mapping_id', 'created_at', 'updated_at'], [
-    chain.id,
-    chain.name,
-    chain.mappingId,
-    chain.createdAt,
-    chain.updatedAt,
-  ]);
+  await insertOne(
+    'stitch_chains',
+    ['id', 'name', 'mapping_id', 'request_id', 'folder_id', 'sort_order', 'created_at', 'updated_at'],
+    [chain.id, chain.name, chain.mappingId, chain.requestId, chain.folderId, chain.sortOrder, chain.createdAt, chain.updatedAt],
+  );
   return chain;
 }
 
@@ -128,6 +137,9 @@ export async function duplicateChain(
     id: crypto.randomUUID(),
     name: newName,
     mappingId: null,
+    requestId: null,
+    folderId: null,
+    sortOrder: 0,
     createdAt: now(),
     updatedAt: now(),
   };
@@ -157,9 +169,11 @@ export async function duplicateChain(
   }));
 
   await withTransaction(async () => {
-    await insertOne('stitch_chains', ['id', 'name', 'mapping_id', 'created_at', 'updated_at'], [
-      newChain.id, newChain.name, newChain.mappingId, newChain.createdAt, newChain.updatedAt,
-    ]);
+    await insertOne(
+      'stitch_chains',
+      ['id', 'name', 'mapping_id', 'request_id', 'folder_id', 'sort_order', 'created_at', 'updated_at'],
+      [newChain.id, newChain.name, newChain.mappingId, newChain.requestId, newChain.folderId, newChain.sortOrder, newChain.createdAt, newChain.updatedAt],
+    );
     for (const n of newNodes) {
       await insertOne(
         'stitch_nodes',
@@ -242,3 +256,4 @@ export async function deleteConnection(id: string): Promise<void> {
   const db = await getDb();
   await db.execute('DELETE FROM stitch_connections WHERE id = ?', [id]);
 }
+

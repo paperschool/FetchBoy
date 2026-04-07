@@ -44,6 +44,8 @@ interface UseSendRequestParams {
   preRequestScript: string;
   preRequestScriptEnabled: boolean;
   scriptKeepOpen: boolean;
+  preRequestChainId?: string | null;
+  preRequestMode?: 'none' | 'javascript' | 'chain';
 }
 
 function invokeWithTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
@@ -64,7 +66,7 @@ export function useSendRequest(params: UseSendRequestParams): {
   const { url, method, headers, queryParams, body, auth, syncQueryParams,
     applyEnv, timeout, sslVerify, activeTabId, abortControllerRef,
     updateRes, setRequestDetailsOpen, preRequestScript, preRequestScriptEnabled,
-    scriptKeepOpen } = params;
+    scriptKeepOpen, preRequestChainId, preRequestMode } = params;
 
   const { executePreScript } = usePreRequestScript();
   const { persistToHistory } = useHistoryPersistence();
@@ -99,8 +101,86 @@ export function useSendRequest(params: UseSendRequestParams): {
       appendLog("Sync Query Parameters: using string-based query stripping fallback for an unparseable URL.");
     }
 
+    // Pre-request chain execution (chain mode takes priority over JS)
+    if (preRequestMode === 'chain' && preRequestChainId) {
+      emitDebug('info', 'Executing pre-request chain');
+      appendLog('Executing pre-request chain...');
+      try {
+        const { loadChainWithNodes } = await import('@/lib/stitch');
+        const { executeChain } = await import('@/lib/stitchEngine');
+        const { chain, nodes, connections } = await loadChainWithNodes(preRequestChainId);
+        emitDebug('info', `Loaded pre-request chain: ${chain.name} (${nodes.length} nodes)`);
+
+        const envState = useEnvironmentStore.getState();
+        const activeEnv = envState.environments.find((e) => e.id === envState.activeEnvironmentId);
+        const envVars: Record<string, string> = {};
+        if (activeEnv?.variables) {
+          for (const v of activeEnv.variables) {
+            if (v.enabled && v.key) envVars[v.key] = v.value;
+          }
+        }
+
+        const cancelledRef = { current: false };
+        const noopCallbacks = {
+          onNodeStart: () => {},
+          onNodeComplete: () => {},
+          onError: () => {},
+          onSleepStart: () => {},
+          onChainComplete: () => {},
+        };
+
+        const ctx = await Promise.race([
+          executeChain(nodes, connections, envVars, noopCallbacks, cancelledRef),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Pre-request chain timed out after 30s')), 30000)),
+        ]);
+
+        if (ctx.status === 'error' && ctx.error) {
+          const message = `Pre-request chain error: ${ctx.error.message}`;
+          emitDebug('error', message);
+          updateRes({ requestError: message, responseData: null, isSending: false });
+          appendLog(message);
+          return;
+        }
+
+        // Collect fetch-terminal node output and inject into request fields
+        const terminalNode = nodes.find((n) => n.type === 'fetch-terminal');
+        if (terminalNode) {
+          const terminalOutput = ctx.nodeOutputs[terminalNode.id] as Record<string, unknown> | undefined;
+          if (terminalOutput && typeof terminalOutput === 'object') {
+            const chainVars: Array<{ key: string; value: string; enabled: boolean }> = [];
+            for (const [k, v] of Object.entries(terminalOutput)) {
+              if (k === 'complete') continue;
+              chainVars.push({ key: k, value: String(v), enabled: true });
+            }
+            if (chainVars.length > 0) {
+              const applyChain = (s: string): string =>
+                s.replace(/\{\{([^}]+)\}\}/g, (_match, key: string) => {
+                  const found = chainVars.find((cv) => cv.key === key.trim());
+                  return found ? found.value : _match;
+                });
+              sendUrlForRequest = applyChain(sendUrlForRequest);
+              sendHeaders = sendHeaders.map((h) => ({ ...h, value: applyChain(h.value) }));
+              sendQueryParams = sendQueryParams.map((q) => ({ ...q, value: applyChain(q.value) }));
+              sendBody = { ...sendBody, raw: applyChain(sendBody.raw) };
+              emitDebug('info', `Chain output injected: ${chainVars.map((v) => v.key).join(', ')}`);
+              appendLog(`Chain variables applied: ${chainVars.map((v) => `${v.key}=${v.value}`).join(', ')}`);
+            }
+          }
+        }
+
+        emitDebug('info', 'Pre-request chain completed');
+        appendLog('Pre-request chain completed successfully.');
+      } catch (chainErr) {
+        const message = `Pre-request chain error: ${chainErr instanceof Error ? chainErr.message : String(chainErr)}`;
+        emitDebug('error', message);
+        updateRes({ requestError: message, responseData: null, isSending: false });
+        appendLog(message);
+        return;
+      }
+    }
+
     // Pre-request script execution
-    if (preRequestScript.trim() && preRequestScriptEnabled) {
+    if (preRequestScript.trim() && preRequestScriptEnabled && preRequestMode !== 'chain') {
       emitDebug('info', 'Executing pre-request script');
       appendLog("Executing pre-request script...");
 
@@ -166,7 +246,7 @@ export function useSendRequest(params: UseSendRequestParams): {
       method, url: sendUrlForRequest, headers: sendHeaders, query_params: sendQueryParams,
       body_type: sendBody.raw.trim() ? "raw" : "none", body_content: sendBody.raw,
       auth_type: auth.type, auth_config: {}, pre_request_script: preRequestScript,
-      pre_request_script_enabled: preRequestScriptEnabled, sort_order: 0,
+      pre_request_script_enabled: preRequestScriptEnabled, pre_request_chain_id: null, sort_order: 0,
       created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     } as const;
 
@@ -220,7 +300,8 @@ export function useSendRequest(params: UseSendRequestParams): {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url, method, headers, queryParams, body, auth, syncQueryParams, applyEnv,
-    timeout, sslVerify, activeTabId, preRequestScript, preRequestScriptEnabled, scriptKeepOpen]);
+    timeout, sslVerify, activeTabId, preRequestScript, preRequestScriptEnabled,
+    scriptKeepOpen, preRequestChainId, preRequestMode]);
 
   return { handleSendRequest };
 }

@@ -203,3 +203,30 @@
 .stitch-marquee {
   animation: stitch-marquee-scroll 8s linear infinite alternate;
 }
+
+/* Connection marching ants during execution */
+@keyframes stitch-marching-ants {
+  to { stroke-dashoffset: -24; }
+}
+
+.stitch-connection-active {
+  stroke-width: 3px;
+  stroke-dasharray: 8 4;
+  animation: stitch-marching-ants 0.6s linear infinite;
+}
+
+@keyframes stitch-connection-fade {
+  0%, 60% { opacity: 1; stroke-width: 3px; }
+  100% { opacity: 0.6; stroke-width: 1.5px; stroke-dasharray: none; }
+}
+
+.stitch-connection-fading {
+  stroke-width: 3px;
+  stroke-dasharray: 8 4;
+  animation: stitch-marching-ants 0.6s linear infinite, stitch-connection-fade 3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Auto-layout animation */
+.stitch-layout-animating [data-node-id] {
+  transition: left 300ms ease-out, top 300ms ease-out;
+}

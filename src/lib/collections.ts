@@ -19,6 +19,7 @@ interface RawRequest {
     auth_config: string;
     pre_request_script: string;
     pre_request_script_enabled: number;
+    pre_request_chain_id: string | null;
     sort_order: number;
     created_at: string;
     updated_at: string;
@@ -34,6 +35,7 @@ function deserializeRequest(raw: RawRequest): Request {
         auth_config: parseJsonField<Record<string, string>>(raw.auth_config, {}),
         pre_request_script: raw.pre_request_script ?? '',
         pre_request_script_enabled: Boolean(raw.pre_request_script_enabled ?? 1),
+        pre_request_chain_id: raw.pre_request_chain_id ?? null,
     };
 }
 
@@ -148,7 +150,7 @@ export async function updateFolderOrder(folderId: string, sortOrder: number): Pr
 const REQUEST_FIELDS = [
     'id', 'collection_id', 'folder_id', 'name', 'method', 'url', 'headers', 'query_params',
     'body_type', 'body_content', 'auth_type', 'auth_config', 'pre_request_script',
-    'pre_request_script_enabled', 'sort_order', 'created_at', 'updated_at',
+    'pre_request_script_enabled', 'pre_request_chain_id', 'sort_order', 'created_at', 'updated_at',
 ] as const;
 
 async function insertRequestRow(req: Request): Promise<void> {
@@ -157,7 +159,7 @@ async function insertRequestRow(req: Request): Promise<void> {
         JSON.stringify(req.headers), JSON.stringify(req.query_params),
         req.body_type, req.body_content, req.auth_type, JSON.stringify(req.auth_config),
         req.pre_request_script, req.pre_request_script_enabled ? 1 : 0,
-        req.sort_order, req.created_at, req.updated_at,
+        req.pre_request_chain_id, req.sort_order, req.created_at, req.updated_at,
     ]);
 }
 
@@ -183,6 +185,7 @@ export async function createSavedRequest(
         auth_config: {},
         pre_request_script: '',
         pre_request_script_enabled: true,
+        pre_request_chain_id: null,
         sort_order: 0,
         created_at: now(),
         updated_at: now(),
@@ -240,6 +243,7 @@ export async function updateSavedRequest(
             auth_config = ?,
             pre_request_script = ?,
             pre_request_script_enabled = ?,
+            pre_request_chain_id = ?,
             sort_order = ?,
             updated_at = ?
          WHERE id = ?`,
@@ -255,6 +259,7 @@ export async function updateSavedRequest(
             JSON.stringify(data.auth_config ?? {}),
             data.pre_request_script ?? '',
             (data.pre_request_script_enabled ?? true) ? 1 : 0,
+            data.pre_request_chain_id ?? null,
             data.sort_order ?? 0,
             now(),
             id,
@@ -263,14 +268,16 @@ export async function updateSavedRequest(
 }
 
 export async function createFullSavedRequest(
-    request: Omit<Request, 'id' | 'created_at' | 'updated_at' | 'pre_request_script' | 'pre_request_script_enabled'> & {
+    request: Omit<Request, 'id' | 'created_at' | 'updated_at' | 'pre_request_script' | 'pre_request_script_enabled' | 'pre_request_chain_id'> & {
         pre_request_script?: string;
         pre_request_script_enabled?: boolean;
+        pre_request_chain_id?: string | null;
     },
 ): Promise<Request> {
     const full: Request = {
         pre_request_script: '',
         pre_request_script_enabled: true,
+        pre_request_chain_id: null,
         ...request,
         id: crypto.randomUUID(),
         created_at: now(),

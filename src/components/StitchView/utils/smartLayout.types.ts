@@ -1,0 +1,9 @@
+export const NODE_WIDTH = 180;
+export const NODE_HEIGHT = 90;
+export const LAYER_GAP_Y = 40;
+export const NODE_GAP_X = 40;
+export const COMPONENT_GAP_Y = 80;
+export const CONTAINER_PADDING_X = 30;
+export const CONTAINER_PADDING_TOP = 50;
+export const STAGGER_MAX_X = 200;
+export const STAGGER_PERIOD = 8;

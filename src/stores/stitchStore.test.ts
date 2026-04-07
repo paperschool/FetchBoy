@@ -15,9 +15,23 @@ vi.mock('@/lib/stitch', () => ({
   deleteConnection: vi.fn(),
 }));
 
+vi.mock('@/lib/stitchFolders', () => ({
+  loadStitchFolders: vi.fn().mockResolvedValue([]),
+  createStitchFolder: vi.fn(),
+  renameStitchFolder: vi.fn(),
+  deleteStitchFolder: vi.fn(),
+  updateStitchFolderOrder: vi.fn(),
+  updateChainFolder: vi.fn(),
+  updateChainOrder: vi.fn(),
+}));
+
 const makeChain = (overrides: Partial<StitchChain> = {}): StitchChain => ({
   id: 'chain-1',
   name: 'Test Chain',
+  mappingId: null,
+  requestId: null,
+  folderId: null,
+  sortOrder: 0,
   createdAt: 'ts',
   updatedAt: 'ts',
   ...overrides,
@@ -50,6 +64,7 @@ const makeConn = (overrides: Partial<StitchConnection> = {}): StitchConnection =
 const resetStore = (): void =>
   useStitchStore.setState({
     chains: [],
+    folders: [],
     activeChainId: null,
     nodes: [],
     connections: [],

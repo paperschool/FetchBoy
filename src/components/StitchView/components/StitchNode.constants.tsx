@@ -1,4 +1,4 @@
-import { Send, Code, Braces, Timer, Repeat, GitMerge, GitBranch, Globe, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
+import { Send, Code, Braces, Timer, Repeat, GitMerge, GitBranch, Globe, ArrowDownToLine, ArrowUpFromLine, CircleStop } from 'lucide-react';
 import type { StitchNodeType as NodeType } from '@/types/stitch';
 
 export const METHOD_COLORS: Record<string, string> = {
@@ -22,6 +22,7 @@ export const NODE_ICONS: Record<NodeType, React.ReactNode> = {
   'mapping': <Globe size={12} />,
   'mapping-entry': <ArrowDownToLine size={12} />,
   'mapping-exit': <ArrowUpFromLine size={12} />,
+  'fetch-terminal': <CircleStop size={12} />,
 };
 
 export const NODE_COLORS: Record<NodeType, string> = {
@@ -35,6 +36,7 @@ export const NODE_COLORS: Record<NodeType, string> = {
   'mapping': 'bg-app-main/95 border-yellow-500/40',
   'mapping-entry': 'bg-app-main/95 border-yellow-500/40',
   'mapping-exit': 'bg-app-main/95 border-yellow-500/40',
+  'fetch-terminal': 'bg-app-main/95 border-teal-500/40',
 };
 
 export const NODE_HEADER_COLORS: Record<NodeType, string> = {
@@ -48,6 +50,7 @@ export const NODE_HEADER_COLORS: Record<NodeType, string> = {
   'mapping': 'bg-yellow-500/15',
   'mapping-entry': 'bg-yellow-500/15',
   'mapping-exit': 'bg-yellow-500/15',
+  'fetch-terminal': 'bg-teal-500/15',
 };
 
 export const NODE_WIDTH = 180;

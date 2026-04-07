@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { ChevronRight, ChevronDown, Send, Code, Braces, Timer, Repeat, GitMerge, GitBranch, Globe, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
+import { ChevronRight, ChevronDown, Send, Code, Braces, Timer, Repeat, GitMerge, GitBranch, Globe, ArrowDownToLine, ArrowUpFromLine, CircleStop } from 'lucide-react';
 import { MonacoEditorField } from '@/components/Editor/MonacoEditorField';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import type { ExecutionLogEntry, StitchNodeType } from '@/types/stitch';
@@ -15,6 +15,7 @@ const NODE_ICONS: Record<StitchNodeType, React.ReactNode> = {
   'mapping': <Globe size={11} />,
   'mapping-entry': <ArrowDownToLine size={11} />,
   'mapping-exit': <ArrowUpFromLine size={11} />,
+  'fetch-terminal': <CircleStop size={11} />,
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -24,6 +25,7 @@ const STATUS_COLORS: Record<string, string> = {
   sleeping: 'text-purple-400',
   cancelled: 'text-yellow-400',
   skipped: 'text-gray-500',
+  replayed: 'text-blue-300',
 };
 
 interface StitchDebugLogEntryProps {
@@ -49,10 +51,11 @@ export function StitchDebugLogEntry({ entry, isError }: StitchDebugLogEntryProps
 
   const isLoopChild = entry.loopNodeId !== undefined;
   const isSkipped = entry.status === 'skipped';
+  const isReplayed = entry.status === 'replayed';
 
   return (
     <div
-      className={`border-b border-app-subtle py-1.5 ${isError ? 'bg-red-500/10' : ''} ${isSkipped ? 'opacity-40' : ''} ${isLoopChild ? 'pl-7 pr-3 border-l-2 border-l-cyan-500/30' : 'px-3'}`}
+      className={`border-b border-app-subtle py-1.5 ${isError ? 'bg-red-500/10' : ''} ${isReplayed ? 'bg-blue-500/5' : ''} ${isSkipped ? 'opacity-40' : ''} ${isLoopChild ? 'pl-7 pr-3 border-l-2 border-l-cyan-500/30' : 'px-3'}`}
       data-testid={`debug-log-entry-${entry.nodeId}`}
     >
       <div className="flex items-center gap-2">

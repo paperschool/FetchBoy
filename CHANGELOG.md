@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.19.3] - 2026-04-07
+
+- feat: Stitch sidebar folders with drag-and-drop reordering — chains can be organized into collapsible folders
+- feat: Pre-request chain execution mode — run a stitch chain before sending a request, alongside existing JS script mode
+- feat: Node replay with custom input — re-execute individual nodes with modified input from a modal editor
+- feat: Smart auto-layout staircase stagger — narrow single-column Sugiyama layouts now get horizontal offsets to reduce visual clutter
+- feat: Fetch-terminal node type and batch container child movement for smoother drag UX
+
 ## [0.19.2] - 2026-04-03
 
 - feat: Pre-request script debug view moved into Scripts tab — shows inline below editor

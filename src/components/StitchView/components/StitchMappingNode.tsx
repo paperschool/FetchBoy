@@ -3,10 +3,10 @@ import { Globe, Eye } from 'lucide-react';
 import type { StitchNode as StitchNodeType, StitchConnection, ExecutionNodeStatus, MappingNodeConfig } from '@/types/stitch';
 import { useStitchStore } from '@/stores/stitchStore';
 
-const MAPPING_PADDING = 20;
+const MAPPING_PADDING = 40;
 const MAPPING_HEADER_HEIGHT = 32;
-const MAPPING_MIN_WIDTH = 420;
-const MAPPING_MIN_HEIGHT = 160;
+const MAPPING_BASE_MIN_WIDTH = 420;
+const MAPPING_BASE_MIN_HEIGHT = 160;
 
 interface StitchMappingNodeProps {
   node: StitchNodeType;
@@ -45,10 +45,18 @@ export const StitchMappingNode = React.memo(function StitchMappingNode({
   const config = node.config as unknown as MappingNodeConfig;
   const hasOutput = useStitchStore((s) => node.id in s.executionNodeOutputs);
 
+  // Measure canvas to fill the visible viewport
+  const canvasMinSize = useMemo(() => {
+    const el = document.querySelector('[data-testid="stitch-canvas"]');
+    if (!el) return { w: MAPPING_BASE_MIN_WIDTH, h: MAPPING_BASE_MIN_HEIGHT };
+    const rect = (el as HTMLElement).getBoundingClientRect();
+    // Use canvas size (unscaled) as the minimum — generously padded
+    return { w: Math.max(MAPPING_BASE_MIN_WIDTH, rect.width - 40), h: Math.max(MAPPING_BASE_MIN_HEIGHT, rect.height - 80) };
+  // Re-measure on child changes (proxy for layout updates)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [childNodes]);
+
   const bounds = useMemo(() => {
-    if (childNodes.length === 0) {
-      return { width: MAPPING_MIN_WIDTH, height: MAPPING_MIN_HEIGHT };
-    }
     let maxRight = 0;
     let maxBottom = 0;
     for (const child of childNodes) {
@@ -58,10 +66,10 @@ export const StitchMappingNode = React.memo(function StitchMappingNode({
       maxBottom = Math.max(maxBottom, relY + 100 + MAPPING_PADDING);
     }
     return {
-      width: Math.max(MAPPING_MIN_WIDTH, maxRight + MAPPING_PADDING),
-      height: Math.max(MAPPING_MIN_HEIGHT, maxBottom + MAPPING_PADDING - MAPPING_HEADER_HEIGHT),
+      width: Math.max(canvasMinSize.w, maxRight + MAPPING_PADDING),
+      height: Math.max(canvasMinSize.h, maxBottom + MAPPING_PADDING - MAPPING_HEADER_HEIGHT),
     };
-  }, [childNodes, node.positionX, node.positionY]);
+  }, [childNodes, node.positionX, node.positionY, canvasMinSize]);
 
   const handlePointerDown = useCallback((e: PointerEvent<HTMLDivElement>): void => {
     if (e.button !== 0) return;

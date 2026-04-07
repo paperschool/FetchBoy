@@ -130,6 +130,9 @@ export async function executeChain(
           case 'mapping-exit':
             output = executeMappingExitNode(node, input);
             break;
+          case 'fetch-terminal':
+            output = { complete: true, ...(input as object) };
+            break;
           default:
             throw new Error(`Unknown node type: ${node.type}`);
         }

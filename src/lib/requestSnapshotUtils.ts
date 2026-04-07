@@ -53,5 +53,7 @@ export function buildSnapshotFromSaved(request: Request): RequestSnapshot {
         preRequestScript: request.pre_request_script ?? '',
         preRequestScriptEnabled: request.pre_request_script_enabled ?? true,
         scriptKeepOpen: false,
+        preRequestChainId: null,
+        preRequestMode: 'none',
     };
 }

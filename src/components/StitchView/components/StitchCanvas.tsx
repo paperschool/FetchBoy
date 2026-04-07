@@ -1,19 +1,18 @@
 import { useCallback, useState, useRef, useEffect } from 'react';
-import { ZoomIn, ZoomOut, Maximize, Play, Square, ScrollText, FileOutput, Send, Code, Braces, Timer, Repeat, GitMerge, GitBranch } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize, Play, Square, ScrollText, FileOutput, Send, Code, Braces, Timer, Repeat, GitMerge, GitBranch, LayoutGrid } from 'lucide-react';
 import { useStitchStore } from '@/stores/stitchStore';
 import { useCanvasTransform } from './StitchCanvas.hooks';
 import { StitchNode } from './StitchNode';
 import { StitchLoopNode, LOOP_MAX_CHILDREN } from './StitchLoopNode';
-import { StitchMappingNode } from './StitchMappingNode';
 import { AddNodeMenu } from './AddNodeMenu';
 import { ConnectionLayer } from './ConnectionLayer';
 import { StitchConnectionDragProvider, useConnectionDrag } from './StitchConnectionDragContext';
+import { computeSmartLayout } from '../utils/smartLayout';
 import { validateConnection } from '../utils/connectionValidator';
 import { computeLoopChildPositions } from '../utils/loopLayout';
 import { getDefaultConfig, generateNodeLabel } from '../utils/nodeFactory';
 import type { StitchNodeType } from '@/types/stitch';
 import { DEFAULT_MAPPING_ENTRY_CONFIG, DEFAULT_MAPPING_EXIT_CONFIG } from '@/types/stitch';
-import { computeMappingChildPositions } from '../utils/mappingLayout';
 
 export function StitchCanvas(): React.ReactElement {
   return (
@@ -50,6 +49,47 @@ function StitchCanvasInner(): React.ReactElement {
 
   const { transform, canvasRef, onPointerDown, onPointerMove, onPointerUp, zoomIn, zoomOut, zoomReset, frameAll } =
     useCanvasTransform();
+
+  const [isAnimatingLayout, setIsAnimatingLayout] = useState(false);
+
+  const handleAutoLayout = useCallback(async (): Promise<void> => {
+    if (nodes.length === 0) return;
+    const positions = computeSmartLayout(nodes, connections);
+    setIsAnimatingLayout(true);
+    // Apply positions — the CSS transition on nodes will animate
+    const promises: Promise<void>[] = [];
+    for (const [nodeId, pos] of positions) {
+      promises.push(updateNode(nodeId, { positionX: pos.x, positionY: pos.y }));
+    }
+    await Promise.all(promises);
+    // Wait for animation, then rebalance containers and frame
+    setTimeout(() => {
+      const fresh = useStitchStore.getState().nodes;
+      frameAll(fresh);
+      setIsAnimatingLayout(false);
+    }, 320);
+  }, [nodes, connections, updateNode, frameAll]);
+
+  // Auto-rebalance containers and frame nodes when switching chains
+  const prevChainIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (activeChainId && activeChainId !== prevChainIdRef.current && nodes.length > 0) {
+      for (const n of nodes) {
+        if (n.type === 'loop') rebalanceLoop(n.id);
+      }
+      // Use setTimeout to ensure the canvas is fully mounted and laid out
+      // (first load: canvas transitions from empty state → mounted)
+      const delay = prevChainIdRef.current === null ? 100 : 0;
+      setTimeout(() => {
+        requestAnimationFrame(() => {
+          const fresh = useStitchStore.getState().nodes;
+          frameAll(fresh);
+        });
+      }, delay);
+    }
+    prevChainIdRef.current = activeChainId;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeChainId]);
 
   const handlePlay = useCallback((): void => {
     // Deselect node so the debug log panel is visible
@@ -141,41 +181,22 @@ function StitchCanvasInner(): React.ReactElement {
     [updateNode],
   );
 
-  const rebalanceMapping = useCallback(
-    (mappingNodeId: string): void => {
-      const freshNodes = useStitchStore.getState().nodes;
-      const freshConns = useStitchStore.getState().connections;
-      const mappingNode = freshNodes.find((n) => n.id === mappingNodeId);
-      if (!mappingNode) return;
-      const children = freshNodes.filter((n) => n.parentNodeId === mappingNodeId);
-      const positions = computeMappingChildPositions(mappingNode, children, freshConns);
-      for (const [childId, pos] of positions) {
-        updateNode(childId, { positionX: pos.x, positionY: pos.y }).catch(() => {});
-      }
-    },
-    [updateNode],
-  );
+  const batchMoveContainerChildren = useStitchStore((s) => s.batchMoveContainerChildren);
 
   const handleUpdatePosition = useCallback(
     (id: string, x: number, y: number): void => {
-      // Read fresh state so children move correctly on every tick
       const freshNodes = useStitchStore.getState().nodes;
       const movedNode = freshNodes.find((n) => n.id === id);
 
-      if (movedNode?.type === 'loop' || movedNode?.type === 'mapping') {
-        const dx = x - movedNode.positionX;
-        const dy = y - movedNode.positionY;
-        const children = freshNodes.filter((n) => n.parentNodeId === id);
-        for (const child of children) {
-          updateNode(child.id, { positionX: child.positionX + dx, positionY: child.positionY + dy }).catch(() => {});
-        }
-        // No rebalance here — deferred to handleContainerDragEnd so children
-        // don't wiggle from layout corrections firing mid-drag.
+      if (movedNode?.type === 'loop') {
+        // Single atomic mutation: parent + all children in one render
+        batchMoveContainerChildren(id, x, y);
+        return;
       }
 
       updateNode(id, { positionX: x, positionY: y }).catch(() => {});
     },
-    [updateNode],
+    [updateNode, batchMoveContainerChildren],
   );
 
   // Rebalance children only after a container (loop/mapping) stops being dragged
@@ -184,19 +205,18 @@ function StitchCanvasInner(): React.ReactElement {
       const freshNodes = useStitchStore.getState().nodes;
       const container = freshNodes.find((n) => n.id === id);
       if (!container) return;
-      if (container.type === 'mapping') rebalanceMapping(id);
-      else if (container.type === 'loop') rebalanceLoop(id);
+      if (container.type === 'loop') rebalanceLoop(id);
     },
-    [rebalanceLoop, rebalanceMapping],
+    [rebalanceLoop],
   );
 
   // Check loop/mapping containment after a node drag ends
   const handleNodeDragEnd = useCallback(
     (id: string): void => {
       const movedNode = nodes.find((n) => n.id === id);
-      if (!movedNode || movedNode.type === 'loop' || movedNode.type === 'mapping') return;
+      if (!movedNode || movedNode.type === 'loop') return;
 
-      const containerNodes = nodes.filter((n) => (n.type === 'loop' || n.type === 'mapping') && n.id !== id);
+      const containerNodes = nodes.filter((n) => n.type === 'loop' && n.id !== id);
       let newParent: string | null = null;
       for (const container of containerNodes) {
         // Loop has child limit, mapping doesn't
@@ -219,18 +239,12 @@ function StitchCanvasInner(): React.ReactElement {
 
       if (newParent !== movedNode.parentNodeId) {
         updateNode(id, { parentNodeId: newParent }).then(() => {
-          const parentNode = nodes.find((n) => n.id === newParent);
-          const rebalanceFn = parentNode?.type === 'mapping' ? rebalanceMapping : rebalanceLoop;
-          if (newParent) rebalanceFn(newParent);
-          if (movedNode.parentNodeId) {
-            const oldParent = nodes.find((n) => n.id === movedNode.parentNodeId);
-            const oldRebalance = oldParent?.type === 'mapping' ? rebalanceMapping : rebalanceLoop;
-            oldRebalance(movedNode.parentNodeId);
-          }
+          if (newParent) rebalanceLoop(newParent);
+          if (movedNode.parentNodeId) rebalanceLoop(movedNode.parentNodeId);
         }).catch(() => {});
       }
     },
-    [updateNode, nodes, rebalanceLoop, rebalanceMapping],
+    [updateNode, nodes, rebalanceLoop],
   );
 
   const handleUpdateLabel = useCallback(
@@ -247,12 +261,13 @@ function StitchCanvasInner(): React.ReactElement {
         const cfg = nodeToDelete.config as { isLoopEntry?: boolean };
         if (cfg.isLoopEntry) return; // Can't delete loop entry snippet
       }
-      // Can't delete mapping entry/exit nodes individually
+      // Can't delete mapping entry/exit or fetch-terminal nodes
       if (nodeToDelete?.type === 'mapping-entry' || nodeToDelete?.type === 'mapping-exit') return;
-      // Can't delete the mapping container in mapper-bound chains
-      if (isMapperChain && nodeToDelete?.type === 'mapping') return;
-      // Delete children first if deleting a container node (loop or mapping)
-      if (nodeToDelete?.type === 'loop' || nodeToDelete?.type === 'mapping') {
+      if (nodeToDelete?.type === 'fetch-terminal') return;
+      // Can't delete mapping container nodes (hidden, engine-only)
+      if (nodeToDelete?.type === 'mapping') return;
+      // Delete children first if deleting a loop container node
+      if (nodeToDelete?.type === 'loop') {
         const children = nodes.filter((n) => n.parentNodeId === id);
         for (const child of children) {
           removeNode(child.id).catch(() => {});
@@ -260,32 +275,32 @@ function StitchCanvasInner(): React.ReactElement {
       }
       removeNode(id).catch(() => {});
     },
-    [removeNode, nodes, isMapperChain],
+    [removeNode, nodes],
   );
 
   const createMappingChildren = useCallback(
-    (mappingNodeId: string): void => {
+    (_mappingNodeId: string): void => {
       if (!activeChainId) return;
+      // Entry/exit are top-level nodes (mapping container is engine-only)
       const entryPromise = addNode({
         chainId: activeChainId,
         type: 'mapping-entry',
-        positionX: 0,
-        positionY: 0,
+        positionX: 200,
+        positionY: 80,
         config: { ...DEFAULT_MAPPING_ENTRY_CONFIG },
         label: 'Entry',
-        parentNodeId: mappingNodeId,
+        parentNodeId: null,
       });
       const exitPromise = addNode({
         chainId: activeChainId,
         type: 'mapping-exit',
-        positionX: 0,
-        positionY: 0,
+        positionX: 200,
+        positionY: 350,
         config: { ...DEFAULT_MAPPING_EXIT_CONFIG },
         label: 'Exit',
-        parentNodeId: mappingNodeId,
+        parentNodeId: null,
       });
       Promise.all([entryPromise, exitPromise]).then(async ([entry, exit]) => {
-        // Create one connection per output key from entry → exit (keyed input ports)
         for (const key of ['status', 'headers', 'body', 'cookies']) {
           await addConnection({
             chainId: activeChainId,
@@ -295,10 +310,9 @@ function StitchCanvasInner(): React.ReactElement {
             targetSlot: key,
           }).catch(() => {});
         }
-        rebalanceMapping(mappingNodeId);
       }).catch(() => {});
     },
-    [activeChainId, addNode, addConnection, rebalanceMapping],
+    [activeChainId, addNode, addConnection],
   );
 
   const createLoopEntrySnippet = useCallback(
@@ -322,7 +336,7 @@ function StitchCanvasInner(): React.ReactElement {
 
   const handleAddNode = useCallback(
     (type: StitchNodeType): void => {
-      if (!activeChainId || isMapperChain) return;
+      if (!activeChainId) return;
       const label = generateNodeLabel(type, nodes);
       const centerX = (-transform.panX + 300) / transform.zoom;
       const centerY = (-transform.panY + 200) / transform.zoom;
@@ -340,7 +354,7 @@ function StitchCanvasInner(): React.ReactElement {
         if (type === 'mapping') createMappingChildren(newNode.id);
       }).catch((err) => { console.error('[stitch] addNode failed:', err); });
     },
-    [activeChainId, isMapperChain, nodes, addNode, transform, createLoopEntrySnippet, createMappingChildren],
+    [activeChainId, nodes, addNode, transform, createLoopEntrySnippet, createMappingChildren],
   );
 
   // ─── Canvas context menu ───────────────────────────────────────────
@@ -361,9 +375,6 @@ function StitchCanvasInner(): React.ReactElement {
 
     const sourceNode = nodes.find((n) => n.id === dropped.sourceNodeId);
 
-    // Mapper chains: only allow drag-drop context menu for nodes inside the container
-    if (isMapperChain && !sourceNode?.parentNodeId) return;
-
     // Convert cursor canvas coords to screen coords for the menu position
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -378,20 +389,18 @@ function StitchCanvasInner(): React.ReactElement {
       canvasY: dropped.cursorY,
       pendingSource: { nodeId: dropped.sourceNodeId, sourceKey, parentNodeId: sourceNode?.parentNodeId ?? null },
     });
-  }, [drag, consumeDroppedDrag, transform, canvasRef, isMapperChain, nodes]);
+  }, [drag, consumeDroppedDrag, transform, canvasRef, nodes]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent): void => {
     // Only show on empty canvas, not on nodes
     if ((e.target as HTMLElement).closest('[data-stitch-node]')) return;
     e.preventDefault();
-    // Mapper chains don't allow adding nodes outside the container
-    if (isMapperChain) return;
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
     const canvasX = (e.clientX - rect.left - transform.panX) / transform.zoom;
     const canvasY = (e.clientY - rect.top - transform.panY) / transform.zoom;
     setContextMenu({ x: e.clientX, y: e.clientY, canvasX, canvasY });
-  }, [isMapperChain, transform, canvasRef]);
+  }, [transform, canvasRef]);
 
   const handleContextAdd = useCallback((type: StitchNodeType): void => {
     if (!activeChainId || !contextMenu) return;
@@ -440,7 +449,7 @@ function StitchCanvasInner(): React.ReactElement {
         className="flex shrink-0 items-center gap-2 border-b border-app-subtle bg-app-sidebar px-3 py-1.5"
         data-stitch-toolbar
       >
-        <AddNodeMenu onAddNode={handleAddNode} disabled={isMapperChain} />
+        <AddNodeMenu onAddNode={handleAddNode} />
         <div className="mx-1 h-4 w-px bg-app-subtle" />
         {isRunning ? (
           <button
@@ -499,6 +508,14 @@ function StitchCanvasInner(): React.ReactElement {
           <ZoomIn size={14} />
         </button>
         <button
+          className={`rounded p-1 ${isAnimatingLayout || isRunning ? 'text-app-muted/30 cursor-default' : 'text-app-muted hover:bg-app-hover hover:text-app-secondary'}`}
+          onClick={() => { if (!isAnimatingLayout && !isRunning) handleAutoLayout().catch(() => {}); }}
+          title="Auto layout"
+          disabled={isAnimatingLayout || isRunning}
+        >
+          <LayoutGrid size={14} />
+        </button>
+        <button
           className="rounded p-1 text-app-muted hover:bg-app-hover hover:text-app-secondary"
           onClick={() => nodes.length > 0 ? frameAll(nodes) : zoomReset()}
           title="Frame all nodes"
@@ -512,9 +529,11 @@ function StitchCanvasInner(): React.ReactElement {
         ref={canvasRef}
         tabIndex={0}
         onKeyDown={handleKeyDown}
-        className="relative flex-1 cursor-grab overflow-hidden bg-app-main outline-none active:cursor-grabbing"
+        className={`relative flex-1 cursor-grab overflow-hidden outline-none active:cursor-grabbing ${isMapperChain ? 'bg-yellow-500/[0.03]' : 'bg-app-main'}`}
         style={{
-          backgroundImage: 'radial-gradient(circle, var(--app-border-subtle) 1px, transparent 1px)',
+          backgroundImage: isMapperChain
+            ? 'radial-gradient(circle, rgba(234, 179, 8, 0.15) 1px, transparent 1px)'
+            : 'radial-gradient(circle, var(--app-border-subtle) 1px, transparent 1px)',
           backgroundSize: '20px 20px',
         }}
         data-testid="stitch-canvas"
@@ -525,6 +544,7 @@ function StitchCanvasInner(): React.ReactElement {
         onContextMenu={handleContextMenu}
       >
         <div
+          className={isAnimatingLayout ? 'stitch-layout-animating' : undefined}
           style={{
             transform: `translate(${transform.panX}px, ${transform.panY}px) scale(${transform.zoom})`,
             transformOrigin: '0 0',
@@ -561,35 +581,7 @@ function StitchCanvasInner(): React.ReactElement {
               />
             );
           })}
-          {/* Render mapping container nodes */}
-          {nodes.filter((n) => n.type === 'mapping').map((node) => {
-            const nodeExecStatus = executionError?.nodeId === node.id
-              ? 'error' as const
-              : executionCurrentNodeId === node.id
-                ? 'running' as const
-                : node.id in executionNodeOutputs
-                  ? 'success' as const
-                  : null;
-            const children = nodes.filter((n) => n.parentNodeId === node.id);
-            return (
-              <StitchMappingNode
-                key={node.id}
-                node={node}
-                childNodes={children}
-                selected={node.id === selectedNodeId}
-                zoom={transform.zoom}
-                onSelect={selectNode}
-                onUpdatePosition={handleUpdatePosition}
-                onUpdateLabel={handleUpdateLabel}
-                onDelete={handleDelete}
-                onConnectionDrop={handleConnectionDrop}
-                onDragEnd={handleContainerDragEnd}
-                executionStatus={nodeExecStatus}
-                connections={connections}
-              />
-            );
-          })}
-          {/* Render regular nodes (non-container) */}
+          {/* Render regular nodes (non-loop, non-mapping-container) */}
           {nodes.filter((n) => n.type !== 'loop' && n.type !== 'mapping').map((node) => {
             const nodeExecStatus = executionError?.nodeId === node.id
               ? 'error' as const

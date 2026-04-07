@@ -1,5 +1,13 @@
 # Long Changelog
 
+## [0.19.3] - 2026-04-07
+
+- feat: stitch sidebar folders — new StitchFolder entity with DB migration (014), StitchFolderRow component with collapsible tree, DnD reordering via @dnd-kit (PointerSensor with 8px activation), useStitchSidebarState/useStitchSidebarCrud/useStitchSidebarDragDrop hooks extracted from monolithic StitchSidebar; chains gain folderId/sortOrder/requestId fields
+- feat: pre-request chain execution — PreRequestModeChooser component with none/javascript/chain radio modes; useSendRequest dynamically imports stitch engine and runs the selected chain with 30s timeout before the main fetch, passing environment variables and surfacing chain errors as request failures
+- feat: node replay with custom input — ReplayInputModal with JSON editor lets users re-execute a single node with modified input; new `replayNode`/`replayNodeWithInput` actions in stitchStore; `replayed` status added to ExecutionLogEntry; StitchNode gains replay button in toolbar
+- feat: smart auto-layout staircase stagger — post-processing pass in computeComponentPositions applies triangular-wave horizontal offsets (STAGGER_MAX_X=200, STAGGER_PERIOD=8) to single-node layers when narrowRatio ≥ 0.75, reducing visual clutter from long skip-edges in linear chains
+- feat: fetch-terminal node type for request-bound chains; batchMoveContainerChildren action for smoother container drag; connection line improvements and StitchPreviewPanel/StitchDebugLogEntry refinements
+
 ## [0.19.2] - 2026-04-03
 
 - feat: moved PreRequestDebugLog from standalone panel in MainPanel into ScriptsTab — debug output now renders inline below the Monaco editor when script status is non-idle, with scriptDebugState and onDebugClose props threaded through RequestDetailsAccordion

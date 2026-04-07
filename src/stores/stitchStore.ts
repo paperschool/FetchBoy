@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import type { StitchChain, StitchNode, StitchConnection, StitchExecutionState, ExecutionLogEntry } from '@/types/stitch';
+import type { StitchChain, StitchFolder, StitchNode, StitchConnection, StitchExecutionState, ExecutionLogEntry } from '@/types/stitch';
 import * as stitchDb from '@/lib/stitch';
+import * as stitchFolderDb from '@/lib/stitchFolders';
 import { executeChain } from '@/lib/stitchEngine';
 import { useEnvironmentStore } from '@/stores/environmentStore';
 
@@ -12,6 +13,7 @@ const cancelledRef = { current: false };
 
 interface StitchState {
   chains: StitchChain[];
+  folders: StitchFolder[];
   activeChainId: string | null;
   nodes: StitchNode[];
   connections: StitchConnection[];
@@ -31,14 +33,23 @@ interface StitchState {
   // Chain actions
   loadChains: () => Promise<void>;
   loadChain: (chainId: string) => Promise<void>;
-  createChain: (name: string, mappingId?: string | null) => Promise<StitchChain>;
+  createChain: (name: string, mappingId?: string | null, folderId?: string | null, requestId?: string | null) => Promise<StitchChain>;
   renameChain: (id: string, name: string) => Promise<void>;
   deleteChain: (id: string) => Promise<void>;
   duplicateChain: (id: string) => Promise<StitchChain>;
 
+  // Folder actions
+  addFolder: (name: string, parentId?: string | null) => Promise<StitchFolder>;
+  renameFolder: (id: string, name: string) => Promise<void>;
+  deleteFolder: (id: string) => Promise<void>;
+  reorderFolders: (ids: string[]) => void;
+  updateChainFolder: (chainId: string, folderId: string | null) => Promise<void>;
+  reorderChains: (folderId: string | null, ids: string[]) => void;
+
   // Node actions
   addNode: (node: Omit<StitchNode, 'id' | 'createdAt' | 'updatedAt'>) => Promise<StitchNode>;
   updateNode: (id: string, changes: { positionX?: number; positionY?: number; config?: Record<string, unknown>; label?: string | null; parentNodeId?: string | null }) => Promise<void>;
+  batchMoveContainerChildren: (containerId: string, x: number, y: number) => void;
   removeNode: (id: string) => Promise<void>;
   selectNode: (id: string | null) => void;
 
@@ -55,6 +66,10 @@ interface StitchState {
   setExecutionState: (state: StitchExecutionState) => void;
   startExecution: () => Promise<void>;
   cancelExecution: () => void;
+
+  // Replay
+  replayNode: (nodeId: string) => Promise<void>;
+  replayNodeWithInput: (nodeId: string, customInput: unknown) => Promise<void>;
 }
 
 // ─── Store ──────────────────────────────────────────────────────────────────
@@ -62,6 +77,7 @@ interface StitchState {
 export const useStitchStore = create<StitchState>()(
   immer((set) => ({
     chains: [],
+    folders: [],
     activeChainId: null,
     nodes: [],
     connections: [],
@@ -79,9 +95,13 @@ export const useStitchStore = create<StitchState>()(
     previewNodeId: null,
 
     loadChains: async () => {
-      const chains = await stitchDb.loadChains();
+      const [chains, folders] = await Promise.all([
+        stitchDb.loadChains(),
+        stitchFolderDb.loadStitchFolders(),
+      ]);
       set((state) => {
         state.chains = chains;
+        state.folders = folders;
       });
     },
 
@@ -98,8 +118,8 @@ export const useStitchStore = create<StitchState>()(
       });
     },
 
-    createChain: async (name: string, mappingId?: string | null) => {
-      const chain = await stitchDb.insertChain(name, mappingId);
+    createChain: async (name: string, mappingId?: string | null, folderId?: string | null, requestId?: string | null) => {
+      const chain = await stitchDb.insertChain(name, mappingId, folderId, requestId);
       set((state) => {
         state.chains.push(chain);
       });
@@ -118,17 +138,21 @@ export const useStitchStore = create<StitchState>()(
     },
 
     deleteChain: async (id: string) => {
-      // If chain is bound to a mapper, unhook it
       const chain = useStitchStore.getState().chains.find((c) => c.id === id);
+      // If chain is bound to a mapper, unhook it
       if (chain?.mappingId) {
         const { updateMapping } = await import('@/lib/mappings');
         await updateMapping(chain.mappingId, { use_chain: false, chain_id: null }).catch(() => {});
-        // Patch in-memory mapping state
         const { useMappingsStore } = await import('@/stores/mappingsStore');
         useMappingsStore.setState((state) => {
           const m = state.mappings.find((x) => x.id === chain.mappingId);
           if (m) { m.use_chain = false; m.chain_id = null; }
         });
+      }
+      // If chain is bound to a request (pre-request chain), unset pre_request_chain_id
+      if (chain?.requestId) {
+        const { updateSavedRequest } = await import('@/lib/collections');
+        await updateSavedRequest(chain.requestId, { pre_request_chain_id: null } as never).catch(() => {});
       }
       await stitchDb.deleteChain(id);
       set((state) => {
@@ -164,6 +188,76 @@ export const useStitchStore = create<StitchState>()(
       return chain;
     },
 
+    // ─── Folder Actions ──────────────────────────────────────────────────────
+
+    addFolder: async (name: string, parentId?: string | null) => {
+      const folder = await stitchFolderDb.createStitchFolder(name, parentId);
+      set((state) => {
+        state.folders.push(folder);
+      });
+      return folder;
+    },
+
+    renameFolder: async (id: string, name: string) => {
+      await stitchFolderDb.renameStitchFolder(id, name);
+      set((state) => {
+        const folder = state.folders.find((f) => f.id === id);
+        if (folder) {
+          folder.name = name;
+          folder.updatedAt = new Date().toISOString();
+        }
+      });
+    },
+
+    deleteFolder: async (id: string) => {
+      // Move children chains to root before deleting folder
+      const chainsInFolder = useStitchStore.getState().chains.filter((c) => c.folderId === id);
+      for (const chain of chainsInFolder) {
+        await stitchFolderDb.updateChainFolder(chain.id, null);
+      }
+      // Delete child subfolders
+      const childFolders = useStitchStore.getState().folders.filter((f) => f.parentId === id);
+      for (const child of childFolders) {
+        await stitchFolderDb.deleteStitchFolder(child.id);
+      }
+      await stitchFolderDb.deleteStitchFolder(id);
+      set((state) => {
+        state.folders = state.folders.filter((f) => f.id !== id && f.parentId !== id);
+        for (const chain of state.chains) {
+          if (chain.folderId === id) chain.folderId = null;
+        }
+      });
+    },
+
+    reorderFolders: (ids: string[]) => {
+      set((state) => {
+        for (let i = 0; i < ids.length; i++) {
+          const folder = state.folders.find((f) => f.id === ids[i]);
+          if (folder) folder.sortOrder = i;
+        }
+      });
+    },
+
+    updateChainFolder: async (chainId: string, folderId: string | null) => {
+      await stitchFolderDb.updateChainFolder(chainId, folderId);
+      set((state) => {
+        const chain = state.chains.find((c) => c.id === chainId);
+        if (chain) {
+          chain.folderId = folderId;
+          chain.updatedAt = new Date().toISOString();
+        }
+      });
+    },
+
+    reorderChains: (_folderId: string | null, ids: string[]) => {
+      set((state) => {
+        for (let i = 0; i < ids.length; i++) {
+          const chain = state.chains.find((c) => c.id === ids[i]);
+          if (chain) chain.sortOrder = i;
+        }
+      });
+    },
+
     addNode: async (node) => {
       const created = await stitchDb.insertNode(node);
       set((state) => {
@@ -183,6 +277,23 @@ export const useStitchStore = create<StitchState>()(
           if (changes.label !== undefined) node.label = changes.label;
           if (changes.parentNodeId !== undefined) node.parentNodeId = changes.parentNodeId;
           node.updatedAt = new Date().toISOString();
+        }
+      });
+    },
+
+    batchMoveContainerChildren: (containerId: string, x: number, y: number) => {
+      set((state) => {
+        const parent = state.nodes.find((n) => n.id === containerId);
+        if (!parent) return;
+        const dx = x - parent.positionX;
+        const dy = y - parent.positionY;
+        parent.positionX = x;
+        parent.positionY = y;
+        for (const child of state.nodes) {
+          if (child.parentNodeId === containerId) {
+            child.positionX += dx;
+            child.positionY += dy;
+          }
         }
       });
     },
@@ -393,6 +504,65 @@ export const useStitchStore = create<StitchState>()(
         state.executionState = 'idle';
         state.sleepCountdown = null;
       });
+    },
+
+    replayNode: async (nodeId: string) => {
+      const { nodes, executionLogs } = useStitchStore.getState();
+      const node = nodes.find((n) => n.id === nodeId);
+      if (!node) return;
+      const completedEntry = [...executionLogs].reverse().find(
+        (e) => e.nodeId === nodeId && (e.status === 'completed' || e.status === 'replayed'),
+      );
+      const originalInput = completedEntry?.input ?? {};
+      await useStitchStore.getState().replayNodeWithInput(nodeId, originalInput);
+    },
+
+    replayNodeWithInput: async (nodeId: string, customInput: unknown) => {
+      const { nodes, connections, executionStartTime } = useStitchStore.getState();
+      const node = nodes.find((n) => n.id === nodeId);
+      if (!node) return;
+
+      const envState = useEnvironmentStore.getState();
+      const activeEnv = envState.environments.find((e) => e.id === envState.activeEnvironmentId);
+      const envVars: Record<string, string> = {};
+      if (activeEnv?.variables) {
+        for (const v of activeEnv.variables) {
+          if (v.enabled && v.key) envVars[v.key] = v.value;
+        }
+      }
+
+      try {
+        const { executeSingleNode } = await import('@/lib/stitchEngine/singleNodeExecutor');
+        const result = await executeSingleNode(node, customInput, envVars, nodes, connections);
+        set((state) => {
+          state.executionNodeOutputs[nodeId] = result.output;
+          state.executionLogs.push({
+            nodeId,
+            nodeLabel: node.label ?? node.type,
+            nodeType: node.type,
+            status: 'replayed',
+            timestamp: Date.now() - (executionStartTime || Date.now()),
+            durationMs: result.durationMs,
+            input: customInput as Record<string, unknown>,
+            output: result.output,
+            consoleLogs: result.consoleLogs,
+            conditionResult: result.conditionResult,
+          });
+          state.previewNodeId = nodeId;
+          state.bottomPanel = 'preview';
+        });
+      } catch (err) {
+        set((state) => {
+          state.executionLogs.push({
+            nodeId,
+            nodeLabel: node.label ?? node.type,
+            nodeType: node.type,
+            status: 'error',
+            timestamp: Date.now() - (executionStartTime || Date.now()),
+            error: err instanceof Error ? err.message : String(err),
+          });
+        });
+      }
     },
   })),
 );

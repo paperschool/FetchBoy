@@ -117,8 +117,10 @@ export function useCanvasTransform(): UseCanvasTransformReturn {
   const NODE_H = 90;
   const PADDING = 60;
 
-  const frameAll = useCallback((nodes: Array<{ positionX: number; positionY: number }>): void => {
-    if (nodes.length === 0) {
+  const frameAll = useCallback((nodes: Array<{ positionX: number; positionY: number; type?: string }>): void => {
+    // Exclude hidden engine-only nodes (mapping containers positioned off-screen)
+    const visible = nodes.filter((n) => n.type !== 'mapping' && Math.abs(n.positionX) < 9000 && Math.abs(n.positionY) < 9000);
+    if (visible.length === 0) {
       setTransform({ panX: 0, panY: 0, zoom: 1 });
       return;
     }
@@ -127,7 +129,7 @@ export function useCanvasTransform(): UseCanvasTransformReturn {
     const viewH = rect?.height ?? 600;
 
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (const n of nodes) {
+    for (const n of visible) {
       minX = Math.min(minX, n.positionX);
       minY = Math.min(minY, n.positionY);
       maxX = Math.max(maxX, n.positionX + NODE_W);

@@ -9,6 +9,7 @@ export const MAPPING_EXIT_INPUT_KEYS = ['status', 'headers', 'body', 'cookies'] 
 /** Returns named input port keys for nodes that have them (most nodes just have a single unnamed input slot). */
 export function getNodeInputKeys(node: StitchNode): string[] {
   if (node.type === 'mapping-exit') return [...MAPPING_EXIT_INPUT_KEYS];
+  if (node.type === 'fetch-terminal') return [];
   return [];
 }
 

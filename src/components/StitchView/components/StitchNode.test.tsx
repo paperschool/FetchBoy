@@ -68,10 +68,12 @@ describe('StitchNode', () => {
     expect(nodeEl.className).not.toContain('ring-2');
   });
 
-  it('calls onDelete on right-click', () => {
+  it('calls onDelete via right-click context menu', () => {
     const onDelete = vi.fn();
     renderNode({ onDelete });
     fireEvent.contextMenu(screen.getByTestId('stitch-node-node-1'));
+    // Context menu should appear with Delete option
+    fireEvent.click(screen.getByText('Delete'));
     expect(onDelete).toHaveBeenCalledWith('node-1');
   });
 

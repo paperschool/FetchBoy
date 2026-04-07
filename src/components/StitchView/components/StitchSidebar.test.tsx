@@ -6,10 +6,10 @@ import { useStitchStore } from '@/stores/stitchStore';
 vi.mock('@/lib/stitch', () => ({
   loadChains: vi.fn().mockResolvedValue([]),
   loadChainWithNodes: vi.fn(),
-  insertChain: vi.fn().mockResolvedValue({ id: 'new', name: 'Chain 1', createdAt: 'ts', updatedAt: 'ts' }),
+  insertChain: vi.fn().mockResolvedValue({ id: 'new', name: 'Chain 1', mappingId: null, folderId: null, sortOrder: 0, createdAt: 'ts', updatedAt: 'ts' }),
   updateChain: vi.fn().mockResolvedValue(undefined),
   deleteChain: vi.fn().mockResolvedValue(undefined),
-  duplicateChain: vi.fn().mockResolvedValue({ chain: { id: 'dup', name: 'Copy', createdAt: 'ts', updatedAt: 'ts' }, nodes: [], connections: [] }),
+  duplicateChain: vi.fn().mockResolvedValue({ chain: { id: 'dup', name: 'Copy', mappingId: null, folderId: null, sortOrder: 0, createdAt: 'ts', updatedAt: 'ts' }, nodes: [], connections: [] }),
   insertNode: vi.fn(),
   updateNode: vi.fn(),
   deleteNode: vi.fn(),
@@ -17,16 +17,31 @@ vi.mock('@/lib/stitch', () => ({
   deleteConnection: vi.fn(),
 }));
 
+vi.mock('@/lib/stitchFolders', () => ({
+  loadStitchFolders: vi.fn().mockResolvedValue([]),
+  createStitchFolder: vi.fn().mockResolvedValue({ id: 'f1', parentId: null, name: 'New Folder', sortOrder: 0, createdAt: 'ts', updatedAt: 'ts' }),
+  renameStitchFolder: vi.fn().mockResolvedValue(undefined),
+  deleteStitchFolder: vi.fn().mockResolvedValue(undefined),
+  updateStitchFolderOrder: vi.fn().mockResolvedValue(undefined),
+  updateChainFolder: vi.fn().mockResolvedValue(undefined),
+  updateChainOrder: vi.fn().mockResolvedValue(undefined),
+}));
+
 const defaultProps = {
   collapsed: false,
   onToggleCollapse: vi.fn(),
 };
+
+function makeChain(id: string, name: string, sortOrder = 0, updatedAt = 'ts') {
+  return { id, name, mappingId: null, requestId: null, folderId: null, sortOrder, createdAt: 'ts', updatedAt };
+}
 
 describe('StitchSidebar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useStitchStore.setState({
       chains: [],
+      folders: [],
       activeChainId: null,
       nodes: [],
       connections: [],
@@ -48,10 +63,7 @@ describe('StitchSidebar', () => {
 
   it('renders chain list when chains exist', () => {
     useStitchStore.setState({
-      chains: [
-        { id: 'c1', name: 'Auth Flow', createdAt: '2026-01-01', updatedAt: '2026-01-01' },
-        { id: 'c2', name: 'Pipeline', createdAt: '2026-01-02', updatedAt: '2026-01-02' },
-      ],
+      chains: [makeChain('c1', 'Auth Flow'), makeChain('c2', 'Pipeline', 1)],
     });
     render(<StitchSidebar {...defaultProps} />);
     expect(screen.getByTestId('chain-list')).toBeInTheDocument();
@@ -61,9 +73,7 @@ describe('StitchSidebar', () => {
 
   it('highlights active chain', () => {
     useStitchStore.setState({
-      chains: [
-        { id: 'c1', name: 'Auth Flow', createdAt: 'ts', updatedAt: 'ts' },
-      ],
+      chains: [makeChain('c1', 'Auth Flow')],
       activeChainId: 'c1',
     });
     render(<StitchSidebar {...defaultProps} />);
@@ -73,25 +83,20 @@ describe('StitchSidebar', () => {
 
   it('shows delete confirmation dialog', () => {
     useStitchStore.setState({
-      chains: [{ id: 'c1', name: 'Test Chain', createdAt: 'ts', updatedAt: 'ts' }],
+      chains: [makeChain('c1', 'Test Chain')],
     });
     render(<StitchSidebar {...defaultProps} />);
-
-    // Open context menu
     fireEvent.contextMenu(screen.getByTestId('chain-entry-c1'));
-    // Click delete
     fireEvent.click(screen.getByText('Delete'));
-    // Confirmation dialog appears
     expect(screen.getByTestId('delete-dialog')).toBeInTheDocument();
     expect(screen.getByText(/This cannot be undone/)).toBeInTheDocument();
   });
 
   it('cancel button dismisses delete dialog', () => {
     useStitchStore.setState({
-      chains: [{ id: 'c1', name: 'Test Chain', createdAt: 'ts', updatedAt: 'ts' }],
+      chains: [makeChain('c1', 'Test Chain')],
     });
     render(<StitchSidebar {...defaultProps} />);
-
     fireEvent.contextMenu(screen.getByTestId('chain-entry-c1'));
     fireEvent.click(screen.getByText('Delete'));
     fireEvent.click(screen.getByTestId('delete-cancel'));
@@ -104,16 +109,12 @@ describe('StitchSidebar', () => {
     expect(screen.getByTitle('Expand sidebar')).toBeInTheDocument();
   });
 
-  it('sorts chains by updatedAt descending', () => {
+  it('sorts chains by sortOrder ascending', () => {
     useStitchStore.setState({
-      chains: [
-        { id: 'c1', name: 'Older', createdAt: 'ts', updatedAt: '2026-01-01T00:00:00Z' },
-        { id: 'c2', name: 'Newer', createdAt: 'ts', updatedAt: '2026-03-01T00:00:00Z' },
-      ],
+      chains: [makeChain('c1', 'Second', 1), makeChain('c2', 'First', 0)],
     });
     render(<StitchSidebar {...defaultProps} />);
     const entries = screen.getAllByTestId(/chain-entry-/);
-    // Newer should come first
     expect(entries[0]).toHaveAttribute('data-testid', 'chain-entry-c2');
     expect(entries[1]).toHaveAttribute('data-testid', 'chain-entry-c1');
   });

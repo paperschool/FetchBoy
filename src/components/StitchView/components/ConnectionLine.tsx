@@ -1,6 +1,7 @@
 import React from 'react';
 
 type ConnectionStatus = 'active' | 'preview' | 'broken' | 'selected';
+type ExecutionStatus = 'default' | 'active' | 'fading';
 
 interface ConnectionLineProps {
   fromX: number;
@@ -8,6 +9,7 @@ interface ConnectionLineProps {
   toX: number;
   toY: number;
   status: ConnectionStatus;
+  executionStatus?: ExecutionStatus;
   onClick?: () => void;
   onContextMenu?: (e: React.MouseEvent) => void;
 }
@@ -22,13 +24,7 @@ function getStrokeStyle(status: ConnectionStatus): { stroke: string; strokeDasha
 }
 
 export const ConnectionLine = React.memo(function ConnectionLine({
-  fromX,
-  fromY,
-  toX,
-  toY,
-  status,
-  onClick,
-  onContextMenu,
+  fromX, fromY, toX, toY, status, executionStatus = 'default', onClick, onContextMenu,
 }: ConnectionLineProps): React.ReactElement {
   const dy = Math.abs(toY - fromY);
   const cpOffset = Math.max(30, dy * 0.5);
@@ -36,9 +32,13 @@ export const ConnectionLine = React.memo(function ConnectionLine({
 
   const style = getStrokeStyle(status);
 
+  // Execution state overrides
+  const execClass = executionStatus === 'active' ? 'stitch-connection-active'
+    : executionStatus === 'fading' ? 'stitch-connection-fading' : undefined;
+  const execStroke = executionStatus === 'active' ? 'rgb(74, 222, 128)' : undefined;
+
   return (
     <g data-testid="connection-line">
-      {/* Wide invisible hit area for clicking */}
       {onClick && (
         <path
           d={d}
@@ -50,14 +50,14 @@ export const ConnectionLine = React.memo(function ConnectionLine({
           onContextMenu={onContextMenu}
         />
       )}
-      {/* Visible line */}
       <path
         d={d}
         fill="none"
-        stroke={style.stroke}
-        strokeWidth={status === 'selected' ? 2.5 : 1.5}
-        strokeDasharray={style.strokeDasharray}
+        stroke={execStroke ?? style.stroke}
+        strokeWidth={executionStatus !== 'default' ? 3 : (status === 'selected' ? 2.5 : 1.5)}
+        strokeDasharray={executionStatus !== 'default' ? undefined : style.strokeDasharray}
         opacity={style.opacity}
+        className={execClass}
         style={{ pointerEvents: 'none' }}
       />
     </g>

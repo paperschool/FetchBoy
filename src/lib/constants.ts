@@ -43,7 +43,7 @@ export const SIDEBAR_EXPANDED_WIDTH = '16rem';
 
 export const CANVAS_MIN_ZOOM = 0.25;
 export const CANVAS_MAX_ZOOM = 2.0;
-export const CANVAS_ZOOM_STEP = 0.1;
+export const CANVAS_ZOOM_STEP = 0.05;
 
 // ── SETTINGS DEFAULTS ───────────────────────────────────────────────────────
 

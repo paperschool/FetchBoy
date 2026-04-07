@@ -53,6 +53,8 @@ export function ConnectionLayer(): React.ReactElement {
   const removeConnection = useStitchStore((s) => s.removeConnection);
   const selectedConnectionId = useStitchStore((s) => s.selectedConnectionId);
   const selectConnection = useStitchStore((s) => s.selectConnection);
+  const executionNodeOutputs = useStitchStore((s) => s.executionNodeOutputs);
+  const executionCurrentNodeId = useStitchStore((s) => s.executionCurrentNodeId);
   const { drag } = useConnectionDrag();
 
   // Force recalculation after DOM paints (node heights not available during initial render)
@@ -109,6 +111,15 @@ export function ConnectionLayer(): React.ReactElement {
           ? 'broken' as const
           : 'active' as const;
 
+      // Execution state for marching ants
+      const sourceCompleted = conn.sourceNodeId in executionNodeOutputs;
+      const targetIsRunning = executionCurrentNodeId === conn.targetNodeId;
+      const targetCompleted = conn.targetNodeId in executionNodeOutputs;
+      const execStatus: 'default' | 'active' | 'fading' =
+        sourceCompleted && targetIsRunning ? 'active'
+        : sourceCompleted && targetCompleted ? 'fading'
+        : 'default';
+
       return {
         id: conn.id,
         fromX: from.x,
@@ -116,14 +127,16 @@ export function ConnectionLayer(): React.ReactElement {
         toX: to.x,
         toY: to.y,
         status,
+        executionStatus: execStatus,
         isBroken,
         sourceKey: conn.sourceKey,
       };
     }).filter(Boolean) as Array<{
       id: string; fromX: number; fromY: number; toX: number; toY: number;
-      status: 'active' | 'selected' | 'broken'; isBroken: boolean; sourceKey: string | null;
+      status: 'active' | 'selected' | 'broken'; executionStatus: 'default' | 'active' | 'fading';
+      isBroken: boolean; sourceKey: string | null;
     }>;
-  }, [connections, nodeMap, nodes, selectedConnectionId, calibrated]);
+  }, [connections, nodeMap, nodes, selectedConnectionId, calibrated, executionNodeOutputs, executionCurrentNodeId]);
 
   return (
     <svg
@@ -139,6 +152,7 @@ export function ConnectionLayer(): React.ReactElement {
           toX={line.toX}
           toY={line.toY}
           status={line.status}
+          executionStatus={line.executionStatus}
           onClick={() => handleClick(line.id)}
           onContextMenu={(e) => handleContextMenu(line.id, e)}
         />

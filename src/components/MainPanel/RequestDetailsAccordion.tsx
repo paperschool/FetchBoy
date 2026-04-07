@@ -54,6 +54,10 @@ interface RequestDetailsAccordionProps {
   onScriptKeepOpenChange: (keepOpen: boolean) => void;
   scriptDebugState?: ScriptDebugState;
   onDebugClose?: () => void;
+  preRequestMode: 'none' | 'javascript' | 'chain';
+  onModeChange: (mode: 'none' | 'javascript' | 'chain') => void;
+  preRequestChainId: string | null;
+  onChainIdChange: (chainId: string | null) => void;
   banner?: React.ReactNode;
   activeVariables?: import('@/lib/db').KeyValuePair[];
 }
@@ -88,6 +92,10 @@ export function RequestDetailsAccordion(props: RequestDetailsAccordionProps): Re
     onScriptKeepOpenChange,
     scriptDebugState,
     onDebugClose,
+    preRequestMode,
+    onModeChange,
+    preRequestChainId,
+    onChainIdChange,
     banner,
     activeVariables,
   } = props;
@@ -310,6 +318,10 @@ export function RequestDetailsAccordion(props: RequestDetailsAccordionProps): Re
               editorFontSize={editorFontSize}
               scriptDebugState={scriptDebugState}
               onDebugClose={onDebugClose}
+              preRequestMode={preRequestMode}
+              onModeChange={onModeChange}
+              preRequestChainId={preRequestChainId}
+              onChainIdChange={onChainIdChange}
             />
           ) : null}
 

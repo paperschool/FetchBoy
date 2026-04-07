@@ -76,10 +76,17 @@ export function StitchView(): React.ReactElement {
   }, [editorHeight]);
 
   useEffect(() => {
-    loadChains().catch((err) => {
-      console.error('Failed to load stitch chains:', err);
-    });
-  }, [loadChains]);
+    loadChains()
+      .then(() => {
+        const { chains: loaded, activeChainId: active } = useStitchStore.getState();
+        if (loaded.length > 0 && !active) {
+          loadChain(loaded[0].id).catch(() => {});
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load stitch chains:', err);
+      });
+  }, [loadChains, loadChain]);
 
   const handleCreateChain = useCallback((): void => {
     const name = `Chain ${chains.length + 1}`;

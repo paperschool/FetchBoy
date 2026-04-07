@@ -1,6 +1,6 @@
 // ─── Stitch Node Types ──────────────────────────────────────────────────────
 
-export type StitchNodeType = 'request' | 'json-object' | 'js-snippet' | 'sleep' | 'loop' | 'merge' | 'condition' | 'mapping' | 'mapping-entry' | 'mapping-exit';
+export type StitchNodeType = 'request' | 'json-object' | 'js-snippet' | 'sleep' | 'loop' | 'merge' | 'condition' | 'mapping' | 'mapping-entry' | 'mapping-exit' | 'fetch-terminal';
 
 export type StitchExecutionState = 'idle' | 'running' | 'paused' | 'completed' | 'error';
 
@@ -131,12 +131,32 @@ export const DEFAULT_MAPPING_EXIT_CONFIG: MappingExitNodeConfig = {
   bodyContentType: 'application/json',
 };
 
+export interface FetchTerminalNodeConfig {
+  requestId: string;
+}
+
+export const DEFAULT_FETCH_TERMINAL_CONFIG: FetchTerminalNodeConfig = {
+  requestId: '',
+};
+
 // ─── Domain Interfaces ──────────────────────────────────────────────────────
+
+export interface StitchFolder {
+  id: string;
+  parentId: string | null;
+  name: string;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface StitchChain {
   id: string;
   name: string;
   mappingId: string | null;
+  requestId: string | null;
+  folderId: string | null;
+  sortOrder: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -166,10 +186,22 @@ export interface StitchConnection {
 
 // ─── Raw DB Row Interfaces ──────────────────────────────────────────────────
 
+export interface RawStitchFolder {
+  id: string;
+  parent_id: string | null;
+  name: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface RawStitchChain {
   id: string;
   name: string;
   mapping_id: string | null;
+  request_id: string | null;
+  folder_id: string | null;
+  sort_order: number;
   created_at: string;
   updated_at: string;
 }
@@ -195,7 +227,7 @@ export interface ExecutionLogEntry {
   nodeId: string;
   nodeLabel: string;
   nodeType: StitchNodeType;
-  status: 'started' | 'completed' | 'error' | 'sleeping' | 'cancelled' | 'skipped';
+  status: 'started' | 'completed' | 'error' | 'sleeping' | 'cancelled' | 'skipped' | 'replayed';
   timestamp: number;       // ms since execution start
   durationMs?: number;
   input?: Record<string, unknown>;

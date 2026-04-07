@@ -69,7 +69,7 @@ export function MainPanel(): React.ReactElement {
   const { state: req, update: updateReq } = useActiveRequestState();
   const { state: res, update: updateRes } = useActiveResponseState();
 
-  const { method, url, headers, queryParams, body, auth, activeTab, timeout, preRequestScript, preRequestScriptEnabled, scriptKeepOpen } = req;
+  const { method, url, headers, queryParams, body, auth, activeTab, timeout, preRequestScript, preRequestScriptEnabled, scriptKeepOpen, preRequestChainId, preRequestMode } = req;
   const { isSending, responseData, requestError, sentUrl, verboseLogs, requestBodyLanguage, wasCancelled, wasTimedOut, timedOutAfterSec } = res;
 
   const setMethod = (m: HttpMethod): void => updateReq({ method: m, isDirty: true });
@@ -96,6 +96,7 @@ export function MainPanel(): React.ReactElement {
     syncQueryParams, applyEnv, timeout, sslVerify, activeTabId,
     abortControllerRef, updateRes, setRequestDetailsOpen,
     preRequestScript, preRequestScriptEnabled, scriptKeepOpen,
+    preRequestChainId, preRequestMode,
   });
 
   useSendRequestKeyboardShortcut(handleSendRequest);
@@ -240,6 +241,10 @@ export function MainPanel(): React.ReactElement {
             onScriptEnabledChange={(enabled) => updateReq({ preRequestScriptEnabled: enabled, isDirty: true })}
             scriptKeepOpen={scriptKeepOpen}
             onScriptKeepOpenChange={(keepOpen) => updateReq({ scriptKeepOpen: keepOpen })}
+            preRequestMode={preRequestMode}
+            onModeChange={(mode) => updateReq({ preRequestMode: mode, isDirty: true })}
+            preRequestChainId={preRequestChainId}
+            onChainIdChange={(chainId) => updateReq({ preRequestChainId: chainId, isDirty: true })}
             scriptDebugState={scriptDebugState}
             onDebugClose={() => {
               const { updateTabScriptDebugState } = useTabStore.getState();

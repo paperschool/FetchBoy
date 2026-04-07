@@ -45,6 +45,7 @@ export interface Request {
     auth_config: Record<string, string>;
     pre_request_script: string;
     pre_request_script_enabled: boolean;
+    pre_request_chain_id?: string | null;
     sort_order: number;
     created_at: string;
     updated_at: string;
@@ -179,13 +180,19 @@ export async function getDb(): Promise<Database> {
             // Column already exists — safe to ignore
         }
         // Ensure mapping chain columns exist (migration 012)
-        try {
-            await _db.execute('ALTER TABLE mappings ADD COLUMN use_chain INTEGER NOT NULL DEFAULT 0');
-            await _db.execute('ALTER TABLE mappings ADD COLUMN chain_id TEXT REFERENCES stitch_chains(id) ON DELETE SET NULL');
-            await _db.execute('ALTER TABLE stitch_chains ADD COLUMN mapping_id TEXT REFERENCES mappings(id) ON DELETE SET NULL');
-        } catch {
-            // Columns already exist — safe to ignore
-        }
+        try { await _db.execute('ALTER TABLE mappings ADD COLUMN use_chain INTEGER NOT NULL DEFAULT 0'); } catch { /* exists */ }
+        try { await _db.execute('ALTER TABLE mappings ADD COLUMN chain_id TEXT REFERENCES stitch_chains(id) ON DELETE SET NULL'); } catch { /* exists */ }
+        try { await _db.execute('ALTER TABLE stitch_chains ADD COLUMN mapping_id TEXT REFERENCES mappings(id) ON DELETE SET NULL'); } catch { /* exists */ }
+        // Ensure stitch folder columns exist (migration 014)
+        await _db.execute(`CREATE TABLE IF NOT EXISTS stitch_folders (
+            id TEXT PRIMARY KEY NOT NULL, parent_id TEXT, name TEXT NOT NULL DEFAULT 'New Folder',
+            sort_order INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+        )`);
+        try { await _db.execute('ALTER TABLE stitch_chains ADD COLUMN folder_id TEXT'); } catch { /* exists */ }
+        try { await _db.execute('ALTER TABLE stitch_chains ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0'); } catch { /* exists */ }
+        // Ensure pre_request_chain columns exist (migration 015)
+        try { await _db.execute('ALTER TABLE requests ADD COLUMN pre_request_chain_id TEXT'); } catch { /* exists */ }
+        try { await _db.execute('ALTER TABLE stitch_chains ADD COLUMN request_id TEXT'); } catch { /* exists */ }
     }
     return _db;
 }

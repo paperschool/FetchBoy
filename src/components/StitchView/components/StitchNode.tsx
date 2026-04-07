@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useMemo, type PointerEvent, type KeyboardEvent } from 'react';
-import { Eye, AlertCircle } from 'lucide-react';
+import { Eye, AlertCircle, RotateCcw, Trash2, Pencil } from 'lucide-react';
+import { ReplayInputModal } from './ReplayInputModal';
 import type { StitchNode as StitchNodeType, StitchConnection, ExecutionNodeStatus } from '@/types/stitch';
 import { useStitchStore } from '@/stores/stitchStore';
 import { extractJsonKeys } from '../utils/jsonKeyExtractor';
@@ -39,6 +40,13 @@ export const StitchNode = React.memo(function StitchNode({
 }: StitchNodeProps): React.ReactElement {
   const allNodes = useStitchStore((s) => s.nodes);
   const hasOutput = useStitchStore((s) => node.id in s.executionNodeOutputs);
+  const replayNode = useStitchStore((s) => s.replayNode);
+  const [replaying, setReplaying] = useState(false);
+  const replayNodeWithInput = useStitchStore((s) => s.replayNodeWithInput);
+  const executionLogs = useStitchStore((s) => s.executionLogs);
+  const canReplay = hasOutput && node.type !== 'sleep' && node.type !== 'mapping-entry' && node.type !== 'mapping-exit';
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const [replayModalOpen, setReplayModalOpen] = useState(false);
   const isLoopEntry = node.type === 'js-snippet' && (node.config as { isLoopEntry?: boolean }).isLoopEntry === true;
   const { drag, startDrag, updateCursor, endDrag } = useConnectionDrag();
   const nodeRef = useRef<HTMLDivElement>(null);
@@ -92,8 +100,8 @@ export const StitchNode = React.memo(function StitchNode({
   const handleContextMenu = useCallback((e: React.MouseEvent): void => {
     e.preventDefault();
     e.stopPropagation();
-    onDelete(node.id);
-  }, [node.id, onDelete]);
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  }, []);
 
   const handleKeyDown = useCallback((e: KeyboardEvent<HTMLDivElement>): void => {
     if ((e.key === 'Delete' || e.key === 'Backspace') && selected && !editing) {
@@ -290,6 +298,24 @@ export const StitchNode = React.memo(function StitchNode({
         >
           <Eye size={11} />
         </button>
+        <button
+          className={`transition-opacity ${canReplay ? 'text-app-muted hover:text-app-secondary' : 'text-app-muted/30 cursor-default'}`}
+          title={
+            !hasOutput ? 'No results to replay'
+            : node.type === 'sleep' ? 'Sleep nodes cannot be replayed'
+            : node.type === 'request' ? 'Replay — will make a real network request'
+            : node.type === 'loop' ? 'Replay — loop may contain request nodes'
+            : 'Replay with last input'
+          }
+          onClick={async (e) => {
+            e.stopPropagation();
+            if (!canReplay || replaying) return;
+            setReplaying(true);
+            try { await replayNode(node.id); } finally { setReplaying(false); }
+          }}
+        >
+          <RotateCcw size={11} className={replaying ? 'animate-spin' : ''} />
+        </button>
       </div>
 
       {/* Body */}
@@ -340,8 +366,8 @@ export const StitchNode = React.memo(function StitchNode({
         </div>
       )}
 
-      {/* Output ports — mapping-exit is terminal, no output port needed */}
-      {node.type === 'mapping-exit' ? null : hasDynamicPorts && !hasError && outputKeys.length > 0 ? (
+      {/* Output ports — mapping-exit and fetch-terminal are terminal, no output port needed */}
+      {node.type === 'mapping-exit' || node.type === 'fetch-terminal' ? null : hasDynamicPorts && !hasError && outputKeys.length > 0 ? (
         <div className="relative h-3">
           {outputKeys.map((key, i) => {
             const offset = outputKeys.length === 1 ? 0.5 : i / (outputKeys.length - 1);
@@ -367,6 +393,49 @@ export const StitchNode = React.memo(function StitchNode({
           }`}
           data-testid="output-port-single"
           onPointerDown={useSinglePort && !hasError ? (e) => handlePortPointerDown('__output__', e) : undefined}
+        />
+      )}
+
+      {/* Context menu */}
+      {contextMenu && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setContextMenu(null)} />
+          <div
+            className="fixed z-50 w-44 rounded-md border border-app-subtle bg-app-main py-1 shadow-lg"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+          >
+            {canReplay && (
+              <button
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-app-secondary hover:bg-app-hover"
+                onClick={() => { setContextMenu(null); setReplayModalOpen(true); }}
+              >
+                <Pencil size={11} /> Replay with Custom Input
+              </button>
+            )}
+            <button
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-red-400 hover:bg-app-hover"
+              onClick={() => { setContextMenu(null); onDelete(node.id); }}
+            >
+              <Trash2 size={11} /> Delete
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Replay with custom input modal */}
+      {replayModalOpen && (
+        <ReplayInputModal
+          nodeLabel={node.label ?? node.type}
+          originalInput={
+            [...executionLogs].reverse().find(
+              (e) => e.nodeId === node.id && (e.status === 'completed' || e.status === 'replayed'),
+            )?.input ?? {}
+          }
+          onRun={(input) => {
+            setReplayModalOpen(false);
+            replayNodeWithInput(node.id, input).catch(() => {});
+          }}
+          onClose={() => setReplayModalOpen(false)}
         />
       )}
     </div>

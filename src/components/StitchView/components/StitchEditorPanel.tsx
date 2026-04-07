@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { Send, Code, Braces, Timer, Repeat, GitMerge, GitBranch, Globe, ArrowDownToLine, ArrowUpFromLine, X } from 'lucide-react';
+import { Send, Code, Braces, Timer, Repeat, GitMerge, GitBranch, Globe, ArrowDownToLine, ArrowUpFromLine, CircleStop, X } from 'lucide-react';
 import { useStitchStore } from '@/stores/stitchStore';
 import { JsonObjectEditor } from './JsonObjectEditor';
 import { JsSnippetEditor } from './JsSnippetEditor';
@@ -23,6 +23,7 @@ const TYPE_ICONS: Record<StitchNodeType, React.ReactNode> = {
   'mapping': <Globe size={12} />,
   'mapping-entry': <ArrowDownToLine size={12} />,
   'mapping-exit': <ArrowUpFromLine size={12} />,
+  'fetch-terminal': <CircleStop size={12} />,
 };
 
 const TYPE_LABELS: Record<StitchNodeType, string> = {
@@ -36,6 +37,7 @@ const TYPE_LABELS: Record<StitchNodeType, string> = {
   'mapping': 'Mapping',
   'mapping-entry': 'Entry',
   'mapping-exit': 'Exit',
+  'fetch-terminal': 'Fetch Terminal',
 };
 
 interface StitchEditorPanelProps {

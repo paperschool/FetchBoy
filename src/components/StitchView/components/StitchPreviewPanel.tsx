@@ -18,8 +18,13 @@ export function StitchPreviewPanel(): React.ReactElement | null {
 
   if (!previewNodeId || !node) return null;
 
+  const executionLogs = useStitchStore((s) => s.executionLogs);
   const output = executionNodeOutputs[previewNodeId];
   const hasOutput = previewNodeId in executionNodeOutputs;
+  const lastLog = [...executionLogs].reverse().find(
+    (e) => e.nodeId === previewNodeId && (e.status === 'completed' || e.status === 'replayed'),
+  );
+  const isReplayed = lastLog?.status === 'replayed';
 
   if (!hasOutput) {
     return (
@@ -54,6 +59,9 @@ export function StitchPreviewPanel(): React.ReactElement | null {
         <span className="min-w-0 flex-1 truncate text-xs font-medium text-app-primary">
           Preview: {node.label ?? node.type} — Last Run Output
         </span>
+        {isReplayed && (
+          <span className="rounded bg-blue-500/15 px-2 py-0.5 text-[10px] font-medium text-blue-400">Replayed</span>
+        )}
         <button
           className="rounded p-0.5 text-app-muted transition-colors hover:bg-app-hover hover:text-app-secondary"
           onClick={handleClose}
