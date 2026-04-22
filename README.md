@@ -18,6 +18,20 @@
 
 # Fetch Boy
 
+<p align="center">
+  <img src="https://img.shields.io/github/package-json/v/paperschool/FetchBoy?color=ffb86b&label=version" alt="Version" />
+  <img src="https://img.shields.io/github/license/paperschool/FetchBoy?color=9f7aea" alt="License" />
+  <img src="https://img.shields.io/badge/status-early%20development-orange" alt="Status" />
+  <img src="https://img.shields.io/badge/platforms-macOS%20%7C%20Windows%20%7C%20Linux-blue" alt="Platforms" />
+  <br />
+  <img src="https://img.shields.io/badge/Tauri-v2-24C8DB?logo=tauri&logoColor=white" alt="Tauri" />
+  <img src="https://img.shields.io/badge/Rust-stable-DEA584?logo=rust&logoColor=white" alt="Rust" />
+  <img src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white" alt="React" />
+  <img src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Vite-purple?logo=vite&logoColor=white" alt="Vite" />
+  <img src="https://img.shields.io/badge/Tailwind-v4-38BDF8?logo=tailwindcss&logoColor=white" alt="Tailwind" />
+</p>
+
 A lightweight, cross-platform tool for building, intercepting, and debugging HTTP requests. Build and test APIs with a clean editor, intercept live traffic through a built-in MITM proxy, set breakpoints to inspect and modify requests in flight, use mapping rules to rewrite URLs and mock responses, and compose multi-step workflows visually with Stitch.
 
 Runs entirely offline. No account required. All data stored locally.
