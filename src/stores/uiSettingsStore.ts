@@ -46,7 +46,7 @@ export const useUiSettingsStore = create<UiSettingsState>((set) => ({
     setHasSeededSampleData: (seeded) => set({ hasSeededSampleData: seeded }),
     lastSeenVersion: null,
     setLastSeenVersion: (version) => set({ lastSeenVersion: version }),
-    proxyEnabled: true,
+    proxyEnabled: false,
     setProxyEnabled: (enabled) => set({ proxyEnabled: enabled }),
     proxyPort: 8080,
     setProxyPort: (port) => set({ proxyPort: port }),

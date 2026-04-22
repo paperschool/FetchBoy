@@ -44,11 +44,12 @@ export function AppShell() {
         useUiSettingsStore.getState().setLastSeenVersion(s.last_seen_version ?? null);
         const proxyEnabled = s.proxy_enabled ?? true;
         const proxyPort = s.proxy_port ?? 8080;
-        useUiSettingsStore.getState().setProxyEnabled(proxyEnabled);
         useUiSettingsStore.getState().setProxyPort(proxyPort);
         // Sync the backend proxy server with the saved enabled/port state.
-        // Without this call the proxy always starts enabled regardless of the saved setting.
-        void setProxyConfig(proxyEnabled, proxyPort);
+        // Only mark proxyEnabled in the UI after the backend confirms success.
+        setProxyConfig(proxyEnabled, proxyPort)
+          .then(() => useUiSettingsStore.getState().setProxyEnabled(proxyEnabled))
+          .catch(() => useUiSettingsStore.getState().setProxyEnabled(false));
       })
       .catch(() => {}); // defaults already set in store initial state
   }, []);

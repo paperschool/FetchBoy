@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.19.4] - 2026-04-22
+
+- feat: Mapping chain editor split into View Chain and Remove Chain buttons — clearer than the old single toggle
+- feat: Open Mapper context-menu action on mapping-bound chains in the Stitch sidebar
+- fix: Proxy enabled state in UI now waits for backend confirmation — no more false "on" indicator when the backend failed to start
+- fix: Mapping entry/exit nodes parented under the mapping container; engine falls back gracefully for chains created before this
+- fix: Deleting a mapping-bound chain re-syncs mappings to the proxy so it unhooks immediately
+
 ## [0.19.3] - 2026-04-07
 
 - feat: Stitch sidebar folders with drag-and-drop reordering — chains can be organized into collapsible folders

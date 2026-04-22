@@ -4,8 +4,12 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { StitchChain, StitchFolder } from '@/types/stitch';
 import { useAppTabStore } from '@/stores/appTabStore';
+import { useInterceptStore } from '@/stores/interceptStore';
 import { useMappingsStore } from '@/stores/mappingsStore';
+import { loadAllMappings } from '@/lib/mappings';
 import { t } from '@/lib/i18n';
+
+const menuBtnClass = 'flex w-full cursor-pointer items-center gap-2 px-3 py-1.5 text-xs hover:bg-app-hover';
 
 interface StitchSidebarEntryProps {
   chain: StitchChain;
@@ -114,10 +118,16 @@ export function StitchSidebarEntry({
               className="shrink-0 text-yellow-400 hover:text-yellow-300"
               data-testid="mapper-badge"
               title="Open mapper"
-              onClick={(e) => {
+              onClick={async (e) => {
                 e.stopPropagation();
-                const mapping = useMappingsStore.getState().mappings.find((m) => m.id === chain.mappingId);
+                let mapping = useMappingsStore.getState().mappings.find((m) => m.id === chain.mappingId);
+                if (!mapping) {
+                  const { mappings } = await loadAllMappings();
+                  useMappingsStore.getState().loadAll(useMappingsStore.getState().folders, mappings);
+                  mapping = mappings.find((m) => m.id === chain.mappingId);
+                }
                 if (mapping) {
+                  useInterceptStore.getState().setSelectedRequestId(null);
                   useMappingsStore.getState().startEditing(mapping);
                   useAppTabStore.getState().setActiveTab('intercept');
                 }
@@ -157,13 +167,13 @@ export function StitchSidebarEntry({
             data-testid="chain-context-menu"
           >
             <button
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-app-secondary hover:bg-app-hover"
+              className={`${menuBtnClass} text-app-secondary`}
               onClick={(e) => { e.stopPropagation(); startEdit(); }}
             >
               <Pencil size={11} /> {t('stitch.rename')}
             </button>
             <button
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-app-secondary hover:bg-app-hover"
+              className={`${menuBtnClass} text-app-secondary`}
               onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onDuplicate(chain.id); }}
             >
               <Copy size={11} /> {t('stitch.duplicate')}
@@ -172,7 +182,7 @@ export function StitchSidebarEntry({
             {/* Move to Folder submenu */}
             <div className="relative">
               <button
-                className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-app-secondary hover:bg-app-hover"
+                className={`${menuBtnClass} text-app-secondary`}
                 onClick={(e) => { e.stopPropagation(); setMoveSubmenuOpen((v) => !v); }}
               >
                 <FolderInput size={11} /> {t('stitch.moveToFolder')}
@@ -181,7 +191,7 @@ export function StitchSidebarEntry({
                 <div className="absolute left-full top-0 z-50 ml-1 w-36 rounded-md border border-app-subtle bg-app-main py-1 shadow-lg">
                   {chain.folderId && (
                     <button
-                      className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-app-secondary hover:bg-app-hover"
+                      className={`${menuBtnClass} text-app-secondary`}
                       onClick={(e) => {
                         e.stopPropagation();
                         setMenuOpen(false);
@@ -195,7 +205,7 @@ export function StitchSidebarEntry({
                   {moveTargets.map((f) => (
                     <button
                       key={f.id}
-                      className="flex w-full items-center gap-2 truncate px-3 py-1.5 text-xs text-app-secondary hover:bg-app-hover"
+                      className={`${menuBtnClass} truncate text-app-secondary`}
                       onClick={(e) => {
                         e.stopPropagation();
                         setMenuOpen(false);
@@ -213,8 +223,32 @@ export function StitchSidebarEntry({
               )}
             </div>
 
+            {chain.mappingId && (
+              <button
+                className={`${menuBtnClass} text-yellow-400`}
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  setMenuOpen(false);
+                  let mapping = useMappingsStore.getState().mappings.find((m) => m.id === chain.mappingId);
+                  if (!mapping) {
+                    const { mappings } = await loadAllMappings();
+                    useMappingsStore.getState().loadAll(useMappingsStore.getState().folders, mappings);
+                    mapping = mappings.find((m) => m.id === chain.mappingId);
+                  }
+                  if (mapping) {
+                    useInterceptStore.getState().setSelectedRequestId(null);
+                    useMappingsStore.getState().startEditing(mapping);
+                    useAppTabStore.getState().setActiveTab('intercept');
+                  }
+                }}
+                data-testid="chain-open-mapper"
+              >
+                <Workflow size={11} /> Open Mapper
+              </button>
+            )}
+
             <button
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-red-400 hover:bg-app-hover"
+              className={`${menuBtnClass} text-red-400`}
               onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onDelete(chain.id); }}
             >
               <Trash2 size={11} /> {t('stitch.delete')}

@@ -139,15 +139,16 @@ export const useStitchStore = create<StitchState>()(
 
     deleteChain: async (id: string) => {
       const chain = useStitchStore.getState().chains.find((c) => c.id === id);
-      // If chain is bound to a mapper, unhook it
+      // If chain is bound to a mapper, unhook it and re-sync proxy
       if (chain?.mappingId) {
-        const { updateMapping } = await import('@/lib/mappings');
+        const { updateMapping, syncMappingsToProxy } = await import('@/lib/mappings');
         await updateMapping(chain.mappingId, { use_chain: false, chain_id: null }).catch(() => {});
         const { useMappingsStore } = await import('@/stores/mappingsStore');
         useMappingsStore.setState((state) => {
           const m = state.mappings.find((x) => x.id === chain.mappingId);
           if (m) { m.use_chain = false; m.chain_id = null; }
         });
+        await syncMappingsToProxy(useMappingsStore.getState().mappings).catch(() => {});
       }
       // If chain is bound to a request (pre-request chain), unset pre_request_chain_id
       if (chain?.requestId) {

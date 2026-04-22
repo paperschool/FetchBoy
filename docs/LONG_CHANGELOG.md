@@ -1,5 +1,13 @@
 # Long Changelog
 
+## [0.19.4] - 2026-04-22
+
+- feat: MappingEditor chain controls split — replaced the single "Use Chain / Chain Active" toggle with two-state UI: when no chain exists, a "Use Chain" button creates one; when bound, separate "View Chain" (yellow, opens chain in Stitch tab and upgrades legacy single entry→exit connection to four keyed connections) and "Remove Chain" (red, calls deleteChain and clears edit.useChain/chainId) buttons render side-by-side
+- feat: chain creation now parents mapping-entry and mapping-exit nodes under the mapping container via `parentNodeId: mappingContainer.id` so they group correctly in the engine; mappingExecutor.ts adds a backward-compat fallback that treats all non-mapping nodes as children when no `parentNodeId` matches, keeping pre-existing chains executable
+- feat: StitchSidebarEntry gains an "Open Mapper" context-menu action for chains with `mappingId` — lazy-loads mappings via `loadAllMappings()` if the store is empty, clears `interceptStore.selectedRequestId` to avoid leaking selection across tabs, then opens the mapping editor; menu button class strings consolidated into a `menuBtnClass` constant
+- fix: AppShell proxy bootstrap no longer optimistically sets `proxyEnabled: true` before the backend confirms — `setProxyConfig(...)` is awaited first, with `.then` setting the UI flag on success and `.catch` forcing it to false; uiSettingsStore default flipped from `true` to `false` so the indicator stays off until confirmation
+- fix: stitchStore.deleteChain on a mapping-bound chain now imports and calls `syncMappingsToProxy(useMappingsStore.getState().mappings)` after unhooking the mapping, so the proxy server immediately stops routing through the deleted chain instead of waiting for the next mapping mutation
+
 ## [0.19.3] - 2026-04-07
 
 - feat: stitch sidebar folders — new StitchFolder entity with DB migration (014), StitchFolderRow component with collapsible tree, DnD reordering via @dnd-kit (PointerSensor with 8px activation), useStitchSidebarState/useStitchSidebarCrud/useStitchSidebarDragDrop hooks extracted from monolithic StitchSidebar; chains gain folderId/sortOrder/requestId fields

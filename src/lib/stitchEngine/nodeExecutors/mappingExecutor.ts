@@ -80,7 +80,14 @@ export async function executeMappingNode(
   callbacks: ExecutionCallbacks,
   cancelledRef: { current: boolean },
 ): Promise<Record<string, unknown>> {
-  const childNodes = allNodes.filter((n) => n.parentNodeId === mappingNode.id);
+  let childNodes = allNodes.filter((n) => n.parentNodeId === mappingNode.id);
+
+  // Fallback for existing chains created before parentNodeId was set on entry/exit nodes:
+  // treat all non-mapping nodes in the chain as children of the mapping container.
+  if (childNodes.length === 0) {
+    childNodes = allNodes.filter((n) => n.id !== mappingNode.id && n.type !== 'mapping');
+  }
+
   const childNodeIds = new Set(childNodes.map((n) => n.id));
   const childConnections = allConnections.filter(
     (c) => childNodeIds.has(c.sourceNodeId) && childNodeIds.has(c.targetNodeId),

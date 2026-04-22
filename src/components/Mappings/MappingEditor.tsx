@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Check, AlertCircle, Play, Pause, Workflow, Loader2 } from 'lucide-react';
+import { Check, AlertCircle, Play, Pause, Workflow, Loader2, Eye, Trash2 } from 'lucide-react';
 import { useMappingsStore } from '@/stores/mappingsStore';
 import type { MatchType, MappingEditForm } from '@/stores/mappingsStore';
 import { useStitchStore } from '@/stores/stitchStore';
@@ -195,58 +195,78 @@ export function MappingEditor({ onClose }: Props) {
                                 {enabled ? <Pause size={13} /> : <Play size={13} />}
                                 {enabled ? 'Enabled' : 'Disabled'}
                             </button>
-                            <button type="button"
-                                onClick={async () => {
-                                    if (!useChain) {
-                                        const stitchStore = useStitchStore.getState();
-                                        // Reuse existing chain if one was previously created
-                                        if (chainId) {
-                                            const existing = stitchStore.chains.find((c) => c.id === chainId);
-                                            if (existing) {
-                                                await stitchStore.loadChain(chainId);
-                                                // Upgrade old single-connection entry→exit to 4 keyed connections
-                                                const freshState = useStitchStore.getState();
-                                                const entryNode = freshState.nodes.find((n: { type: string }) => n.type === 'mapping-entry');
-                                                const exitNode = freshState.nodes.find((n: { type: string }) => n.type === 'mapping-exit');
-                                                if (entryNode && exitNode) {
-                                                    const entryToExit = freshState.connections.filter(
-                                                        (c: { sourceNodeId: string; targetNodeId: string }) => c.sourceNodeId === entryNode.id && c.targetNodeId === exitNode.id,
-                                                    );
-                                                    const hasOldSingle = entryToExit.length === 1 && entryToExit[0].sourceKey === null;
-                                                    if (hasOldSingle) {
-                                                        await stitchStore.removeConnection(entryToExit[0].id);
-                                                        for (const key of ['status', 'headers', 'body', 'cookies']) {
-                                                            await stitchStore.addConnection({
-                                                                chainId, sourceNodeId: entryNode.id, sourceKey: key,
-                                                                targetNodeId: exitNode.id, targetSlot: key,
-                                                            });
-                                                        }
+                            {useChain && chainId ? (
+                                <>
+                                    <button type="button"
+                                        onClick={async () => {
+                                            const stitchStore = useStitchStore.getState();
+                                            await stitchStore.loadChain(chainId);
+                                            // Upgrade old single-connection entry→exit to 4 keyed connections
+                                            const freshState = useStitchStore.getState();
+                                            const entryNode = freshState.nodes.find((n: { type: string }) => n.type === 'mapping-entry');
+                                            const exitNode = freshState.nodes.find((n: { type: string }) => n.type === 'mapping-exit');
+                                            if (entryNode && exitNode) {
+                                                const entryToExit = freshState.connections.filter(
+                                                    (c: { sourceNodeId: string; targetNodeId: string }) => c.sourceNodeId === entryNode.id && c.targetNodeId === exitNode.id,
+                                                );
+                                                const hasOldSingle = entryToExit.length === 1 && entryToExit[0].sourceKey === null;
+                                                if (hasOldSingle) {
+                                                    await stitchStore.removeConnection(entryToExit[0].id);
+                                                    for (const key of ['status', 'headers', 'body', 'cookies']) {
+                                                        await stitchStore.addConnection({
+                                                            chainId, sourceNodeId: entryNode.id, sourceKey: key,
+                                                            targetNodeId: exitNode.id, targetSlot: key,
+                                                        });
                                                     }
                                                 }
-                                                edit.useChain(true);
-                                                useAppTabStore.getState().setActiveTab('stitch');
-                                                return;
                                             }
-                                        }
-                                        // Delete previous chain if one exists before creating new
+                                            useAppTabStore.getState().setActiveTab('stitch');
+                                        }}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30"
+                                        title="View linked Stitch chain"
+                                        data-testid="view-chain-button"
+                                    >
+                                        <Eye size={13} />
+                                        View Chain
+                                    </button>
+                                    <button type="button"
+                                        onClick={async () => {
+                                            const stitchStore = useStitchStore.getState();
+                                            await stitchStore.deleteChain(chainId);
+                                            edit.useChain(false);
+                                            edit.chainId(null);
+                                        }}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors bg-red-500/20 text-red-400 hover:bg-red-500/30"
+                                        title="Delete linked chain and unhook from this mapping"
+                                        data-testid="remove-chain-button"
+                                    >
+                                        <Trash2 size={13} />
+                                        Remove Chain
+                                    </button>
+                                </>
+                            ) : (
+                                <button type="button"
+                                    onClick={async () => {
+                                        const stitchStore = useStitchStore.getState();
+                                        // Delete stale chain reference if one exists
                                         if (chainId) {
                                             await stitchStore.deleteChain(chainId).catch(() => {});
                                         }
                                         // Create a new bound chain with entry/exit nodes
                                         const chain = await stitchStore.createChain(`Mapping: ${name}`, editForm.id);
                                         await stitchStore.loadChain(chain.id);
-                                        // Mapping node is engine-only (hidden) — entry/exit are top-level
-                                        await stitchStore.addNode({
+                                        // Mapping node is engine-only (hidden) — entry/exit are its children
+                                        const mappingContainer = await stitchStore.addNode({
                                             chainId: chain.id, type: 'mapping', positionX: -9999, positionY: -9999,
                                             config: { ...DEFAULT_MAPPING_CONFIG, urlPattern, matchType }, label: name, parentNodeId: null,
                                         });
                                         const entry = await stitchStore.addNode({
                                             chainId: chain.id, type: 'mapping-entry', positionX: 200, positionY: 80,
-                                            config: { ...DEFAULT_MAPPING_ENTRY_CONFIG }, label: 'Entry', parentNodeId: null,
+                                            config: { ...DEFAULT_MAPPING_ENTRY_CONFIG }, label: 'Entry', parentNodeId: mappingContainer.id,
                                         });
                                         const exit = await stitchStore.addNode({
                                             chainId: chain.id, type: 'mapping-exit', positionX: 200, positionY: 350,
-                                            config: { ...DEFAULT_MAPPING_EXIT_CONFIG }, label: 'Exit', parentNodeId: null,
+                                            config: { ...DEFAULT_MAPPING_EXIT_CONFIG }, label: 'Exit', parentNodeId: mappingContainer.id,
                                         });
                                         for (const key of ['status', 'headers', 'body', 'cookies']) {
                                             await stitchStore.addConnection({
@@ -256,19 +276,15 @@ export function MappingEditor({ onClose }: Props) {
                                         edit.chainId(chain.id);
                                         edit.useChain(true);
                                         useAppTabStore.getState().setActiveTab('stitch');
-                                    } else {
-                                        edit.useChain(false);
-                                    }
-                                }}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                                    useChain ? 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30' : 'bg-gray-500/20 text-app-muted hover:bg-gray-500/30'
-                                }`}
-                                title={useChain ? 'Chain mode active — responses driven by Stitch chain' : 'Click to enable chain mode'}
-                                data-testid="use-chain-toggle"
-                            >
-                                <Workflow size={13} />
-                                {useChain ? 'Chain Active' : 'Use Chain'}
-                            </button>
+                                    }}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors bg-gray-500/20 text-app-muted hover:bg-gray-500/30"
+                                    title="Create a Stitch chain for this mapping"
+                                    data-testid="use-chain-toggle"
+                                >
+                                    <Workflow size={13} />
+                                    Use Chain
+                                </button>
+                            )}
                             </div>
                         </>
                     )}
