@@ -2,20 +2,23 @@
   <img src="./src-tauri/icons/fetch-boi-logo.svg" alt="Fetch Boy Logo" width="150px" height="150px" style="scale: 1.5;" />
 </p>
 
-<h1 align="center">Fetch Boy</h1>
-
 <table>
   <tr>
     <td>
-      <img src="screenshots/main.png" alt="Fetch Boy Main Interface" width="100%" />
+      <img src="screenshots/main.png" alt="Fetch Boy - Fetch Interface" width="100%" />
     </td>
     <td>
-      <img src="screenshots/main-2.png" alt="Fetch Boy Main Interface" width="100%" />
+      <img src="screenshots/main-2.png" alt="Fetch Boy - Intercept Interface" width="100%" />
+    </td>
+    <td>
+      <img src="screenshots/main-3.png" alt="Fetch Boy - Stitch Interface" width="100%" />
     </td>
   </tr>
 </table>
 
-A lightweight, cross-platform tool for building, intercepting, and debugging HTTP requests. Build and test APIs with a clean editor, intercept live traffic through a built-in MITM proxy, set breakpoints to inspect and modify requests in flight, and use mapping rules to rewrite URLs and mock responses.
+# Fetch Boy
+
+A lightweight, cross-platform tool for building, intercepting, and debugging HTTP requests. Build and test APIs with a clean editor, intercept live traffic through a built-in MITM proxy, set breakpoints to inspect and modify requests in flight, use mapping rules to rewrite URLs and mock responses, and compose multi-step workflows visually with Stitch.
 
 Runs entirely offline. No account required. All data stored locally.
 
@@ -61,14 +64,33 @@ Runs entirely offline. No account required. All data stored locally.
 - Rewrite request URLs, add or remove headers, and edit cookies
 - Override response bodies using the Monaco editor or serve a file from disk
 - Organize mappings into folders with drag-and-drop ordering
+- Auto-save changes to mapping rules with manual save fallback
 - Activity log sub-tab shows which mapping rules fired for each intercepted request
+
+### Stitch — Visual Request Chains
+
+- Compose multi-step flows on an infinite canvas by wiring nodes together
+- Node types include Request, JS Snippet, JSON Object, Sleep, Loop/forEach, Condition, Parallel + Merge, and Mapping Chain containers
+- Pipe response data between nodes — outputs flow as raw types with input key shape inference and type badges
+- Write inline JavaScript with a Monaco editor; console.log/warn/error is captured into the debug log
+- Iterate over arrays with loop containers that auto-layout their children and indent in the debug log
+- Branch on runtime conditions or fan out requests in parallel and merge their results
+- Replay any node in isolation to re-run a step without rebuilding its inputs
+- Node result preview with an Eye toggle; click to scroll to the corresponding debug log entry
+- Import existing saved requests into the canvas via a searchable palette
+- Organize chains into folders in a collapsible sidebar with auto-save
+- Run chains as a pre-request step, or bind one to a mapping rule so proxied traffic triggers it automatically
 
 ### User Experience & Productivity
 
 - Work in multiple tabs simultaneously with per-tab state isolation
 - Use keyboard shortcuts (Cmd/Ctrl+Enter to send, ? for shortcuts overlay)
 - Customize the application theme (light/dark/system)
-- Import and export collections and environments as JSON
+- Import and export collections and environments as JSON, with post-processing options for folder merge, flatten, and depth limiting
+- Keep Open checkbox keeps request editors open across tab switches
+- Scripts tab with script debug output for pre/post-request hooks
+- Template sidebar for dropping common request and node shapes into your work
+- i18n-ready UI with `t()` migration across the app
 - Guided onboarding tour on first launch covering Fetch and Intercept tabs
 - "What's New" modal on version update with full changelog
 - Splash screen startup animation
