@@ -19,6 +19,7 @@
 # Fetch Boy
 
 <p align="center">
+  <a href="https://github.com/paperschool/FetchBoy/releases/latest"><img src="https://img.shields.io/github/v/release/paperschool/FetchBoy?color=50fa7b&label=release" alt="Latest Release" /></a>
   <img src="https://img.shields.io/github/package-json/v/paperschool/FetchBoy?color=ffb86b&label=version" alt="Version" />
   <img src="https://img.shields.io/github/license/paperschool/FetchBoy?color=9f7aea" alt="License" />
   <img src="https://img.shields.io/badge/status-early%20development-orange" alt="Status" />
