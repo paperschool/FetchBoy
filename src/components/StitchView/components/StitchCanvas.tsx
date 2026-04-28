@@ -249,6 +249,11 @@ function StitchCanvasInner(): React.ReactElement {
     (id: string): void => {
       const movedNode = nodes.find((n) => n.id === id);
       if (!movedNode || movedNode.type === 'loop') return;
+      // Mapping entry/exit are permanently parented to their mapping container.
+      // Skip hit-testing — without this, every click clears their parentNodeId
+      // and rebalanceLoop runs on the mapping container, repositioning the
+      // sibling into off-screen container-relative coords.
+      if (movedNode.type === 'mapping-entry' || movedNode.type === 'mapping-exit') return;
 
       const containerNodes = nodes.filter((n) => n.type === 'loop' && n.id !== id);
       let newParent: string | null = null;
