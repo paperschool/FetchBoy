@@ -44,6 +44,10 @@ export const SIDEBAR_EXPANDED_WIDTH = '16rem';
 export const CANVAS_MIN_ZOOM = 0.25;
 export const CANVAS_MAX_ZOOM = 2.0;
 export const CANVAS_ZOOM_STEP = 0.05;
+// Absolute zoom level the canvas snaps to when a node's editor first opens.
+// Picked so deep-zoomed users pull back and far-zoomed users pull in to the same
+// comfortable context view: node clearly readable with surrounding nodes visible.
+export const CANVAS_NODE_FOCUS_ZOOM = 0.85;
 
 // ── SETTINGS DEFAULTS ───────────────────────────────────────────────────────
 

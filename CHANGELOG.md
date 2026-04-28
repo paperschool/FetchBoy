@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.19.5] - 2026-04-28
+
+- feat: Stitch — clicking a node smoothly centers it in the canvas after the editor opens, with eased pan-and-zoom animation
+- feat: Stitch — first open snaps zoom to a comfortable context level (0.85), pulling in if zoomed far out or back if zoomed in close
+- feat: Stitch — node-to-node switches pan only and keep the user's current zoom (no compounded zoom-outs)
+- chore: README badges, release links, and screenshot updates
+
 ## [0.19.4] - 2026-04-22
 
 - feat: Mapping chain editor split into View Chain and Remove Chain buttons — clearer than the old single toggle

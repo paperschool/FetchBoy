@@ -1,5 +1,6 @@
 import { useCallback, useState, useRef, useEffect } from 'react';
 import { ZoomIn, ZoomOut, Maximize, Play, Square, ScrollText, FileOutput, Send, Code, Braces, Timer, Repeat, GitMerge, GitBranch, LayoutGrid } from 'lucide-react';
+import { CANVAS_NODE_FOCUS_ZOOM } from '@/lib/constants';
 import { useStitchStore } from '@/stores/stitchStore';
 import { useCanvasTransform } from './StitchCanvas.hooks';
 import { StitchNode } from './StitchNode';
@@ -47,7 +48,7 @@ function StitchCanvasInner(): React.ReactElement {
   const { drag, consumeDroppedDrag } = useConnectionDrag();
   const connectionMadeRef = useRef(false);
 
-  const { transform, canvasRef, onPointerDown, onPointerMove, onPointerUp, zoomIn, zoomOut, zoomReset, frameAll } =
+  const { transform, canvasRef, onPointerDown, onPointerMove, onPointerUp, zoomIn, zoomOut, zoomReset, frameAll, centerOnNode } =
     useCanvasTransform();
 
   const [isAnimatingLayout, setIsAnimatingLayout] = useState(false);
@@ -69,6 +70,39 @@ function StitchCanvasInner(): React.ReactElement {
       setIsAnimatingLayout(false);
     }, 320);
   }, [nodes, connections, updateNode, frameAll]);
+
+  // Center the selected node every time selection changes to a real node.
+  // First open (editor was closed): also snap zoom to CANVAS_NODE_FOCUS_ZOOM
+  // — pulls in if zoomed far out, pulls back if zoomed in close.
+  // Node→node switch: pan only, keep current zoom.
+  // Closing the editor (id → null): no animation.
+  //
+  // Animation start is deferred ~140ms so:
+  //  1. The editor panel has time to mount/swap content and visibly settle
+  //     before the canvas starts moving — editor stays the focus.
+  //  2. Any pointer drag the user accidentally started has time to end, so
+  //     centering uses the node's settled position, not a moving target.
+  //  3. Rapid clicks across nodes coalesce — clearTimeout cancels the
+  //     stale animation before it fires.
+  const prevSelectedNodeIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const prev = prevSelectedNodeIdRef.current;
+    prevSelectedNodeIdRef.current = selectedNodeId;
+    if (!selectedNodeId) return;
+    const isFirstOpen = prev === null;
+    const targetId = selectedNodeId;
+    const timer = window.setTimeout(() => {
+      // Re-resolve the node and re-check selection at fire time — selection,
+      // position, and store contents may have all changed during the delay.
+      if (useStitchStore.getState().selectedNodeId !== targetId) return;
+      const node = useStitchStore.getState().nodes.find((n) => n.id === targetId);
+      if (!node || node.type === 'mapping') return;
+      const opts = isFirstOpen ? { targetZoom: CANVAS_NODE_FOCUS_ZOOM } : undefined;
+      centerOnNode(node, opts);
+    }, 140);
+    return () => window.clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedNodeId]);
 
   // Auto-rebalance containers and frame nodes when switching chains
   const prevChainIdRef = useRef<string | null>(null);

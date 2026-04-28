@@ -1,5 +1,12 @@
 # Long Changelog
 
+## [0.19.5] - 2026-04-28
+
+- feat: Stitch canvas centers the selected node when its editor opens — new `centerOnNode(node, opts?)` action and `animateTransform` rAF helper added to `useCanvasTransform` (StitchCanvas.hooks.ts); the StitchCanvas selection effect defers ~140ms before firing centering so the editor panel mounts/swaps content and any accidental pointer drag has a chance to settle, then animates pan and zoom together over ~350ms with `easeOutCubic`; selection is re-resolved from the store at fire time so rapid clicks coalesce and stale animations no-op
+- feat: new `CANVAS_NODE_FOCUS_ZOOM = 0.85` constant in lib/constants.ts — applied as an absolute target zoom only on first editor open (prev selection was null), so deeply-zoomed users pull back and far-zoomed users pull in to the same comfortable context level; subsequent node-to-node switches pass no `targetZoom` and pan only, preserving the user's current zoom and avoiding compounded zoom-outs across clicks
+- fix: animation cancels cleanly on every user-initiated viewport change — `cancelAnimation()` invoked at the top of `onPointerDown` (after pan guards), the imperative wheel handler, `zoomIn`/`zoomOut`/`zoomReset`, and `frameAll`; an unmount cleanup cancels any pending rAF; the selection-watch effect's cleanup clears the deferred-start timer so unmounting or rapid selection changes never leave orphan rAF callbacks
+- chore: README polish — badges, screenshot updates, and release links (commits a7a2615, bd5eb47, acfd346)
+
 ## [0.19.4] - 2026-04-22
 
 - feat: MappingEditor chain controls split — replaced the single "Use Chain / Chain Active" toggle with two-state UI: when no chain exists, a "Use Chain" button creates one; when bound, separate "View Chain" (yellow, opens chain in Stitch tab and upgrades legacy single entry→exit connection to four keyed connections) and "Remove Chain" (red, calls deleteChain and clears edit.useChain/chainId) buttons render side-by-side

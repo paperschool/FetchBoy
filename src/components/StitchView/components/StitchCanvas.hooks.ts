@@ -25,6 +25,10 @@ export interface UseCanvasTransformReturn {
   zoomOut: () => void;
   zoomReset: () => void;
   frameAll: (nodes: Array<{ positionX: number; positionY: number }>) => void;
+  centerOnNode: (
+    node: { positionX: number; positionY: number },
+    opts?: { targetZoom?: number; duration?: number },
+  ) => void;
 }
 
 export function useCanvasTransform(): UseCanvasTransformReturn {
@@ -44,12 +48,53 @@ export function useCanvasTransform(): UseCanvasTransformReturn {
     startPanY: 0,
   });
 
+  // Use a ref for the latest transform to avoid stale closures and unnecessary re-creations
+  const transformRef = useRef(transform);
+  transformRef.current = transform;
+
+  const animationRef = useRef<number | null>(null);
+
+  const cancelAnimation = useCallback((): void => {
+    if (animationRef.current !== null) {
+      cancelAnimationFrame(animationRef.current);
+      animationRef.current = null;
+    }
+  }, []);
+
+  const animateTransform = useCallback(
+    (target: CanvasTransform, duration: number): void => {
+      if (animationRef.current !== null) {
+        cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
+      }
+      const start = transformRef.current;
+      const startTime = performance.now();
+      const easeOutCubic = (t: number): number => 1 - Math.pow(1 - t, 3);
+      const tick = (now: number): void => {
+        const t = Math.min(1, (now - startTime) / duration);
+        const k = easeOutCubic(t);
+        setTransform({
+          panX: start.panX + (target.panX - start.panX) * k,
+          panY: start.panY + (target.panY - start.panY) * k,
+          zoom: start.zoom + (target.zoom - start.zoom) * k,
+        });
+        animationRef.current = t < 1 ? requestAnimationFrame(tick) : null;
+      };
+      animationRef.current = requestAnimationFrame(tick);
+    },
+    [],
+  );
+
   // Imperative wheel listener with { passive: false } so preventDefault() works
   useEffect(() => {
     const el = canvasRef.current;
     if (!el) return;
     const handler = (e: WheelEvent): void => {
       e.preventDefault();
+      if (animationRef.current !== null) {
+        cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
+      }
       setTransform((prev) => {
         const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
         const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, prev.zoom + delta));
@@ -60,9 +105,12 @@ export function useCanvasTransform(): UseCanvasTransformReturn {
     return () => el.removeEventListener('wheel', handler);
   }, []);
 
-  // Use a ref for the latest transform to avoid stale closures and unnecessary re-creations
-  const transformRef = useRef(transform);
-  transformRef.current = transform;
+  useEffect(() => () => {
+    if (animationRef.current !== null) {
+      cancelAnimationFrame(animationRef.current);
+      animationRef.current = null;
+    }
+  }, []);
 
   const onPointerDown = useCallback((e: PointerEvent): void => {
     // Only pan on primary button and when clicking empty canvas
@@ -70,6 +118,7 @@ export function useCanvasTransform(): UseCanvasTransformReturn {
     if ((e.target as HTMLElement).closest('[data-stitch-node]')) return;
     if ((e.target as HTMLElement).closest('[data-stitch-toolbar]')) return;
 
+    cancelAnimation();
     panRef.current = {
       isPanning: true,
       startX: e.clientX,
@@ -78,7 +127,7 @@ export function useCanvasTransform(): UseCanvasTransformReturn {
       startPanY: transformRef.current.panY,
     };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-  }, []);
+  }, [cancelAnimation]);
 
   const onPointerMove = useCallback((e: PointerEvent): void => {
     if (!panRef.current.isPanning) return;
@@ -96,28 +145,32 @@ export function useCanvasTransform(): UseCanvasTransformReturn {
   }, []);
 
   const zoomIn = useCallback((): void => {
+    cancelAnimation();
     setTransform((prev) => ({
       ...prev,
       zoom: Math.min(MAX_ZOOM, prev.zoom + ZOOM_STEP),
     }));
-  }, []);
+  }, [cancelAnimation]);
 
   const zoomOut = useCallback((): void => {
+    cancelAnimation();
     setTransform((prev) => ({
       ...prev,
       zoom: Math.max(MIN_ZOOM, prev.zoom - ZOOM_STEP),
     }));
-  }, []);
+  }, [cancelAnimation]);
 
   const zoomReset = useCallback((): void => {
+    cancelAnimation();
     setTransform({ panX: 0, panY: 0, zoom: 1 });
-  }, []);
+  }, [cancelAnimation]);
 
   const NODE_W = 180;
   const NODE_H = 90;
   const PADDING = 60;
 
   const frameAll = useCallback((nodes: Array<{ positionX: number; positionY: number; type?: string }>): void => {
+    cancelAnimation();
     // Exclude hidden engine-only nodes (mapping containers positioned off-screen)
     const visible = nodes.filter((n) => n.type !== 'mapping' && Math.abs(n.positionX) < 9000 && Math.abs(n.positionY) < 9000);
     if (visible.length === 0) {
@@ -148,7 +201,30 @@ export function useCanvasTransform(): UseCanvasTransformReturn {
     const panY = (viewH - contentH * zoom) / 2 - (minY - PADDING) * zoom;
 
     setTransform({ panX, panY, zoom });
-  }, [canvasRef]);
+  }, [canvasRef, cancelAnimation]);
 
-  return { transform, canvasRef, onPointerDown, onPointerMove, onPointerUp, zoomIn, zoomOut, zoomReset, frameAll };
+  const centerOnNode = useCallback(
+    (
+      node: { positionX: number; positionY: number },
+      opts?: { targetZoom?: number; duration?: number },
+    ): void => {
+      const duration = opts?.duration ?? 350;
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect || rect.width === 0 || rect.height === 0) return;
+
+      const current = transformRef.current;
+      // If targetZoom omitted, keep current zoom (pan only).
+      const requestedZoom = opts?.targetZoom ?? current.zoom;
+      const zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, requestedZoom));
+      const nodeCenterX = node.positionX + NODE_W / 2;
+      const nodeCenterY = node.positionY + NODE_H / 2;
+      const panX = rect.width / 2 - nodeCenterX * zoom;
+      const panY = rect.height / 2 - nodeCenterY * zoom;
+
+      animateTransform({ panX, panY, zoom }, duration);
+    },
+    [canvasRef, animateTransform],
+  );
+
+  return { transform, canvasRef, onPointerDown, onPointerMove, onPointerUp, zoomIn, zoomOut, zoomReset, frameAll, centerOnNode };
 }
