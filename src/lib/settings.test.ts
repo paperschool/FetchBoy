@@ -43,6 +43,7 @@ describe('loadAllSettings', () => {
             last_seen_version: null,
             proxy_enabled: true,
             proxy_port: 8080,
+            stitch_canvas_auto_focus: true,
         });
     });
 
@@ -62,6 +63,7 @@ describe('loadAllSettings', () => {
             last_seen_version: null,
             proxy_enabled: true,
             proxy_port: 8080,
+            stitch_canvas_auto_focus: true,
         });
     });
 
@@ -81,6 +83,7 @@ describe('loadAllSettings', () => {
             last_seen_version: null,
             proxy_enabled: true,
             proxy_port: 8080,
+            stitch_canvas_auto_focus: true,
         });
     });
 });

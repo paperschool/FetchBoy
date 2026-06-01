@@ -101,7 +101,8 @@ Runs entirely offline. No account required. All data stored locally.
 - Work in multiple tabs simultaneously with per-tab state isolation
 - Use keyboard shortcuts (Cmd/Ctrl+Enter to send, ? for shortcuts overlay)
 - Customize the application theme (light/dark/system)
-- Import and export collections and environments as JSON, with post-processing options for folder merge, flatten, and depth limiting
+- Import collections from Postman (v1 and v2.1), Insomnia (v4), and Bruno — including Bruno folders, single-file JSON exports, and `.zip` archives — with pre-request scripts carried across all formats
+- Export collections and environments as JSON, with post-processing options for folder merge, flatten, and depth limiting
 - Keep Open checkbox keeps request editors open across tab switches
 - Scripts tab with script debug output for pre/post-request hooks
 - Template sidebar for dropping common request and node shapes into your work

@@ -18,6 +18,7 @@ export async function loadAllSettings(): Promise<AppSettings> {
             last_seen_version: (map['last_seen_version'] as string | null) ?? null,
             proxy_enabled: (map['proxy_enabled'] as boolean) ?? true,
             proxy_port: (map['proxy_port'] as number) ?? 8080,
+            stitch_canvas_auto_focus: (map['stitch_canvas_auto_focus'] as boolean) ?? true,
         };
     } catch {
         return {
@@ -31,6 +32,7 @@ export async function loadAllSettings(): Promise<AppSettings> {
             last_seen_version: null,
             proxy_enabled: true,
             proxy_port: 8080,
+            stitch_canvas_auto_focus: true,
         };
     }
 }

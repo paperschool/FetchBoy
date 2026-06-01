@@ -48,8 +48,7 @@ export function formatMethod(method: string): React.ReactElement {
 }
 
 export function formatHostPath(host: string, path: string): string {
-  const hasProtocol = host.startsWith('http://') || host.startsWith('https://');
-  return hasProtocol ? `${host}${path}` : `https://${host}${path}`;
+  return `${host}${path}`;
 }
 
 export function formatStatusCode(statusCode?: number, isPending?: boolean): React.ReactElement {

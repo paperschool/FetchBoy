@@ -17,6 +17,7 @@ interface InsomniaResource {
   body?: InsomniaBody;
   authentication?: InsomniaAuth;
   data?: Record<string, string>;
+  preRequestScript?: string;
 }
 interface InsomniaExport { resources?: InsomniaResource[]; __export_format?: number }
 
@@ -86,6 +87,7 @@ export function parseInsomniaV4(json: string): ImportResult {
     const { auth_type, auth_config } = mapAuth(r.authentication);
     const parentId = r.parentId ?? '';
     const folderId = parentId === workspace._id ? null : (idMap.get(parentId) ?? null);
+    const preRequestScript = r.preRequestScript?.trim() ?? '';
 
     return {
       id: crypto.randomUUID(),
@@ -100,8 +102,8 @@ export function parseInsomniaV4(json: string): ImportResult {
       body_content: r.body?.text ?? '',
       auth_type,
       auth_config,
-      pre_request_script: '',
-      pre_request_script_enabled: true,
+      pre_request_script: preRequestScript,
+      pre_request_script_enabled: preRequestScript.length > 0,
       sort_order: i,
     };
   });

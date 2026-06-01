@@ -28,6 +28,13 @@ export async function insertOne(
 }
 
 /** Batch INSERT helper — inserts multiple rows in a single statement. */
+/**
+ * SQLite caps bound parameters per statement (999 on system SQLite — e.g. macOS).
+ * Stay well under it so large multi-row inserts (e.g. a big collection import)
+ * don't silently fail.
+ */
+const MAX_BIND_PARAMS = 900;
+
 export async function insertMany(
   table: string,
   fields: string[],
@@ -36,12 +43,16 @@ export async function insertMany(
   if (rows.length === 0) return;
   const db = await getDb();
   const rowPlaceholder = `(${fields.map(() => '?').join(', ')})`;
-  const placeholders = rows.map(() => rowPlaceholder).join(', ');
-  const values = rows.flat();
-  await db.execute(
-    `INSERT INTO ${table} (${fields.join(', ')}) VALUES ${placeholders}`,
-    values,
-  );
+  // Chunk so chunkSize * fields.length stays under the bound-parameter ceiling.
+  const chunkSize = Math.max(1, Math.floor(MAX_BIND_PARAMS / fields.length));
+  for (let i = 0; i < rows.length; i += chunkSize) {
+    const chunk = rows.slice(i, i + chunkSize);
+    const placeholders = chunk.map(() => rowPlaceholder).join(', ');
+    await db.execute(
+      `INSERT INTO ${table} (${fields.join(', ')}) VALUES ${placeholders}`,
+      chunk.flat(),
+    );
+  }
 }
 
 /**
@@ -75,21 +86,6 @@ export function buildUpdate(
     sql: `UPDATE ${table} SET ${parts.join(', ')} WHERE id = ?`,
     values,
   };
-}
-
-/** Run a series of DB operations inside a SQLite transaction. Rolls back on error. */
-export async function withTransaction<T>(fn: () => Promise<T>): Promise<T> {
-  const db = await getDb();
-  const txName = `sp_${Date.now()}`;
-  await db.execute(`SAVEPOINT ${txName}`);
-  try {
-    const result = await fn();
-    await db.execute(`RELEASE SAVEPOINT ${txName}`);
-    return result;
-  } catch (err) {
-    try { await db.execute(`ROLLBACK TO SAVEPOINT ${txName}`); } catch { /* already rolled back */ }
-    throw err;
-  }
 }
 
 /** Generic proxy sync — invoke a Tauri command with mapped items. */

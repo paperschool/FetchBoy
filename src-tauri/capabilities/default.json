@@ -9,7 +9,18 @@
         "core:default",
         "dialog:allow-open",
         "dialog:allow-save",
-        "fs:allow-read-text-file",
+        {
+            "identifier": "fs:allow-read-text-file",
+            "allow": [{ "path": "$HOME/**" }]
+        },
+        {
+            "identifier": "fs:allow-read-dir",
+            "allow": [{ "path": "$HOME/**" }]
+        },
+        {
+            "identifier": "fs:allow-read-file",
+            "allow": [{ "path": "$HOME/**" }]
+        },
         "fs:allow-write-text-file",
         "http:default",
         "shell:allow-open",

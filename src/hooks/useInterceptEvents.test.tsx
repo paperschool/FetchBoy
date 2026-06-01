@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render } from '@testing-library/react'
 import { useInterceptEvents } from './useInterceptEvents'
 import { useInterceptStore } from '@/stores/interceptStore'
+import { INTERCEPT_FLUSH_INTERVAL_MS } from '@/lib/constants'
 
 // Mock the Tauri event module
 vi.mock('@tauri-apps/api/event', () => ({
@@ -26,13 +27,13 @@ describe('useInterceptEvents', () => {
     vi.clearAllMocks()
   })
 
-  it('calls listen with intercept:request on mount', async () => {
+  it('calls listen with intercept:request-split on mount', async () => {
     const mockUnlisten = vi.fn()
     vi.mocked(listen).mockResolvedValue(mockUnlisten)
 
     render(<TestHost />)
 
-    expect(listen).toHaveBeenCalledWith('intercept:request', expect.any(Function))
+    expect(listen).toHaveBeenCalledWith('intercept:request-split', expect.any(Function))
   })
 
   it('also calls listen with breakpoint:paused on mount', async () => {
@@ -44,32 +45,36 @@ describe('useInterceptEvents', () => {
     expect(listen).toHaveBeenCalledWith('breakpoint:paused', expect.any(Function))
   })
 
-  it('adds request to store when intercept:request event is received', async () => {
-    const mockUnlisten = vi.fn()
-    const handlers: Record<string, ((event: { payload: unknown }) => void)> = {}
+  it('adds request to store when intercept:request-split event is received', async () => {
+    vi.useFakeTimers()
+    try {
+      const mockUnlisten = vi.fn()
+      const handlers: Record<string, ((event: { payload: unknown }) => void)> = {}
 
-    vi.mocked(listen).mockImplementation((eventName, handler) => {
-      handlers[eventName as string] = handler as (event: { payload: unknown }) => void
-      return Promise.resolve(mockUnlisten)
-    })
+      vi.mocked(listen).mockImplementation((eventName, handler) => {
+        handlers[eventName as string] = handler as (event: { payload: unknown }) => void
+        return Promise.resolve(mockUnlisten)
+      })
 
-    render(<TestHost />)
-    await vi.waitFor(() => Object.keys(handlers).includes('intercept:request'))
+      render(<TestHost />)
 
-    const payload = {
-      id: 'test-1',
-      timestamp: 1234567890,
-      method: 'GET',
-      host: 'example.com',
-      path: '/api/data',
-      statusCode: 200,
-      contentType: 'application/json',
-      size: 512,
+      const payload = {
+        id: 'test-1',
+        timestamp: 1234567890,
+        method: 'GET',
+        host: 'example.com',
+        path: '/api/data',
+        requestHeaders: { accept: 'application/json' },
+      }
+      // Events are buffered and flushed on an interval; push then advance past the flush.
+      handlers['intercept:request-split']({ payload })
+      await vi.advanceTimersByTimeAsync(INTERCEPT_FLUSH_INTERVAL_MS + 1)
+
+      expect(useInterceptStore.getState().requests).toHaveLength(1)
+      expect(useInterceptStore.getState().requests[0].id).toBe('test-1')
+    } finally {
+      vi.useRealTimers()
     }
-    handlers['intercept:request']({ payload })
-
-    expect(useInterceptStore.getState().requests).toHaveLength(1)
-    expect(useInterceptStore.getState().requests[0].id).toBe('test-1')
   })
 
   it('calls unlisten for all listeners on unmount', async () => {
@@ -83,7 +88,7 @@ describe('useInterceptEvents', () => {
 
     unmount()
 
-    // Two listeners registered (intercept:request + breakpoint:paused)
-    expect(mockUnlisten).toHaveBeenCalledTimes(2)
+    // Three listeners registered: intercept:request-split, intercept:response-split, breakpoint:paused
+    expect(mockUnlisten).toHaveBeenCalledTimes(3)
   })
 })

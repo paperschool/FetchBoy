@@ -27,6 +27,8 @@ interface UiSettingsState {
     setFlashInstallCert: (flash: boolean) => void;
     proxyShuttingDown: boolean;
     setProxyShuttingDown: (shuttingDown: boolean) => void;
+    stitchCanvasAutoFocus: boolean;
+    setStitchCanvasAutoFocus: (enabled: boolean) => void;
 }
 
 export const useUiSettingsStore = create<UiSettingsState>((set) => ({
@@ -56,4 +58,6 @@ export const useUiSettingsStore = create<UiSettingsState>((set) => ({
     setFlashInstallCert: (flash) => set({ flashInstallCert: flash }),
     proxyShuttingDown: false,
     setProxyShuttingDown: (shuttingDown) => set({ proxyShuttingDown: shuttingDown }),
+    stitchCanvasAutoFocus: true,
+    setStitchCanvasAutoFocus: (enabled) => set({ stitchCanvasAutoFocus: enabled }),
 }));

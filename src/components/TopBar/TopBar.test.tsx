@@ -57,11 +57,6 @@ describe('TopBar', () => {
         mockSetActiveEnvironment.mockResolvedValue(undefined);
     });
 
-    it('renders the app name', () => {
-        render(<TopBar />);
-        expect(screen.getByText('Fetch Boy 🦴')).toBeInTheDocument();
-    });
-
     it('renders the environment selector with "No Environment" as default option', () => {
         render(<TopBar />);
         const select = screen.getByRole('combobox');

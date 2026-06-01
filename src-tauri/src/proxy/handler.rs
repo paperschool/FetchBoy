@@ -568,6 +568,10 @@ impl HttpHandler for InterceptHandler {
 
                             // Build the request data to send to the frontend.
                             let chain_body = orig_response_body.clone().unwrap_or_default();
+                            let chain_url = req_info
+                                .as_ref()
+                                .map(|r| format!("https://{}{}", r.host, r.path))
+                                .unwrap_or_default();
                             chain_emit_fn(&ChainExecutionRequestEvent {
                                 request_id: request_id.clone(),
                                 chain_id: chain_id.clone(),
@@ -575,6 +579,7 @@ impl HttpHandler for InterceptHandler {
                                 status: status_code,
                                 headers: response_headers.clone(),
                                 body: chain_body,
+                                url: chain_url,
                             });
 
                             // Wait for the frontend to execute the chain and send the result back.

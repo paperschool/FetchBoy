@@ -221,15 +221,41 @@ describe('stitchStore', () => {
   describe('addConnection', () => {
     it('adds connection to state', async () => {
       const stitchDb = await import('@/lib/stitch');
-      const conn = makeConn();
-      vi.mocked(stitchDb.insertConnection).mockResolvedValue(conn);
+      vi.mocked(stitchDb.insertConnection).mockResolvedValue();
 
       const result = await useStitchStore.getState().addConnection({
         chainId: 'chain-1', sourceNodeId: 'node-1', sourceKey: 'out',
         targetNodeId: 'node-2', targetSlot: 'in',
       });
-      expect(result).toEqual(conn);
-      expect(useStitchStore.getState().connections).toContainEqual(conn);
+      expect(result.chainId).toBe('chain-1');
+      expect(result.sourceNodeId).toBe('node-1');
+      expect(result.sourceKey).toBe('out');
+      expect(result.targetNodeId).toBe('node-2');
+      expect(result.targetSlot).toBe('in');
+      expect(result.id).toBeTruthy();
+      expect(result.createdAt).toBeTruthy();
+      expect(useStitchStore.getState().connections).toContainEqual(result);
+    });
+
+    it('auto-suffixes targetSlot on input-key collision', async () => {
+      const stitchDb = await import('@/lib/stitch');
+      vi.mocked(stitchDb.insertConnection).mockResolvedValue();
+
+      await useStitchStore.getState().addConnection({
+        chainId: 'chain-1', sourceNodeId: 'node-A', sourceKey: 'headers',
+        targetNodeId: 'node-T', targetSlot: 'input',
+      });
+      const second = await useStitchStore.getState().addConnection({
+        chainId: 'chain-1', sourceNodeId: 'node-B', sourceKey: 'headers',
+        targetNodeId: 'node-T', targetSlot: 'input',
+      });
+      const third = await useStitchStore.getState().addConnection({
+        chainId: 'chain-1', sourceNodeId: 'node-C', sourceKey: 'headers',
+        targetNodeId: 'node-T', targetSlot: 'input',
+      });
+
+      expect(second.targetSlot).toBe('headers_2');
+      expect(third.targetSlot).toBe('headers_3');
     });
   });
 

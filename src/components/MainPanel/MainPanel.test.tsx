@@ -378,7 +378,7 @@ describe('MainPanel request builder', () => {
     render(<MainPanel />);
 
     fireEvent.change(screen.getByLabelText('Request URL'), {
-      target: { value: '{{BASE_URL}}/posts/1' },
+      target: { value: 'https://{{BASE_URL}}/posts/1' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Send' }));
 

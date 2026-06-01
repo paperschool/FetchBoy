@@ -1,4 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { AlertTriangle, X } from 'lucide-react';
+import { open } from '@tauri-apps/plugin-shell';
 import { TabLayout } from '@/components/Layout/TabLayout';
 import { useStitchStore } from '@/stores/stitchStore';
 import { StitchCanvas } from './components/StitchCanvas';
@@ -10,8 +12,19 @@ import { StitchSidebar } from './components/StitchSidebar';
 import { StitchEmptyState } from './components/StitchEmptyState';
 import { useStitchAutoSave } from './hooks/useStitchAutoSave';
 
+const STITCH_DEV_WARNING_KEY = 'stitch-dev-warning-dismissed';
+const FETCHBOY_ISSUES_URL = 'https://github.com/paperschool/FetchBoy/issues';
+
 export function StitchView(): React.ReactElement {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [devWarningDismissed, setDevWarningDismissed] = useState(
+    () => localStorage.getItem(STITCH_DEV_WARNING_KEY) === '1',
+  );
+
+  const dismissDevWarning = useCallback((): void => {
+    localStorage.setItem(STITCH_DEV_WARNING_KEY, '1');
+    setDevWarningDismissed(true);
+  }, []);
   const activeChainId = useStitchStore((s) => s.activeChainId);
   const selectedNodeId = useStitchStore((s) => s.selectedNodeId);
   const nodes = useStitchStore((s) => s.nodes);
@@ -116,15 +129,43 @@ export function StitchView(): React.ReactElement {
   }, [headerEditValue, activeChainId, activeChain?.name, renameChain]);
 
   return (
-    <TabLayout
-      sidebarCollapsed={sidebarCollapsed}
-      sidebar={
-        <StitchSidebar
-          collapsed={sidebarCollapsed}
-          onToggleCollapse={() => setSidebarCollapsed((v) => !v)}
-        />
-      }
-      mainContent={
+    <div className="flex h-full flex-col">
+      {!devWarningDismissed && (
+        <div
+          data-testid="stitch-dev-warning"
+          className="flex shrink-0 items-center gap-2 border-b border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-400"
+        >
+          <AlertTriangle size={14} className="shrink-0" />
+          <span className="flex-1">
+            Stitch is still under development — report bugs{" "}
+            <button
+              onClick={() => void open(FETCHBOY_ISSUES_URL)}
+              className="cursor-pointer font-medium underline hover:text-amber-300"
+            >
+              here
+            </button>
+            .
+          </span>
+          <button
+            onClick={dismissDevWarning}
+            aria-label="Dismiss warning"
+            title="Dismiss"
+            className="shrink-0 cursor-pointer rounded p-0.5 text-amber-400 hover:bg-amber-500/20 hover:text-amber-300"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+      <div className="min-h-0 flex-1">
+        <TabLayout
+          sidebarCollapsed={sidebarCollapsed}
+          sidebar={
+            <StitchSidebar
+              collapsed={sidebarCollapsed}
+              onToggleCollapse={() => setSidebarCollapsed((v) => !v)}
+            />
+          }
+          mainContent={
         activeChainId ? (
           <div className="flex h-full flex-col">
             {/* Chain header bar */}
@@ -182,7 +223,9 @@ export function StitchView(): React.ReactElement {
         ) : (
           <StitchEmptyState hasChain={false} onCreateChain={handleCreateChain} />
         )
-      }
-    />
+          }
+        />
+      </div>
+    </div>
   );
 }

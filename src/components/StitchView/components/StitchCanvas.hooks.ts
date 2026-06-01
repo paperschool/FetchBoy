@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, type PointerEvent } from 'react';
-import { CANVAS_MIN_ZOOM as MIN_ZOOM, CANVAS_MAX_ZOOM as MAX_ZOOM, CANVAS_ZOOM_STEP as ZOOM_STEP } from '@/lib/constants';
+import { CANVAS_MIN_ZOOM as MIN_ZOOM, CANVAS_MAX_ZOOM as MAX_ZOOM, CANVAS_ZOOM_STEP as ZOOM_STEP, CANVAS_WHEEL_ZOOM_STEP as WHEEL_ZOOM_STEP } from '@/lib/constants';
 
 export interface CanvasTransform {
   panX: number;
@@ -95,11 +95,21 @@ export function useCanvasTransform(): UseCanvasTransformReturn {
         cancelAnimationFrame(animationRef.current);
         animationRef.current = null;
       }
-      setTransform((prev) => {
-        const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
-        const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, prev.zoom + delta));
-        return { ...prev, zoom: newZoom };
-      });
+      // Trackpad pinch-zoom and Ctrl/Cmd+wheel arrive as wheel events with
+      // ctrlKey set — those zoom. A plain two-finger swipe pans the canvas.
+      if (e.ctrlKey) {
+        setTransform((prev) => {
+          const delta = e.deltaY > 0 ? -WHEEL_ZOOM_STEP : WHEEL_ZOOM_STEP;
+          const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, prev.zoom + delta));
+          return { ...prev, zoom: newZoom };
+        });
+      } else {
+        setTransform((prev) => ({
+          ...prev,
+          panX: prev.panX - e.deltaX,
+          panY: prev.panY - e.deltaY,
+        }));
+      }
     };
     el.addEventListener('wheel', handler, { passive: false });
     return () => el.removeEventListener('wheel', handler);

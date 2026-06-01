@@ -74,7 +74,7 @@ describe('AuthPanel', () => {
     const onAuthChange = vi.fn();
     render(<AuthPanel auth={auth} onAuthChange={onAuthChange} />);
 
-    fireEvent.change(screen.getByLabelText(/location/i), { target: { value: 'query' } });
+    fireEvent.change(screen.getByLabelText(/add to/i), { target: { value: 'query' } });
 
     expect(onAuthChange).toHaveBeenCalledWith({
       type: 'api-key',

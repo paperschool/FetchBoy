@@ -14,6 +14,7 @@ interface ChainExecutionRequestPayload {
   status: number;
   headers: Record<string, string>;
   body: string;
+  url: string;
 }
 
 /**
@@ -26,7 +27,7 @@ interface ChainExecutionRequestPayload {
  */
 export function useChainExecutionListener(): void {
   const handleChainExecute = useCallback(async (payload: ChainExecutionRequestPayload) => {
-    const { requestId, chainId, status, headers, body } = payload;
+    const { requestId, chainId, status, headers, body, url } = payload;
 
     try {
       // Load chain nodes and connections from DB
@@ -162,7 +163,7 @@ export function useChainExecutionListener(): void {
       // Execute the mapping container with intercepted request data
       const result = await executeMappingNode(
         mappingNode,
-        { status, headers, body: parsedBody },
+        { status, headers, body: parsedBody, url },
         nodes,
         connections,
         envVariables,

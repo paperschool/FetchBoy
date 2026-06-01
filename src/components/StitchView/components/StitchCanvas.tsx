@@ -1,7 +1,9 @@
 import { useCallback, useState, useRef, useEffect } from 'react';
-import { ZoomIn, ZoomOut, Maximize, Play, Square, ScrollText, FileOutput, Send, Code, Braces, Timer, Repeat, GitMerge, GitBranch, LayoutGrid } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize, Play, Square, ScrollText, FileOutput, Send, Code, Braces, Timer, Repeat, GitMerge, GitBranch, LayoutGrid, Focus } from 'lucide-react';
 import { CANVAS_NODE_FOCUS_ZOOM } from '@/lib/constants';
 import { useStitchStore } from '@/stores/stitchStore';
+import { useUiSettingsStore } from '@/stores/uiSettingsStore';
+import { saveSetting } from '@/lib/settings';
 import { useCanvasTransform } from './StitchCanvas.hooks';
 import { StitchNode } from './StitchNode';
 import { StitchLoopNode, LOOP_MAX_CHILDREN } from './StitchLoopNode';
@@ -36,6 +38,7 @@ function StitchCanvasInner(): React.ReactElement {
   const chains = useStitchStore((s) => s.chains);
   const isMapperChain = chains.find((c) => c.id === activeChainId)?.mappingId != null;
   const selectConnection = useStitchStore((s) => s.selectConnection);
+  const updateConnection = useStitchStore((s) => s.updateConnection);
   const selectedConnectionId = useStitchStore((s) => s.selectedConnectionId);
   const removeConnection = useStitchStore((s) => s.removeConnection);
   const executionState = useStitchStore((s) => s.executionState);
@@ -47,6 +50,13 @@ function StitchCanvasInner(): React.ReactElement {
   const executionLogs = useStitchStore((s) => s.executionLogs);
   const { drag, consumeDroppedDrag } = useConnectionDrag();
   const connectionMadeRef = useRef(false);
+  const autoFocus = useUiSettingsStore((s) => s.stitchCanvasAutoFocus);
+  const setAutoFocus = useUiSettingsStore((s) => s.setStitchCanvasAutoFocus);
+  const handleToggleAutoFocus = useCallback((): void => {
+    const next = !autoFocus;
+    setAutoFocus(next);
+    saveSetting('stitch_canvas_auto_focus', next).catch(() => {});
+  }, [autoFocus, setAutoFocus]);
 
   const { transform, canvasRef, onPointerDown, onPointerMove, onPointerUp, zoomIn, zoomOut, zoomReset, frameAll, centerOnNode } =
     useCanvasTransform();
@@ -94,6 +104,8 @@ function StitchCanvasInner(): React.ReactElement {
     const timer = window.setTimeout(() => {
       // Re-resolve the node and re-check selection at fire time — selection,
       // position, and store contents may have all changed during the delay.
+      // Also re-read the toggle so flipping it mid-delay takes effect.
+      if (!useUiSettingsStore.getState().stitchCanvasAutoFocus) return;
       if (useStitchStore.getState().selectedNodeId !== targetId) return;
       const node = useStitchStore.getState().nodes.find((n) => n.id === targetId);
       if (!node || node.type === 'mapping') return;
@@ -116,6 +128,7 @@ function StitchCanvasInner(): React.ReactElement {
       const delay = prevChainIdRef.current === null ? 100 : 0;
       setTimeout(() => {
         requestAnimationFrame(() => {
+          if (!useUiSettingsStore.getState().stitchCanvasAutoFocus) return;
           const fresh = useStitchStore.getState().nodes;
           frameAll(fresh);
         });
@@ -249,11 +262,16 @@ function StitchCanvasInner(): React.ReactElement {
     (id: string): void => {
       const movedNode = nodes.find((n) => n.id === id);
       if (!movedNode || movedNode.type === 'loop') return;
-      // Mapping entry/exit are permanently parented to their mapping container.
-      // Skip hit-testing — without this, every click clears their parentNodeId
-      // and rebalanceLoop runs on the mapping container, repositioning the
-      // sibling into off-screen container-relative coords.
+      // Skip if the node lives inside a mapping container. Loop hit-testing
+      // can't see the hidden mapping container, so it would always conclude
+      // "no parent" — silently stripping mapping membership and triggering
+      // rebalanceLoop on the mapping container, which stamps every child
+      // into off-screen container-relative coords.
       if (movedNode.type === 'mapping-entry' || movedNode.type === 'mapping-exit') return;
+      if (movedNode.parentNodeId) {
+        const currentParent = nodes.find((n) => n.id === movedNode.parentNodeId);
+        if (currentParent?.type === 'mapping') return;
+      }
 
       const containerNodes = nodes.filter((n) => n.type === 'loop' && n.id !== id);
       let newParent: string | null = null;
@@ -402,6 +420,43 @@ function StitchCanvasInner(): React.ReactElement {
     pendingSource?: { nodeId: string; sourceKey: string | null; parentNodeId: string | null };
   } | null>(null);
 
+  // ─── Connection context menu (rename alias / delete) ───────────────
+  const [connectionMenu, setConnectionMenu] = useState<{
+    connId: string; x: number; y: number;
+    renaming?: { value: string };
+  } | null>(null);
+
+  const handleConnectionContextMenu = useCallback((connId: string, x: number, y: number): void => {
+    setConnectionMenu({ connId, x, y });
+  }, []);
+
+  const beginRenameAlias = useCallback((): void => {
+    if (!connectionMenu) return;
+    const conn = connections.find((c) => c.id === connectionMenu.connId);
+    if (!conn) { setConnectionMenu(null); return; }
+    const currentAlias = conn.targetSlot && conn.targetSlot !== 'input' ? conn.targetSlot : (conn.sourceKey ?? '');
+    setConnectionMenu({ ...connectionMenu, renaming: { value: currentAlias } });
+  }, [connectionMenu, connections]);
+
+  const commitRenameAlias = useCallback((): void => {
+    if (!connectionMenu?.renaming) return;
+    const conn = connections.find((c) => c.id === connectionMenu.connId);
+    const trimmed = connectionMenu.renaming.value.trim();
+    setConnectionMenu(null);
+    if (!conn || !trimmed) return;
+    const currentAlias = conn.targetSlot && conn.targetSlot !== 'input' ? conn.targetSlot : (conn.sourceKey ?? '');
+    if (trimmed === currentAlias) return;
+    updateConnection(conn.id, { targetSlot: trimmed }).catch((err) => {
+      console.error('[stitch] updateConnection failed:', err);
+    });
+  }, [connectionMenu, connections, updateConnection]);
+
+  const handleDeleteConnection = useCallback((): void => {
+    if (!connectionMenu) return;
+    removeConnection(connectionMenu.connId).catch(() => {});
+    setConnectionMenu(null);
+  }, [connectionMenu, removeConnection]);
+
   // Detect drag-drop on empty space → show context menu to create + connect
   useEffect(() => {
     if (drag !== null) {
@@ -431,8 +486,9 @@ function StitchCanvasInner(): React.ReactElement {
   }, [drag, consumeDroppedDrag, transform, canvasRef, nodes]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent): void => {
-    // Only show on empty canvas, not on nodes
+    // Only show on empty canvas — not on nodes or connection lines (svg)
     if ((e.target as HTMLElement).closest('[data-stitch-node]')) return;
+    if ((e.target as HTMLElement).closest('svg')) return;
     e.preventDefault();
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -469,7 +525,13 @@ function StitchCanvasInner(): React.ReactElement {
       }
       if (type === 'loop') createLoopEntrySnippet(newNode.id);
       if (type === 'mapping') createMappingChildren(newNode.id);
-      if (inheritedParent) rebalanceLoop(inheritedParent);
+      // Only rebalance if the inherited parent is actually a loop — running
+      // loop-layout on a mapping container would stamp all its children
+      // (entry, exit, the new node) into off-screen container-relative coords.
+      if (inheritedParent) {
+        const parentNode = nodes.find((n) => n.id === inheritedParent);
+        if (parentNode?.type === 'loop') rebalanceLoop(inheritedParent);
+      }
     }).catch(() => {});
     setContextMenu(null);
   }, [activeChainId, nodes, addNode, addConnection, contextMenu, createLoopEntrySnippet, createMappingChildren, rebalanceLoop]);
@@ -561,6 +623,15 @@ function StitchCanvasInner(): React.ReactElement {
         >
           <Maximize size={14} />
         </button>
+        <button
+          className={`rounded p-1 ${autoFocus ? 'text-yellow-500 hover:bg-app-hover' : 'text-app-muted hover:bg-app-hover hover:text-app-secondary'}`}
+          onClick={handleToggleAutoFocus}
+          title={autoFocus ? 'Auto-focus on click: ON — click to disable' : 'Auto-focus on click: OFF — click to enable'}
+          aria-pressed={autoFocus}
+          data-testid="toggle-auto-focus"
+        >
+          <Focus size={14} />
+        </button>
       </div>
 
       {/* Canvas area */}
@@ -591,7 +662,7 @@ function StitchCanvasInner(): React.ReactElement {
             inset: 0,
           }}
         >
-          <ConnectionLayer />
+          <ConnectionLayer onConnectionContextMenu={handleConnectionContextMenu} />
           {/* Render loop nodes first (behind regular nodes) */}
           {nodes.filter((n) => n.type === 'loop').map((node) => {
             const nodeExecStatus = executionError?.nodeId === node.id
@@ -688,6 +759,57 @@ function StitchCanvasInner(): React.ReactElement {
               </button>
             ))}
           </div>
+        )}
+
+        {/* Connection context menu */}
+        {connectionMenu && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setConnectionMenu(null)} onContextMenu={(e) => { e.preventDefault(); setConnectionMenu(null); }} />
+            <div
+              className="fixed z-50 min-w-[200px] rounded border border-app-subtle bg-app-main py-1 shadow-lg"
+              style={{ left: connectionMenu.x, top: connectionMenu.y }}
+              data-testid="connection-context-menu"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {connectionMenu.renaming ? (
+                <div className="flex flex-col gap-1 px-2 py-1.5">
+                  <span className="text-[9px] uppercase tracking-wide text-app-muted">Input alias</span>
+                  <input
+                    autoFocus
+                    type="text"
+                    className="rounded border border-app-subtle bg-app-main px-2 py-1 text-xs text-app-primary outline-none focus:border-blue-500"
+                    value={connectionMenu.renaming.value}
+                    onChange={(e) => setConnectionMenu({ ...connectionMenu, renaming: { value: e.target.value } })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') { e.preventDefault(); commitRenameAlias(); }
+                      else if (e.key === 'Escape') { e.preventDefault(); setConnectionMenu(null); }
+                    }}
+                    onFocus={(e) => e.currentTarget.select()}
+                    data-testid="connection-rename-input"
+                  />
+                  <span className="text-[9px] text-app-muted">Enter to save · Esc to cancel</span>
+                </div>
+              ) : (
+                <>
+                  <button
+                    className="w-full px-3 py-1.5 text-left text-xs text-app-secondary hover:bg-app-hover"
+                    onClick={beginRenameAlias}
+                    data-testid="connection-menu-rename"
+                  >
+                    Rename input alias
+                  </button>
+                  <button
+                    className="w-full px-3 py-1.5 text-left text-xs text-red-400 hover:bg-app-hover"
+                    onClick={handleDeleteConnection}
+                    data-testid="connection-menu-delete"
+                  >
+                    Delete connection
+                  </button>
+                </>
+              )}
+            </div>
+          </>
         )}
       </div>
     </div>

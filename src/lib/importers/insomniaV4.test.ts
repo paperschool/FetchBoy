@@ -63,6 +63,24 @@ describe('parseInsomniaV4', () => {
     expect(result.environments[0].variables).toHaveLength(2);
   });
 
+  it('extracts preRequestScript from request resources', () => {
+    const withScript = JSON.stringify({
+      __export_format: 4,
+      resources: [
+        { _id: 'wrk_1', _type: 'workspace', name: 'API Tests', parentId: null },
+        { _id: 'req_1', _type: 'request', parentId: 'wrk_1', name: 'With Script', method: 'GET', url: 'https://api.example.com', preRequestScript: 'console.log("hello");' },
+        { _id: 'req_2', _type: 'request', parentId: 'wrk_1', name: 'Without Script', method: 'GET', url: 'https://api.example.com/other' },
+      ],
+    });
+    const result = parseInsomniaV4(withScript);
+    const withScriptReq = result.requests.find((r) => r.name === 'With Script');
+    const withoutScriptReq = result.requests.find((r) => r.name === 'Without Script');
+    expect(withScriptReq?.pre_request_script).toBe('console.log("hello");');
+    expect(withScriptReq?.pre_request_script_enabled).toBe(true);
+    expect(withoutScriptReq?.pre_request_script).toBe('');
+    expect(withoutScriptReq?.pre_request_script_enabled).toBe(false);
+  });
+
   it('throws on invalid JSON', () => {
     expect(() => parseInsomniaV4('not json')).toThrow('Invalid JSON');
   });

@@ -7,7 +7,7 @@ import { extractJsonKeys } from '../utils/jsonKeyExtractor';
 import { extractReturnKeys } from '../utils/jsKeyExtractor';
 import { getRequestOutputPorts } from '../utils/requestOutputResolver';
 import { resolveInputShape } from '../utils/inputShapeResolver';
-import { getNodeInputKeys } from '../utils/nodeOutputKeys';
+import { getNodeInputKeys, getPortLeftPercent } from '../utils/nodeOutputKeys';
 import { useConnectionDrag } from './StitchConnectionDragContext';
 import { METHOD_COLORS, NODE_ICONS, NODE_COLORS, NODE_HEADER_COLORS, NODE_WIDTH } from './StitchNode.constants';
 
@@ -130,7 +130,7 @@ export const StitchNode = React.memo(function StitchNode({
       return { keys: ['true', 'false'], error: null };
     }
     if (node.type === 'mapping-entry') {
-      return { keys: ['status', 'headers', 'body', 'cookies'], error: null };
+      return { keys: ['status', 'headers', 'body', 'cookies', 'url'], error: null };
     }
     return null;
   }, [node.type, node.config, node.id, connections, allNodes]);
@@ -156,14 +156,10 @@ export const StitchNode = React.memo(function StitchNode({
     e.preventDefault();
     let portX: number;
     if (key === '__output__') {
-      // Single centered port
       portX = node.positionX + NODE_WIDTH / 2;
     } else {
       const allKeys = portResult?.keys ?? [];
-      const idx = allKeys.indexOf(key);
-      const count = allKeys.length;
-      const offset = count === 1 ? 0.5 : idx / (count - 1);
-      const leftPercent = (10 + offset * 80) / 100;
+      const leftPercent = getPortLeftPercent(node.type, key, allKeys) / 100;
       portX = node.positionX + NODE_WIDTH * leftPercent;
     }
     const measuredHeight = nodeRef.current?.offsetHeight ?? 82;
@@ -223,15 +219,21 @@ export const StitchNode = React.memo(function StitchNode({
       {node.type === 'mapping-entry' ? null : inputKeys.length > 0 ? (
         <>
           {/* Named input port labels */}
-          <div className="absolute -top-4 flex w-full justify-around px-1">
-            {inputKeys.map((key) => (
-              <span key={key} className="max-w-[3rem] truncate text-center text-[7px] leading-none text-app-muted">{key}</span>
-            ))}
-          </div>
+          {inputKeys.map((key) => {
+            const leftPercent = getPortLeftPercent(node.type, key, inputKeys);
+            return (
+              <span
+                key={`label-${key}`}
+                className="absolute -top-4 max-w-[3rem] -translate-x-1/2 truncate text-center text-[7px] leading-none text-app-muted"
+                style={{ left: `${leftPercent}%` }}
+              >
+                {key}
+              </span>
+            );
+          })}
           {/* Named input ports */}
-          {inputKeys.map((key, i) => {
-            const offset = inputKeys.length === 1 ? 0.5 : i / (inputKeys.length - 1);
-            const leftPercent = 10 + offset * 80;
+          {inputKeys.map((key) => {
+            const leftPercent = getPortLeftPercent(node.type, key, inputKeys);
             return (
               <div
                 key={key}
@@ -359,19 +361,27 @@ export const StitchNode = React.memo(function StitchNode({
 
       {/* Output port labels */}
       {hasDynamicPorts && !hasError && outputKeys.length > 0 && (
-        <div className="flex justify-around px-1 pb-1">
-          {outputKeys.map((key) => (
-            <span key={key} className="max-w-[3rem] truncate text-center text-[7px] leading-none text-app-muted">{key}</span>
-          ))}
+        <div className="relative h-3 px-1">
+          {outputKeys.map((key) => {
+            const leftPercent = getPortLeftPercent(node.type, key, outputKeys);
+            return (
+              <span
+                key={`label-${key}`}
+                className="absolute top-0 max-w-[3rem] -translate-x-1/2 truncate text-center text-[7px] leading-none text-app-muted"
+                style={{ left: `${leftPercent}%` }}
+              >
+                {key}
+              </span>
+            );
+          })}
         </div>
       )}
 
       {/* Output ports — mapping-exit and fetch-terminal are terminal, no output port needed */}
       {node.type === 'mapping-exit' || node.type === 'fetch-terminal' ? null : hasDynamicPorts && !hasError && outputKeys.length > 0 ? (
         <div className="relative h-3">
-          {outputKeys.map((key, i) => {
-            const offset = outputKeys.length === 1 ? 0.5 : i / (outputKeys.length - 1);
-            const leftPercent = 10 + offset * 80;
+          {outputKeys.map((key) => {
+            const leftPercent = getPortLeftPercent(node.type, key, outputKeys);
             return (
               <div
                 key={key}

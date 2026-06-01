@@ -17,13 +17,18 @@ export function resolveInputShape(
   const keys: string[] = [];
   for (const c of connections) {
     if (c.targetNodeId !== nodeId) continue;
+    // Resolved input key (targetSlot overrides sourceKey when set).
+    const targetKey = c.targetSlot && c.targetSlot !== 'input' ? c.targetSlot : null;
     if (c.sourceKey !== null) {
-      keys.push(c.sourceKey);
+      keys.push(targetKey ?? c.sourceKey);
     } else if (nodes) {
-      // Null sourceKey — resolve keys from the source node's output shape
-      const sourceNode = nodes.find((n) => n.id === c.sourceNodeId);
-      if (sourceNode) {
-        keys.push(...getOutputKeysForNode(sourceNode, connections));
+      // Null sourceKey — resolve keys from the source node's output shape.
+      // If targetSlot is set, the whole spread lands under that single key.
+      if (targetKey) {
+        keys.push(targetKey);
+      } else {
+        const sourceNode = nodes.find((n) => n.id === c.sourceNodeId);
+        if (sourceNode) keys.push(...getOutputKeysForNode(sourceNode, connections));
       }
     }
   }

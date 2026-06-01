@@ -29,6 +29,9 @@ export function JsSnippetEditor({ node }: JsSnippetEditorProps): React.ReactElem
     for (const c of incoming) {
       const raw = executionNodeOutputs[c.sourceNodeId];
       const sourceOutput = typeof raw === 'object' && raw !== null && !Array.isArray(raw) ? raw as Record<string, unknown> : null;
+      // Resolved input key the snippet sees — `targetSlot` overrides `sourceKey`
+      // when set, matching resolveNodeInputs (e.g. auto-suffixed `headers_2`).
+      const targetKey = c.targetSlot && c.targetSlot !== 'input' ? c.targetSlot : null;
       if (c.sourceKey !== null) {
         let type = '?';
         if (sourceOutput && c.sourceKey in sourceOutput) {
@@ -37,7 +40,7 @@ export function JsSnippetEditor({ node }: JsSnippetEditorProps): React.ReactElem
           else if (Array.isArray(val)) type = 'array';
           else type = typeof val;
         }
-        entries.push({ key: c.sourceKey, type });
+        entries.push({ key: targetKey ?? c.sourceKey, type });
       } else if (sourceOutput) {
         for (const key of Object.keys(sourceOutput)) {
           const val = sourceOutput[key];
@@ -45,7 +48,7 @@ export function JsSnippetEditor({ node }: JsSnippetEditorProps): React.ReactElem
           if (val === null) type = 'null';
           else if (Array.isArray(val)) type = 'array';
           else type = typeof val;
-          entries.push({ key, type });
+          entries.push({ key: targetKey ?? key, type });
         }
       } else if (raw !== undefined) {
         // Non-object output (array, string, number) — show as `value`
@@ -53,7 +56,7 @@ export function JsSnippetEditor({ node }: JsSnippetEditorProps): React.ReactElem
         if (raw === null) type = 'null';
         else if (Array.isArray(raw)) type = 'array';
         else type = typeof raw;
-        entries.push({ key: 'value', type });
+        entries.push({ key: targetKey ?? 'value', type });
       }
     }
 

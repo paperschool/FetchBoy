@@ -2,11 +2,11 @@ import { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import { useStitchStore } from '@/stores/stitchStore';
 import { ConnectionLine } from './ConnectionLine';
 import { useConnectionDrag } from './StitchConnectionDragContext';
-import { getNodeOutputKeys, getNodeInputKeys } from '../utils/nodeOutputKeys';
+import { getNodeOutputKeys, getNodeInputKeys, getPortLeftPercent } from '../utils/nodeOutputKeys';
 import type { StitchNode, StitchConnection } from '@/types/stitch';
 
 const NODE_WIDTH = 180;
-const INPUT_SLOT_OFFSET_Y = -1.5;
+const INPUT_SLOT_OFFSET_Y = 0;
 const FALLBACK_HEIGHT = 82;
 
 function measureNodeHeight(nodeId: string): number {
@@ -19,10 +19,7 @@ function getOutputPortPosition(
   portKey: string,
   allKeys: string[],
 ): { x: number; y: number } {
-  const idx = allKeys.indexOf(portKey);
-  const count = allKeys.length;
-  const offset = count === 1 ? 0.5 : count === 0 ? 0.5 : idx / (count - 1);
-  const leftPercent = (10 + offset * 80) / 100;
+  const leftPercent = getPortLeftPercent(node.type, portKey, allKeys) / 100;
   const nodeHeight = measureNodeHeight(node.id);
   return { x: node.positionX + NODE_WIDTH * leftPercent, y: node.positionY + nodeHeight };
 }
@@ -34,23 +31,21 @@ function measureNodeWidth(nodeId: string): number {
 
 function getInputSlotPosition(node: StitchNode, targetSlot?: string | null): { x: number; y: number } {
   const inputKeys = getNodeInputKeys(node);
-  if (targetSlot && inputKeys.length > 0) {
-    const idx = inputKeys.indexOf(targetSlot);
-    if (idx >= 0) {
-      const count = inputKeys.length;
-      const offset = count === 1 ? 0.5 : idx / (count - 1);
-      const leftPercent = (10 + offset * 80) / 100;
-      return { x: node.positionX + NODE_WIDTH * leftPercent, y: node.positionY + INPUT_SLOT_OFFSET_Y };
-    }
+  if (targetSlot && inputKeys.length > 0 && inputKeys.includes(targetSlot)) {
+    const leftPercent = getPortLeftPercent(node.type, targetSlot, inputKeys) / 100;
+    return { x: node.positionX + NODE_WIDTH * leftPercent, y: node.positionY + INPUT_SLOT_OFFSET_Y };
   }
   const width = node.type === 'loop' ? measureNodeWidth(node.id) : NODE_WIDTH;
   return { x: node.positionX + width / 2, y: node.positionY + INPUT_SLOT_OFFSET_Y };
 }
 
-export function ConnectionLayer(): React.ReactElement {
+interface ConnectionLayerProps {
+  onConnectionContextMenu?: (connId: string, x: number, y: number) => void;
+}
+
+export function ConnectionLayer({ onConnectionContextMenu }: ConnectionLayerProps = {}): React.ReactElement {
   const nodes = useStitchStore((s) => s.nodes);
   const connections = useStitchStore((s) => s.connections);
-  const removeConnection = useStitchStore((s) => s.removeConnection);
   const selectedConnectionId = useStitchStore((s) => s.selectedConnectionId);
   const selectConnection = useStitchStore((s) => s.selectConnection);
   const executionNodeOutputs = useStitchStore((s) => s.executionNodeOutputs);
@@ -85,9 +80,10 @@ export function ConnectionLayer(): React.ReactElement {
   const handleContextMenu = useCallback(
     (connId: string, e: React.MouseEvent): void => {
       e.preventDefault();
-      removeConnection(connId).catch(() => {});
+      e.stopPropagation();
+      onConnectionContextMenu?.(connId, e.clientX, e.clientY);
     },
-    [removeConnection],
+    [onConnectionContextMenu],
   );
 
   // Include nodes in deps so connection positions recalculate when node content/height changes
@@ -120,6 +116,16 @@ export function ConnectionLayer(): React.ReactElement {
         : sourceCompleted && targetCompleted ? 'fading'
         : 'default';
 
+      // Resolved input alias the consumer sees (e.g. `input.headers_2`).
+      // Only show when the target uses the generic 'input' slot — explicit
+      // slots like mapping-exit's status/headers/body/cookies are already
+      // visible on the node itself.
+      const targetInputKeys = getNodeInputKeys(targetNode);
+      const targetUsesGenericInput = targetInputKeys.length === 0;
+      const resolvedAlias = targetUsesGenericInput
+        ? (conn.targetSlot && conn.targetSlot !== 'input' ? conn.targetSlot : conn.sourceKey)
+        : null;
+
       return {
         id: conn.id,
         fromX: from.x,
@@ -130,11 +136,12 @@ export function ConnectionLayer(): React.ReactElement {
         executionStatus: execStatus,
         isBroken,
         sourceKey: conn.sourceKey,
+        alias: resolvedAlias,
       };
     }).filter(Boolean) as Array<{
       id: string; fromX: number; fromY: number; toX: number; toY: number;
       status: 'active' | 'selected' | 'broken'; executionStatus: 'default' | 'active' | 'fading';
-      isBroken: boolean; sourceKey: string | null;
+      isBroken: boolean; sourceKey: string | null; alias: string | null;
     }>;
   }, [connections, nodeMap, nodes, selectedConnectionId, calibrated, executionNodeOutputs, executionCurrentNodeId]);
 
@@ -145,17 +152,48 @@ export function ConnectionLayer(): React.ReactElement {
       data-testid="connection-layer"
     >
       {connectionLines.map((line) => (
-        <ConnectionLine
-          key={line.id}
-          fromX={line.fromX}
-          fromY={line.fromY}
-          toX={line.toX}
-          toY={line.toY}
-          status={line.status}
-          executionStatus={line.executionStatus}
-          onClick={() => handleClick(line.id)}
-          onContextMenu={(e) => handleContextMenu(line.id, e)}
-        />
+        <g key={line.id}>
+          <ConnectionLine
+            fromX={line.fromX}
+            fromY={line.fromY}
+            toX={line.toX}
+            toY={line.toY}
+            status={line.status}
+            executionStatus={line.executionStatus}
+            onClick={() => handleClick(line.id)}
+            onContextMenu={(e) => handleContextMenu(line.id, e)}
+          />
+          {line.alias && (() => {
+            const midX = (line.fromX + line.toX) / 2;
+            const midY = (line.fromY + line.toY) / 2;
+            // Approximate text width to size the backdrop pill (~5.5px per glyph at 9px font)
+            const w = line.alias.length * 5.5 + 10;
+            return (
+              <g className="pointer-events-none select-none">
+                <rect
+                  x={midX - w / 2}
+                  y={midY - 8}
+                  width={w}
+                  height={14}
+                  rx={3}
+                  ry={3}
+                  fill="var(--app-main, #111)"
+                  stroke="var(--app-border-subtle)"
+                  strokeWidth={0.5}
+                  opacity={0.9}
+                />
+                <text
+                  x={midX}
+                  y={midY + 2}
+                  textAnchor="middle"
+                  style={{ fontSize: '9px', fill: 'var(--app-text-muted)', fontFamily: 'var(--font-mono, monospace)' }}
+                >
+                  {line.alias}
+                </text>
+              </g>
+            );
+          })()}
+        </g>
       ))}
 
       {/* Preview wire during drag */}

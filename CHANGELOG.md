@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.19.6] - 2026-06-01
+
+- feat: Import collections from Bruno — folders of `.bru` files, single-file JSON exports, and `.zip` archives, including environments and pre-request scripts
+- feat: Insomnia (v4) imports now carry pre-request scripts across, matching the Postman and Bruno paths
+- fix: Stitch canvas — two-finger trackpad gestures now pan instead of zoom, and pinch/ctrl-wheel zoom is slowed for finer control
+- feat: Dismissable "Stitch is still under development" banner linking to the GitHub issues page
+- fix: Imported folders no longer vanish on restart — large inserts are chunked under SQLite's bound-parameter limit and the unreliable savepoint transaction was removed
+- fix: Clearer import errors for inaccessible folders, with overflowing error and preview lists now contained in scroll boxes
+
 ## [0.19.5] - 2026-04-28
 
 - feat: Stitch — clicking a node smoothly centers it in the canvas after the editor opens, with eased pan-and-zoom animation

@@ -25,7 +25,15 @@ export function executeMappingEntryNode(
     headers: input.headers ?? {},
     body: input.body ?? {},
     cookies,
+    url: input.url ?? '',
   };
+}
+
+/** Replace {{key}} placeholders in a template with values from the node input. */
+function interpolateFromInput(template: string, input: Record<string, unknown>): string {
+  return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (match, key: string) =>
+    input[key] !== undefined ? String(input[key]) : match,
+  );
 }
 
 export function executeMappingExitNode(
@@ -41,7 +49,7 @@ export function executeMappingExitNode(
     headers = { ...(input.headers as Record<string, string>) };
   } else {
     for (const h of config.headers ?? []) {
-      if (h.key) headers[h.key] = h.value;
+      if (h.key) headers[h.key] = interpolateFromInput(h.value, input);
     }
   }
 
@@ -53,15 +61,19 @@ export function executeMappingExitNode(
   } else {
     const setCookies: string[] = [];
     for (const c of config.cookies ?? []) {
-      if (c.key) setCookies.push(`${c.key}=${c.value}`);
+      if (c.key) setCookies.push(`${c.key}=${interpolateFromInput(c.value, input)}`);
     }
     if (setCookies.length > 0) {
       headers['Set-Cookie'] = setCookies.join(', ');
     }
   }
 
-  let body: unknown = input.body ?? config.body ?? '';
-  if (typeof body === 'object' && body !== null) body = JSON.stringify(body);
+  let body: unknown;
+  if (input.body !== undefined && input.body !== null) {
+    body = typeof input.body === 'object' ? JSON.stringify(input.body) : input.body;
+  } else {
+    body = interpolateFromInput(String(config.body ?? ''), input);
+  }
 
   return {
     status,

@@ -3,7 +3,16 @@ import { getDb } from '@/lib/db';
 import { insertMany } from '@/lib/dbHelpers';
 import type { ImportResult } from './types';
 
-/** Persist an ImportResult to SQLite with sequential inserts. */
+/**
+ * Persist an ImportResult to SQLite, sequentially in FK-dependency order
+ * (environments → collection → folders → requests).
+ *
+ * NOTE: not wrapped in a SAVEPOINT/transaction. tauri-plugin-sql runs each
+ * `db.execute` against a pooled connection, so multi-statement savepoints are
+ * unreliable ("no such savepoint" when RELEASE lands on a different connection
+ * than SAVEPOINT). Each insert below is individually atomic, which is enough
+ * once `insertMany` chunks under the bound-parameter limit.
+ */
 export async function persistImportResult(result: ImportResult): Promise<{
   collection: Collection;
   folders: Folder[];
@@ -33,7 +42,7 @@ export async function persistImportResult(result: ImportResult): Promise<{
   const folders: Folder[] = result.folders.map((f) => ({ ...f, created_at: now, updated_at: now }));
   const requests: Request[] = result.requests.map((r) => ({ ...r, created_at: now, updated_at: now }));
 
-  // Insert environments first (foreign key target).
+  // environments → collection → folders → requests (FK dependency order).
   await insertMany('environments', ['id', 'name', 'variables', 'is_active', 'created_at'],
     environments.map((env) => [env.id, env.name, JSON.stringify(env.variables), 0, env.created_at]));
 

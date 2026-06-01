@@ -149,15 +149,12 @@ describe('stitch lib', () => {
   });
 
   describe('insertConnection', () => {
-    it('creates a connection and returns it', async () => {
+    it('persists a fully-formed connection', async () => {
       const { insertConnection } = await import('./stitch');
-      const result = await insertConnection({
-        chainId: 'c1', sourceNodeId: 'n1', sourceKey: 'out',
-        targetNodeId: 'n2', targetSlot: 'in',
+      await insertConnection({
+        id: 'conn1', chainId: 'c1', sourceNodeId: 'n1', sourceKey: 'out',
+        targetNodeId: 'n2', targetSlot: 'in', createdAt: new Date().toISOString(),
       });
-      expect(result.chainId).toBe('c1');
-      expect(result.sourceNodeId).toBe('n1');
-      expect(typeof result.id).toBe('string');
       expect(mockDb.execute).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO stitch_connections'),
         expect.any(Array),

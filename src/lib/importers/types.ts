@@ -19,4 +19,4 @@ export interface ImportResult {
   environments: ImportedEnvironment[];
 }
 
-export type ImportFormat = 'postman-v1' | 'postman-v2' | 'insomnia-v4';
+export type ImportFormat = 'postman-v1' | 'postman-v2' | 'insomnia-v4' | 'bruno';

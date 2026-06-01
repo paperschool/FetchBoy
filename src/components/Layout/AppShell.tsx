@@ -42,6 +42,7 @@ export function AppShell() {
         useUiSettingsStore.getState().setSidebarSettingsExpanded(s.sidebar_settings_expanded ?? false);
         useUiSettingsStore.getState().setHasSeededSampleData(s.has_seeded_sample_data ?? false);
         useUiSettingsStore.getState().setLastSeenVersion(s.last_seen_version ?? null);
+        useUiSettingsStore.getState().setStitchCanvasAutoFocus(s.stitch_canvas_auto_focus ?? true);
         const proxyEnabled = s.proxy_enabled ?? true;
         const proxyPort = s.proxy_port ?? 8080;
         useUiSettingsStore.getState().setProxyPort(proxyPort);
@@ -60,7 +61,13 @@ export function AppShell() {
         sidebarCollapsed ? 'grid-cols-[3.5rem_1fr]' : 'grid-cols-[16rem_1fr]'
       } grid-rows-[3rem_2.25rem_1fr] overflow-hidden transition-[grid-template-columns] duration-200 ease-in-out [&>aside]:row-span-2 [&>main]:col-start-2 [&>main]:row-start-3`}
     >
-      <TopBar />
+      <div
+        data-testid="top-bar"
+        className="col-start-2 row-start-1 flex items-center justify-between border-b border-app-subtle px-3"
+      >
+        <span className="select-none text-sm font-semibold text-app-primary">Fetch Boy 🦴</span>
+        <TopBar />
+      </div>
       <ErrorBoundary fallbackLabel="Sidebar">
         <Sidebar collapsed={sidebarCollapsed} onToggle={handleToggleSidebar} />
       </ErrorBoundary>

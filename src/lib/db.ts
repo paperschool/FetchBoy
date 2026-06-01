@@ -161,6 +161,7 @@ export interface AppSettings {
     last_seen_version?: string | null;
     proxy_enabled?: boolean;
     proxy_port?: number;
+    stitch_canvas_auto_focus?: boolean;
 }
 
 // ─── Singleton Database Handle ────────────────────────────────────────────────

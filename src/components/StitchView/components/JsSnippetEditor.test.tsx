@@ -76,8 +76,8 @@ describe('JsSnippetEditor', () => {
   it('shows input keys as chips when connections exist', () => {
     useStitchStore.setState({
       connections: [
-        { id: 'c1', chainId: 'chain-1', sourceNodeId: 'src', sourceKey: 'name', targetNodeId: 'node-1', targetSlot: 'in', createdAt: 'ts' },
-        { id: 'c2', chainId: 'chain-1', sourceNodeId: 'src', sourceKey: 'age', targetNodeId: 'node-1', targetSlot: 'in', createdAt: 'ts' },
+        { id: 'c1', chainId: 'chain-1', sourceNodeId: 'src', sourceKey: 'name', targetNodeId: 'node-1', targetSlot: 'input', createdAt: 'ts' },
+        { id: 'c2', chainId: 'chain-1', sourceNodeId: 'src', sourceKey: 'age', targetNodeId: 'node-1', targetSlot: 'input', createdAt: 'ts' },
       ],
     });
     render(<JsSnippetEditor node={makeJsNode('return { a: 1 }')} />);

@@ -13,6 +13,7 @@ pub struct ChainExecutionRequestEvent {
     pub status: u16,
     pub headers: HashMap<String, String>,
     pub body: String,
+    pub url: String,
 }
 
 /// Result returned from the frontend after chain execution completes.

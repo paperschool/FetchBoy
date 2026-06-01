@@ -21,7 +21,7 @@ export const intercept = {
   'intercept.host': 'Host',
   'intercept.path': 'Path',
   'intercept.status': 'Status',
-  'intercept.noRequests': 'No intercepted requests yet.',
+  'intercept.noRequests': 'No intercepted requests yet',
   'intercept.pausedAt': 'Paused at breakpoint',
   'intercept.paused': 'Paused',
   'intercept.resuming': 'Resuming...',

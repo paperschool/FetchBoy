@@ -9,6 +9,8 @@ export const import_ = {
   'import.fetchboy': 'FetchBoy',
   'import.postman': 'Postman',
   'import.insomnia': 'Insomnia',
+  'import.bruno': 'Bruno',
+  'import.selectFolder': 'Select Folder',
   'import.aiGenerated': 'AI-Generated',
   'import.chooseFile': 'Choose File',
   'import.importButton': 'Import',

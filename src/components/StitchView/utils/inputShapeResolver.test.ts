@@ -8,7 +8,7 @@ const makeConn = (overrides: Partial<StitchConnection> = {}): StitchConnection =
   sourceNodeId: 'src-1',
   sourceKey: 'key1',
   targetNodeId: 'target-1',
-  targetSlot: 'in',
+  targetSlot: 'input',
   createdAt: 'ts',
   ...overrides,
 });
@@ -52,5 +52,14 @@ describe('resolveInputShape', () => {
     ];
     const result = resolveInputShape('n2', connections);
     expect(result).toEqual(['x', 'y']);
+  });
+
+  it('uses targetSlot as the resolved key when set (overrides sourceKey)', () => {
+    const connections = [
+      makeConn({ id: 'c1', sourceKey: 'headers', targetSlot: 'input', targetNodeId: 'n2' }),
+      makeConn({ id: 'c2', sourceKey: 'headers', targetSlot: 'headers_2', targetNodeId: 'n2' }),
+    ];
+    const result = resolveInputShape('n2', connections);
+    expect(result).toEqual(['headers', 'headers_2']);
   });
 });

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import packageJson from '../../package.json';
 import { getCurrentVersion, isNewVersion } from './appVersion';
 
 describe('getCurrentVersion', () => {
@@ -7,8 +8,8 @@ describe('getCurrentVersion', () => {
         expect(typeof getCurrentVersion()).toBe('string');
     });
 
-    it('returns package.json version (0.1.0)', () => {
-        expect(getCurrentVersion()).toBe('0.1.0');
+    it('returns the package.json version', () => {
+        expect(getCurrentVersion()).toBe(packageJson.version);
     });
 });
 
@@ -18,11 +19,11 @@ describe('isNewVersion', () => {
     });
 
     it('returns false for same version', () => {
-        expect(isNewVersion('0.1.0')).toBe(false);
+        expect(isNewVersion(getCurrentVersion())).toBe(false);
     });
 
-    it('returns true for different (older) version', () => {
-        expect(isNewVersion('0.0.9')).toBe(true);
+    it('returns true for a different (older) version', () => {
+        expect(isNewVersion('0.0.0')).toBe(true);
     });
 
     it('returns true for empty string', () => {

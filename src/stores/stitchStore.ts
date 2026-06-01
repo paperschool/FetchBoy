@@ -56,6 +56,7 @@ interface StitchState {
   // Connection actions
   addConnection: (conn: Omit<StitchConnection, 'id' | 'createdAt'>) => Promise<StitchConnection>;
   removeConnection: (id: string) => Promise<void>;
+  updateConnection: (id: string, changes: { targetSlot?: string }) => Promise<void>;
   selectConnection: (id: string | null) => void;
 
   // Preview
@@ -268,7 +269,9 @@ export const useStitchStore = create<StitchState>()(
     },
 
     updateNode: async (id, changes) => {
-      await stitchDb.updateNode(id, changes);
+      // Optimistic: update React state first so connection lines and node
+      // visuals stay in sync during 60Hz drag. DB write happens in the
+      // background; auto-save will reconcile if it fails.
       set((state) => {
         const node = state.nodes.find((n) => n.id === id);
         if (node) {
@@ -280,6 +283,7 @@ export const useStitchStore = create<StitchState>()(
           node.updatedAt = new Date().toISOString();
         }
       });
+      await stitchDb.updateNode(id, changes);
     },
 
     batchMoveContainerChildren: (containerId: string, x: number, y: number) => {
@@ -333,10 +337,36 @@ export const useStitchStore = create<StitchState>()(
       }),
 
     addConnection: async (conn) => {
-      const created = await stitchDb.insertConnection(conn);
+      // Auto-disambiguate input keys on collision: if this connection's
+      // resolved input key (sourceKey, since targetSlot is the default
+      // 'input') matches an existing connection on the same target, append
+      // _2, _3, ... to targetSlot so the consumer sees distinct keys.
+      // Optimistic state update before DB so back-to-back addConnection
+      // calls see each other's writes (no race on the collision check).
+      let finalConn = conn;
+      const targetSlotIsDefault = !conn.targetSlot || conn.targetSlot === 'input';
+      if (targetSlotIsDefault && conn.sourceKey) {
+        const existing = useStitchStore.getState().connections.filter((c) => c.targetNodeId === conn.targetNodeId);
+        const usedKeys = new Set(
+          existing
+            .map((c) => (c.targetSlot && c.targetSlot !== 'input' ? c.targetSlot : c.sourceKey))
+            .filter((k): k is string => Boolean(k)),
+        );
+        if (usedKeys.has(conn.sourceKey)) {
+          let n = 2;
+          while (usedKeys.has(`${conn.sourceKey}_${n}`)) n++;
+          finalConn = { ...conn, targetSlot: `${conn.sourceKey}_${n}` };
+        }
+      }
+      const created: StitchConnection = {
+        ...finalConn,
+        id: crypto.randomUUID(),
+        createdAt: new Date().toISOString(),
+      };
       set((state) => {
         state.connections.push(created);
       });
+      await stitchDb.insertConnection(created);
       return created;
     },
 
@@ -345,6 +375,14 @@ export const useStitchStore = create<StitchState>()(
       set((state) => {
         state.connections = state.connections.filter((c) => c.id !== id);
       });
+    },
+
+    updateConnection: async (id, changes) => {
+      set((state) => {
+        const conn = state.connections.find((c) => c.id === id);
+        if (conn && changes.targetSlot !== undefined) conn.targetSlot = changes.targetSlot;
+      });
+      await stitchDb.updateConnection(id, changes);
     },
 
     selectConnection: (id) =>

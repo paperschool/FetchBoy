@@ -1,5 +1,5 @@
 import { getDb } from '@/lib/db';
-import { now, parseJsonField, insertOne, buildUpdate, withTransaction } from '@/lib/dbHelpers';
+import { now, parseJsonField, insertOne, buildUpdate } from '@/lib/dbHelpers';
 import type {
   StitchChain,
   StitchNode,
@@ -168,27 +168,29 @@ export async function duplicateChain(
     createdAt: now(),
   }));
 
-  await withTransaction(async () => {
+  // Sequential inserts in FK-dependency order (chain → nodes → connections).
+  // Not wrapped in a SAVEPOINT: tauri-plugin-sql runs each db.execute against a
+  // pooled connection, so a RELEASE can land on a different connection than the
+  // SAVEPOINT ("no such savepoint"). Each insert is individually atomic.
+  await insertOne(
+    'stitch_chains',
+    ['id', 'name', 'mapping_id', 'request_id', 'folder_id', 'sort_order', 'created_at', 'updated_at'],
+    [newChain.id, newChain.name, newChain.mappingId, newChain.requestId, newChain.folderId, newChain.sortOrder, newChain.createdAt, newChain.updatedAt],
+  );
+  for (const n of newNodes) {
     await insertOne(
-      'stitch_chains',
-      ['id', 'name', 'mapping_id', 'request_id', 'folder_id', 'sort_order', 'created_at', 'updated_at'],
-      [newChain.id, newChain.name, newChain.mappingId, newChain.requestId, newChain.folderId, newChain.sortOrder, newChain.createdAt, newChain.updatedAt],
+      'stitch_nodes',
+      ['id', 'chain_id', 'type', 'position_x', 'position_y', 'config', 'label', 'parent_node_id', 'created_at', 'updated_at'],
+      [n.id, n.chainId, n.type, n.positionX, n.positionY, JSON.stringify(n.config), n.label, n.parentNodeId, n.createdAt, n.updatedAt],
     );
-    for (const n of newNodes) {
-      await insertOne(
-        'stitch_nodes',
-        ['id', 'chain_id', 'type', 'position_x', 'position_y', 'config', 'label', 'parent_node_id', 'created_at', 'updated_at'],
-        [n.id, n.chainId, n.type, n.positionX, n.positionY, JSON.stringify(n.config), n.label, n.parentNodeId, n.createdAt, n.updatedAt],
-      );
-    }
-    for (const c of newConns) {
-      await insertOne(
-        'stitch_connections',
-        ['id', 'chain_id', 'source_node_id', 'source_key', 'target_node_id', 'target_slot', 'created_at'],
-        [c.id, c.chainId, c.sourceNodeId, c.sourceKey, c.targetNodeId, c.targetSlot, c.createdAt],
-      );
-    }
-  });
+  }
+  for (const c of newConns) {
+    await insertOne(
+      'stitch_connections',
+      ['id', 'chain_id', 'source_node_id', 'source_key', 'target_node_id', 'target_slot', 'created_at'],
+      [c.id, c.chainId, c.sourceNodeId, c.sourceKey, c.targetNodeId, c.targetSlot, c.createdAt],
+    );
+  }
 
   return { chain: newChain, nodes: newNodes, connections: newConns };
 }
@@ -236,24 +238,31 @@ export async function deleteNode(id: string): Promise<void> {
 
 // ─── Connection Operations ──────────────────────────────────────────────────
 
-export async function insertConnection(
-  conn: Omit<StitchConnection, 'id' | 'createdAt'>,
-): Promise<StitchConnection> {
-  const full: StitchConnection = {
-    ...conn,
-    id: crypto.randomUUID(),
-    createdAt: now(),
-  };
+export async function insertConnection(conn: StitchConnection): Promise<void> {
   await insertOne(
     'stitch_connections',
     ['id', 'chain_id', 'source_node_id', 'source_key', 'target_node_id', 'target_slot', 'created_at'],
-    [full.id, full.chainId, full.sourceNodeId, full.sourceKey, full.targetNodeId, full.targetSlot, full.createdAt],
+    [conn.id, conn.chainId, conn.sourceNodeId, conn.sourceKey, conn.targetNodeId, conn.targetSlot, conn.createdAt],
   );
-  return full;
 }
 
 export async function deleteConnection(id: string): Promise<void> {
   const db = await getDb();
   await db.execute('DELETE FROM stitch_connections WHERE id = ?', [id]);
+}
+
+export async function updateConnection(
+  id: string,
+  changes: { targetSlot?: string },
+): Promise<void> {
+  // stitch_connections has no updated_at column, so we can't use buildUpdate
+  // (which auto-appends updated_at). Inline the SQL instead.
+  const sets: string[] = [];
+  const values: unknown[] = [];
+  if (changes.targetSlot !== undefined) { sets.push('target_slot = ?'); values.push(changes.targetSlot); }
+  if (sets.length === 0) return;
+  values.push(id);
+  const db = await getDb();
+  await db.execute(`UPDATE stitch_connections SET ${sets.join(', ')} WHERE id = ?`, values);
 }
 

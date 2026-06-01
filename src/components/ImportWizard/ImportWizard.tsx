@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import {
   X,
   FileUp,
+  FolderUp,
   AlertTriangle,
   CheckCircle2,
   Loader2,
@@ -13,9 +14,14 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
-import { readTextFile } from "@tauri-apps/plugin-fs";
+import { readTextFile, readDir, readFile } from "@tauri-apps/plugin-fs";
 import { persistImportResult } from "@/lib/importers/persist";
 import { parseByFormat } from "@/lib/importers/parseByFormat";
+import {
+  parseBrunoCollection,
+  parseBrunoZip,
+  type BrunoSourceFile,
+} from "@/lib/importers/bruno";
 import { importCollectionFromJson } from "@/lib/importExport";
 import { useCollectionStore } from "@/stores/collectionStore";
 import { useEnvironmentStore } from "@/stores/environmentStore";
@@ -46,7 +52,22 @@ const FORMAT_LABEL: Record<SelectedFormat, string> = {
   "postman-v2": "v2.0 / v2.1",
   "insomnia-v4": "v4",
   "fetchboy-v1": "v1",
+  bruno: "Collection",
 };
+
+/**
+ * Translate low-level errors into plain language. Tauri's fs scope rejection
+ * ("forbidden path … not allowed on the scope for … permission in your
+ * capability file") is developer jargon — users only need to know the folder
+ * isn't readable and where imports are allowed from.
+ */
+function friendlyImportError(err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err);
+  if (/forbidden path|not allowed on the scope|capability file/i.test(raw)) {
+    return "FetchBoy doesn't have permission to read files in that location. Imports are allowed from your home folder (e.g. Documents, Downloads, Desktop) — move the collection there and try again.";
+  }
+  return raw;
+}
 
 
 function CopyPromptFooter(): React.ReactElement {
@@ -241,6 +262,100 @@ export function ImportWizard({
     }
   };
 
+  // Bruno native collection — select a folder of .bru files, walk it, then preview.
+  const handleBrunoFolderSelect = async (): Promise<void> => {
+    emitDebug("info", "import-wizard", "Selecting Bruno collection folder");
+    try {
+      const selected = await open({ directory: true, multiple: false });
+      if (!selected) {
+        emitDebug("info", "import-wizard", "Folder dialog cancelled");
+        return;
+      }
+      const root = typeof selected === "string" ? selected : selected[0];
+      emitDebug("info", "import-wizard", `Folder selected: ${root}`);
+
+      const files: BrunoSourceFile[] = [];
+      const walk = async (dir: string, rel: string): Promise<void> => {
+        const entries = await readDir(dir);
+        for (const entry of entries) {
+          const childPath = `${dir}/${entry.name}`;
+          const childRel = rel ? `${rel}/${entry.name}` : entry.name;
+          if (entry.isDirectory) {
+            await walk(childPath, childRel);
+          } else if (entry.isFile && entry.name.endsWith(".bru")) {
+            files.push({ path: childRel, content: await readTextFile(childPath) });
+          }
+        }
+      };
+      await walk(root, "");
+
+      const collectionName =
+        root.split("/").filter(Boolean).pop() ?? "Bruno Collection";
+      const parsed = parseBrunoCollection(files, collectionName);
+      setResult(parsed);
+      const topIds = parsed.folders
+        .filter((f) => f.parent_id === null)
+        .map((f) => f.id);
+      setSelectedFolderIds(new Set(topIds));
+      emitDebug(
+        "info",
+        "import-wizard",
+        `Parsed ${files.length} .bru file(s) — showing preview`,
+      );
+      setStep("preview");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      emitDebug("error", "import-wizard", `Bruno folder import failed: ${msg}`);
+      setError(friendlyImportError(err));
+      setStep("error");
+    }
+  };
+
+  // Bruno single-file import — accepts a JSON export or a .zip of the collection.
+  const handleBrunoFileSelect = async (): Promise<void> => {
+    emitDebug("info", "import-wizard", "Selecting Bruno file (json or zip)");
+    try {
+      const selected = await open({
+        multiple: false,
+        filters: [
+          { name: "Bruno Collection", extensions: ["zip", "json"] },
+          { name: "All Files", extensions: ["*"] },
+        ],
+      });
+      if (!selected) {
+        emitDebug("info", "import-wizard", "File dialog cancelled");
+        return;
+      }
+      const path = typeof selected === "string" ? selected : selected[0];
+      const baseName =
+        path.split("/").pop()?.replace(/\.(zip|json)$/i, "") ?? "Bruno Collection";
+      emitDebug("info", "import-wizard", `File selected: ${path}`);
+
+      let parsed: ImportResult;
+      if (path.toLowerCase().endsWith(".zip")) {
+        const bytes = await readFile(path);
+        parsed = parseBrunoZip(bytes, baseName);
+        emitDebug("info", "import-wizard", `Unzipped Bruno collection (${bytes.length} bytes)`);
+      } else {
+        const text = await readTextFile(path);
+        parsed = parseByFormat(text, "bruno");
+      }
+
+      setResult(parsed);
+      const topIds = parsed.folders
+        .filter((f) => f.parent_id === null)
+        .map((f) => f.id);
+      setSelectedFolderIds(new Set(topIds));
+      emitDebug("info", "import-wizard", "Parse successful — showing preview");
+      setStep("preview");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      emitDebug("error", "import-wizard", `Bruno file import failed: ${msg}`);
+      setError(friendlyImportError(err));
+      setStep("error");
+    }
+  };
+
   const handleImport = async (): Promise<void> => {
     if (!processedResult) return;
     setStep("importing");
@@ -343,7 +458,7 @@ export function ImportWizard({
               <p className="text-xs text-app-muted">
                 Select the format to import:
               </p>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <p className="text-xs font-semibold text-app-primary">
                     FetchBoy
@@ -374,6 +489,19 @@ export function ImportWizard({
                     {formatBtn("insomnia-v4", "purple")}
                   </div>
                 </div>
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-app-primary">
+                    Bruno
+                  </p>
+                  <div className="flex flex-col gap-1.5">
+                    <button
+                      onClick={() => selectFormat("bruno")}
+                      className="rounded border border-amber-500/30 px-3 py-1.5 text-xs font-medium text-amber-400 hover:bg-amber-500/10 hover:border-amber-500/60 cursor-pointer transition-colors"
+                    >
+                      Collection
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Horizontal divider — padded from left/right */}
@@ -389,20 +517,49 @@ export function ImportWizard({
           {/* Step 2: File select */}
           {step === "file" && format && (
             <>
-              <p className="text-xs text-app-muted">
-                Select the{" "}
-                {format === "fetchboy-v1" ? ".fetchboy" : "exported JSON"} file{" "}
-                <span className="text-app-secondary">
-                  ({FORMAT_LABEL[format]})
-                </span>
-                :
-              </p>
-              <button
-                onClick={() => void handleFileSelect()}
-                className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-app-subtle py-6 text-sm text-app-muted hover:text-app-primary hover:border-blue-500/50 cursor-pointer transition-colors"
-              >
-                <FileUp size={18} /> Choose File...
-              </button>
+              {format === "bruno" ? (
+                <>
+                  <p className="text-xs text-app-muted">
+                    Import a Bruno collection — select the collection{" "}
+                    <span className="text-app-secondary">folder</span> of{" "}
+                    <code className="text-app-secondary">.bru</code> files, or a
+                    single <span className="text-app-secondary">.zip</span> /{" "}
+                    JSON export <span className="text-app-secondary">file</span>:
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => void handleBrunoFolderSelect()}
+                      className="flex flex-col items-center justify-center gap-2 rounded-md border border-dashed border-app-subtle py-6 text-sm text-app-muted hover:text-app-primary hover:border-amber-500/50 cursor-pointer transition-colors"
+                    >
+                      <FolderUp size={18} /> Select Folder
+                    </button>
+                    <button
+                      onClick={() => void handleBrunoFileSelect()}
+                      className="flex flex-col items-center justify-center gap-2 rounded-md border border-dashed border-app-subtle py-6 text-sm text-app-muted hover:text-app-primary hover:border-amber-500/50 cursor-pointer transition-colors"
+                    >
+                      <FileUp size={18} /> Select File (.zip / .json)
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs text-app-muted">
+                    Select the{" "}
+                    {format === "fetchboy-v1" ? ".fetchboy" : "exported JSON"}{" "}
+                    file{" "}
+                    <span className="text-app-secondary">
+                      ({FORMAT_LABEL[format]})
+                    </span>
+                    :
+                  </p>
+                  <button
+                    onClick={() => void handleFileSelect()}
+                    className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-app-subtle py-6 text-sm text-app-muted hover:text-app-primary hover:border-blue-500/50 cursor-pointer transition-colors"
+                  >
+                    <FileUp size={18} /> Choose File...
+                  </button>
+                </>
+              )}
               <div className="flex justify-between">
                 <button
                   onClick={() => setStep("format")}
@@ -460,16 +617,26 @@ export function ImportWizard({
                   </div>
                 )}
                 {result.warnings.length > 0 && (
-                  <div className="mt-2 space-y-1 border-t border-app-subtle pt-2">
-                    {result.warnings.map((w, i) => (
-                      <p
-                        key={i}
-                        className="flex items-start gap-1 text-amber-400"
-                      >
-                        <AlertTriangle size={12} className="mt-0.5 shrink-0" />{" "}
-                        {w.message}
-                      </p>
-                    ))}
+                  <div className="mt-2 border-t border-app-subtle pt-2">
+                    <p className="mb-1 text-app-muted">
+                      {result.warnings.length} warning(s)
+                    </p>
+                    <div className="max-h-32 space-y-1 overflow-y-auto pr-1">
+                      {result.warnings.slice(0, 100).map((w, i) => (
+                        <p
+                          key={i}
+                          className="flex items-start gap-1 break-words text-amber-400"
+                        >
+                          <AlertTriangle size={12} className="mt-0.5 shrink-0" />{" "}
+                          {w.message}
+                        </p>
+                      ))}
+                      {result.warnings.length > 100 && (
+                        <p className="text-app-muted">
+                          …and {result.warnings.length - 100} more
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -669,7 +836,11 @@ export function ImportWizard({
             <div className="flex flex-col items-center gap-2 py-4">
               <AlertTriangle size={24} className="text-red-400" />
               <p className="text-sm font-medium text-red-400">Import failed</p>
-              <p className="text-xs text-app-muted text-center">{error}</p>
+              <div className="max-h-48 w-full overflow-y-auto rounded border border-app-subtle bg-app-subtle/20 px-3 py-2">
+                <p className="whitespace-pre-wrap break-words text-left text-xs text-app-muted">
+                  {error}
+                </p>
+              </div>
               <button
                 onClick={() => {
                   setError(null);
