@@ -27,7 +27,7 @@ interface UseCollectionTreeStateReturn {
   handleDeleteCollection: (id: string) => Promise<void>;
   handleExportCollection: (id: string, name: string) => Promise<void>;
   handleImportCollection: () => Promise<void>;
-  handleAddFolder: (colId: string) => Promise<void>;
+  handleAddFolder: (colId: string, parentId?: string | null) => Promise<void>;
   handleDeleteFolder: (id: string) => Promise<void>;
   handleLoadRequest: (id: string) => void;
   handleOpenInNewTab: (id: string) => void;
@@ -50,7 +50,11 @@ export function useCollectionTreeState(): UseCollectionTreeStateReturn {
       .then(({ collections, folders, requests }) => {
         store.loadAll(collections, folders, requests);
       })
-      .catch(() => {});
+      .catch((err) => {
+        // Do NOT swallow — a rejected load silently empties the whole tree,
+        // which looks exactly like "my collections disappeared".
+        console.error('Failed to load collections from DB:', err);
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

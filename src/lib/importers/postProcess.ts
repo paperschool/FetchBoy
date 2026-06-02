@@ -1,4 +1,5 @@
 import type { ImportResult } from './types';
+import { MAX_FOLDER_DEPTH } from '@/components/CollectionTree/folderDepth';
 
 export interface ImportOptions {
   flattenSingleChild: boolean;
@@ -105,8 +106,14 @@ export function applyImportOptions(result: ImportResult, options: ImportOptions)
   }
 
   // ── 3. Limit folder depth ─────────────────────────────────────────────────
-  if (options.limitDepth && options.maxDepth > 0) {
-    const maxDepth = options.maxDepth; // e.g. 2 keeps depths 0 and 1
+  // The 5-level cap (MAX_FOLDER_DEPTH) is a hard invariant the runtime create/drag
+  // guards rely on, so it is enforced on every import; the user's "limit depth"
+  // toggle can only tighten it further, never exceed it.
+  {
+    const maxDepth =
+      options.limitDepth && options.maxDepth > 0
+        ? Math.min(options.maxDepth, MAX_FOLDER_DEPTH)
+        : MAX_FOLDER_DEPTH; // e.g. 2 keeps depths 0 and 1
 
     const folderById = new Map(folders.map((f) => [f.id, f]));
     const depthOf = new Map<string, number>();

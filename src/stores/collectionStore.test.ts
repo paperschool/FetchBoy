@@ -218,7 +218,9 @@ describe('collectionStore', () => {
             expect(tree[0].item.id).toBe('col-1');
             expect(tree[0].folders).toHaveLength(1);
             expect(tree[0].folders[0].type).toBe('folder');
-            expect(tree[0].folders[0].children).toHaveLength(1);
+            expect(tree[0].folders[0].depth).toBe(0);
+            expect(tree[0].folders[0].requests).toHaveLength(1);
+            expect(tree[0].folders[0].folders).toHaveLength(0);
             expect(tree[0].requests).toHaveLength(1);
             expect(tree[0].requests[0].item.id).toBe('req-2');
         });
@@ -242,6 +244,80 @@ describe('collectionStore', () => {
             const tree = useCollectionStore.getState().getCollectionTree();
             expect(tree[0].requests).toHaveLength(1);
             expect(tree[0].requests[0].item.id).toBe('req-2');
+        });
+
+        it('builds a 5-level nested folder tree with correct depths', () => {
+            const col = makeCol();
+            // fld-0 (depth 0) → fld-1 (1) → fld-2 (2) → fld-3 (3) → fld-4 (4)
+            const folders = [0, 1, 2, 3, 4].map((d) =>
+                makeFld({
+                    id: `fld-${d}`,
+                    parent_id: d === 0 ? null : `fld-${d - 1}`,
+                    name: `Level ${d}`,
+                }),
+            );
+            // one request at the deepest folder
+            const deepReq = makeReq({ id: 'req-deep', folder_id: 'fld-4' });
+            useCollectionStore.getState().loadAll([col], folders, [deepReq]);
+            const tree = useCollectionStore.getState().getCollectionTree();
+
+            // Walk down the chain asserting depth + single child at each level
+            let node = tree[0].folders[0];
+            expect(tree[0].folders).toHaveLength(1);
+            for (let d = 0; d < 4; d++) {
+                expect(node.item.id).toBe(`fld-${d}`);
+                expect(node.depth).toBe(d);
+                expect(node.folders).toHaveLength(1);
+                node = node.folders[0];
+            }
+            // deepest level (depth 4) holds the request, no further folders
+            expect(node.item.id).toBe('fld-4');
+            expect(node.depth).toBe(4);
+            expect(node.folders).toHaveLength(0);
+            expect(node.requests).toHaveLength(1);
+            expect(node.requests[0].item.id).toBe('req-deep');
+        });
+
+        it('flat collection (all parent_id null) renders all folders at depth 0', () => {
+            const col = makeCol();
+            const flat = [0, 1, 2].map((i) =>
+                makeFld({ id: `fld-${i}`, parent_id: null, sort_order: i }),
+            );
+            useCollectionStore.getState().loadAll([col], flat, []);
+            const tree = useCollectionStore.getState().getCollectionTree();
+            expect(tree[0].folders).toHaveLength(3);
+            for (const f of tree[0].folders) {
+                expect(f.depth).toBe(0);
+                expect(f.folders).toHaveLength(0);
+            }
+        });
+
+        it('orphan folder (parent_id points at missing folder) surfaces at top level', () => {
+            const col = makeCol();
+            const orphan = makeFld({ id: 'fld-orphan', parent_id: 'does-not-exist' });
+            useCollectionStore.getState().loadAll([col], [orphan], []);
+            const tree = useCollectionStore.getState().getCollectionTree();
+            expect(tree[0].folders).toHaveLength(1);
+            expect(tree[0].folders[0].item.id).toBe('fld-orphan');
+            expect(tree[0].folders[0].depth).toBe(0);
+        });
+
+        it('cyclic parent_id chain surfaces the folders instead of dropping them', () => {
+            const col = makeCol();
+            // a → b → a (cycle); neither is reachable from null and both reference existing folders
+            const a = makeFld({ id: 'fld-a', parent_id: 'fld-b', sort_order: 0 });
+            const b = makeFld({ id: 'fld-b', parent_id: 'fld-a', sort_order: 1 });
+            const reqInB = makeReq({ id: 'req-b', folder_id: 'fld-b' });
+            useCollectionStore.getState().loadAll([col], [a, b], [reqInB]);
+            // Returns without hanging AND the user's data is not silently lost: one
+            // cycle member surfaces at the top level with the other nested under it.
+            const tree = useCollectionStore.getState().getCollectionTree();
+            expect(tree[0].folders).toHaveLength(1);
+            const top = tree[0].folders[0];
+            expect(top.item.id).toBe('fld-a');
+            expect(top.folders).toHaveLength(1);
+            expect(top.folders[0].item.id).toBe('fld-b');
+            expect(top.folders[0].requests[0].item.id).toBe('req-b');
         });
     });
 });

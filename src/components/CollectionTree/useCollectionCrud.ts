@@ -21,6 +21,9 @@ import { writeTextFile, readTextFile } from "@tauri-apps/plugin-fs";
 import { useEnvironmentStore } from "@/stores/environmentStore";
 import { setActiveEnvironment } from "@/lib/environments";
 import { useDebugStore } from "@/stores/debugStore";
+import { useToastStore } from "@/stores/toastStore";
+import { t } from "@/lib/i18n";
+import { canCreateSubFolder } from "./folderDepth";
 import type { EditingType } from "./useCollectionInlineEdit";
 
 function emitDebug(level: 'info' | 'warn' | 'error', source: string, message: string): void {
@@ -38,7 +41,7 @@ interface UseCollectionCrudReturn {
   handleDeleteCollection: (id: string) => Promise<void>;
   handleExportCollection: (id: string, name: string) => Promise<void>;
   handleImportCollection: () => Promise<void>;
-  handleAddFolder: (colId: string) => Promise<void>;
+  handleAddFolder: (colId: string, parentId?: string | null) => Promise<void>;
   handleDeleteFolder: (id: string) => Promise<void>;
   handleLoadRequest: (id: string) => void;
   handleOpenInNewTab: (id: string) => void;
@@ -103,10 +106,19 @@ export function useCollectionCrud(
   );
 
   const handleAddFolder = useCallback(
-    async (colId: string) => {
-      const folder = await createFolder(colId, "New Folder");
+    async (colId: string, parentId: string | null = null) => {
+      // Depth guard: block creating a sub-folder that would exceed the 5-level cap.
+      if (parentId && !canCreateSubFolder(parentId, store.folders)) {
+        useToastStore.getState().addToast('warning', t('collections.maxDepthReached'));
+        return;
+      }
+      const folder = await createFolder(colId, "New Folder", parentId);
       store.addFolder(folder);
-      setExpanded((prev) => ({ ...prev, [folder.id]: true }));
+      setExpanded((prev) => ({
+        ...prev,
+        ...(parentId ? { [parentId]: true } : {}),
+        [folder.id]: true,
+      }));
       startEdit("folder", folder.id, folder.name);
     },
     [store, startEdit, setExpanded],
@@ -143,7 +155,7 @@ export function useCollectionCrud(
       if (!req) return;
       const { activeTabId, tabs, updateTabRequestState } = useTabStore.getState();
       const activeTabEntry = tabs.find((t) => t.id === activeTabId);
-      const { method, url, headers, queryParams, body, auth, preRequestScript, preRequestScriptEnabled } =
+      const { method, url, headers, queryParams, body, auth, preRequestScript, preRequestScriptEnabled, preRequestTemplateId, postResponseScript, postResponseScriptEnabled } =
         activeTabEntry?.requestState ?? useTabStore.getState().tabs[0].requestState;
 
       const changes = {
@@ -155,6 +167,9 @@ export function useCollectionCrud(
         auth_config: authStateToConfig(auth),
         pre_request_script: preRequestScript,
         pre_request_script_enabled: preRequestScriptEnabled,
+        pre_request_template_id: preRequestTemplateId,
+        post_response_script: postResponseScript,
+        post_response_script_enabled: postResponseScriptEnabled,
       };
 
       try {

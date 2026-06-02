@@ -342,7 +342,7 @@ tests {
 }
 `;
 
-  it('extracts pre-request script and warns on post-response/tests', () => {
+  it('imports pre-request + post-response scripts and warns only on the tests block (Story 20.9)', () => {
     const result = parseBrunoCollection([
       { path: 'Scripted.bru', content: SCRIPTED_BRU },
       { path: 'Health.bru', content: HEALTH_BRU },
@@ -350,18 +350,22 @@ tests {
     const scripted = result.requests.find((r) => r.name === 'Scripted');
     expect(scripted?.pre_request_script).toBe('bru.setVar("ts", Date.now());');
     expect(scripted?.pre_request_script_enabled).toBe(true);
+    // post-response block is now imported (Story 20.9), not skipped.
+    expect(scripted?.post_response_script).toBe('bru.setVar("token", res.body.token);');
+    expect(scripted?.post_response_script_enabled).toBe(true);
 
     const health = result.requests.find((r) => r.name === 'Health');
     expect(health?.pre_request_script).toBe('');
-    expect(health?.pre_request_script_enabled).toBe(false);
+    expect(health?.post_response_script ?? '').toBe('');
 
+    // Only the (unsupported) tests assertion block still warns.
     const scriptWarnings = result.warnings.filter((w) => w.field === 'script');
-    expect(scriptWarnings.length).toBeGreaterThanOrEqual(1);
     expect(scriptWarnings.every((w) => w.severity === 'info')).toBe(true);
-    expect(scriptWarnings.some((w) => /post-response|test/i.test(w.message))).toBe(true);
+    expect(scriptWarnings.some((w) => /tests/i.test(w.message))).toBe(true);
+    expect(scriptWarnings.some((w) => /not supported yet/i.test(w.message))).toBe(false);
   });
 
-  it('extracts pre-request script from JSON export and warns on post/tests', () => {
+  it('imports post-response script from JSON export (Story 20.9)', () => {
     const json = JSON.stringify({
       meta: { name: 'API', type: 'collection' },
       items: [
@@ -377,8 +381,8 @@ tests {
     });
     const result = parseBruno(json);
     expect(result.requests[0].pre_request_script).toBe('console.log(1);');
-    expect(result.requests[0].pre_request_script_enabled).toBe(true);
-    expect(result.warnings.some((w) => w.field === 'script' && w.severity === 'info')).toBe(true);
+    expect(result.requests[0].post_response_script).toBe('console.log(2);');
+    expect(result.requests[0].post_response_script_enabled).toBe(true);
   });
 });
 

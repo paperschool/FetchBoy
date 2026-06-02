@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { X, ChevronRight, ChevronDown, Globe } from 'lucide-react';
+import { X, ChevronRight, ChevronDown, Globe, CheckCircle2, XCircle } from 'lucide-react';
 import { MonacoEditorField } from '@/components/Editor/MonacoEditorField';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import { t } from '@/lib/i18n';
@@ -28,10 +28,10 @@ export function PreRequestDebugLog({ debugState, onClose }: PreRequestDebugLogPr
   const [outputExpanded, setOutputExpanded] = useState(false);
   const fontSize = useUiSettingsStore((s) => s.editorFontSize);
 
-  const { status, consoleLogs, httpLogs, error, startTime, endTime, inputSnapshot, outputSnapshot } = debugState;
+  const { status, consoleLogs, httpLogs, error, startTime, endTime, inputSnapshot, outputSnapshot, testResults } = debugState;
   const durationMs = startTime && endTime ? endTime - startTime : null;
   const statusInfo = STATUS_STYLES[status];
-  const hasContent = consoleLogs.length > 0 || httpLogs.length > 0 || error;
+  const hasContent = consoleLogs.length > 0 || httpLogs.length > 0 || !!error || (testResults?.length ?? 0) > 0;
 
   // Auto-scroll
   const handleScroll = useCallback(() => {
@@ -45,7 +45,7 @@ export function PreRequestDebugLog({ debugState, onClose }: PreRequestDebugLogPr
     if (!userScrolledRef.current && scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [consoleLogs.length, httpLogs.length, error]);
+  }, [consoleLogs.length, httpLogs.length, error, testResults?.length]);
 
   const toggleInput = useCallback(() => setInputExpanded((p) => !p), []);
   const toggleOutput = useCallback(() => setOutputExpanded((p) => !p), []);
@@ -87,6 +87,18 @@ export function PreRequestDebugLog({ debugState, onClose }: PreRequestDebugLogPr
           </div>
         ))}
 
+        {/* Post-response test results (fb.test / fb.expect) */}
+        {testResults?.map((tr, i) => (
+          <div key={`t${i}`} className="flex items-start gap-1.5 border-b border-app-subtle px-3 py-1 text-[10px]" data-testid="test-result-entry">
+            {tr.passed
+              ? <CheckCircle2 size={11} className="mt-0.5 shrink-0 text-green-400" />
+              : <XCircle size={11} className="mt-0.5 shrink-0 text-red-400" />}
+            <span className={tr.passed ? 'text-app-secondary' : 'text-red-400'}>
+              {tr.name}{tr.error ? ` — ${tr.error}` : ''}
+            </span>
+          </div>
+        ))}
+
         {/* Console logs */}
         {consoleLogs.map((log, i) => (
           <div
@@ -107,9 +119,16 @@ export function PreRequestDebugLog({ debugState, onClose }: PreRequestDebugLogPr
 
         {/* Error */}
         {error && (
-          <div className="mx-3 my-1.5 rounded bg-red-500/15 px-2 py-1 text-xs text-red-400" data-testid="script-error">
-            {error.lineNumber && <span className="mr-1 font-medium">Line {error.lineNumber}:</span>}
-            {error.message}
+          <div className="mx-3 my-1.5 rounded bg-red-500/15 px-2 py-1.5 text-xs text-red-400" data-testid="script-error">
+            <div className="font-medium">
+              {error.lineNumber && <span className="mr-1">Line {error.lineNumber}:</span>}
+              {error.message}
+            </div>
+            {error.stack && (
+              <pre className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap break-all font-mono text-[10px] text-red-300/80">
+                {error.stack}
+              </pre>
+            )}
           </div>
         )}
 

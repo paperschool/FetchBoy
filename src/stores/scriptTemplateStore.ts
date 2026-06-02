@@ -7,6 +7,8 @@ import {
   deleteScriptTemplate,
   type ScriptTemplate,
 } from '@/lib/scriptTemplates';
+import { clearPreRequestTemplateLinks } from '@/lib/collections';
+import { useCollectionStore } from '@/stores/collectionStore';
 
 interface ScriptTemplateStore {
   templates: ScriptTemplate[];
@@ -47,6 +49,10 @@ export const useScriptTemplateStore = create<ScriptTemplateStore>()(
 
     remove: async (id) => {
       await deleteScriptTemplate(id);
+      // Drop the dangling reference so requests don't claim a "linked template"
+      // that no longer exists (persisted + in-memory).
+      await clearPreRequestTemplateLinks(id);
+      useCollectionStore.getState().clearTemplateLinks(id);
       set((state) => {
         state.templates = state.templates.filter((t) => t.id !== id);
       });

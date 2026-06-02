@@ -20,6 +20,9 @@ interface RawRequest {
     pre_request_script: string;
     pre_request_script_enabled: number;
     pre_request_chain_id: string | null;
+    pre_request_template_id: string | null;
+    post_response_script: string | null;
+    post_response_script_enabled: number | null;
     sort_order: number;
     created_at: string;
     updated_at: string;
@@ -36,6 +39,9 @@ function deserializeRequest(raw: RawRequest): Request {
         pre_request_script: raw.pre_request_script ?? '',
         pre_request_script_enabled: Boolean(raw.pre_request_script_enabled ?? 1),
         pre_request_chain_id: raw.pre_request_chain_id ?? null,
+        pre_request_template_id: raw.pre_request_template_id ?? null,
+        post_response_script: raw.post_response_script ?? '',
+        post_response_script_enabled: Boolean(raw.post_response_script_enabled ?? 0),
     };
 }
 
@@ -47,9 +53,14 @@ export async function loadAllCollections(): Promise<{
     requests: Request[];
 }> {
     const db = await getDb();
-    const collections = await db.select<Collection[]>(
+    const rawCollections = await db.select<Array<Collection & { pre_request_script_enabled?: number | boolean }>>(
         'SELECT * FROM collections ORDER BY created_at ASC',
     );
+    const collections: Collection[] = rawCollections.map((c) => ({
+        ...c,
+        pre_request_script: c.pre_request_script ?? '',
+        pre_request_script_enabled: Boolean(c.pre_request_script_enabled ?? 1),
+    }));
     const folders = await db.select<Folder[]>('SELECT * FROM folders ORDER BY sort_order ASC');
     const rawRequests = await db.select<RawRequest[]>(
         'SELECT * FROM requests ORDER BY sort_order ASC',
@@ -70,6 +81,8 @@ export async function createCollection(name: string): Promise<Collection> {
         name,
         description: '',
         default_environment_id: null,
+        pre_request_script: '',
+        pre_request_script_enabled: true,
         created_at: now(),
         updated_at: now(),
     };
@@ -78,6 +91,18 @@ export async function createCollection(name: string): Promise<Collection> {
         [col.id, col.name, col.description, col.default_environment_id, col.created_at, col.updated_at],
     );
     return col;
+}
+
+export async function updateCollectionScript(
+    id: string,
+    script: string,
+    enabled: boolean,
+): Promise<void> {
+    const db = await getDb();
+    await db.execute(
+        'UPDATE collections SET pre_request_script = ?, pre_request_script_enabled = ?, updated_at = ? WHERE id = ?',
+        [script, enabled ? 1 : 0, now(), id],
+    );
 }
 
 export async function renameCollection(id: string, name: string): Promise<void> {
@@ -145,12 +170,26 @@ export async function updateFolderOrder(folderId: string, sortOrder: number): Pr
     ]);
 }
 
+export async function updateFolderParent(
+    folderId: string,
+    parentId: string | null,
+): Promise<void> {
+    const db = await getDb();
+    await db.execute('UPDATE folders SET parent_id = ?, updated_at = ? WHERE id = ?', [
+        parentId,
+        now(),
+        folderId,
+    ]);
+}
+
 // ─── Request INSERT helper ────────────────────────────────────────────────────
 
 const REQUEST_FIELDS = [
     'id', 'collection_id', 'folder_id', 'name', 'method', 'url', 'headers', 'query_params',
     'body_type', 'body_content', 'auth_type', 'auth_config', 'pre_request_script',
-    'pre_request_script_enabled', 'pre_request_chain_id', 'sort_order', 'created_at', 'updated_at',
+    'pre_request_script_enabled', 'pre_request_chain_id', 'pre_request_template_id',
+    'post_response_script', 'post_response_script_enabled',
+    'sort_order', 'created_at', 'updated_at',
 ] as const;
 
 async function insertRequestRow(req: Request): Promise<void> {
@@ -159,7 +198,9 @@ async function insertRequestRow(req: Request): Promise<void> {
         JSON.stringify(req.headers), JSON.stringify(req.query_params),
         req.body_type, req.body_content, req.auth_type, JSON.stringify(req.auth_config),
         req.pre_request_script, req.pre_request_script_enabled ? 1 : 0,
-        req.pre_request_chain_id, req.sort_order, req.created_at, req.updated_at,
+        req.pre_request_chain_id, req.pre_request_template_id ?? null,
+        req.post_response_script ?? '', (req.post_response_script_enabled ?? false) ? 1 : 0,
+        req.sort_order, req.created_at, req.updated_at,
     ]);
 }
 
@@ -186,6 +227,7 @@ export async function createSavedRequest(
         pre_request_script: '',
         pre_request_script_enabled: true,
         pre_request_chain_id: null,
+        pre_request_template_id: null,
         sort_order: 0,
         created_at: now(),
         updated_at: now(),
@@ -202,6 +244,15 @@ export async function renameRequest(id: string, name: string): Promise<void> {
 export async function deleteRequest(id: string): Promise<void> {
     const db = await getDb();
     await db.execute('DELETE FROM requests WHERE id = ?', [id]);
+}
+
+/** Null out the pre-request template link on every request that referenced a now-deleted template. */
+export async function clearPreRequestTemplateLinks(templateId: string): Promise<void> {
+    const db = await getDb();
+    await db.execute(
+        'UPDATE requests SET pre_request_template_id = NULL, updated_at = ? WHERE pre_request_template_id = ?',
+        [now(), templateId],
+    );
 }
 
 export async function updateRequestOrder(requestId: string, sortOrder: number): Promise<void> {
@@ -230,54 +281,51 @@ export async function updateSavedRequest(
     data: Partial<Omit<Request, 'id' | 'created_at'>>,
 ): Promise<void> {
     const db = await getDb();
-    await db.execute(
-        `UPDATE requests SET
-            name = ?,
-            method = ?,
-            url = ?,
-            headers = ?,
-            query_params = ?,
-            body_type = ?,
-            body_content = ?,
-            auth_type = ?,
-            auth_config = ?,
-            pre_request_script = ?,
-            pre_request_script_enabled = ?,
-            pre_request_chain_id = ?,
-            sort_order = ?,
-            updated_at = ?
-         WHERE id = ?`,
-        [
-            data.name ?? '',
-            data.method ?? 'GET',
-            data.url ?? '',
-            JSON.stringify(data.headers ?? []),
-            JSON.stringify(data.query_params ?? []),
-            data.body_type ?? 'none',
-            data.body_content ?? '',
-            data.auth_type ?? 'none',
-            JSON.stringify(data.auth_config ?? {}),
-            data.pre_request_script ?? '',
-            (data.pre_request_script_enabled ?? true) ? 1 : 0,
-            data.pre_request_chain_id ?? null,
-            data.sort_order ?? 0,
-            now(),
-            id,
-        ],
-    );
+    // Partial UPDATE: only touch columns the caller actually provided. A full-row
+    // UPDATE would reset omitted columns (e.g. post_response_script) to defaults,
+    // silently wiping fields the caller didn't intend to change (e.g. overwrite-save).
+    const sets: string[] = [];
+    const values: unknown[] = [];
+    const put = (col: string, val: unknown): void => {
+        sets.push(`${col} = ?`);
+        values.push(val);
+    };
+    if (data.name !== undefined) put('name', data.name);
+    if (data.method !== undefined) put('method', data.method);
+    if (data.url !== undefined) put('url', data.url);
+    if (data.headers !== undefined) put('headers', JSON.stringify(data.headers));
+    if (data.query_params !== undefined) put('query_params', JSON.stringify(data.query_params));
+    if (data.body_type !== undefined) put('body_type', data.body_type);
+    if (data.body_content !== undefined) put('body_content', data.body_content);
+    if (data.auth_type !== undefined) put('auth_type', data.auth_type);
+    if (data.auth_config !== undefined) put('auth_config', JSON.stringify(data.auth_config));
+    if (data.pre_request_script !== undefined) put('pre_request_script', data.pre_request_script);
+    if (data.pre_request_script_enabled !== undefined) put('pre_request_script_enabled', data.pre_request_script_enabled ? 1 : 0);
+    if (data.pre_request_chain_id !== undefined) put('pre_request_chain_id', data.pre_request_chain_id);
+    if (data.pre_request_template_id !== undefined) put('pre_request_template_id', data.pre_request_template_id);
+    if (data.post_response_script !== undefined) put('post_response_script', data.post_response_script);
+    if (data.post_response_script_enabled !== undefined) put('post_response_script_enabled', data.post_response_script_enabled ? 1 : 0);
+    if (data.sort_order !== undefined) put('sort_order', data.sort_order);
+
+    if (sets.length === 0) return; // nothing to update
+    put('updated_at', now());
+    values.push(id);
+    await db.execute(`UPDATE requests SET ${sets.join(', ')} WHERE id = ?`, values);
 }
 
 export async function createFullSavedRequest(
-    request: Omit<Request, 'id' | 'created_at' | 'updated_at' | 'pre_request_script' | 'pre_request_script_enabled' | 'pre_request_chain_id'> & {
+    request: Omit<Request, 'id' | 'created_at' | 'updated_at' | 'pre_request_script' | 'pre_request_script_enabled' | 'pre_request_chain_id' | 'pre_request_template_id'> & {
         pre_request_script?: string;
         pre_request_script_enabled?: boolean;
         pre_request_chain_id?: string | null;
+        pre_request_template_id?: string | null;
     },
 ): Promise<Request> {
     const full: Request = {
         pre_request_script: '',
         pre_request_script_enabled: true,
         pre_request_chain_id: null,
+        pre_request_template_id: null,
         ...request,
         id: crypto.randomUUID(),
         created_at: now(),

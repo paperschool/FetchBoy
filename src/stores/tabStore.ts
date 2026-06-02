@@ -3,7 +3,7 @@ import { immer } from 'zustand/middleware/immer';
 import { current } from 'immer';
 import type { HttpMethod, RequestTab, AuthState, BodyMode, KeyValueRow } from './requestStore';
 import type { ResponseData } from '@/components/ResponseViewer/ResponseViewer';
-import type { ConsoleLogEntry, HttpLogEntry, ScriptError } from '@/lib/scriptEngine';
+import type { ConsoleLogEntry, HttpLogEntry, ScriptError, TestResult } from '@/lib/scriptEngine';
 import { useUiSettingsStore } from './uiSettingsStore';
 
 // ─── Script Debug State ──────────────────────────────────────────────────────
@@ -17,6 +17,10 @@ export interface ScriptDebugState {
     endTime: number | null;
     inputSnapshot: Record<string, unknown> | null;
     outputSnapshot: Record<string, unknown> | null;
+    /** Which stage produced this debug state. */
+    stage?: 'pre-request' | 'post-response';
+    /** Post-response `fb.test` outcomes (Story 20.8). */
+    testResults?: TestResult[];
 }
 
 export function createDefaultScriptDebugState(): ScriptDebugState {
@@ -35,6 +39,8 @@ export function createDefaultScriptDebugState(): ScriptDebugState {
 // ─── Per-tab Data Snapshots ───────────────────────────────────────────────────
 
 export interface RequestSnapshot {
+    /** The saved request this tab represents (null for an unsaved/new request). */
+    savedRequestId: string | null;
     method: HttpMethod;
     url: string;
     headers: KeyValueRow[];
@@ -48,7 +54,10 @@ export interface RequestSnapshot {
     preRequestScriptEnabled: boolean;
     scriptKeepOpen: boolean;
     preRequestChainId: string | null;
+    preRequestTemplateId: string | null;
     preRequestMode: 'none' | 'javascript' | 'chain';
+    postResponseScript: string;
+    postResponseScriptEnabled: boolean;
 }
 
 export interface ResponseSnapshot {
@@ -65,6 +74,7 @@ export interface ResponseSnapshot {
 
 export function createDefaultRequestSnapshot(): RequestSnapshot {
     return {
+        savedRequestId: null,
         method: 'GET',
         url: '',
         headers: [],
@@ -78,7 +88,10 @@ export function createDefaultRequestSnapshot(): RequestSnapshot {
         preRequestScriptEnabled: true,
         scriptKeepOpen: false,
         preRequestChainId: null,
+        preRequestTemplateId: null,
         preRequestMode: 'none',
+        postResponseScript: '',
+        postResponseScriptEnabled: false,
     };
 }
 

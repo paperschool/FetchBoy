@@ -4,32 +4,15 @@ import { useDroppable } from '@dnd-kit/core';
 import { RequestRow } from './RequestRow';
 import { FolderRow } from './FolderRow';
 import { t } from '@/lib/i18n';
+import type { TreeFolder, TreeRequest } from '@/stores/collectionStore';
 
 export interface CollectionRowProps {
     collection: {
         id: string;
         name: string;
     };
-    folders: {
-        item: {
-            id: string;
-            name: string;
-        };
-        children: {
-            item: {
-                id: string;
-                name: string;
-                method: string;
-            };
-        }[];
-    }[];
-    requests: {
-        item: {
-            id: string;
-            name: string;
-            method: string;
-        };
-    }[];
+    folders: TreeFolder[]; // top-level folders only; deeper levels render via FolderRow recursion
+    requests: TreeRequest[];
     isExpanded: boolean;
     expandedFolders: Record<string, boolean>;
     editingId: string | null;
@@ -52,6 +35,7 @@ export interface CollectionRowProps {
     onCommitEditFolder: () => void;
     onCancelEditFolder: () => void;
     onAddRequestToFolder: (folderId: string) => void;
+    onAddSubFolder: (parentId: string) => void;
     onDeleteFolder: (folderId: string) => void;
     // Request callbacks
     onSelectRequest: (id: string) => void;
@@ -84,6 +68,7 @@ export function CollectionRow({
     onCommitEditFolder,
     onCancelEditFolder,
     onAddRequestToFolder,
+    onAddSubFolder,
     onDeleteFolder,
     onSelectRequest,
     onDeleteRequest,
@@ -229,36 +214,32 @@ export function CollectionRow({
                         </SortableContext>
                     </div>
 
-                    {/* Folders */}
+                    {/* Folders (top-level; nested folders render recursively inside FolderRow) */}
                     <SortableContext items={folderIds} strategy={verticalListSortingStrategy}>
-                        {folders.map((folderNode) => {
-                            const { item: fld, children: fldReqs } = folderNode;
-
-                            return (
-                                <FolderRow
-                                    key={fld.id}
-                                    folder={fld}
-                                    folderRequests={fldReqs}
-                                    colId={collection.id}
-                                    isExpanded={Boolean(expandedFolders[fld.id])}
-                                    editingId={editingId}
-                                    editingValue={editingValue}
-                                    editRef={editRef}
-                                    activeRequestId={activeRequestId}
-                                    onToggle={() => onToggleFolder(fld.id)}
-                                    onEditChange={onEditChange}
-                                    onEditFolder={onEditFolder}
-                                    onCommitEdit={onCommitEditFolder}
-                                    onCancelEdit={onCancelEditFolder}
-                                    onAddRequest={() => onAddRequestToFolder(fld.id)}
-                                    onDeleteFolder={() => onDeleteFolder(fld.id)}
-                                    onSelectRequest={onSelectRequest}
-                                    onDeleteRequest={onDeleteRequest}
-                                    onUpdateRequest={onUpdateRequest}
-                                    onOpenRequestInNewTab={onOpenRequestInNewTab}
-                                />
-                            );
-                        })}
+                        {folders.map((folderNode) => (
+                            <FolderRow
+                                key={folderNode.item.id}
+                                node={folderNode}
+                                colId={collection.id}
+                                expandedFolders={expandedFolders}
+                                editingId={editingId}
+                                editingValue={editingValue}
+                                editRef={editRef}
+                                activeRequestId={activeRequestId}
+                                onToggleFolder={onToggleFolder}
+                                onEditChange={onEditChange}
+                                onEditFolder={onEditFolder}
+                                onCommitEdit={onCommitEditFolder}
+                                onCancelEdit={onCancelEditFolder}
+                                onAddRequest={onAddRequestToFolder}
+                                onAddSubFolder={onAddSubFolder}
+                                onDeleteFolder={onDeleteFolder}
+                                onSelectRequest={onSelectRequest}
+                                onDeleteRequest={onDeleteRequest}
+                                onUpdateRequest={onUpdateRequest}
+                                onOpenRequestInNewTab={onOpenRequestInNewTab}
+                            />
+                        ))}
                     </SortableContext>
                 </div>
             )}

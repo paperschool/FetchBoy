@@ -7,6 +7,7 @@ import { KeyboardShortcutsModal } from '@/components/ui/KeyboardShortcutsModal';
 import { WhatsNewModal } from '@/components/ui/WhatsNewModal';
 import { useProxyExitCleanup } from '@/hooks/useProxyExitCleanup';
 import { useRequestStore } from '@/stores/requestStore';
+import { useScriptTemplateStore } from '@/stores/scriptTemplateStore';
 import { useTourStore } from '@/stores/tourStore';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
 import { seedSampleDataIfNeeded } from '@/lib/seedSampleData';
@@ -73,6 +74,12 @@ function App() {
     import('@tauri-apps/api/webviewWindow').then(({ getCurrentWebviewWindow }) => {
       getCurrentWebviewWindow().setTitle(`Fetch Boy - v${getCurrentVersion()}`).catch(() => {});
     }).catch(() => {});
+  }, []);
+
+  // Load script templates once at startup so a request's linked template resolves
+  // on first Scripts-tab open (otherwise the store is empty until the library opens).
+  useEffect(() => {
+    void useScriptTemplateStore.getState().load();
   }, []);
 
   useEffect(() => {

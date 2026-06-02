@@ -1,24 +1,25 @@
 import { type ReactNode } from "react";
 import type React from "react";
-import { Send, Radar, Link2, Bug, Settings } from "lucide-react";
+import { Send, Radar, Link2, Code2, Bug, Settings } from "lucide-react";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { ToastContainer } from "@/components/ui/ToastContainer";
-import { useAppTabStore } from "@/stores/appTabStore";
+import { useAppTabStore, type AppTab } from "@/stores/appTabStore";
 import { useUiSettingsStore } from "@/stores/uiSettingsStore";
 import { InterceptView } from "@/components/InterceptView/InterceptView";
 import { DebugView } from "@/components/Debug/DebugView";
 import { SettingsView } from "@/components/SettingsView/SettingsView";
+import { ScriptWorkspace } from "@/components/ScriptWorkspace/ScriptWorkspace";
 import { FetchTabActions } from "@/components/TopBar/TopBar";
 import { InterceptTabActions } from "@/components/InterceptView/InterceptTopBar";
 import { StitchView } from "@/components/StitchView/StitchView";
 import { useChainExecutionListener } from "@/hooks/useChainExecutionListener";
-
-type AppTab = "fetch" | "intercept" | "stitch" | "debug" | "settings";
+import { t } from "@/lib/i18n";
 
 const TAB_CONFIG: Record<AppTab, { label: () => string; icon: React.ReactNode }> = {
   fetch: { label: () => "Fetch", icon: <Send size={13} /> },
   intercept: { label: () => "Intercept", icon: <Radar size={13} /> },
   stitch: { label: () => "Stitch", icon: <Link2 size={13} /> },
+  scripts: { label: () => t("scripts.tab"), icon: <Code2 size={13} /> },
   debug: { label: () => "", icon: <Bug size={13} /> },
   settings: { label: () => "", icon: <Settings size={13} /> },
 };
@@ -107,6 +108,16 @@ export function AppTabs({ children }: AppTabsProps) {
         >
           <ErrorBoundary fallbackLabel="Stitch">
             <StitchView />
+          </ErrorBoundary>
+        </div>
+
+        {/* Scripts workspace panel */}
+        <div
+          className={activeTab === "scripts" ? "h-full" : "hidden"}
+          data-testid="scripts-panel"
+        >
+          <ErrorBoundary fallbackLabel="Scripts">
+            <ScriptWorkspace />
           </ErrorBoundary>
         </div>
 

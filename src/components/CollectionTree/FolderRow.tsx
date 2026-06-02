@@ -1,26 +1,33 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, FilePlus, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, FilePlus, FolderPlus, Trash2 } from 'lucide-react';
 import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useDndMonitor } from '@dnd-kit/core';
 import { RequestRow } from './RequestRow';
+import { t } from '@/lib/i18n';
+import { MAX_FOLDER_DEPTH_INDEX } from './folderDepth';
+import type { TreeFolder } from '@/stores/collectionStore';
+
+// Per-nesting-level indentation step (px). Equivalent to the old static `ml-3`,
+// but applied once per level so indentation grows with depth and stays legible.
+const INDENT_STEP_PX = 12;
 
 export interface FolderRowProps {
-    folder: { id: string; name: string };
-    folderRequests: { item: { id: string; name: string; method: string } }[];
+    node: TreeFolder;
     colId: string;
-    isExpanded: boolean;
+    expandedFolders: Record<string, boolean>;
     editingId: string | null;
     editingValue: string;
     editRef: React.MutableRefObject<HTMLInputElement | null>;
     activeRequestId: string | null;
-    onToggle: () => void;
+    onToggleFolder: (id: string) => void;
     onEditChange: (v: string) => void;
     onEditFolder: (id: string, name: string) => void;
     onCommitEdit: () => void;
     onCancelEdit: () => void;
-    onAddRequest: () => void;
-    onDeleteFolder: () => void;
+    onAddRequest: (folderId: string) => void;
+    onAddSubFolder: (parentId: string) => void;
+    onDeleteFolder: (folderId: string) => void;
     onSelectRequest: (id: string) => void;
     onDeleteRequest: (id: string) => void;
     onUpdateRequest: (id: string) => void;
@@ -28,28 +35,32 @@ export interface FolderRowProps {
 }
 
 export function FolderRow({
-    folder,
-    folderRequests,
+    node,
     colId,
-    isExpanded,
+    expandedFolders,
     editingId,
     editingValue,
     editRef,
     activeRequestId,
-    onToggle,
+    onToggleFolder,
     onEditChange,
     onEditFolder,
     onCommitEdit,
     onCancelEdit,
     onAddRequest,
+    onAddSubFolder,
     onDeleteFolder,
     onSelectRequest,
     onDeleteRequest,
     onUpdateRequest,
     onOpenRequestInNewTab,
 }: FolderRowProps) {
+    const folder = node.item;
+    const isExpanded = Boolean(expandedFolders[folder.id]);
     const isEditing = editingId === folder.id;
-    const fldReqIds = folderRequests.map((r) => r.item.id);
+    const canNest = node.depth < MAX_FOLDER_DEPTH_INDEX;
+    const fldReqIds = node.requests.map((r) => r.item.id);
+    const subFolderIds = node.folders.map((f) => f.item.id);
 
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
         id: folder.id,
@@ -69,6 +80,7 @@ export function FolderRow({
         <div
             ref={setNodeRef}
             data-testid={`folder-${folder.id}`}
+            data-depth={node.depth}
             style={{
                 transform: CSS.Transform.toString(transform),
                 transition,
@@ -81,7 +93,7 @@ export function FolderRow({
                 {...listeners}
             >
                 <button
-                    onClick={onToggle}
+                    onClick={() => onToggleFolder(folder.id)}
                     className="flex-shrink-0 text-app-muted cursor-pointer"
                     aria-label={isExpanded ? 'Collapse folder' : 'Expand folder'}
                 >
@@ -112,7 +124,7 @@ export function FolderRow({
 
                 <div className="hidden group-hover:flex items-center gap-0.5 text-gray-300">
                     <button
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); onAddRequest(); }}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); onAddRequest(folder.id); }}
                         aria-label="Add request to folder"
                         title="New Request"
                         className="p-1 rounded hover:text-white cursor-pointer"
@@ -121,8 +133,20 @@ export function FolderRow({
                         <FilePlus size={14} />
                     </button>
 
+                    {canNest && (
+                        <button
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onAddSubFolder(folder.id); }}
+                            aria-label="Add subfolder"
+                            title={t('collections.newSubfolderTitle')}
+                            className="p-1 rounded hover:text-white cursor-pointer"
+                            draggable={false}
+                        >
+                            <FolderPlus size={14} />
+                        </button>
+                    )}
+
                     <button
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDeleteFolder(); }}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDeleteFolder(folder.id); }}
                         aria-label="Delete folder"
                         title="Delete"
                         className="p-1 rounded text-red-400 hover:text-red-300 cursor-pointer"
@@ -134,9 +158,9 @@ export function FolderRow({
             </div>
 
             {isExpanded && (
-                <div className="ml-3">
+                <div style={{ paddingLeft: INDENT_STEP_PX }}>
                     <SortableContext items={fldReqIds} strategy={verticalListSortingStrategy}>
-                        {folderRequests.map((reqNode) => (
+                        {node.requests.map((reqNode) => (
                             <RequestRow
                                 key={reqNode.item.id}
                                 id={reqNode.item.id}
@@ -156,6 +180,34 @@ export function FolderRow({
                                 onDelete={() => onDeleteRequest(reqNode.item.id)}
                                 onUpdate={() => onUpdateRequest(reqNode.item.id)}
                                 onOpenInNewTab={() => onOpenRequestInNewTab(reqNode.item.id)}
+                            />
+                        ))}
+                    </SortableContext>
+
+                    {/* Nested sub-folders (recursive) */}
+                    <SortableContext items={subFolderIds} strategy={verticalListSortingStrategy}>
+                        {node.folders.map((childNode) => (
+                            <FolderRow
+                                key={childNode.item.id}
+                                node={childNode}
+                                colId={colId}
+                                expandedFolders={expandedFolders}
+                                editingId={editingId}
+                                editingValue={editingValue}
+                                editRef={editRef}
+                                activeRequestId={activeRequestId}
+                                onToggleFolder={onToggleFolder}
+                                onEditChange={onEditChange}
+                                onEditFolder={onEditFolder}
+                                onCommitEdit={onCommitEdit}
+                                onCancelEdit={onCancelEdit}
+                                onAddRequest={onAddRequest}
+                                onAddSubFolder={onAddSubFolder}
+                                onDeleteFolder={onDeleteFolder}
+                                onSelectRequest={onSelectRequest}
+                                onDeleteRequest={onDeleteRequest}
+                                onUpdateRequest={onUpdateRequest}
+                                onOpenRequestInNewTab={onOpenRequestInNewTab}
                             />
                         ))}
                     </SortableContext>

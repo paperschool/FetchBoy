@@ -400,13 +400,14 @@
           window.__splashReady = true;
         }, SPLASH_MS);
 
-        /* ── Click-to-skip (only after timer) ── */
+        /* ── Click-to-skip (any time — short-circuits at the earliest point) ── */
         document.getElementById('static-splash').addEventListener('click', function () {
-          if (window.__splashReady) {
-            window.__splashSkipped = true;
-            // dispatch a custom event so React can react immediately
-            window.dispatchEvent(new Event('splash-ready'));
-          }
+          window.__splashSkipped = true;
+          // Mark ready so React skips immediately even if it mounts after the click
+          // (otherwise the splash-ready event below would fire with no listener).
+          window.__splashReady = true;
+          // Notify an already-mounted React right away.
+          window.dispatchEvent(new Event('splash-ready'));
         });
 
         // Also fire the event when timer completes

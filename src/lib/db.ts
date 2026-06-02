@@ -16,6 +16,9 @@ export interface Collection {
     name: string;
     description: string;
     default_environment_id: string | null;
+    /** Collection-wide pre-request script — runs before every request in the collection. */
+    pre_request_script?: string;
+    pre_request_script_enabled?: boolean;
     created_at: string;
     updated_at: string;
 }
@@ -46,6 +49,11 @@ export interface Request {
     pre_request_script: string;
     pre_request_script_enabled: boolean;
     pre_request_chain_id?: string | null;
+    /** Optional linked script template run before the inline pre-request script. */
+    pre_request_template_id?: string | null;
+    /** Optional post-response/test script run after the response returns. */
+    post_response_script?: string;
+    post_response_script_enabled?: boolean;
     sort_order: number;
     created_at: string;
     updated_at: string;
@@ -194,6 +202,8 @@ export async function getDb(): Promise<Database> {
         // Ensure pre_request_chain columns exist (migration 015)
         try { await _db.execute('ALTER TABLE requests ADD COLUMN pre_request_chain_id TEXT'); } catch { /* exists */ }
         try { await _db.execute('ALTER TABLE stitch_chains ADD COLUMN request_id TEXT'); } catch { /* exists */ }
+        // Ensure pre_request_template link exists (migration 016)
+        try { await _db.execute('ALTER TABLE requests ADD COLUMN pre_request_template_id TEXT'); } catch { /* exists */ }
     }
     return _db;
 }

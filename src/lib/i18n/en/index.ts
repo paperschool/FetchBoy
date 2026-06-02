@@ -8,6 +8,7 @@ import { intercept } from './intercept';
 import { breakpoints } from './breakpoints';
 import { mappings } from './mappings';
 import { stitch } from './stitch';
+import { scripts } from './scripts';
 import { settings } from './settings';
 import { import_ } from './import_';
 import { tour } from './tour';
@@ -25,6 +26,7 @@ export const translations = {
   ...breakpoints,
   ...mappings,
   ...stitch,
+  ...scripts,
   ...settings,
   ...import_,
   ...tour,

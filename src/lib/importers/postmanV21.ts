@@ -1,5 +1,6 @@
 import type { KeyValuePair } from '@/lib/db';
 import type { ImportResult, ImportWarning } from './types';
+import { convertPmToFb } from './pmToFb';
 
 // ─── Postman v2.1 JSON Shape ─────────────────────────────────────────────────
 
@@ -58,6 +59,7 @@ export function parsePostmanV21(json: string): ImportResult {
   catch { throw new Error('Invalid JSON: cannot parse Postman collection file'); }
 
   if (!data.info?.name) throw new Error('Missing collection name (info.name)');
+  const collectionName = data.info.name;
   const schema = data.info.schema ?? '';
   if (schema && !schema.includes('v2.1') && !schema.includes('v2.0')) {
     throw new Error(`Unsupported Postman schema: ${schema}. Only v2.0/v2.1 are supported.`);
@@ -69,7 +71,7 @@ export function parsePostmanV21(json: string): ImportResult {
   const requests: ImportResult['requests'] = [];
 
   if (data.event?.some((e) => e.listen === 'test')) {
-    warnings.push({ field: 'event', message: 'Test scripts are not supported and will be skipped', severity: 'info' });
+    warnings.push({ field: 'event', message: 'Collection-level test scripts are not supported and were skipped (per-request test scripts are imported as post-response scripts)', severity: 'info' });
   }
 
   const environments: ImportResult['environments'] = [];
@@ -82,13 +84,49 @@ export function parsePostmanV21(json: string): ImportResult {
     });
   }
 
-  function processItems(items: PostmanItem[], parentFolderId: string | null, sortStart: number): void {
+  // Script mapping (aligned to the global/pre/post slot model):
+  //   • collection-level pre-request  → the collection's "global" script
+  //   • folder-level pre-request       → inlined into each contained request's pre-request
+  //   • request-level pre-request/test → the request's pre / post-response slots
+  const getPrerequestExec = (events?: PostmanEvent[]): string =>
+    events?.find((e) => e.listen === 'prerequest')?.script?.exec?.join('\n') ?? '';
+
+  const getTestExec = (events?: PostmanEvent[]): string =>
+    events?.find((e) => e.listen === 'test')?.script?.exec?.join('\n') ?? '';
+
+  // Convert once and surface a warning if anything needs manual review.
+  const convertScoped = (raw: string, scopeLabel: string): string => {
+    const { code, unconverted } = convertPmToFb(raw);
+    if (unconverted.length) {
+      warnings.push({
+        field: scopeLabel,
+        message: `Script from "${scopeLabel}" imported, but ${unconverted.length} Postman API(s) need manual review (e.g. ${unconverted[0].split(' ')[0]}).`,
+        severity: 'warning',
+      });
+    }
+    return code;
+  };
+
+  interface AncestorScript { code: string; scope: string }
+
+  function processItems(
+    items: PostmanItem[],
+    parentFolderId: string | null,
+    sortStart: number,
+    inherited: AncestorScript[],
+  ): void {
     let sort = sortStart;
     for (const item of items) {
       if (item.item) {
         const folderId = crypto.randomUUID();
-        folders.push({ id: folderId, collection_id: collectionId, parent_id: parentFolderId, name: item.name ?? 'Unnamed Folder', sort_order: sort++ });
-        processItems(item.item, folderId, 0);
+        const folderName = item.name ?? 'Unnamed Folder';
+        folders.push({ id: folderId, collection_id: collectionId, parent_id: parentFolderId, name: folderName, sort_order: sort++ });
+
+        const folderRaw = getPrerequestExec(item.event);
+        const childInherited = folderRaw.trim()
+          ? [...inherited, { code: convertScoped(folderRaw, folderName), scope: folderName }]
+          : inherited;
+        processItems(item.item, folderId, 0, childInherited);
       } else if (item.request) {
         const req = item.request;
         const { auth_type, auth_config } = mapAuth(req.auth);
@@ -98,8 +136,13 @@ export function parsePostmanV21(json: string): ImportResult {
           warnings.push({ field: `request.${item.name}`, message: `Body mode "${req.body.mode}" not fully supported — imported as raw`, severity: 'warning' });
         }
 
-        const preRequestEvent = item.event?.find((e) => e.listen === 'prerequest');
-        const preRequestScript = preRequestEvent?.script?.exec?.join('\n') ?? '';
+        const reqRaw = getPrerequestExec(item.event);
+        const ownPre = reqRaw.trim() ? convertScoped(reqRaw, `request.${item.name}`) : '';
+        // Folder-level ancestor scripts run before the request's own — inline them
+        // (collection-level lives in the collection's global slot, handled below).
+        const preRequestScript = [...inherited.map((a) => a.code), ownPre].filter((s) => s.trim()).join('\n\n');
+        const testRaw = getTestExec(item.event);
+        const postResponseScript = testRaw.trim() ? convertScoped(testRaw, `request.${item.name}`) : '';
 
         requests.push({
           id: crypto.randomUUID(),
@@ -116,16 +159,30 @@ export function parsePostmanV21(json: string): ImportResult {
           auth_config,
           pre_request_script: preRequestScript,
           pre_request_script_enabled: true,
+          pre_request_template_id: null,
+          post_response_script: postResponseScript,
+          post_response_script_enabled: postResponseScript.trim().length > 0,
           sort_order: sort++,
         });
       }
     }
   }
 
-  processItems(data.item ?? [], null, 0);
+  // Collection-level pre-request script → the collection's "global" slot.
+  const collectionRaw = getPrerequestExec(data.event);
+  const collectionScript = collectionRaw.trim() ? convertScoped(collectionRaw, collectionName) : '';
+
+  processItems(data.item ?? [], null, 0, []);
 
   return {
-    collection: { id: collectionId, name: data.info.name, description: '', default_environment_id: null },
+    collection: {
+      id: collectionId,
+      name: data.info.name,
+      description: '',
+      default_environment_id: null,
+      pre_request_script: collectionScript,
+      pre_request_script_enabled: collectionScript.trim().length > 0,
+    },
     folders,
     requests,
     warnings,

@@ -28,7 +28,30 @@ const NESTED_COLLECTION = JSON.stringify({
   ],
 });
 
+const WITH_TEST_SCRIPT = JSON.stringify({
+  info: { name: 'WithTest', schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json' },
+  item: [
+    {
+      name: 'Get Users',
+      request: { method: 'GET', url: 'https://api.example.com/users' },
+      event: [
+        { listen: 'test', script: { exec: ['pm.test("ok", function () {});', 'console.log("done");'] } },
+      ],
+    },
+  ],
+});
+
 describe('parsePostmanV21', () => {
+  it('imports a per-request test event into post_response_script, converting pm.test → fb.test (Story 20.9)', () => {
+    const result = parsePostmanV21(WITH_TEST_SCRIPT);
+    expect(result.requests).toHaveLength(1);
+    // pm.test/pm.expect are mechanically converted to fb.test/fb.expect so the
+    // imported test actually runs in the post-response sandbox (no bare `pm`).
+    expect(result.requests[0].post_response_script).toContain('fb.test');
+    expect(result.requests[0].post_response_script).not.toContain('pm.test');
+    expect(result.requests[0].post_response_script_enabled).toBe(true);
+  });
+
   it('parses a minimal collection', () => {
     const result = parsePostmanV21(MINIMAL_COLLECTION);
     expect(result.collection.name).toBe('Test Collection');
@@ -110,5 +133,55 @@ describe('parsePostmanV21', () => {
     const withoutScript = result.requests.find((r) => r.name === 'Without Script');
     expect(withScript?.pre_request_script).toBe('const a = 1;\nconst b = 2;');
     expect(withoutScript?.pre_request_script).toBe('');
+  });
+
+  it('imports a collection-level pre-request script into the collection global slot (Story rework)', () => {
+    const json = JSON.stringify({
+      info: { name: 'Auth Coll', schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json' },
+      event: [{ listen: 'prerequest', script: { exec: ['pm.environment.set("t", "x");'] } }],
+      item: [
+        { name: 'A', request: { method: 'GET', url: 'https://api.example.com/a' } },
+        { name: 'B', request: { method: 'GET', url: 'https://api.example.com/b' } },
+      ],
+    });
+    const result = parsePostmanV21(json);
+    // Collection-level script → the collection's global slot, not a per-request template.
+    expect(result.collection.pre_request_script).toContain('fb.env.set("t", "x")');
+    expect(result.collection.pre_request_script_enabled).toBe(true);
+    expect(result.requests.every((r) => !r.pre_request_template_id)).toBe(true);
+  });
+
+  it('inlines a folder-level pre-request script into each contained request', () => {
+    const json = JSON.stringify({
+      info: { name: 'Folder Coll', schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json' },
+      item: [{
+        name: 'Folder',
+        event: [{ listen: 'prerequest', script: { exec: ['pm.environment.set("f", "1");'] } }],
+        item: [{
+          name: 'Req',
+          request: { method: 'GET', url: 'https://api.example.com' },
+          event: [{ listen: 'prerequest', script: { exec: ['console.log("own");'] } }],
+        }],
+      }],
+    });
+    const result = parsePostmanV21(json);
+    const req = result.requests.find((r) => r.name === 'Req');
+    expect(req?.pre_request_script).toContain('fb.env.set("f", "1")'); // folder ancestor inlined
+    expect(req?.pre_request_script).toContain('console.log("own")');   // own script after it
+  });
+
+  it('converts a request-level pm.sendRequest script and flags it for review', () => {
+    const json = JSON.stringify({
+      info: { name: 'C', schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json' },
+      item: [{
+        name: 'OAuth',
+        request: { method: 'GET', url: 'https://api.example.com' },
+        event: [{ listen: 'prerequest', script: { exec: ['pm.sendRequest({ url: u }, function (e, r) {});'] } }],
+      }],
+    });
+    const result = parsePostmanV21(json);
+    const req = result.requests[0];
+    expect(req.pre_request_script).toContain('// ⚠️ Imported from Postman');
+    expect(result.warnings.some((w) => w.message.includes('manual review'))).toBe(true);
   });
 });

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-type AppTab = "fetch" | "intercept" | "stitch" | "debug" | "settings";
+export type AppTab = "fetch" | "intercept" | "stitch" | "scripts" | "debug" | "settings";
 
 interface AppTabStore {
   activeTab: AppTab;

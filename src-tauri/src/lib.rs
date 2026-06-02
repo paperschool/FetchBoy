@@ -9,7 +9,7 @@ mod proxy;
 use serde::Serialize;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
+use tauri::menu::{AboutMetadata, Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::{Emitter, Manager};
 
 // ─── App State ────────────────────────────────────────────────────────────────
@@ -104,7 +104,29 @@ fn build_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
             "Fetch Boy",
             true,
             &[
-                &PredefinedMenuItem::about(app, None, None)?,
+                &PredefinedMenuItem::about(
+                    app,
+                    None,
+                    Some(AboutMetadata {
+                        name: Some("Fetch Boy".into()),
+                        version: Some(app.package_info().version.to_string()),
+                        authors: Some(vec!["Dominic Jomaa".into()]),
+                        website: Some("https://github.com/paperschool/FetchBoy".into()),
+                        website_label: Some("GitHub".into()),
+                        copyright: Some("© Dominic Jomaa".into()),
+                        // macOS' standard panel shows only icon/name/version/copyright/credits,
+                        // so author + repo also go in credits to be visible there.
+                        credits: Some(
+                            "Created by Dominic Jomaa\nhttps://github.com/paperschool/FetchBoy".into(),
+                        ),
+                        // Full-res app icon (default_window_icon is only ~32px → tiny in the panel).
+                        icon: tauri::image::Image::from_bytes(include_bytes!(
+                            "../icons/icon_512x512.png"
+                        ))
+                        .ok(),
+                        ..Default::default()
+                    }),
+                )?,
                 &PredefinedMenuItem::separator(app)?,
                 &PredefinedMenuItem::hide(app, None)?,
                 &PredefinedMenuItem::hide_others(app, None)?,

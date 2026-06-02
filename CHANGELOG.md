@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.20.0] - 2026-06-02
+
+- feat: Collection tree now renders true nested folders up to 5 levels deep — recursive rendering with independent expand/collapse, replacing the old flat single-level list
+- feat: Folder depth guards on create, move, and drag-drop — operations that would exceed 5 levels are blocked with clear feedback
+- feat: Imports keep their nesting — the depth control defaults to 5 and is hard-capped, so deep Postman/Insomnia/Bruno collections no longer collapse into a flat dump
+- feat: New top-level Script Workspace — full-height Monaco editor with global / pre-request / post-response slots, a template manager, and a run panel showing console and test output
+- feat: FetchBoy API IntelliSense in the script editor — autocomplete and hover docs for `fb.*`, scoped to whether you're writing a pre-request or post-response script
+- feat: Collection-wide "global" pre-request script — runs before every request in the collection, editable from the Scripts tab and the workspace
+- feat: Post-response / test scripts — new `fb.response`, `fb.test`, and `fb.expect` run after the response returns, with pass/fail results in the debug panel
+- feat: Importers carry test scripts across — Postman/Bruno `pm.test`/`pm.expect` and common assertions convert to `fb.test`/`fb.expect` instead of being skipped
+- fix: Overwrite-saving a request no longer wipes its post-response or template script; deleting a template clears stale links; global scripts resolve correctly with multiple tabs open; cyclic/orphaned folders surface instead of vanishing
+- refactor: Pre-request chains retired — the chooser was removed, so stored chain bindings are cleared and no longer execute invisibly before a request
+
 ## [0.19.6] - 2026-06-01
 
 - feat: Import collections from Bruno — folders of `.bru` files, single-file JSON exports, and `.zip` archives, including environments and pre-request scripts

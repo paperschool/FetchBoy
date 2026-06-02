@@ -29,7 +29,13 @@ function authConfigToState(
 }
 
 export function buildSnapshotFromSaved(request: Request): RequestSnapshot {
+    // Restore the pre-request view from what the request actually has. Pre-request
+    // chains were retired, so a stored chain id no longer maps to 'chain' mode.
+    const hasScript = !!request.pre_request_script?.trim() || !!request.pre_request_template_id;
+    const preRequestMode: RequestSnapshot['preRequestMode'] = hasScript ? 'javascript' : 'none';
+
     return {
+        savedRequestId: request.id,
         method: isHttpMethod(request.method) ? request.method : 'GET',
         url: request.url,
         headers: request.headers.map((h) => ({
@@ -53,7 +59,10 @@ export function buildSnapshotFromSaved(request: Request): RequestSnapshot {
         preRequestScript: request.pre_request_script ?? '',
         preRequestScriptEnabled: request.pre_request_script_enabled ?? true,
         scriptKeepOpen: false,
-        preRequestChainId: null,
-        preRequestMode: 'none',
+        preRequestChainId: request.pre_request_chain_id ?? null,
+        preRequestTemplateId: request.pre_request_template_id ?? null,
+        preRequestMode,
+        postResponseScript: request.post_response_script ?? '',
+        postResponseScriptEnabled: request.post_response_script_enabled ?? false,
     };
 }

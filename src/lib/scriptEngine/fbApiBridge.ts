@@ -1,6 +1,9 @@
 import type { QuickJSAsyncContext, QuickJSHandle } from 'quickjs-emscripten';
 import { sha256 } from 'js-sha256';
-import type { ScriptContext, ConsoleLogEntry, HttpLogEntry, HttpSender } from './types';
+import type {
+  ScriptContext, ConsoleLogEntry, HttpLogEntry, HttpSender,
+  ResponseSnapshotForScript, PostResponseResult, TestResult,
+} from './types';
 import { injectFbHttp } from './fbHttpBridge';
 
 // ─── Console Capture ────────────────────────────────────────────────────────
@@ -153,4 +156,105 @@ export function injectFbApi(options: InjectFbApiOptions): Record<string, string>
   evalOrThrow(ctx, overrideScript, 'Env override error').dispose();
 
   return envStore;
+}
+
+// ─── fb post-response API (fb.response + fb.test/fb.expect) ───────────────────
+
+export interface InjectFbPostResponseOptions {
+  ctx: QuickJSAsyncContext;
+  response: ResponseSnapshotForScript;
+  envVars: Record<string, string>;
+}
+
+/**
+ * Sets up the post-response sandbox: read-only `fb.response`, `fb.env` (synced to
+ * __fb_env_store), `fb.utils`, `console`, and a minimal `fb.test`/`fb.expect`
+ * surface whose assertion failures are caught and recorded (never thrown past the
+ * sandbox). Results are read back via {@link extractPostResponseResults}.
+ */
+export function injectFbPostResponseApi(options: InjectFbPostResponseOptions): void {
+  const { ctx, response, envVars } = options;
+  const fb = ctx.newObject();
+  injectFbEnv(ctx, fb, { ...envVars });
+  injectFbUtils(ctx, fb);
+  ctx.setProp(ctx.global, 'fb', fb);
+  fb.dispose();
+
+  const initScript = `
+    globalThis.__fb_env_store = ${JSON.stringify(envVars)};
+    globalThis.__fb_response = ${JSON.stringify(response)};
+    globalThis.__fb_tests = [];
+  `;
+  evalOrThrow(ctx, initScript, 'Post-response init error').dispose();
+
+  const apiScript = `(function() {
+    // Sync fb.env to __fb_env_store (so mutations are extractable).
+    const origSet = fb.env.set;
+    fb.env.set = function(key, value) { globalThis.__fb_env_store[key] = value; return origSet(key, value); };
+    fb.env.get = function(key) { const v = globalThis.__fb_env_store[key]; return v !== undefined ? v : undefined; };
+
+    // Read-only fb.response.
+    const r = globalThis.__fb_response;
+    fb.response = {
+      get status() { return r.status; },
+      get headers() { return r.headers; },
+      get body() { return r.body; },
+      get time() { return r.time; },
+    };
+
+    // Assertion failures are tagged so fb.test can tell them apart from genuine
+    // runtime errors (a typo / wrong-type call) that would otherwise masquerade as
+    // ordinary assertion failures.
+    function __fbAssert(msg) { var e = new Error(msg); e.fbAssertion = true; throw e; }
+
+    // Minimal test surface — failures are recorded, never escape the sandbox.
+    fb.test = function(name, fn) {
+      try { fn(); globalThis.__fb_tests.push({ name: String(name), passed: true }); }
+      catch (e) {
+        var msg = (e && e.message) ? String(e.message) : String(e);
+        // A non-assertion throw is a bug in the test code, not a failed expectation.
+        if (!(e && e.fbAssertion)) msg = 'Runtime error: ' + msg;
+        globalThis.__fb_tests.push({ name: String(name), passed: false, error: msg });
+      }
+    };
+    fb.expect = function(actual) {
+      return {
+        toBe: function(expected) { if (actual !== expected) __fbAssert('Expected ' + JSON.stringify(actual) + ' to be ' + JSON.stringify(expected)); },
+        toEqual: function(expected) { if (JSON.stringify(actual) !== JSON.stringify(expected)) __fbAssert('Expected ' + JSON.stringify(actual) + ' to equal ' + JSON.stringify(expected)); },
+        toContain: function(sub) {
+          if (typeof actual !== 'string' && !Array.isArray(actual)) {
+            __fbAssert('toContain expects a string or array, got ' + (actual === null ? 'null' : typeof actual));
+          }
+          if (actual.indexOf(sub) === -1) __fbAssert('Expected ' + JSON.stringify(actual) + ' to contain ' + JSON.stringify(sub));
+        },
+        toBeGreaterThan: function(n) { if (!(actual > n)) __fbAssert('Expected ' + actual + ' to be greater than ' + n); },
+      };
+    };
+  })()`;
+  evalOrThrow(ctx, apiScript, 'Post-response API init error').dispose();
+}
+
+/** Read env mutations + test results back out of a post-response sandbox. */
+export function extractPostResponseResults(
+  ctx: QuickJSAsyncContext,
+  inputEnvVars: Record<string, string>,
+  consoleLogs: ConsoleLogEntry[],
+): PostResponseResult {
+  const read = (code: string): unknown => {
+    const res = ctx.evalCode(code);
+    if (res.error) { res.error.dispose(); return undefined; }
+    const json = ctx.getString(res.value);
+    res.value.dispose();
+    try { return JSON.parse(json); } catch { return undefined; }
+  };
+
+  const allEnv = (read(`JSON.stringify(globalThis.__fb_env_store)`) as Record<string, string>) ?? {};
+  const envMutations: Record<string, string> = {};
+  for (const [key, value] of Object.entries(allEnv)) {
+    if (inputEnvVars[key] !== value) envMutations[key] = value;
+  }
+
+  const testResults = (read(`JSON.stringify(globalThis.__fb_tests)`) as TestResult[]) ?? [];
+
+  return { envMutations, consoleLogs, testResults };
 }

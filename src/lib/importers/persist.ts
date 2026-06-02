@@ -47,8 +47,13 @@ export async function persistImportResult(result: ImportResult): Promise<{
     environments.map((env) => [env.id, env.name, JSON.stringify(env.variables), 0, env.created_at]));
 
   await db.execute(
-    'INSERT INTO collections (id, name, description, default_environment_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
-    [collection.id, collection.name, collection.description, collection.default_environment_id, collection.created_at, collection.updated_at],
+    'INSERT INTO collections (id, name, description, default_environment_id, pre_request_script, pre_request_script_enabled, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [
+      collection.id, collection.name, collection.description, collection.default_environment_id,
+      collection.pre_request_script ?? '',
+      (collection.pre_request_script_enabled ?? !!collection.pre_request_script?.trim()) ? 1 : 0,
+      collection.created_at, collection.updated_at,
+    ],
   );
 
   await insertMany('folders', ['id', 'collection_id', 'parent_id', 'name', 'sort_order', 'created_at', 'updated_at'],
@@ -57,12 +62,16 @@ export async function persistImportResult(result: ImportResult): Promise<{
   await insertMany('requests', [
     'id', 'collection_id', 'folder_id', 'name', 'method', 'url', 'headers', 'query_params',
     'body_type', 'body_content', 'auth_type', 'auth_config', 'pre_request_script',
-    'pre_request_script_enabled', 'sort_order', 'created_at', 'updated_at',
+    'pre_request_script_enabled', 'pre_request_template_id',
+    'post_response_script', 'post_response_script_enabled',
+    'sort_order', 'created_at', 'updated_at',
   ], requests.map((r) => [
     r.id, r.collection_id, r.folder_id, r.name, r.method, r.url,
     JSON.stringify(r.headers), JSON.stringify(r.query_params),
     r.body_type, r.body_content, r.auth_type, JSON.stringify(r.auth_config),
     r.pre_request_script, r.pre_request_script_enabled ? 1 : 0,
+    r.pre_request_template_id ?? null,
+    r.post_response_script ?? '', (r.post_response_script_enabled ?? false) ? 1 : 0,
     r.sort_order, r.created_at, r.updated_at,
   ]));
 

@@ -24,6 +24,7 @@ import {
 } from "@/lib/importers/bruno";
 import { importCollectionFromJson } from "@/lib/importExport";
 import { useCollectionStore } from "@/stores/collectionStore";
+import { MAX_FOLDER_DEPTH } from "@/components/CollectionTree/folderDepth";
 import { useEnvironmentStore } from "@/stores/environmentStore";
 import { emitDebug } from "@/lib/debugUtils";
 import type { ImportFormat, ImportResult } from "@/lib/importers/types";
@@ -118,7 +119,7 @@ export function ImportWizard({
     new Set(),
   );
   const [limitDepth, setLimitDepth] = useState(true);
-  const [maxDepth, setMaxDepth] = useState(3);
+  const [maxDepth, setMaxDepth] = useState(MAX_FOLDER_DEPTH);
   const [mergeSameName, setMergeSameName] = useState(true);
   const [optionsExpanded, setOptionsExpanded] = useState(true);
 
@@ -435,11 +436,11 @@ export function ImportWizard({
       onClick={reset}
     >
       <div
-        className="bg-app-main border border-app-subtle w-[28rem] rounded-lg shadow-xl"
+        className="bg-app-main border border-app-subtle w-[28rem] rounded-lg shadow-xl flex max-h-[90vh] flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-app-subtle px-4 py-3">
+        <div className="flex shrink-0 items-center justify-between border-b border-app-subtle px-4 py-3">
           <h2 className="text-sm font-semibold text-app-primary">
             Import Collection
           </h2>
@@ -451,7 +452,7 @@ export function ImportWizard({
           </button>
         </div>
 
-        <div className="px-4 py-4 space-y-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 space-y-4">
           {/* Step 1: Format select */}
           {step === "format" && (
             <>
@@ -687,11 +688,14 @@ export function ImportWizard({
                           <input
                             type="number"
                             min={1}
-                            max={10}
+                            max={MAX_FOLDER_DEPTH}
                             value={maxDepth}
                             onChange={(e) =>
                               setMaxDepth(
-                                Math.max(1, parseInt(e.target.value) || 1),
+                                Math.min(
+                                  MAX_FOLDER_DEPTH,
+                                  Math.max(1, parseInt(e.target.value) || 1),
+                                ),
                               )
                             }
                             onClick={(e) => e.stopPropagation()}
@@ -700,7 +704,7 @@ export function ImportWizard({
                         )}
                       </label>
                       <p className="ml-5 mt-0.5 text-[10px] text-app-muted">
-                        Flattens folders nested deeper than the limit
+                        Flattens folders nested deeper than the limit (max {MAX_FOLDER_DEPTH} levels)
                       </p>
                     </div>
 

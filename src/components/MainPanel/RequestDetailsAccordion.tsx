@@ -4,6 +4,8 @@ import { KeyValueRows } from "@/components/RequestBuilder/KeyValueRows";
 import { AuthPanel } from "@/components/AuthPanel/AuthPanel";
 import { TimeoutInput } from "@/components/RequestBuilder/TimeoutInput";
 import { ScriptsTab } from "./components/ScriptsTab";
+import { useScriptTemplateStore } from "@/stores/scriptTemplateStore";
+import { useCollectionStore } from "@/stores/collectionStore";
 import { extractQueryParamsFromUrl } from "@/lib/extractQueryParamsFromUrl";
 import { areQueryParamsEqual, buildUrlFromQueryParams } from "@/lib/urlUtils";
 import type { AuthState, HttpMethod, RequestTab } from "@/stores/requestStore";
@@ -48,6 +50,9 @@ interface RequestDetailsAccordionProps {
   setBodyRaw: (raw: string) => void;
   preRequestScript: string;
   preRequestScriptEnabled: boolean;
+  postResponseScript: string;
+  postResponseScriptEnabled: boolean;
+  onPostResponseEnabledChange: (enabled: boolean) => void;
   scriptKeepOpen: boolean;
   onScriptChange: (script: string) => void;
   onScriptEnabledChange: (enabled: boolean) => void;
@@ -58,6 +63,8 @@ interface RequestDetailsAccordionProps {
   onModeChange: (mode: 'none' | 'javascript' | 'chain') => void;
   preRequestChainId: string | null;
   onChainIdChange: (chainId: string | null) => void;
+  preRequestTemplateId?: string | null;
+  onTemplateIdChange?: (id: string | null) => void;
   banner?: React.ReactNode;
   activeVariables?: import('@/lib/db').KeyValuePair[];
 }
@@ -86,6 +93,9 @@ export function RequestDetailsAccordion(props: RequestDetailsAccordionProps): Re
     setBodyRaw,
     preRequestScript,
     preRequestScriptEnabled,
+    postResponseScript,
+    postResponseScriptEnabled,
+    onPostResponseEnabledChange,
     scriptKeepOpen,
     onScriptChange,
     onScriptEnabledChange,
@@ -96,9 +106,37 @@ export function RequestDetailsAccordion(props: RequestDetailsAccordionProps): Re
     onModeChange,
     preRequestChainId,
     onChainIdChange,
+    preRequestTemplateId,
+    onTemplateIdChange,
     banner,
     activeVariables,
   } = props;
+
+  // A linked template may have since been deleted; only treat the link as real if
+  // the template still exists, otherwise the dot would lie about what runs.
+  const linkedTemplateExists = useScriptTemplateStore((s) =>
+    preRequestTemplateId ? s.templates.some((tmpl) => tmpl.id === preRequestTemplateId) : false,
+  );
+
+  // The active request's collection — for the collection-wide ("global") script dot.
+  const collectionGlobalActive = useCollectionStore((s) => {
+    const req = s.activeRequestId ? s.requests.find((r) => r.id === s.activeRequestId) : null;
+    const col = req?.collection_id ? s.collections.find((c) => c.id === req.collection_id) : null;
+    return !!(col?.pre_request_script_enabled && col.pre_request_script?.trim());
+  });
+
+  // One dot per associated script slot (global / pre-request / post-response).
+  const scriptDots: Array<{ color: string; title: string }> = [];
+  if (collectionGlobalActive) scriptDots.push({ color: 'bg-sky-400', title: 'Collection-wide script' });
+  if (
+    (preRequestScriptEnabled && preRequestScript.trim()) ||
+    (preRequestTemplateId && linkedTemplateExists)
+  ) {
+    scriptDots.push({ color: 'bg-orange-400', title: 'Pre-request script' });
+  }
+  if (postResponseScriptEnabled && postResponseScript.trim()) {
+    scriptDots.push({ color: 'bg-emerald-400', title: 'Post-response script' });
+  }
 
   const [queryMatchError, setQueryMatchError] = useState<string | null>(null);
 
@@ -198,7 +236,29 @@ export function RequestDetailsAccordion(props: RequestDetailsAccordionProps): Re
                         : "text-app-muted hover:text-app-primary"
                     }`}
                   >
-                    {tab.label()}
+                    <span className="inline-flex items-center gap-1.5">
+                      {tab.label()}
+                      {tab.id === "scripts" && (
+                        scriptDots.length > 0 ? (
+                          <span className="inline-flex items-center gap-0.5">
+                            {scriptDots.map((dot) => (
+                              <span
+                                key={dot.title}
+                                className={`inline-block h-1.5 w-1.5 rounded-full ${dot.color}`}
+                                title={dot.title}
+                                aria-label={dot.title}
+                              />
+                            ))}
+                          </span>
+                        ) : (
+                          <span
+                            className="inline-block h-1.5 w-1.5 rounded-full bg-gray-500"
+                            title="No scripts"
+                            aria-label="No scripts"
+                          />
+                        )
+                      )}
+                    </span>
                   </button>
                 );
               })}
@@ -311,6 +371,9 @@ export function RequestDetailsAccordion(props: RequestDetailsAccordionProps): Re
             <ScriptsTab
               script={preRequestScript}
               enabled={preRequestScriptEnabled}
+              postResponseScript={postResponseScript}
+              postResponseScriptEnabled={postResponseScriptEnabled}
+              onPostResponseEnabledChange={onPostResponseEnabledChange}
               keepOpen={scriptKeepOpen}
               onScriptChange={onScriptChange}
               onEnabledChange={onScriptEnabledChange}
@@ -322,6 +385,8 @@ export function RequestDetailsAccordion(props: RequestDetailsAccordionProps): Re
               onModeChange={onModeChange}
               preRequestChainId={preRequestChainId}
               onChainIdChange={onChainIdChange}
+              preRequestTemplateId={preRequestTemplateId}
+              onTemplateIdChange={onTemplateIdChange}
             />
           ) : null}
 

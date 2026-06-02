@@ -10,11 +10,14 @@ import {
 import { interpolateRequestFields } from "@/lib/interpolateRequest";
 import { interpolate } from "@/lib/interpolate";
 import { usePreRequestScript, type ScriptError } from "@/hooks/usePreRequestScript";
+import { usePostResponseScript } from "@/hooks/usePostResponseScript";
 import { useEnvironmentStore } from "@/stores/environmentStore";
 import { useHistoryPersistence } from "@/hooks/useHistoryPersistence";
 import type { AuthState, HttpMethod } from "@/stores/requestStore";
 import { useTabStore, createDefaultScriptDebugState } from "@/stores/tabStore";
 import { useDebugStore } from "@/stores/debugStore";
+import { useScriptTemplateStore } from "@/stores/scriptTemplateStore";
+import { useCollectionStore } from "@/stores/collectionStore";
 
 function emitDebug(level: 'info' | 'warn' | 'error', message: string): void {
   useDebugStore.getState().addInternalEvent({
@@ -45,7 +48,10 @@ interface UseSendRequestParams {
   preRequestScriptEnabled: boolean;
   scriptKeepOpen: boolean;
   preRequestChainId?: string | null;
+  preRequestTemplateId?: string | null;
   preRequestMode?: 'none' | 'javascript' | 'chain';
+  postResponseScript?: string;
+  postResponseScriptEnabled?: boolean;
 }
 
 function invokeWithTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
@@ -66,9 +72,11 @@ export function useSendRequest(params: UseSendRequestParams): {
   const { url, method, headers, queryParams, body, auth, syncQueryParams,
     applyEnv, timeout, sslVerify, activeTabId, abortControllerRef,
     updateRes, setRequestDetailsOpen, preRequestScript, preRequestScriptEnabled,
-    scriptKeepOpen, preRequestChainId, preRequestMode } = params;
+    scriptKeepOpen, preRequestTemplateId,
+    postResponseScript, postResponseScriptEnabled } = params;
 
   const { executePreScript } = usePreRequestScript();
+  const { executePostScript } = usePostResponseScript();
   const { persistToHistory } = useHistoryPersistence();
 
   const appendLog = useCallback((message: string) => {
@@ -101,86 +109,43 @@ export function useSendRequest(params: UseSendRequestParams): {
       appendLog("Sync Query Parameters: using string-based query stripping fallback for an unparseable URL.");
     }
 
-    // Pre-request chain execution (chain mode takes priority over JS)
-    if (preRequestMode === 'chain' && preRequestChainId) {
-      emitDebug('info', 'Executing pre-request chain');
-      appendLog('Executing pre-request chain...');
-      try {
-        const { loadChainWithNodes } = await import('@/lib/stitch');
-        const { executeChain } = await import('@/lib/stitchEngine');
-        const { chain, nodes, connections } = await loadChainWithNodes(preRequestChainId);
-        emitDebug('info', `Loaded pre-request chain: ${chain.name} (${nodes.length} nodes)`);
+    // Pre-request chains were retired (Story rework): the chooser to create/edit one
+    // was removed and migration 018 clears every binding, so no chain executes here.
 
-        const envState = useEnvironmentStore.getState();
-        const activeEnv = envState.environments.find((e) => e.id === envState.activeEnvironmentId);
-        const envVars: Record<string, string> = {};
-        if (activeEnv?.variables) {
-          for (const v of activeEnv.variables) {
-            if (v.enabled && v.key) envVars[v.key] = v.value;
-          }
-        }
+    // Compose the pre-request execution, in run order:
+    //   1. collection-wide "global" script (applies to every request in the collection)
+    //   2. a linked script template (if any)
+    //   3. this request's own inline script
+    // Each part is gated independently so the global script still runs even when the
+    // request has no script of its own (or uses chain mode).
+    const collStore = useCollectionStore.getState();
+    // Resolve the collection from the request bound to the TAB being sent, not the
+    // global activeRequestId (last tree selection) — those diverge with multiple
+    // open tabs, which would prepend the wrong collection's global script.
+    const sentSavedRequestId =
+      useTabStore.getState().tabs.find((tb) => tb.id === activeTabId)?.requestState.savedRequestId ?? null;
+    const activeReq = sentSavedRequestId
+      ? collStore.requests.find((r) => r.id === sentSavedRequestId)
+      : null;
+    const collection = activeReq?.collection_id
+      ? collStore.collections.find((c) => c.id === activeReq.collection_id)
+      : null;
+    const globalScript = collection?.pre_request_script_enabled && collection.pre_request_script?.trim()
+      ? collection.pre_request_script
+      : '';
 
-        const cancelledRef = { current: false };
-        const noopCallbacks = {
-          onNodeStart: () => {},
-          onNodeComplete: () => {},
-          onError: () => {},
-          onSleepStart: () => {},
-          onChainComplete: () => {},
-        };
-
-        const ctx = await Promise.race([
-          executeChain(nodes, connections, envVars, noopCallbacks, cancelledRef),
-          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Pre-request chain timed out after 30s')), 30000)),
-        ]);
-
-        if (ctx.status === 'error' && ctx.error) {
-          const message = `Pre-request chain error: ${ctx.error.message}`;
-          emitDebug('error', message);
-          updateRes({ requestError: message, responseData: null, isSending: false });
-          appendLog(message);
-          return;
-        }
-
-        // Collect fetch-terminal node output and inject into request fields
-        const terminalNode = nodes.find((n) => n.type === 'fetch-terminal');
-        if (terminalNode) {
-          const terminalOutput = ctx.nodeOutputs[terminalNode.id] as Record<string, unknown> | undefined;
-          if (terminalOutput && typeof terminalOutput === 'object') {
-            const chainVars: Array<{ key: string; value: string; enabled: boolean }> = [];
-            for (const [k, v] of Object.entries(terminalOutput)) {
-              if (k === 'complete') continue;
-              chainVars.push({ key: k, value: String(v), enabled: true });
-            }
-            if (chainVars.length > 0) {
-              const applyChain = (s: string): string =>
-                s.replace(/\{\{([^}]+)\}\}/g, (_match, key: string) => {
-                  const found = chainVars.find((cv) => cv.key === key.trim());
-                  return found ? found.value : _match;
-                });
-              sendUrlForRequest = applyChain(sendUrlForRequest);
-              sendHeaders = sendHeaders.map((h) => ({ ...h, value: applyChain(h.value) }));
-              sendQueryParams = sendQueryParams.map((q) => ({ ...q, value: applyChain(q.value) }));
-              sendBody = { ...sendBody, raw: applyChain(sendBody.raw) };
-              emitDebug('info', `Chain output injected: ${chainVars.map((v) => v.key).join(', ')}`);
-              appendLog(`Chain variables applied: ${chainVars.map((v) => `${v.key}=${v.value}`).join(', ')}`);
-            }
-          }
-        }
-
-        emitDebug('info', 'Pre-request chain completed');
-        appendLog('Pre-request chain completed successfully.');
-      } catch (chainErr) {
-        const message = `Pre-request chain error: ${chainErr instanceof Error ? chainErr.message : String(chainErr)}`;
-        emitDebug('error', message);
-        updateRes({ requestError: message, responseData: null, isSending: false });
-        appendLog(message);
-        return;
-      }
+    let templateCode = '';
+    if (preRequestTemplateId) {
+      const tplStore = useScriptTemplateStore.getState();
+      if (!tplStore.isLoaded) await tplStore.load();
+      templateCode = useScriptTemplateStore.getState().templates.find((t) => t.id === preRequestTemplateId)?.code ?? '';
     }
 
-    // Pre-request script execution
-    if (preRequestScript.trim() && preRequestScriptEnabled && preRequestMode !== 'chain') {
+    const ownScript = preRequestScriptEnabled ? preRequestScript : '';
+    const effectiveScript = [globalScript, templateCode, ownScript].filter((s) => s.trim()).join('\n\n');
+
+    // Pre-request script execution (the chain branch above handles chain mode separately).
+    if (effectiveScript.trim()) {
       emitDebug('info', 'Executing pre-request script');
       appendLog("Executing pre-request script...");
 
@@ -191,7 +156,7 @@ export function useSendRequest(params: UseSendRequestParams): {
       });
 
       try {
-        const result = await executePreScript(preRequestScript, {
+        const result = await executePreScript(effectiveScript, {
           url: sendUrlForRequest, method, headers: sendHeaders, queryParams: sendQueryParams, body: sendBody.raw,
         });
         // Re-interpolate with fresh env vars (fb.env.set mutations are persisted before we get here)
@@ -217,7 +182,7 @@ export function useSendRequest(params: UseSendRequestParams): {
         const lineInfo = err.lineNumber ? ` (line ${err.lineNumber})` : '';
         const message = `Pre-request script error${lineInfo}: ${err.message}`;
         updateTabScriptDebugState(activeTabId, {
-          status: 'error', endTime: Date.now(), error: { message: err.message, lineNumber: err.lineNumber },
+          status: 'error', endTime: Date.now(), error: { message: err.message, lineNumber: err.lineNumber, stack: err.stack },
           consoleLogs: (err.consoleLogs ?? []) as never[], httpLogs: (err.httpLogs ?? []) as never[],
         });
         emitDebug('error', message);
@@ -246,7 +211,8 @@ export function useSendRequest(params: UseSendRequestParams): {
       method, url: sendUrlForRequest, headers: sendHeaders, query_params: sendQueryParams,
       body_type: sendBody.raw.trim() ? "raw" : "none", body_content: sendBody.raw,
       auth_type: auth.type, auth_config: {}, pre_request_script: preRequestScript,
-      pre_request_script_enabled: preRequestScriptEnabled, pre_request_chain_id: null, sort_order: 0,
+      pre_request_script_enabled: preRequestScriptEnabled, pre_request_chain_id: null,
+      pre_request_template_id: preRequestTemplateId ?? null, sort_order: 0,
       created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     } as const;
 
@@ -269,6 +235,45 @@ export function useSendRequest(params: UseSendRequestParams): {
       updateRes({ responseData: response });
       await persistToHistory(method, sendUrlForRequest, response.status, Number(response.responseTimeMs), requestSnapshot);
       appendLog("History persisted for successful response.");
+
+      // Post-response / test script (Story 20.8) — runs after the response is shown.
+      if (postResponseScript?.trim() && postResponseScriptEnabled) {
+        emitDebug('info', 'Executing post-response script');
+        appendLog('Executing post-response script...');
+        const { updateTabScriptDebugState } = useTabStore.getState();
+        const headersRecord: Record<string, string> = {};
+        for (const h of response.headers ?? []) headersRecord[h.key] = h.value;
+        updateTabScriptDebugState(activeTabId, {
+          ...createDefaultScriptDebugState(), stage: 'post-response', status: 'running', startTime: Date.now(),
+        });
+        try {
+          const postResult = await executePostScript(postResponseScript, {
+            status: response.status,
+            headers: headersRecord,
+            body: response.body,
+            time: Number(response.responseTimeMs),
+          });
+          updateTabScriptDebugState(activeTabId, {
+            stage: 'post-response', status: 'completed', endTime: Date.now(),
+            consoleLogs: postResult.consoleLogs, testResults: postResult.testResults,
+          });
+          const failed = postResult.testResults.filter((t) => !t.passed).length;
+          emitDebug(failed > 0 ? 'warn' : 'info', `Post-response script completed (${postResult.testResults.length} test(s), ${failed} failed)`);
+          appendLog(`Post-response script completed: ${postResult.testResults.length} test(s), ${failed} failed.`);
+        } catch (postErr) {
+          const err = postErr as ScriptError & { consoleLogs?: unknown[] };
+          const lineInfo = err.lineNumber ? ` (line ${err.lineNumber})` : '';
+          const message = `Post-response script error${lineInfo}: ${err.message}`;
+          updateTabScriptDebugState(activeTabId, {
+            stage: 'post-response', status: 'error', endTime: Date.now(),
+            error: { message: err.message, lineNumber: err.lineNumber, stack: err.stack },
+            consoleLogs: (err.consoleLogs ?? []) as never[],
+          });
+          emitDebug('error', message);
+          appendLog(message);
+          // Do NOT clobber the displayed response — the error only surfaces in the debug state.
+        }
+      }
     } catch (error) {
       if ((error instanceof DOMException && error.name === "AbortError") || extractErrorReason(error) === "__CANCELLED__") {
         emitDebug('warn', `${method} ${sendUrlForRequest} — cancelled by user`);
@@ -301,7 +306,8 @@ export function useSendRequest(params: UseSendRequestParams): {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url, method, headers, queryParams, body, auth, syncQueryParams, applyEnv,
     timeout, sslVerify, activeTabId, preRequestScript, preRequestScriptEnabled,
-    scriptKeepOpen, preRequestChainId, preRequestMode]);
+    scriptKeepOpen, preRequestTemplateId,
+    postResponseScript, postResponseScriptEnabled]);
 
   return { handleSendRequest };
 }

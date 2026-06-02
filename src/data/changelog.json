@@ -1,6 +1,17 @@
 {
   "changelog": [
     {
+      "version": "0.20.0",
+      "date": "2026-06-02",
+      "changes": [
+        "Collection tree now renders true nested folders up to 5 levels deep, with depth guards on create/move/drag-drop and imports that keep their nesting",
+        "New top-level Script Workspace — a full-height editor with global, pre-request, and post-response slots, a template manager, and a run panel",
+        "FetchBoy API IntelliSense in the script editor, scoped to the stage you're editing (pre-request vs post-response)",
+        "Collection-wide \"global\" pre-request scripts, plus post-response/test scripts with fb.response, fb.test, and fb.expect",
+        "Importers carry Postman/Bruno test scripts across by converting pm.test/pm.expect to fb.test/fb.expect"
+      ]
+    },
+    {
       "version": "0.19.0",
       "date": "2026-04-02",
       "changes": [

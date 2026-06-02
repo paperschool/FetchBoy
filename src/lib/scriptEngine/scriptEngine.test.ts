@@ -353,5 +353,22 @@ describe('executePreRequestScript', () => {
                 message: expect.stringContaining('boom'),
             });
         });
+
+        it('reports a complete error with name, line number, and stack', async () => {
+            const ctx = makeContext();
+            // line 1 blank, line 2 throws — so lineNumber should resolve to 2.
+            let caught: (Error & { lineNumber?: number; stack?: string }) | undefined;
+            try {
+                await executePreRequestScript('\nthrow new TypeError("kaboom");', ctx);
+            } catch (e) {
+                caught = e as typeof caught;
+            }
+            expect(caught).toBeDefined();
+            expect(caught!.message).toContain('TypeError');
+            expect(caught!.message).toContain('kaboom');
+            expect(caught!.lineNumber).toBe(2);
+            expect(typeof caught!.stack).toBe('string');
+            expect((caught!.stack ?? '').length).toBeGreaterThan(0);
+        });
     });
 });

@@ -12,13 +12,15 @@ export interface TreeRequest {
 export interface TreeFolder {
     type: 'folder';
     item: Folder;
-    children: TreeRequest[];
+    depth: number; // 0-based; collection-level folders are depth 0
+    folders: TreeFolder[]; // nested sub-folders (sorted by sort_order)
+    requests: TreeRequest[]; // this folder's requests (sorted by sort_order)
 }
 
 export interface TreeCollection {
     type: 'collection';
     item: Collection;
-    folders: TreeFolder[];
+    folders: TreeFolder[]; // top-level folders (parent_id === null)
     requests: TreeRequest[]; // direct requests (no folder)
 }
 
@@ -39,11 +41,13 @@ interface CollectionState {
     // Collection CRUD
     addCollection: (collection: Collection) => void;
     renameCollection: (id: string, name: string) => void;
+    setCollectionScript: (id: string, script: string, enabled: boolean) => void;
     deleteCollection: (id: string) => void;
 
     // Folder CRUD
     addFolder: (folder: Folder) => void;
     renameFolder: (id: string, name: string) => void;
+    moveFolder: (id: string, parentId: string | null) => void;
     deleteFolder: (id: string) => void;
 
     // Request CRUD
@@ -51,6 +55,7 @@ interface CollectionState {
     renameRequest: (id: string, name: string) => void;
     deleteRequest: (id: string) => void;
     updateRequest: (id: string, changes: Partial<Omit<Request, 'id' | 'created_at'>>) => void;
+    clearTemplateLinks: (templateId: string) => void;
 
     // Reorder
     reorderFolders: (collectionId: string, orderedIds: string[]) => void;
@@ -96,6 +101,15 @@ export const useCollectionStore = create<CollectionState>()(
                 if (col) col.name = name;
             }),
 
+        setCollectionScript: (id, script, enabled) =>
+            set((state) => {
+                const col = state.collections.find((c) => c.id === id);
+                if (col) {
+                    col.pre_request_script = script;
+                    col.pre_request_script_enabled = enabled;
+                }
+            }),
+
         deleteCollection: (id) =>
             set((state) => {
                 const folderIds = state.folders
@@ -126,6 +140,12 @@ export const useCollectionStore = create<CollectionState>()(
                 if (folder) folder.name = name;
             }),
 
+        moveFolder: (id, parentId) =>
+            set((state) => {
+                const folder = state.folders.find((f) => f.id === id);
+                if (folder) folder.parent_id = parentId;
+            }),
+
         deleteFolder: (id) =>
             set((state) => {
                 state.folders = state.folders.filter((f) => f.id !== id);
@@ -153,6 +173,13 @@ export const useCollectionStore = create<CollectionState>()(
             set((state) => {
                 const req = state.requests.find((r) => r.id === id);
                 if (req) Object.assign(req, changes);
+            }),
+
+        clearTemplateLinks: (templateId) =>
+            set((state) => {
+                for (const r of state.requests) {
+                    if (r.pre_request_template_id === templateId) r.pre_request_template_id = null;
+                }
             }),
 
         deleteRequest: (id) =>
@@ -191,19 +218,65 @@ export const useCollectionStore = create<CollectionState>()(
         getCollectionTree: () => {
             const { collections, folders, requests } = get();
             return collections.map((col) => {
-                const colFolders = folders
-                    .filter((f) => f.collection_id === col.id)
-                    .sort((a, b) => a.sort_order - b.sort_order)
-                    .map(
-                        (folder): TreeFolder => ({
-                            type: 'folder',
-                            item: folder,
-                            children: requests
-                                .filter((r) => r.folder_id === folder.id)
-                                .sort((a, b) => a.sort_order - b.sort_order)
-                                .map((r): TreeRequest => ({ type: 'request', item: r })),
-                        }),
-                    );
+                const colFolders = folders.filter((f) => f.collection_id === col.id);
+
+                // Group this collection's folders by parent_id for recursive assembly.
+                const childrenOf = new Map<string | null, Folder[]>();
+                for (const f of colFolders) {
+                    const list = childrenOf.get(f.parent_id) ?? [];
+                    list.push(f);
+                    childrenOf.set(f.parent_id, list);
+                }
+
+                const requestsOf = (folderId: string): TreeRequest[] =>
+                    requests
+                        .filter((r) => r.folder_id === folderId)
+                        .sort((a, b) => a.sort_order - b.sort_order)
+                        .map((r): TreeRequest => ({ type: 'request', item: r }));
+
+                // `seen` guards against cyclic parent_id chains (would otherwise recurse forever)
+                // and against a folder being emitted twice.
+                const seen = new Set<string>();
+                const build = (parentId: string | null, depth: number): TreeFolder[] =>
+                    (childrenOf.get(parentId) ?? [])
+                        .slice()
+                        .sort((a, b) => a.sort_order - b.sort_order)
+                        .filter((f) => {
+                            if (seen.has(f.id)) return false;
+                            seen.add(f.id);
+                            return true;
+                        })
+                        .map(
+                            (folder): TreeFolder => ({
+                                type: 'folder',
+                                item: folder,
+                                depth,
+                                folders: build(folder.id, depth + 1),
+                                requests: requestsOf(folder.id),
+                            }),
+                        );
+
+                const topLevel = build(null, 0);
+
+                // Orphans & cycle members: folders never reached from a root — either
+                // their parent_id points at a missing folder, or they are trapped in a
+                // parent_id cycle. Surface them at the top level instead of silently
+                // dropping the user's data. Re-check `seen` inside the loop because each
+                // build() emits descendants, so a later candidate may already be covered.
+                const orphans: TreeFolder[] = [];
+                for (const folder of colFolders
+                    .filter((f) => f.parent_id !== null && !seen.has(f.id))
+                    .sort((a, b) => a.sort_order - b.sort_order)) {
+                    if (seen.has(folder.id)) continue;
+                    seen.add(folder.id);
+                    orphans.push({
+                        type: 'folder',
+                        item: folder,
+                        depth: 0,
+                        folders: build(folder.id, 1),
+                        requests: requestsOf(folder.id),
+                    });
+                }
 
                 const directRequests = requests
                     .filter((r) => r.collection_id === col.id && r.folder_id === null)
@@ -213,7 +286,7 @@ export const useCollectionStore = create<CollectionState>()(
                 return {
                     type: 'collection' as const,
                     item: col,
-                    folders: colFolders,
+                    folders: [...topLevel, ...orphans],
                     requests: directRequests,
                 };
             });

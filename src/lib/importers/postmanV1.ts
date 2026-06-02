@@ -1,5 +1,6 @@
 import type { KeyValuePair } from '@/lib/db';
 import type { ImportResult, ImportWarning } from './types';
+import { convertPmToFb } from './pmToFb';
 
 // ─── Postman v1 JSON Shape ───────────────────────────────────────────────────
 
@@ -107,6 +108,16 @@ export function parsePostmanV1(json: string): ImportResult {
     const queryParams: KeyValuePair[] = [];
     const bodyContent = bodyMode === 'raw' ? getBodyContent(req) : '';
 
+    const rawPre = req.preRequestScript?.trim() ?? '';
+    let preRequestScript = '';
+    if (rawPre) {
+      const { code, unconverted } = convertPmToFb(rawPre);
+      preRequestScript = code;
+      if (unconverted.length) {
+        warnings.push({ field: `request.${req.name}`, message: `Pre-request script imported, but ${unconverted.length} Postman API(s) need manual review.`, severity: 'warning' });
+      }
+    }
+
     return {
       id: crypto.randomUUID(),
       collection_id: collectionId,
@@ -120,7 +131,7 @@ export function parsePostmanV1(json: string): ImportResult {
       body_content: bodyContent,
       auth_type: 'none' as const,
       auth_config: {},
-      pre_request_script: req.preRequestScript?.trim() ?? '',
+      pre_request_script: preRequestScript,
       pre_request_script_enabled: true,
       sort_order: sortOrder,
     };

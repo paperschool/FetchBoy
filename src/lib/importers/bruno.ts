@@ -152,7 +152,7 @@ export interface ParsedBruRequest {
   authMode: string;
   authConfig: Record<string, string>;
   preRequestScript: string;
-  hasPostResponse: boolean;
+  postResponseScript: string;
   hasTests: boolean;
   hasPreVars: boolean;
 }
@@ -172,6 +172,7 @@ export function parseBruRequest(content: string): ParsedBruRequest {
   const bodyBlock = blocks.find((b) => b.name.startsWith('body:'));
   const auth = extractBruAuth(blocks, methodKv);
   const preReqBlock = blocks.find((b) => b.name === 'script:pre-request');
+  const postResBlock = blocks.find((b) => b.name === 'script:post-response');
 
   const bodyMode = bodyBlock ? bodyBlock.name.slice('body:'.length) : (methodKv.body ?? 'none');
 
@@ -186,7 +187,7 @@ export function parseBruRequest(content: string): ParsedBruRequest {
     authMode: auth.mode,
     authConfig: auth.config,
     preRequestScript: preReqBlock ? preReqBlock.body.trim() : '',
-    hasPostResponse: blocks.some((b) => b.name === 'script:post-response'),
+    postResponseScript: postResBlock ? postResBlock.body.trim() : '',
     hasTests: blocks.some((b) => b.name === 'tests'),
     hasPreVars: blocks.some((b) => b.name === 'vars:pre-request'),
   };
@@ -214,6 +215,8 @@ function buildRequest(
     auth_config: auth.auth_config,
     pre_request_script: parsed.preRequestScript,
     pre_request_script_enabled: parsed.preRequestScript.length > 0,
+    post_response_script: parsed.postResponseScript,
+    post_response_script_enabled: parsed.postResponseScript.length > 0,
     sort_order: sortOrder,
   };
 }
@@ -368,10 +371,10 @@ export function parseBrunoCollection(files: BrunoSourceFile[], collectionName: s
       auth = NO_AUTH;
     }
 
-    if (parsed.hasPostResponse || parsed.hasTests) {
+    if (parsed.hasTests) {
       warnings.push({
         field: 'script',
-        message: `${parsed.name}: post-response/test scripts are not supported yet and were skipped`,
+        message: `${parsed.name}: Bruno "tests" assertion blocks are not supported and were skipped (the post-response script block is imported)`,
         severity: 'info',
       });
     }
@@ -579,9 +582,10 @@ export function parseBruno(json: string): ImportResult {
         const body = mapJsonBody(r.body);
         const auth = resolve(mapJsonAuth(r.auth), inheritedAuth, item.name ?? 'request');
         const preScript = (r.script?.req ?? '').trim();
+        const postScript = (r.script?.res ?? '').trim();
         const label = item.name ?? 'Unnamed Request';
-        if (r.script?.res || r.tests) {
-          warnings.push({ field: 'script', message: `${label}: post-response/test scripts are not supported yet and were skipped`, severity: 'info' });
+        if (r.tests) {
+          warnings.push({ field: 'script', message: `${label}: Bruno "tests" assertion blocks are not supported and were skipped (the post-response script is imported)`, severity: 'info' });
         }
         if (r.vars?.req?.length) {
           warnings.push({ field: 'script', message: `${label}: pre-request vars are request-scoped and were not imported`, severity: 'info' });
@@ -601,6 +605,8 @@ export function parseBruno(json: string): ImportResult {
           auth_config: auth.auth_config,
           pre_request_script: preScript,
           pre_request_script_enabled: preScript.length > 0,
+          post_response_script: postScript,
+          post_response_script_enabled: postScript.length > 0,
           sort_order: sort++,
         });
       }

@@ -83,5 +83,35 @@ pub fn migrations() -> Vec<Migration> {
             sql: include_str!("../migrations/013_script_templates.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 14,
+            description: "create_stitch_folders_table",
+            sql: include_str!("../migrations/014_stitch_folders.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 15,
+            description: "add_pre_request_chain",
+            sql: include_str!("../migrations/015_pre_request_chain.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 16,
+            description: "add_post_response_scripts",
+            sql: include_str!("../migrations/016_post_response_scripts.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 17,
+            description: "add_collection_pre_request_script",
+            sql: include_str!("../migrations/017_collection_pre_request_script.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 18,
+            description: "retire_pre_request_chains",
+            sql: include_str!("../migrations/018_retire_pre_request_chains.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }

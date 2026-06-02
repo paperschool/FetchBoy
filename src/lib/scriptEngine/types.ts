@@ -37,6 +37,35 @@ export interface ScriptResult {
 export interface ScriptError {
   message: string;
   lineNumber?: number;
+  /** Full stack trace from the QuickJS sandbox (script frames), when available. */
+  stack?: string;
+}
+
+// ─── Post-response Script Context & Result ────────────────────────────────────
+
+export interface ResponseSnapshotForScript {
+  status: number;
+  headers: Record<string, string>;
+  body: string;
+  /** Response time in milliseconds. */
+  time: number;
+}
+
+export interface PostResponseContext {
+  response: ResponseSnapshotForScript;
+  envVars: Record<string, string>;
+}
+
+export interface TestResult {
+  name: string;
+  passed: boolean;
+  error?: string;
+}
+
+export interface PostResponseResult {
+  envMutations: Record<string, string>;
+  consoleLogs: ConsoleLogEntry[];
+  testResults: TestResult[];
 }
 
 // ─── HTTP Sender Callback ───────────────────────────────────────────────────

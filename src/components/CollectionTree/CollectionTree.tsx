@@ -167,6 +167,7 @@ export function CollectionTree() {
                             onCommitEditFolder={handleCommitEdit}
                             onCancelEditFolder={handleCancelEdit}
                             onAddRequestToFolder={(folderId: string) => void handleAddRequest(col.id, folderId)}
+                            onAddSubFolder={(parentId: string) => void handleAddFolder(col.id, parentId)}
                             onDeleteFolder={(folderId: string) => void handleDeleteFolder(folderId)}
                             // Request actions
                             onSelectRequest={(id: string) => handleLoadRequest(id)}
