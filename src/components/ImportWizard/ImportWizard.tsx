@@ -12,6 +12,7 @@ import {
   ClipboardCopy,
   ChevronDown,
   ChevronRight,
+  Layers,
 } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { readTextFile, readDir, readFile } from "@tauri-apps/plugin-fs";
@@ -199,13 +200,27 @@ export function ImportWizard({
           `File read OK (${text.length} chars) — importing as FetchBoy v1`,
         );
         setStep("importing");
-        const { collection, folders, requests, environment } =
-          await importCollectionFromJson(text);
-        emitDebug("info", "import-wizard", `Persisted to DB — updating stores`);
-        collectionStore.addCollection(collection);
+        const colState = useCollectionStore.getState();
+        const envState = useEnvironmentStore.getState();
+        const { mode, collection, folders, requests, environment } =
+          await importCollectionFromJson(text, {
+            collections: colState.collections,
+            folders: colState.folders,
+            requests: colState.requests,
+            environments: envState.environments,
+          });
+        emitDebug("info", "import-wizard", `${mode === "merge" ? "Merged into" : "Persisted"} — updating stores`);
+        if (mode === "create") collectionStore.addCollection(collection);
         for (const f of folders) collectionStore.addFolder(f);
         for (const r of requests) collectionStore.addRequest(r);
-        if (environment) envStore.addEnvironment(environment);
+        if (environment) {
+          if (envState.environments.some((e) => e.id === environment.id)) {
+            envStore.updateVariables(environment.id, environment.variables);
+          } else {
+            envStore.addEnvironment(environment);
+            if (mode === "merge") collectionStore.setCollectionDefaultEnvironment(collection.id, environment.id);
+          }
+        }
         setImportedCount({
           folders: folders.length,
           requests: requests.length,
@@ -214,7 +229,7 @@ export function ImportWizard({
         emitDebug(
           "info",
           "import-wizard",
-          `Import complete — ${folders.length} folder(s), ${requests.length} request(s)${environment ? ", 1 environment" : ""}`,
+          `Import complete (${mode}) — ${folders.length} folder(s), ${requests.length} request(s)${environment ? ", 1 environment" : ""}`,
         );
         setStep("done");
       } catch (err) {
@@ -366,13 +381,27 @@ export function ImportWizard({
       `Importing collection "${processedResult.collection.name}" — ${processedResult.folders.length} folder(s), ${processedResult.requests.length} request(s)`,
     );
     try {
-      const { collection, folders, requests, environments } =
-        await persistImportResult(processedResult);
-      emitDebug("info", "import-wizard", `Persisted to DB — updating stores`);
-      collectionStore.addCollection(collection);
+      const colState = useCollectionStore.getState();
+      const envState = useEnvironmentStore.getState();
+      const { mode, collection, folders, requests, environments } =
+        await persistImportResult(processedResult, {
+          collections: colState.collections,
+          folders: colState.folders,
+          requests: colState.requests,
+          environments: envState.environments,
+        });
+      emitDebug("info", "import-wizard", `${mode === "merge" ? "Merged into" : "Persisted"} — updating stores`);
+      if (mode === "create") collectionStore.addCollection(collection);
       for (const f of folders) collectionStore.addFolder(f);
       for (const r of requests) collectionStore.addRequest(r);
-      for (const env of environments) envStore.addEnvironment(env);
+      for (const env of environments) {
+        if (envState.environments.some((e) => e.id === env.id)) {
+          envStore.updateVariables(env.id, env.variables);
+        } else {
+          envStore.addEnvironment(env);
+          if (mode === "merge") collectionStore.setCollectionDefaultEnvironment(collection.id, env.id);
+        }
+      }
       setImportedCount({
         folders: folders.length,
         requests: requests.length,
@@ -401,6 +430,11 @@ export function ImportWizard({
 
   const totalVars =
     result?.environments.reduce((sum, e) => sum + e.variables.length, 0) ?? 0;
+
+  // Story 21.2 — a same-named existing collection means this import will merge, not duplicate.
+  const willMerge =
+    !!processedResult &&
+    collectionStore.collections.some((c) => c.name === processedResult.collection.name);
 
   const toggleFolderId = (id: string): void => {
     setSelectedFolderIds((prev) => {
@@ -584,6 +618,12 @@ export function ImportWizard({
                 <p className="font-medium text-app-primary">
                   {result.collection.name}
                 </p>
+                {willMerge && (
+                  <p className="flex items-center gap-1.5 text-blue-400">
+                    <Layers size={12} />
+                    Merges into your existing “{result.collection.name}” — content appended, env variables unioned (existing values kept).
+                  </p>
+                )}
                 <p className="text-app-muted">
                   {processedResult.folders.length} folder(s),{" "}
                   {processedResult.requests.length} request(s)

@@ -11,6 +11,7 @@ interface RawEnvironment {
     variables: string; // JSON TEXT
     is_active: number; // SQLite INTEGER 0 or 1
     created_at: string;
+    owner_collection_id: string | null;
 }
 
 function deserializeEnvironment(raw: RawEnvironment): Environment {
@@ -20,6 +21,7 @@ function deserializeEnvironment(raw: RawEnvironment): Environment {
         variables: JSON.parse(raw.variables) as KeyValuePair[],
         is_active: raw.is_active === 1,
         created_at: raw.created_at,
+        owner_collection_id: raw.owner_collection_id ?? null,
     };
 }
 

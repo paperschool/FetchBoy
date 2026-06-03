@@ -1,6 +1,17 @@
 {
   "changelog": [
     {
+      "version": "0.22.0",
+      "date": "2026-06-03",
+      "changes": [
+        "Deleting a collection now removes the environment it created on import, while leaving your own and shared environments untouched",
+        "Re-importing a collection you already have merges into it instead of making a duplicate — content is appended and environment variables are unioned (your existing values win)",
+        "The .fetchboy export is now a complete snapshot — pre/post-response scripts, the collection-wide script, linked templates, and full named environments all round-trip",
+        "New \"Include secrets\" choice when exporting — keep values for a lossless round-trip, or redact them (default) to share safely",
+        "Importing a redacted export blanks secret fields for re-entry, and same-named script templates are reused instead of duplicated"
+      ]
+    },
+    {
       "version": "0.21.0",
       "date": "2026-06-03",
       "changes": [

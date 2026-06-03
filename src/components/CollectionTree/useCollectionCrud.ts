@@ -19,6 +19,7 @@ import {
 import { save, open } from "@tauri-apps/plugin-dialog";
 import { writeTextFile, readTextFile } from "@tauri-apps/plugin-fs";
 import { useEnvironmentStore } from "@/stores/environmentStore";
+import { useScriptTemplateStore } from "@/stores/scriptTemplateStore";
 import { setActiveEnvironment } from "@/lib/environments";
 import { useDebugStore } from "@/stores/debugStore";
 import { useToastStore } from "@/stores/toastStore";
@@ -186,7 +187,15 @@ export function useCollectionCrud(
   const handleExportCollection = useCallback(
     async (id: string, name: string) => {
       try {
-        const json = exportCollectionToJson(id, useCollectionStore.getState(), useEnvironmentStore.getState().environments);
+        const includeSecrets = window.confirm(
+          "Include secret values in plaintext?\n\nOK = a lossless export that contains your live secrets (keep the file safe).\nCancel = secrets are redacted (safe to share).",
+        );
+        const json = exportCollectionToJson(
+          id,
+          useCollectionStore.getState(),
+          useEnvironmentStore.getState().environments,
+          { includeSecrets, templates: useScriptTemplateStore.getState().templates },
+        );
         const path = await save({
           defaultPath: `${name.replace(/[^a-z0-9]/gi, "_")}.fetchboy`,
           filters: [{ name: "Fetchboy Collection", extensions: ["fetchboy"] }, { name: "All Files", extensions: ["*"] }],
@@ -214,17 +223,35 @@ export function useCollectionCrud(
       emitDebug('info', 'import', `File selected: ${path}`);
       const text = await readTextFile(path);
       emitDebug('info', 'import', `File read OK (${text.length} chars) — parsing collection`);
-      const { collection, folders, requests, environment } = await importCollectionFromJson(text);
-      emitDebug('info', 'import', `Persisted to DB — collection "${collection.name}", ${folders.length} folder(s), ${requests.length} request(s)${environment ? ', 1 environment' : ''}`);
-      store.addCollection(collection);
+      const colState = useCollectionStore.getState();
+      const envStore = useEnvironmentStore.getState();
+      const { mode, collection, folders, requests, environment, warnings } = await importCollectionFromJson(text, {
+        collections: colState.collections,
+        folders: colState.folders,
+        requests: colState.requests,
+        environments: envStore.environments,
+      });
+      emitDebug('info', 'import', `${mode === 'merge' ? 'Merged into' : 'Persisted'} collection "${collection.name}" — ${folders.length} folder(s), ${requests.length} request(s)${environment ? ', 1 environment' : ''}`);
+      if (mode === 'create') store.addCollection(collection);
       for (const f of folders) store.addFolder(f);
       for (const r of requests) store.addRequest(r);
       if (environment) {
-        const envStore = useEnvironmentStore.getState();
-        envStore.addEnvironment(environment);
+        if (envStore.environments.some((e) => e.id === environment.id)) {
+          envStore.updateVariables(environment.id, environment.variables);
+        } else {
+          envStore.addEnvironment(environment);
+          if (mode === 'merge') store.setCollectionDefaultEnvironment(collection.id, environment.id);
+        }
       }
       emitDebug('info', 'import', `Store updated — import complete`);
-      window.alert(`Imported '${collection.name}' — ${folders.length} folder(s), ${requests.length} request(s).`);
+      const summary = mode === 'merge'
+        ? [
+            `Merged into existing '${collection.name}'.`,
+            `Added ${folders.length} folder(s), ${requests.length} request(s).`,
+            ...(warnings.length ? ['', `Environment conflicts (kept existing values):`, ...warnings.map((w) => `• ${w.message}`)] : []),
+          ].join('\n')
+        : `Imported '${collection.name}' — ${folders.length} folder(s), ${requests.length} request(s).`;
+      window.alert(summary);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       emitDebug('error', 'import', `Import failed: ${msg}`);

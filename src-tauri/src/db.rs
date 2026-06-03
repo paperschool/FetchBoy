@@ -113,5 +113,11 @@ pub fn migrations() -> Vec<Migration> {
             sql: include_str!("../migrations/018_retire_pre_request_chains.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 19,
+            description: "environment_ownership",
+            sql: include_str!("../migrations/019_environment_ownership.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }

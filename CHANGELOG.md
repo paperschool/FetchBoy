@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.22.0] - 2026-06-03
+
+- feat: Deleting a collection now cleans up the environment it auto-created on import, while never touching environments you made yourself or share across collections
+- feat: Re-importing a collection whose name you already have merges into it instead of creating a duplicate — content is appended and environment variables are unioned (your existing values win, conflicts reported)
+- feat: The ".fetchboy" export is now a complete, round-trippable snapshot — pre/post-response scripts, the collection-wide script, linked templates, and full named environments
+- feat: New "Include secrets" choice on export — keep secret values for a lossless round-trip, or redact them (default) to share safely
+- fix: Importing a redacted export blanks secret fields for re-entry, and same-named script templates are reused instead of duplicated
+
 ## [0.21.0] - 2026-06-03
 
 - feat: Script execution output moved to a full-height "Script Output" tab in the response viewer, with a section and dot per stage

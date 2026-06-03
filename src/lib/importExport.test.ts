@@ -83,7 +83,7 @@ describe('exportCollectionToJson', () => {
         const json = exportCollectionToJson('col-original-id', store, []);
         const parsed = JSON.parse(json) as Record<string, unknown>;
 
-        expect(parsed.fetch_boy_version).toBe('1.0');
+        expect(parsed.fetch_boy_version).toBe('1.1');
         expect(parsed.type).toBe('collection');
         expect(typeof parsed.exported_at).toBe('string');
         expect(parsed.collection).toMatchObject({ id: 'col-original-id', name: 'My API' });
@@ -100,10 +100,11 @@ describe('exportCollectionToJson', () => {
         const store = { collections: [col], folders: [], requests: [] };
 
         const json = exportCollectionToJson('col-original-id', store, [env]);
-        const parsed = JSON.parse(json) as { environment?: { variables: unknown[] } };
+        const parsed = JSON.parse(json) as { environments?: { name: string; variables: unknown[] }[] };
 
-        expect(parsed.environment).toBeDefined();
-        expect(parsed.environment!.variables).toHaveLength(1);
+        expect(parsed.environments).toBeDefined();
+        expect(parsed.environments!).toHaveLength(1);
+        expect(parsed.environments![0].variables).toHaveLength(1);
     });
 
     it('redacts secret variable values on export', async () => {
@@ -119,12 +120,27 @@ describe('exportCollectionToJson', () => {
         const store = { collections: [col], folders: [], requests: [] };
 
         const json = exportCollectionToJson('col-original-id', store, [env]);
-        const parsed = JSON.parse(json) as { environment: { variables: Array<{ key: string; value: string; secret?: boolean }> } };
+        const parsed = JSON.parse(json) as { environments: { variables: Array<{ key: string; value: string; secret?: boolean }> }[] };
 
-        const baseUrl = parsed.environment.variables.find((v) => v.key === 'BASE_URL')!;
-        const apiKey = parsed.environment.variables.find((v) => v.key === 'API_KEY')!;
+        const baseUrl = parsed.environments[0].variables.find((v) => v.key === 'BASE_URL')!;
+        const apiKey = parsed.environments[0].variables.find((v) => v.key === 'API_KEY')!;
         expect(baseUrl.value).toBe('https://api.example.com');
         expect(apiKey.value).toBe('<REDACTED>');
+    });
+
+    it('keeps secret values in plaintext when includeSecrets is set', async () => {
+        const { exportCollectionToJson } = await import('./importExport');
+        const col = makeCollection({ default_environment_id: 'env-1' });
+        const env = makeEnvironment({
+            id: 'env-1',
+            variables: [{ key: 'API_KEY', value: 'super-secret-key', enabled: true, secret: true }],
+        });
+        const store = { collections: [col], folders: [], requests: [] };
+
+        const json = exportCollectionToJson('col-original-id', store, [env], { includeSecrets: true });
+        const parsed = JSON.parse(json) as { environments: { variables: Array<{ key: string; value: string }> }[] };
+
+        expect(parsed.environments[0].variables[0].value).toBe('super-secret-key');
     });
 
     it('omits environment when collection has no default environment', async () => {
@@ -133,9 +149,9 @@ describe('exportCollectionToJson', () => {
         const store = { collections: [col], folders: [], requests: [] };
 
         const json = exportCollectionToJson('col-original-id', store, []);
-        const parsed = JSON.parse(json) as { environment?: unknown };
+        const parsed = JSON.parse(json) as { environments?: unknown };
 
-        expect(parsed.environment).toBeUndefined();
+        expect(parsed.environments).toBeUndefined();
     });
 
     it('filters to only the requested collection folders and requests', async () => {
@@ -313,14 +329,166 @@ describe('importCollectionFromJson', () => {
     it('throws on wrong fetch_boy_version', async () => {
         const { importCollectionFromJson } = await import('./importExport');
         const json = buildCollectionJson({ fetch_boy_version: '2.0' });
-        await expect(importCollectionFromJson(json)).rejects.toThrow('Unsupported format version: expected 1.0');
+        await expect(importCollectionFromJson(json)).rejects.toThrow('Unsupported format version: expected 1.0 or 1.1');
         expect(mockExecute).not.toHaveBeenCalled();
+    });
+
+    it('imports a legacy 1.0 envelope without error (back-compat)', async () => {
+        const { importCollectionFromJson } = await import('./importExport');
+        const json = buildCollectionJson({ fetch_boy_version: '1.0' });
+        const result = await importCollectionFromJson(json);
+        expect(result.mode).toBe('create');
+        expect(result.collection.name).toBe('My API');
     });
 
     it('makes no DB calls when validation fails (no partial writes)', async () => {
         const { importCollectionFromJson } = await import('./importExport');
         await expect(importCollectionFromJson('invalid')).rejects.toThrow();
         expect(mockExecute).not.toHaveBeenCalled();
+    });
+});
+
+// ─── importCollectionFromJson — merge (Story 21.2) ────────────────────────────
+
+describe('importCollectionFromJson — merge into same-named collection', () => {
+    const buildJson = (overrides: Record<string, unknown> = {}) =>
+        JSON.stringify({
+            fetch_boy_version: '1.0',
+            type: 'collection',
+            exported_at: '2026-01-01T00:00:00.000Z',
+            collection: makeCollection({ name: 'My API' }),
+            folders: [makeFolder({ id: 'inc-f', sort_order: 0 })],
+            requests: [makeRequest({ id: 'inc-r', folder_id: 'inc-f', sort_order: 0 })],
+            ...overrides,
+        });
+
+    const existingSnapshot = (envVars = [{ key: 'A', value: 'existing', enabled: true }]) => ({
+        collections: [makeCollection({ id: 'existing-col', name: 'My API', default_environment_id: 'env-x' })],
+        folders: [makeFolder({ id: 'ef', collection_id: 'existing-col', sort_order: 2 })],
+        requests: [makeRequest({ id: 'er', collection_id: 'existing-col', sort_order: 5 })],
+        environments: [makeEnvironment({ id: 'env-x', variables: envVars })],
+    });
+
+    it('merges into the existing collection without inserting a new collection row', async () => {
+        const { importCollectionFromJson } = await import('./importExport');
+        const result = await importCollectionFromJson(buildJson(), existingSnapshot());
+
+        expect(result.mode).toBe('merge');
+        expect(result.collection.id).toBe('existing-col');
+        const insertedCollection = mockExecute.mock.calls.some(
+            (c) => typeof c[0] === 'string' && (c[0] as string).includes('INSERT INTO collections'),
+        );
+        expect(insertedCollection).toBe(false);
+    });
+
+    it('appends folders/requests under the existing id with continued sort_order', async () => {
+        const { importCollectionFromJson } = await import('./importExport');
+        const { folders, requests } = await importCollectionFromJson(buildJson(), existingSnapshot());
+
+        expect(folders[0].collection_id).toBe('existing-col');
+        expect(folders[0].sort_order).toBe(3); // max existing 2 + 1
+        expect(requests[0].collection_id).toBe('existing-col');
+        expect(requests[0].sort_order).toBe(6); // max existing 5 + 1
+    });
+
+    it('unions env variables, keeping existing values and warning on conflicts', async () => {
+        const { importCollectionFromJson } = await import('./importExport');
+        const json = buildJson({
+            environment: {
+                variables: [
+                    { key: 'A', value: 'incoming', enabled: true },
+                    { key: 'B', value: '2', enabled: true },
+                ],
+            },
+        });
+        const { environment, warnings } = await importCollectionFromJson(json, existingSnapshot());
+
+        expect(environment!.variables.find((v) => v.key === 'A')!.value).toBe('existing');
+        expect(environment!.variables.find((v) => v.key === 'B')!.value).toBe('2');
+        expect(warnings).toHaveLength(1);
+        expect(warnings[0].field).toBe('A');
+    });
+
+    it('creates a new collection when the name does not match (no behaviour change)', async () => {
+        const { importCollectionFromJson } = await import('./importExport');
+        const json = buildJson({ collection: makeCollection({ name: 'Brand New' }) });
+        const result = await importCollectionFromJson(json, existingSnapshot());
+        expect(result.mode).toBe('create');
+        expect(result.collection.id).not.toBe('existing-col');
+    });
+});
+
+// ─── Complete export round-trip (Story 21.3) ─────────────────────────────────
+
+describe('complete export round-trip (1.1)', () => {
+    const tpl = { id: 'tpl-1', name: 'Auth', code: 'authcode', description: '', created_at: '', updated_at: '' };
+
+    const exportFixture = async () => {
+        const { exportCollectionToJson } = await import('./importExport');
+        const col = makeCollection({
+            id: 'c1', name: 'Trip', default_environment_id: 'env-1',
+            pre_request_script: 'globalScript();', pre_request_script_enabled: true,
+        });
+        const req = makeRequest({
+            id: 'r1', collection_id: 'c1', folder_id: null,
+            pre_request_template_id: 'tpl-1',
+            post_response_script: 'fb.test("ok", () => {})', post_response_script_enabled: true,
+        });
+        const env = makeEnvironment({ id: 'env-1', name: 'Trip Env', variables: [{ key: 'BASE', value: 'x', enabled: true }] });
+        const store = { collections: [col], folders: [], requests: [req] };
+        return exportCollectionToJson('c1', store, [env], { templates: [tpl] });
+    };
+
+    it('export carries collection script, post-response script, linked template id, and named env', async () => {
+        const json = await exportFixture();
+        const parsed = JSON.parse(json) as Record<string, any>;
+        expect(parsed.fetch_boy_version).toBe('1.1');
+        expect(parsed.collection.pre_request_script).toBe('globalScript();');
+        expect(parsed.requests[0].post_response_script).toBe('fb.test("ok", () => {})');
+        expect(parsed.requests[0].pre_request_template_id).toBe('tpl-1');
+        expect(parsed.templates).toHaveLength(1);
+        expect(parsed.environments[0].name).toBe('Trip Env');
+    });
+
+    it('re-import restores scripts + env and creates the template, remapping the link', async () => {
+        const { importCollectionFromJson } = await import('./importExport');
+        const json = await exportFixture();
+        mockSelect.mockResolvedValue([]); // loadScriptTemplates → none exist locally
+        const result = await importCollectionFromJson(json);
+        expect(result.mode).toBe('create');
+        expect(result.collection.pre_request_script).toBe('globalScript();');
+        expect(result.requests[0].post_response_script).toBe('fb.test("ok", () => {})');
+        expect(result.requests[0].pre_request_template_id).toBeTruthy();
+        expect(result.requests[0].pre_request_template_id).not.toBe('tpl-1'); // remapped to created id
+        expect(result.environment!.name).toBe('Trip Env');
+    });
+
+    it('reuses an existing same-named template instead of duplicating', async () => {
+        const { importCollectionFromJson } = await import('./importExport');
+        const json = await exportFixture();
+        mockSelect.mockResolvedValue([{ id: 'local-tpl', name: 'Auth', code: 'x', description: '', created_at: '', updated_at: '' }]);
+        const result = await importCollectionFromJson(json);
+        expect(result.requests[0].pre_request_template_id).toBe('local-tpl');
+        const createdTemplate = mockExecute.mock.calls.some(
+            (c) => typeof c[0] === 'string' && (c[0] as string).includes('INSERT INTO script_templates'),
+        );
+        expect(createdTemplate).toBe(false);
+    });
+
+    it('blanks redacted secret values on import (keeps the secret flag)', async () => {
+        const { importCollectionFromJson } = await import('./importExport');
+        const json = JSON.stringify({
+            fetch_boy_version: '1.1',
+            type: 'collection',
+            exported_at: '2026-01-01T00:00:00.000Z',
+            collection: makeCollection({ name: 'Sec' }),
+            folders: [],
+            requests: [],
+            environments: [{ name: 'E', variables: [{ key: 'K', value: '<REDACTED>', enabled: true, secret: true }] }],
+        });
+        const { environment } = await importCollectionFromJson(json);
+        expect(environment!.variables[0].value).toBe('');
+        expect(environment!.variables[0].secret).toBe(true);
     });
 });
 

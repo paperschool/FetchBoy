@@ -99,6 +99,57 @@ describe('collections lib', () => {
         });
     });
 
+    describe('selectOwnedEnvironmentsToDelete', () => {
+        const col = (id: string, defEnv: string | null = null) => ({ id, default_environment_id: defEnv });
+        const env = (id: string, owner: string | null) => ({ id, owner_collection_id: owner });
+
+        it('deletes an owned env when its only referencing collection is the deleted one', async () => {
+            const { selectOwnedEnvironmentsToDelete } = await import('./collections');
+            const result = selectOwnedEnvironmentsToDelete(
+                'c1',
+                [env('e1', 'c1')],
+                [col('c1', 'e1')],
+            );
+            expect(result).toEqual(['e1']);
+        });
+
+        it('preserves an owned env still referenced by another collection', async () => {
+            const { selectOwnedEnvironmentsToDelete } = await import('./collections');
+            const result = selectOwnedEnvironmentsToDelete(
+                'c1',
+                [env('e1', 'c1')],
+                [col('c1', 'e1'), col('c2', 'e1')],
+            );
+            expect(result).toEqual([]);
+        });
+
+        it('preserves a null-owner (manual/shared) env', async () => {
+            const { selectOwnedEnvironmentsToDelete } = await import('./collections');
+            const result = selectOwnedEnvironmentsToDelete(
+                'c1',
+                [env('e1', null)],
+                [col('c1', 'e1')],
+            );
+            expect(result).toEqual([]);
+        });
+
+        it('deletes only the owned env, leaving an env owned by another collection', async () => {
+            const { selectOwnedEnvironmentsToDelete } = await import('./collections');
+            const result = selectOwnedEnvironmentsToDelete(
+                'c1',
+                [env('e1', 'c1'), env('e2', 'c2')],
+                [col('c1', 'e1'), col('c2', 'e2')],
+            );
+            expect(result).toEqual(['e1']);
+        });
+
+        it('returns nothing when the deleted collection owns no env', async () => {
+            const { selectOwnedEnvironmentsToDelete } = await import('./collections');
+            const result = selectOwnedEnvironmentsToDelete('c1', [env('e1', null)], [col('c1', null)]);
+            expect(result).toEqual([]);
+        });
+    });
+
     describe('createFolder', () => {
         it('inserts folder and returns it with correct collection_id', async () => {
             const { createFolder } = await import('./collections');

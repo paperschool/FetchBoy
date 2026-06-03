@@ -1,5 +1,5 @@
 import { getDb } from '@/lib/db';
-import type { Collection, Folder, KeyValuePair, Request } from '@/lib/db';
+import type { Collection, Environment, Folder, KeyValuePair, Request } from '@/lib/db';
 import { now, parseJsonField, insertOne } from '@/lib/dbHelpers';
 
 // ─── Internal raw DB types ────────────────────────────────────────────────────
@@ -114,9 +114,43 @@ export async function renameCollection(id: string, name: string): Promise<void> 
     ]);
 }
 
+/**
+ * Pure decision: which environments owned by the deleted collection should be
+ * removed. An owned env is deleted only if no *other* collection still references
+ * it via default_environment_id. Shared / null-owner envs are always preserved.
+ */
+export function selectOwnedEnvironmentsToDelete(
+    deletedCollectionId: string,
+    environments: Pick<Environment, 'id' | 'owner_collection_id'>[],
+    collections: Pick<Collection, 'id' | 'default_environment_id'>[],
+): string[] {
+    return environments
+        .filter((env) => env.owner_collection_id === deletedCollectionId)
+        .filter(
+            (env) =>
+                !collections.some(
+                    (c) => c.id !== deletedCollectionId && c.default_environment_id === env.id,
+                ),
+        )
+        .map((env) => env.id);
+}
+
 export async function deleteCollection(id: string): Promise<void> {
     const db = await getDb();
+    // Compute owned, unshared environments BEFORE the delete — ON DELETE SET NULL
+    // would otherwise clear owner_collection_id and hide them from the cascade.
+    const environments = await db.select<Pick<Environment, 'id' | 'owner_collection_id'>[]>(
+        'SELECT id, owner_collection_id FROM environments',
+    );
+    const collections = await db.select<Pick<Collection, 'id' | 'default_environment_id'>[]>(
+        'SELECT id, default_environment_id FROM collections',
+    );
+    const envIdsToDelete = selectOwnedEnvironmentsToDelete(id, environments, collections);
+
     await db.execute('DELETE FROM collections WHERE id = ?', [id]);
+    for (const envId of envIdsToDelete) {
+        await db.execute('DELETE FROM environments WHERE id = ?', [envId]);
+    }
 }
 
 // ─── Folders ─────────────────────────────────────────────────────────────────

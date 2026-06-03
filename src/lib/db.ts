@@ -65,6 +65,8 @@ export interface Environment {
     variables: KeyValuePair[];
     is_active: boolean;
     created_at: string;
+    /** Collection that auto-created this env on import. NULL = shared/manual → never auto-deleted. */
+    owner_collection_id?: string | null;
 }
 
 export interface HistoryEntry {
@@ -204,6 +206,8 @@ export async function getDb(): Promise<Database> {
         try { await _db.execute('ALTER TABLE stitch_chains ADD COLUMN request_id TEXT'); } catch { /* exists */ }
         // Ensure pre_request_template link exists (migration 016)
         try { await _db.execute('ALTER TABLE requests ADD COLUMN pre_request_template_id TEXT'); } catch { /* exists */ }
+        // Ensure environment ownership column exists (migration 019)
+        try { await _db.execute('ALTER TABLE environments ADD COLUMN owner_collection_id TEXT'); } catch { /* exists */ }
     }
     return _db;
 }

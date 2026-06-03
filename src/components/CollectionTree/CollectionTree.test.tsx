@@ -36,6 +36,7 @@ vi.mock('@/lib/collections', () => ({
     updateRequestOrder: (...a: unknown[]) => mockUpdateRequestOrder(...a),
     moveRequestToFolder: (...a: unknown[]) => mockMoveRequestToFolder(...a),
     updateSavedRequest: (...a: unknown[]) => mockUpdateSavedRequest(...a),
+    selectOwnedEnvironmentsToDelete: () => [],
 }));
 
 // ─── Mock import/export lib ──────────────────────────────────────────────────

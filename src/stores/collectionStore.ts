@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import type { Collection, Folder, Request } from '@/lib/db';
+import { selectOwnedEnvironmentsToDelete } from '@/lib/collections';
+import { useEnvironmentStore } from '@/stores/environmentStore';
 
 // ─── Tree Types ───────────────────────────────────────────────────────────────
 
@@ -42,6 +44,7 @@ interface CollectionState {
     addCollection: (collection: Collection) => void;
     renameCollection: (id: string, name: string) => void;
     setCollectionScript: (id: string, script: string, enabled: boolean) => void;
+    setCollectionDefaultEnvironment: (id: string, environmentId: string | null) => void;
     deleteCollection: (id: string) => void;
 
     // Folder CRUD
@@ -110,7 +113,22 @@ export const useCollectionStore = create<CollectionState>()(
                 }
             }),
 
-        deleteCollection: (id) =>
+        setCollectionDefaultEnvironment: (id, environmentId) =>
+            set((state) => {
+                const col = state.collections.find((c) => c.id === id);
+                if (col) col.default_environment_id = environmentId;
+            }),
+
+        deleteCollection: (id) => {
+            // Mirror the DB cascade: drop environments owned by this collection that
+            // no other collection still references (active-env fallback handled by
+            // environmentStore.deleteEnvironment). Compute against the pre-delete snapshot.
+            const envStore = useEnvironmentStore.getState();
+            const envIdsToRemove = selectOwnedEnvironmentsToDelete(
+                id,
+                envStore.environments,
+                get().collections,
+            );
             set((state) => {
                 const folderIds = state.folders
                     .filter((f) => f.collection_id === id)
@@ -127,7 +145,9 @@ export const useCollectionStore = create<CollectionState>()(
                 ) {
                     state.activeRequestId = null;
                 }
-            }),
+            });
+            for (const envId of envIdsToRemove) envStore.deleteEnvironment(envId);
+        },
 
         addFolder: (folder) =>
             set((state) => {
