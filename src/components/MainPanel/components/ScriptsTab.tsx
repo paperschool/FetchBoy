@@ -1,6 +1,5 @@
 import { useCallback, type ReactNode } from 'react';
 import { Code, Layers, FlaskConical, Pencil, ExternalLink } from 'lucide-react';
-import { PreRequestDebugLog } from './PreRequestDebugLog';
 import { useAppTabStore } from '@/stores/appTabStore';
 import { useCollectionStore } from '@/stores/collectionStore';
 import { useScriptWorkspaceStore, type ScriptSlot } from '@/stores/scriptWorkspaceStore';
@@ -84,7 +83,6 @@ interface ScriptsTabProps {
 export function ScriptsTab({
   script, enabled, postResponseScript, postResponseScriptEnabled, keepOpen,
   onEnabledChange, onPostResponseEnabledChange, onKeepOpenChange,
-  scriptDebugState, onDebugClose,
 }: ScriptsTabProps): React.ReactElement {
   // Resolve the active request (+ its collection) so we can name each slot and
   // surface the collection-wide ("global") script. Unsaved requests omit global.
@@ -108,7 +106,7 @@ export function ScriptsTab({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col space-y-3">
-      {collection && (
+      {collection ? (
         <SlotLauncher
           icon={<Layers size={14} className="text-sky-400" />}
           label={t('scripts.globalScriptTitle')}
@@ -123,6 +121,17 @@ export function ScriptsTab({
           onEnabledChange={handleGlobalEnabledChange}
           onOpen={() => handleOpenInEditor('global')}
         />
+      ) : (
+        <div className="flex items-start gap-2 rounded border border-dashed border-app-subtle bg-app-sidebar/30 px-3 py-2" data-testid="scripts-global-save-hint">
+          <Layers size={14} className="mt-0.5 shrink-0 text-app-muted" />
+          <div className="min-w-0">
+            <p className="flex items-center gap-2 text-sm font-medium text-app-secondary">
+              {t('scripts.globalScriptTitle')}
+              <span className="rounded bg-app-subtle px-2 py-0.5 text-[10px] font-medium text-app-muted">GLOBAL</span>
+            </p>
+            <p className="text-[11px] text-app-muted">{t('scripts.globalSaveHint')}</p>
+          </div>
+        </div>
       )}
 
       <SlotLauncher
@@ -160,10 +169,6 @@ export function ScriptsTab({
         onEnabledChange={onPostResponseEnabledChange}
         onOpen={() => handleOpenInEditor('post')}
       />
-
-      {scriptDebugState && scriptDebugState.status !== 'idle' && onDebugClose && (
-        <PreRequestDebugLog debugState={scriptDebugState} onClose={onDebugClose} />
-      )}
     </div>
   );
 }

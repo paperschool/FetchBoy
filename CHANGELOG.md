@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.21.0] - 2026-06-03
+
+- feat: Script execution output moved to a full-height "Script Output" tab in the response viewer, with a section and dot per stage
+- feat: Collection-wide "global", pre-request, and post-response scripts now run as separate stages — the global script is reported correctly instead of being lumped into pre-request
+- feat: Scripts tab now shows a hint on unsaved requests explaining collection-wide scripts unlock once the request is saved into a collection
+- fix: Environment variables with an empty value are no longer flagged as "missing" (they resolve to an empty string, matching interpolation)
+- refactor: Removed the cramped in-accordion script debug log in favour of the new response tab
+
 ## [0.20.0] - 2026-06-02
 
 - feat: Collection tree now renders true nested folders up to 5 levels deep — recursive rendering with independent expand/collapse, replacing the old flat single-level list

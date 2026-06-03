@@ -22,7 +22,10 @@ export function unresolvedTokens(template: string, variables: KeyValuePair[]): s
 
     while ((match = regex.exec(template)) !== null) {
         const key = match[1];
-        const resolved = variables.some((v) => v.key === key && v.enabled && v.value !== '');
+        // A token is resolved if an enabled variable with that key exists — matching
+        // interpolate()'s behaviour, which resolves an existing (even empty-valued)
+        // variable rather than leaving the token verbatim. Empty value ≠ missing.
+        const resolved = variables.some((v) => v.key === key && v.enabled);
         if (!resolved) {
             unresolved.add(key);
         }

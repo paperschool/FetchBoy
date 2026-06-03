@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 
 export interface ViewerTab {
   id: string
-  label: string
+  label: ReactNode
 }
 
 interface ViewerShellProps {

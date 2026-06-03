@@ -6,7 +6,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { HeadersTable } from '@/components/ui/HeadersTable';
 import { ViewerShell } from '@/components/ui/ViewerShell';
+import { ScriptOutputPanel, scriptStageRan } from '@/components/ResponseViewer/ScriptOutputPanel';
+import { createDefaultScriptDebugState, type ScriptDebugState } from '@/stores/tabStore';
 import { t } from '@/lib/i18n';
+
+const EMPTY_DEBUG = createDefaultScriptDebugState();
 
 export interface ResponseHeaderRow {
   key: string;
@@ -47,9 +51,12 @@ interface ResponseViewerProps {
   wasCancelled?: boolean;
   wasTimedOut?: boolean;
   timedOutAfterSec?: number | null;
+  globalDebug?: ScriptDebugState;
+  scriptDebug?: ScriptDebugState;
+  postResponseDebug?: ScriptDebugState;
 }
 
-type ResponseTab = 'body' | 'headers' | 'logs';
+type ResponseTab = 'body' | 'headers' | 'logs' | 'script';
 
 // Re-exported from shared utility for backwards compatibility
 import { getStatusColorClass } from '@/lib/statusColors';
@@ -108,8 +115,12 @@ export function ImageViewer({ contentType, body }: { contentType?: string; body:
   );
 }
 
-export function ResponseViewer({ response, error, logs = [], onClearLogs, requestedUrl, wasCancelled = false, wasTimedOut = false, timedOutAfterSec = null }: ResponseViewerProps) {
+export function ResponseViewer({ response, error, logs = [], onClearLogs, requestedUrl, wasCancelled = false, wasTimedOut = false, timedOutAfterSec = null, globalDebug, scriptDebug, postResponseDebug }: ResponseViewerProps) {
   const [activeTab, setActiveTab] = useState<ResponseTab>('body');
+  const globalRan = scriptStageRan(globalDebug);
+  const preRan = scriptStageRan(scriptDebug);
+  const postRan = scriptStageRan(postResponseDebug);
+  const hasScriptOutput = globalRan || preRan || postRan;
   const [responseBodyLanguage, setResponseBodyLanguage] = useState<'json' | 'html' | 'xml' | 'plaintext'>('json');
   const editorFontSize = useUiSettingsStore((state) => state.editorFontSize);
 
@@ -130,6 +141,21 @@ export function ResponseViewer({ response, error, logs = [], onClearLogs, reques
     { id: 'body', label: t('common.body') },
     { id: 'headers', label: t('common.headers') },
     { id: 'logs', label: logs.length > 0 ? t('fetch.logsCount', { count: String(logs.length) }) : t('fetch.logs') },
+    ...(hasScriptOutput
+      ? [{
+          id: 'script',
+          label: (
+            <span className="inline-flex items-center gap-1.5">
+              {t('scripts.output.tabTitle')}
+              <span className="inline-flex items-center gap-0.5">
+                {globalRan && <span className="inline-block h-1.5 w-1.5 rounded-full bg-sky-400" title="Collection (global) ran" />}
+                {preRan && <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-400" title="Pre-request ran" />}
+                {postRan && <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" title="Post-response ran" />}
+              </span>
+            </span>
+          ),
+        }]
+      : []),
   ];
 
   const header = (
@@ -175,7 +201,7 @@ export function ResponseViewer({ response, error, logs = [], onClearLogs, reques
     </>
   );
 
-  if (!response && !error && logs.length === 0 && !wasCancelled && !wasTimedOut) {
+  if (!response && !error && logs.length === 0 && !wasCancelled && !wasTimedOut && !hasScriptOutput) {
     return (
       <ViewerShell testId="response-viewer">
         <EmptyState icon={Send} label={t('fetch.hitSend')} />
@@ -268,6 +294,16 @@ export function ResponseViewer({ response, error, logs = [], onClearLogs, reques
           ) : (
             <pre className="bg-app-main text-app-secondary h-full overflow-auto rounded-md p-2 text-xs whitespace-pre-wrap">{logs.join('\n')}</pre>
           )}
+        </div>
+      )}
+
+      {activeTab === 'script' && (
+        <div className="min-h-0 flex-1">
+          <ScriptOutputPanel
+            global={globalDebug ?? EMPTY_DEBUG}
+            pre={scriptDebug ?? EMPTY_DEBUG}
+            post={postResponseDebug ?? EMPTY_DEBUG}
+          />
         </div>
       )}
     </ViewerShell>

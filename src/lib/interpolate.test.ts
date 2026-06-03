@@ -63,4 +63,9 @@ describe('unresolvedTokens', () => {
         const vars = [enabled('BASE', 'https://x.com')];
         expect(unresolvedTokens('{{BASE}}/{{PATH}}', vars)).toEqual(['PATH']);
     });
+
+    it('treats an existing enabled variable with an empty value as resolved (not missing)', () => {
+        // interpolate() resolves it to '', so the warning must not flag it as missing.
+        expect(unresolvedTokens('{{x-site-origin}}', [enabled('x-site-origin', '')])).toEqual([]);
+    });
 });

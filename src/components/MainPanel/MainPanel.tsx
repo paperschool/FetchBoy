@@ -37,7 +37,9 @@ export function MainPanel(): React.ReactElement {
   const sslVerify = useUiSettingsStore((s) => s.sslVerify);
 
   const activeTabId = useTabStore((s) => s.activeTabId);
+  const globalDebugState = useTabStore((s) => s.tabs.find((tab) => tab.id === s.activeTabId)?.globalDebugState);
   const scriptDebugState = useTabStore((s) => s.tabs.find((tab) => tab.id === s.activeTabId)?.scriptDebugState);
+  const postResponseDebugState = useTabStore((s) => s.tabs.find((tab) => tab.id === s.activeTabId)?.postResponseDebugState);
   const openedFromIntercept = useTabStore((s) => s.tabs.find((t) => t.id === s.activeTabId)?.openedFromIntercept);
   const clearOpenedFromIntercept = useTabStore((s) => s.clearOpenedFromIntercept);
   const [bannerTabId, setBannerTabId] = useState<string | null>(null);
@@ -273,7 +275,7 @@ export function MainPanel(): React.ReactElement {
             </div>
             <div className="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden">
               {responseData || requestError || verboseLogs.length > 0 || wasCancelled || wasTimedOut ? (
-                <ResponseViewer response={responseData} error={requestError} logs={verboseLogs} wasCancelled={wasCancelled} wasTimedOut={wasTimedOut} timedOutAfterSec={timedOutAfterSec} onClearLogs={() => updateRes({ verboseLogs: [] })} requestedUrl={sentUrl ?? undefined} />
+                <ResponseViewer response={responseData} error={requestError} logs={verboseLogs} wasCancelled={wasCancelled} wasTimedOut={wasTimedOut} timedOutAfterSec={timedOutAfterSec} onClearLogs={() => updateRes({ verboseLogs: [] })} requestedUrl={sentUrl ?? undefined} globalDebug={globalDebugState} scriptDebug={scriptDebugState} postResponseDebug={postResponseDebugState} />
               ) : (
                 <p className="text-app-muted text-sm">{t('fetch.sendResponseHint')}</p>
               )}

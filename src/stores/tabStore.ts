@@ -117,7 +117,12 @@ export interface TabEntry {
     isCustomLabel: boolean;
     requestState: RequestSnapshot;
     responseState: ResponseSnapshot;
+    /** Collection-wide "global" pre-request stage execution. */
+    globalDebugState: ScriptDebugState;
+    /** The request's own pre-request stage execution (linked template + inline script). */
     scriptDebugState: ScriptDebugState;
+    /** Post-response stage execution, kept separately so each stage can be shown. */
+    postResponseDebugState: ScriptDebugState;
     openedFromIntercept?: boolean;
 }
 
@@ -138,7 +143,9 @@ interface TabStore {
     syncLabelFromRequest: (id: string, method: string, url: string) => void;
     updateTabRequestState: (id: string, patch: Partial<RequestSnapshot>) => void;
     updateTabResponseState: (id: string, patch: Partial<ResponseSnapshot>) => void;
+    updateTabGlobalDebugState: (id: string, patch: Partial<ScriptDebugState>) => void;
     updateTabScriptDebugState: (id: string, patch: Partial<ScriptDebugState>) => void;
+    updateTabPostResponseDebugState: (id: string, patch: Partial<ScriptDebugState>) => void;
     appendResponseLog: (id: string, log: string) => void;
     openRequestInNewTab: (snapshot: RequestSnapshot, label: string, meta?: { openedFromIntercept?: boolean }) => void;
     clearOpenedFromIntercept: (id: string) => void;
@@ -150,7 +157,9 @@ const createInitialTab = (): TabEntry => ({
     isCustomLabel: false,
     requestState: createDefaultRequestSnapshot(),
     responseState: createDefaultResponseSnapshot(),
+    globalDebugState: createDefaultScriptDebugState(),
     scriptDebugState: createDefaultScriptDebugState(),
+    postResponseDebugState: createDefaultScriptDebugState(),
 });
 
 const initialTab = createInitialTab();
@@ -168,7 +177,9 @@ export const useTabStore = create<TabStore>()(
                     isCustomLabel: false,
                     requestState: createDefaultRequestSnapshot(),
                     responseState: createDefaultResponseSnapshot(),
+                    globalDebugState: createDefaultScriptDebugState(),
                     scriptDebugState: createDefaultScriptDebugState(),
+                    postResponseDebugState: createDefaultScriptDebugState(),
                 };
                 state.tabs.push(newTab);
                 state.activeTabId = newTab.id;
@@ -218,7 +229,9 @@ export const useTabStore = create<TabStore>()(
                     isCustomLabel: true,
                     requestState: structuredClone(current(source.requestState)),
                     responseState: createDefaultResponseSnapshot(),
+                    globalDebugState: createDefaultScriptDebugState(),
                     scriptDebugState: createDefaultScriptDebugState(),
+                    postResponseDebugState: createDefaultScriptDebugState(),
                 };
 
                 state.tabs.splice(sourceIdx + 1, 0, duplicated);
@@ -278,10 +291,22 @@ export const useTabStore = create<TabStore>()(
                 if (tab) Object.assign(tab.responseState, patch);
             }),
 
+        updateTabGlobalDebugState: (id, patch) =>
+            set((state) => {
+                const tab = state.tabs.find((t) => t.id === id);
+                if (tab) Object.assign(tab.globalDebugState, patch);
+            }),
+
         updateTabScriptDebugState: (id, patch) =>
             set((state) => {
                 const tab = state.tabs.find((t) => t.id === id);
                 if (tab) Object.assign(tab.scriptDebugState, patch);
+            }),
+
+        updateTabPostResponseDebugState: (id, patch) =>
+            set((state) => {
+                const tab = state.tabs.find((t) => t.id === id);
+                if (tab) Object.assign(tab.postResponseDebugState, patch);
             }),
 
         appendResponseLog: (id, log) =>
@@ -298,7 +323,9 @@ export const useTabStore = create<TabStore>()(
                     isCustomLabel: true,
                     requestState: { ...snapshot },
                     responseState: createDefaultResponseSnapshot(),
+                    globalDebugState: createDefaultScriptDebugState(),
                     scriptDebugState: createDefaultScriptDebugState(),
+                    postResponseDebugState: createDefaultScriptDebugState(),
                     openedFromIntercept: meta?.openedFromIntercept,
                 };
                 state.tabs.push(newTab);

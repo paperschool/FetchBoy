@@ -1,6 +1,17 @@
 {
   "changelog": [
     {
+      "version": "0.21.0",
+      "date": "2026-06-03",
+      "changes": [
+        "Script execution output moved to a full-height \"Script Output\" tab in the response viewer",
+        "Collection-wide \"global\", pre-request, and post-response scripts now run as separate stages, each shown with its own section and dot",
+        "The global collection script is now reported correctly instead of being lumped in with the pre-request stage",
+        "New hint on the Scripts tab for unsaved requests explaining collection-wide scripts unlock once the request is saved into a collection",
+        "Fixed environment variables with an empty value being wrongly flagged as missing"
+      ]
+    },
+    {
       "version": "0.20.0",
       "date": "2026-06-02",
       "changes": [

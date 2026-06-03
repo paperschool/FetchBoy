@@ -1,5 +1,12 @@
 # Long Changelog
 
+## [0.21.0] - 2026-06-03
+
+- feat: script execution output moved to a dedicated "Script Output" tab in the response viewer — new `src/components/ResponseViewer/ScriptOutputPanel.tsx` renders each stage that ran as a full-height, scrollable section (status, duration, HTTP sub-requests, console logs, `fb.test` pass/fail, error with line number + stack, collapsible input/output snapshots); the cramped in-accordion `PreRequestDebugLog` was removed, `ViewerShell` tab labels now accept `ReactNode`, and the tab appears (with per-stage dots) only once a script has run — even when there is no HTTP response (e.g. a pre-request error that aborts the send)
+- feat: collection-wide "global", pre-request, and post-response scripts now run as distinct execution stages — `useSendRequest` runs the global collection script in its own sandbox via a shared `runPreStage` helper before the request's own pre-request stage (matching Postman's collection-vs-request separation; values cross stages only through persisted `fb.env` mutations), so a global script is reported as "Collection-wide script" instead of being mislabeled "Pre-request"; `tabStore` gains separate `globalDebugState` / `scriptDebugState` / `postResponseDebugState` per tab, surfaced as sky / amber / emerald sections and dots
+- feat: Scripts tab hint for unsaved requests — when a request is not yet saved into a collection, the global slot is replaced by a dashed "Collection-wide script" card explaining it becomes available, and runs before every request in the collection, once the request is saved
+- fix: environment variables with an empty value are no longer flagged as missing — `unresolvedTokens` previously required `value !== ''`, contradicting `interpolate()` which resolves an existing enabled variable to `''`; now a token is "resolved" whenever an enabled variable with that key exists, so the unresolved-variable warning ring no longer fires for keys like `x-site-origin` that exist but are blank
+
 ## [0.20.0] - 2026-06-02
 
 Epic 20 — Deep Collection Nesting & Request Script Workspace.

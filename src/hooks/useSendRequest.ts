@@ -14,7 +14,7 @@ import { usePostResponseScript } from "@/hooks/usePostResponseScript";
 import { useEnvironmentStore } from "@/stores/environmentStore";
 import { useHistoryPersistence } from "@/hooks/useHistoryPersistence";
 import type { AuthState, HttpMethod } from "@/stores/requestStore";
-import { useTabStore, createDefaultScriptDebugState } from "@/stores/tabStore";
+import { useTabStore, createDefaultScriptDebugState, type ScriptDebugState } from "@/stores/tabStore";
 import { useDebugStore } from "@/stores/debugStore";
 import { useScriptTemplateStore } from "@/stores/scriptTemplateStore";
 import { useCollectionStore } from "@/stores/collectionStore";
@@ -142,21 +142,20 @@ export function useSendRequest(params: UseSendRequestParams): {
     }
 
     const ownScript = preRequestScriptEnabled ? preRequestScript : '';
-    const effectiveScript = [globalScript, templateCode, ownScript].filter((s) => s.trim()).join('\n\n');
 
-    // Pre-request script execution (the chain branch above handles chain mode separately).
-    if (effectiveScript.trim()) {
-      emitDebug('info', 'Executing pre-request script');
-      appendLog("Executing pre-request script...");
-
+    // Run one pre-request-style stage: execute, persist env mutations, re-interpolate, and
+    // apply the resulting field mutations to the outgoing request. Returns false on error.
+    const runPreStage = async (
+      scriptCode: string,
+      label: string,
+      updateDebug: (patch: Partial<ScriptDebugState>) => void,
+    ): Promise<boolean> => {
+      emitDebug('info', `Executing ${label} script`);
+      appendLog(`Executing ${label} script...`);
       const inputSnap = { url: sendUrlForRequest, method, headers: sendHeaders, queryParams: sendQueryParams, body: sendBody.raw };
-      const { updateTabScriptDebugState } = useTabStore.getState();
-      updateTabScriptDebugState(activeTabId, {
-        ...createDefaultScriptDebugState(), status: 'running', startTime: Date.now(), inputSnapshot: inputSnap,
-      });
-
+      updateDebug({ ...createDefaultScriptDebugState(), status: 'running', startTime: Date.now(), inputSnapshot: inputSnap });
       try {
-        const result = await executePreScript(effectiveScript, {
+        const result = await executePreScript(scriptCode, {
           url: sendUrlForRequest, method, headers: sendHeaders, queryParams: sendQueryParams, body: sendBody.raw,
         });
         // Re-interpolate with fresh env vars (fb.env.set mutations are persisted before we get here)
@@ -171,25 +170,36 @@ export function useSendRequest(params: UseSendRequestParams): {
         sendBody = { ...sendBody, raw: reInterpolate(result.body) };
 
         const outputSnap = { url: result.url, headers: result.headers, queryParams: result.queryParams, body: result.body };
-        updateTabScriptDebugState(activeTabId, {
-          status: 'completed', endTime: Date.now(),
-          consoleLogs: result.consoleLogs, httpLogs: result.httpLogs, outputSnapshot: outputSnap,
-        });
-        emitDebug('info', 'Pre-request script completed');
-        appendLog("Pre-request script completed successfully.");
+        updateDebug({ status: 'completed', endTime: Date.now(), consoleLogs: result.consoleLogs, httpLogs: result.httpLogs, outputSnapshot: outputSnap });
+        emitDebug('info', `${label} script completed`);
+        appendLog(`${label} script completed successfully.`);
+        return true;
       } catch (scriptError) {
         const err = scriptError as ScriptError & { consoleLogs?: unknown[]; httpLogs?: unknown[] };
         const lineInfo = err.lineNumber ? ` (line ${err.lineNumber})` : '';
-        const message = `Pre-request script error${lineInfo}: ${err.message}`;
-        updateTabScriptDebugState(activeTabId, {
+        const message = `${label} script error${lineInfo}: ${err.message}`;
+        updateDebug({
           status: 'error', endTime: Date.now(), error: { message: err.message, lineNumber: err.lineNumber, stack: err.stack },
           consoleLogs: (err.consoleLogs ?? []) as never[], httpLogs: (err.httpLogs ?? []) as never[],
         });
         emitDebug('error', message);
         updateRes({ requestError: message, responseData: null, isSending: false });
         appendLog(`Script error: ${message}`);
-        return;
+        return false;
       }
+    };
+
+    const { updateTabGlobalDebugState, updateTabScriptDebugState } = useTabStore.getState();
+
+    // 1. Collection-wide "global" script runs first — its own stage (chain mode aside).
+    if (globalScript.trim()) {
+      if (!await runPreStage(globalScript, 'Collection (global)', (patch) => updateTabGlobalDebugState(activeTabId, patch))) return;
+    }
+
+    // 2. The request's own pre-request (linked template + inline script) — the pre-request stage.
+    const preStageScript = [templateCode, ownScript].filter((s) => s.trim()).join('\n\n');
+    if (preStageScript.trim()) {
+      if (!await runPreStage(preStageScript, 'Pre-request', (patch) => updateTabScriptDebugState(activeTabId, patch))) return;
     }
 
     const requestedUrlForDisplay = buildRequestedUrlForDisplay(sendUrlForRequest, sendQueryParams, sendAuth as AuthState);
@@ -240,10 +250,10 @@ export function useSendRequest(params: UseSendRequestParams): {
       if (postResponseScript?.trim() && postResponseScriptEnabled) {
         emitDebug('info', 'Executing post-response script');
         appendLog('Executing post-response script...');
-        const { updateTabScriptDebugState } = useTabStore.getState();
+        const { updateTabPostResponseDebugState } = useTabStore.getState();
         const headersRecord: Record<string, string> = {};
         for (const h of response.headers ?? []) headersRecord[h.key] = h.value;
-        updateTabScriptDebugState(activeTabId, {
+        updateTabPostResponseDebugState(activeTabId, {
           ...createDefaultScriptDebugState(), stage: 'post-response', status: 'running', startTime: Date.now(),
         });
         try {
@@ -253,7 +263,7 @@ export function useSendRequest(params: UseSendRequestParams): {
             body: response.body,
             time: Number(response.responseTimeMs),
           });
-          updateTabScriptDebugState(activeTabId, {
+          updateTabPostResponseDebugState(activeTabId, {
             stage: 'post-response', status: 'completed', endTime: Date.now(),
             consoleLogs: postResult.consoleLogs, testResults: postResult.testResults,
           });
@@ -264,7 +274,7 @@ export function useSendRequest(params: UseSendRequestParams): {
           const err = postErr as ScriptError & { consoleLogs?: unknown[] };
           const lineInfo = err.lineNumber ? ` (line ${err.lineNumber})` : '';
           const message = `Post-response script error${lineInfo}: ${err.message}`;
-          updateTabScriptDebugState(activeTabId, {
+          updateTabPostResponseDebugState(activeTabId, {
             stage: 'post-response', status: 'error', endTime: Date.now(),
             error: { message: err.message, lineNumber: err.lineNumber, stack: err.stack },
             consoleLogs: (err.consoleLogs ?? []) as never[],

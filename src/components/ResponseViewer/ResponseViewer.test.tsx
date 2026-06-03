@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { ResponseViewer, type ResponseData, isImageContentType, isPdfContentType, isBinaryContentType } from './ResponseViewer';
+import { createDefaultScriptDebugState } from '@/stores/tabStore';
 
 vi.mock('@monaco-editor/react', () => ({
   default: ({ value, options, language, path }: { value?: string; options?: { readOnly?: boolean; fontSize?: number }; language?: string; path?: string }) => (
@@ -239,6 +240,40 @@ describe('Story 7.7 Image & Binary Response Handling', () => {
       fireEvent.change(select, { target: { value: 'plaintext' } });
       expect(select).toHaveValue('plaintext');
     });
+  });
+});
+
+describe('ResponseViewer Script Output tab', () => {
+  it('hides the Script Output tab when no script ran', () => {
+    render(<ResponseViewer response={sampleResponse} error={null} />);
+    expect(screen.queryByRole('button', { name: /Script Output/ })).toBeNull();
+  });
+
+  it('shows the Script Output tab with the pre-request execution when a script ran', () => {
+    const scriptDebug = {
+      ...createDefaultScriptDebugState(),
+      status: 'completed' as const,
+      stage: 'pre-request' as const,
+      startTime: 1, endTime: 5,
+      consoleLogs: [{ level: 'log' as const, args: 'hello-from-script', timestamp: 1 }],
+    };
+    render(<ResponseViewer response={sampleResponse} error={null} scriptDebug={scriptDebug} />);
+    fireEvent.click(screen.getByRole('button', { name: /Script Output/ }));
+    expect(screen.getByTestId('script-output-panel')).toBeInTheDocument();
+    expect(screen.getByText(/hello-from-script/)).toBeInTheDocument();
+  });
+
+  it('renders even with no response when a script produced output', () => {
+    const scriptDebug = {
+      ...createDefaultScriptDebugState(),
+      status: 'error' as const,
+      stage: 'pre-request' as const,
+      error: { message: 'TypeError: boom', lineNumber: 3 },
+    };
+    render(<ResponseViewer response={null} error={null} scriptDebug={scriptDebug} />);
+    fireEvent.click(screen.getByRole('button', { name: /Script Output/ }));
+    expect(screen.getByText(/TypeError: boom/)).toBeInTheDocument();
+    expect(screen.getByText(/Line 3/)).toBeInTheDocument();
   });
 });
 
