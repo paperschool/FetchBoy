@@ -100,7 +100,7 @@ export function useCollectionCrud(
 
   const handleDeleteCollection = useCallback(
     async (id: string) => {
-      try { await dbDeleteCollection(id); store.deleteCollection(id); }
+      try { const deletedEnvIds = await dbDeleteCollection(id); store.deleteCollection(id, deletedEnvIds); }
       catch (error) { console.error("Failed to delete collection", error); }
     },
     [store],
@@ -243,6 +243,14 @@ export function useCollectionCrud(
           if (mode === 'merge') store.setCollectionDefaultEnvironment(collection.id, environment.id);
         }
       }
+      // Merge overwrote the collection-wide script in the DB — mirror it in the store.
+      if (mode === 'merge') {
+        store.setCollectionScript(collection.id, collection.pre_request_script ?? '', collection.pre_request_script_enabled ?? false);
+      }
+      // Templates restored by importCollectionFromJson were written to the DB only;
+      // refresh the store so imported requests' linked templates resolve in-session.
+      useScriptTemplateStore.setState({ isLoaded: false });
+      await useScriptTemplateStore.getState().load();
       emitDebug('info', 'import', `Store updated — import complete`);
       const summary = mode === 'merge'
         ? [

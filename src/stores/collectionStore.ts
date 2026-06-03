@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import type { Collection, Folder, Request } from '@/lib/db';
-import { selectOwnedEnvironmentsToDelete } from '@/lib/collections';
 import { useEnvironmentStore } from '@/stores/environmentStore';
 
 // ─── Tree Types ───────────────────────────────────────────────────────────────
@@ -45,7 +44,7 @@ interface CollectionState {
     renameCollection: (id: string, name: string) => void;
     setCollectionScript: (id: string, script: string, enabled: boolean) => void;
     setCollectionDefaultEnvironment: (id: string, environmentId: string | null) => void;
-    deleteCollection: (id: string) => void;
+    deleteCollection: (id: string, deletedEnvIds: string[]) => void;
 
     // Folder CRUD
     addFolder: (folder: Folder) => void;
@@ -119,16 +118,14 @@ export const useCollectionStore = create<CollectionState>()(
                 if (col) col.default_environment_id = environmentId;
             }),
 
-        deleteCollection: (id) => {
-            // Mirror the DB cascade: drop environments owned by this collection that
-            // no other collection still references (active-env fallback handled by
-            // environmentStore.deleteEnvironment). Compute against the pre-delete snapshot.
+        deleteCollection: (id, deletedEnvIds) => {
+            // Mirror the DB cascade using the exact env ids the DB deleted (passed in
+            // from lib/collections.deleteCollection) so the store and DB can't diverge.
+            // If a removed env was active, the app is simply left with no active
+            // environment — environmentStore.deleteEnvironment does not auto-pick a
+            // fallback (a valid state the user re-selects from).
             const envStore = useEnvironmentStore.getState();
-            const envIdsToRemove = selectOwnedEnvironmentsToDelete(
-                id,
-                envStore.environments,
-                get().collections,
-            );
+            const envIdsToRemove = deletedEnvIds;
             set((state) => {
                 const folderIds = state.folders
                     .filter((f) => f.collection_id === id)

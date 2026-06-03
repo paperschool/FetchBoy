@@ -24,8 +24,8 @@ export function FetchSettings(): React.ReactElement {
         const collections = useCollectionStore.getState().collections
         const sample = collections.find((c) => c.id === 'sample-getting-started')
         if (sample) {
-            useCollectionStore.getState().deleteCollection(sample.id)
-            await deleteCollectionFromDb(sample.id).catch(() => {})
+            const deletedEnvIds = await deleteCollectionFromDb(sample.id).catch(() => [] as string[])
+            useCollectionStore.getState().deleteCollection(sample.id, deletedEnvIds)
         }
         await seedSampleDataIfNeeded()
     }

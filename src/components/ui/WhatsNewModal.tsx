@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Sparkles, ChevronDown, ArrowUpCircle } from 'lucide-react';
+import { open } from '@tauri-apps/plugin-shell';
 import { fetchLatestRelease, compareSemver, type LatestReleaseInfo } from '@/lib/appVersion';
 import { t } from '@/lib/i18n';
 
@@ -54,15 +55,15 @@ export function WhatsNewModal({ version, changelog, onDismiss }: WhatsNewModalPr
                 </div>
 
                 {hasUpdate && latestRelease && (
-                    <a
-                        href={latestRelease.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mb-3 flex items-center gap-2 rounded-md border border-green-600/40 bg-green-600/10 px-3 py-2 text-sm text-green-400 hover:bg-green-600/20 transition-colors shrink-0"
+                    <button
+                        type="button"
+                        onClick={() => void open(latestRelease.url)}
+                        className="mb-3 flex w-full items-center gap-2 rounded-md border border-green-600/40 bg-green-600/10 px-3 py-2 text-left text-sm text-green-400 hover:bg-green-600/20 transition-colors cursor-pointer shrink-0"
+                        data-testid="whats-new-update-link"
                     >
                         <ArrowUpCircle size={16} className="shrink-0" />
                         <span>Update available: <strong>v{latestRelease.version}</strong> — click to download</span>
-                    </a>
+                    </button>
                 )}
 
                 <div className="overflow-y-auto flex-1 space-y-1 pr-1" data-testid="changelog-list">

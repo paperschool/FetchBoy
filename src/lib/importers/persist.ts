@@ -4,6 +4,7 @@ import { insertMany } from '@/lib/dbHelpers';
 import { updateEnvironmentVariables } from '@/lib/environments';
 import type { ImportSnapshot } from '@/lib/importExport';
 import { findCollectionByExactName, mergeEnvVariables, nextSortOrderBase } from './mergeCollection';
+import { REQUEST_COLS, requestRow } from '@/lib/requestRow';
 import type { ImportResult, ImportWarning } from './types';
 
 export interface PersistImportOutcome {
@@ -25,26 +26,6 @@ export interface PersistImportOutcome {
  * than SAVEPOINT). Each insert below is individually atomic, which is enough
  * once `insertMany` chunks under the bound-parameter limit.
  */
-const REQUEST_COLS = [
-  'id', 'collection_id', 'folder_id', 'name', 'method', 'url', 'headers', 'query_params',
-  'body_type', 'body_content', 'auth_type', 'auth_config', 'pre_request_script',
-  'pre_request_script_enabled', 'pre_request_template_id',
-  'post_response_script', 'post_response_script_enabled',
-  'sort_order', 'created_at', 'updated_at',
-];
-
-function requestRow(r: Request): unknown[] {
-  return [
-    r.id, r.collection_id, r.folder_id, r.name, r.method, r.url,
-    JSON.stringify(r.headers), JSON.stringify(r.query_params),
-    r.body_type, r.body_content, r.auth_type, JSON.stringify(r.auth_config),
-    r.pre_request_script, r.pre_request_script_enabled ? 1 : 0,
-    r.pre_request_template_id ?? null,
-    r.post_response_script ?? '', (r.post_response_script_enabled ?? false) ? 1 : 0,
-    r.sort_order, r.created_at, r.updated_at,
-  ];
-}
-
 const FOLDER_COLS = ['id', 'collection_id', 'parent_id', 'name', 'sort_order', 'created_at', 'updated_at'];
 const folderRow = (f: Folder): unknown[] => [f.id, f.collection_id, f.parent_id, f.name, f.sort_order, f.created_at, f.updated_at];
 
@@ -84,22 +65,28 @@ export async function persistImportResult(
   const folders: Folder[] = result.folders.map((f) => ({ ...f, created_at: now, updated_at: now }));
   const requests: Request[] = result.requests.map((r) => ({ ...r, created_at: now, updated_at: now }));
 
-  // environments → collection → folders → requests (FK dependency order).
-  await insertMany('environments', ['id', 'name', 'variables', 'is_active', 'created_at', 'owner_collection_id'],
-    environments.map((env) => [env.id, env.name, JSON.stringify(env.variables), 0, env.created_at, env.owner_collection_id ?? null]));
-
+  // Insert the collection FIRST (default env null) so the environments'
+  // owner_collection_id FK has a target, then the environments, then bind the
+  // default. (Env-first would violate the FK on a fresh foreign-keys-on DB.)
   await db.execute(
     'INSERT INTO collections (id, name, description, default_environment_id, pre_request_script, pre_request_script_enabled, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
     [
-      collection.id, collection.name, collection.description, collection.default_environment_id,
+      collection.id, collection.name, collection.description, null,
       collection.pre_request_script ?? '',
       (collection.pre_request_script_enabled ?? !!collection.pre_request_script?.trim()) ? 1 : 0,
       collection.created_at, collection.updated_at,
     ],
   );
 
+  await insertMany('environments', ['id', 'name', 'variables', 'is_active', 'created_at', 'owner_collection_id'],
+    environments.map((env) => [env.id, env.name, JSON.stringify(env.variables), 0, env.created_at, env.owner_collection_id ?? null]));
+
+  if (defaultEnvId) {
+    await db.execute('UPDATE collections SET default_environment_id = ? WHERE id = ?', [defaultEnvId, collection.id]);
+  }
+
   await insertMany('folders', FOLDER_COLS, folders.map(folderRow));
-  await insertMany('requests', REQUEST_COLS, requests.map(requestRow));
+  await insertMany('requests', [...REQUEST_COLS], requests.map(requestRow));
 
   return { mode: 'create', collection, folders, requests, environments, warnings: [] };
 }
@@ -126,7 +113,22 @@ async function mergeImportResult(
     ...r, collection_id: targetId, sort_order: requestBase + i, created_at: now, updated_at: now,
   }));
 
-  // Union all imported variables into the target's bound environment (or create one).
+  const db = await getDb();
+
+  // 1. Append folders + requests first (purely additive — existing rows untouched).
+  if (folders.length > 0) await insertMany('folders', FOLDER_COLS, folders.map(folderRow));
+  if (requests.length > 0) await insertMany('requests', [...REQUEST_COLS], requests.map(requestRow));
+
+  // 2. Apply the imported collection-wide pre-request script only when the source
+  //    actually carries one (most wizard formats don't), so an empty parse never
+  //    clobbers an existing collection script.
+  const incomingScript = result.collection.pre_request_script?.trim() ? result.collection.pre_request_script : '';
+  if (incomingScript) {
+    await db.execute('UPDATE collections SET pre_request_script = ?, pre_request_script_enabled = ?, updated_at = ? WHERE id = ?',
+      [incomingScript, (result.collection.pre_request_script_enabled ?? true) ? 1 : 0, now, targetId]);
+  }
+
+  // 3. Merge env variables LAST (this overwrites a pre-existing env row).
   const incomingVars = result.environments.flatMap((e) => e.variables);
   const warnings: ImportWarning[] = [];
   const environments: Environment[] = [];
@@ -146,18 +148,19 @@ async function mergeImportResult(
       };
       await insertMany('environments', ['id', 'name', 'variables', 'is_active', 'created_at', 'owner_collection_id'],
         [[env.id, env.name, JSON.stringify(env.variables), 0, env.created_at, targetId]]);
-      const db = await getDb();
       await db.execute('UPDATE collections SET default_environment_id = ?, updated_at = ? WHERE id = ?', [env.id, now, targetId]);
       environments.push(env);
     }
   }
 
-  if (folders.length > 0) await insertMany('folders', FOLDER_COLS, folders.map(folderRow));
-  if (requests.length > 0) await insertMany('requests', REQUEST_COLS, requests.map(requestRow));
-
   return {
     mode: 'merge',
-    collection: { ...target, default_environment_id: environments[0]?.id ?? target.default_environment_id },
+    collection: {
+      ...target,
+      pre_request_script: incomingScript || target.pre_request_script,
+      pre_request_script_enabled: incomingScript ? (result.collection.pre_request_script_enabled ?? true) : target.pre_request_script_enabled,
+      default_environment_id: environments[0]?.id ?? target.default_environment_id,
+    },
     folders,
     requests,
     environments,

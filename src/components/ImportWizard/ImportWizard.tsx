@@ -27,6 +27,7 @@ import { importCollectionFromJson } from "@/lib/importExport";
 import { useCollectionStore } from "@/stores/collectionStore";
 import { MAX_FOLDER_DEPTH } from "@/components/CollectionTree/folderDepth";
 import { useEnvironmentStore } from "@/stores/environmentStore";
+import { useScriptTemplateStore } from "@/stores/scriptTemplateStore";
 import { emitDebug } from "@/lib/debugUtils";
 import type { ImportFormat, ImportResult } from "@/lib/importers/types";
 import {
@@ -221,6 +222,13 @@ export function ImportWizard({
             if (mode === "merge") collectionStore.setCollectionDefaultEnvironment(collection.id, environment.id);
           }
         }
+        // Merge overwrote the collection-wide script in the DB — mirror it in the store.
+        if (mode === "merge") {
+          collectionStore.setCollectionScript(collection.id, collection.pre_request_script ?? "", collection.pre_request_script_enabled ?? false);
+        }
+        // Refresh restored templates into the store so imported template links resolve.
+        useScriptTemplateStore.setState({ isLoaded: false });
+        await useScriptTemplateStore.getState().load();
         setImportedCount({
           folders: folders.length,
           requests: requests.length,
@@ -401,6 +409,10 @@ export function ImportWizard({
           envStore.addEnvironment(env);
           if (mode === "merge") collectionStore.setCollectionDefaultEnvironment(collection.id, env.id);
         }
+      }
+      // Merge may have overwritten the collection-wide script in the DB — mirror it.
+      if (mode === "merge") {
+        collectionStore.setCollectionScript(collection.id, collection.pre_request_script ?? "", collection.pre_request_script_enabled ?? false);
       }
       setImportedCount({
         folders: folders.length,

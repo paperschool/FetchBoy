@@ -296,8 +296,27 @@ describe('importCollectionFromJson', () => {
         expect(environment!.name).toBe('My API Variables');
         expect(environment!.variables).toHaveLength(1);
         expect(collection.default_environment_id).toBe(environment!.id);
-        // Extra DB call for environment insert
-        expect(mockExecute).toHaveBeenCalledTimes(4);
+        // collection insert + env insert + default_environment_id UPDATE + folders + requests.
+        // (Collection is inserted first with a null default env to satisfy the
+        // environments.owner_collection_id FK, then the default is bound via UPDATE.)
+        expect(mockExecute).toHaveBeenCalledTimes(5);
+    });
+
+    it('blanks a redacted value only when the variable is flagged secret', async () => {
+        const { importCollectionFromJson } = await import('./importExport');
+        const json = buildCollectionJson({
+            environments: [{
+                name: 'E',
+                variables: [
+                    { key: 'SECRET', value: '<REDACTED>', enabled: true, secret: true },
+                    { key: 'LITERAL', value: '<REDACTED>', enabled: true },
+                ],
+            }],
+        });
+        const { environment } = await importCollectionFromJson(json);
+        // The flagged secret is blanked for re-entry; a non-secret literal survives.
+        expect(environment!.variables.find((v) => v.key === 'SECRET')!.value).toBe('');
+        expect(environment!.variables.find((v) => v.key === 'LITERAL')!.value).toBe('<REDACTED>');
     });
 
     it('returns null environment when envelope has no variables', async () => {
@@ -407,6 +426,19 @@ describe('importCollectionFromJson — merge into same-named collection', () => 
         expect(environment!.variables.find((v) => v.key === 'B')!.value).toBe('2');
         expect(warnings).toHaveLength(1);
         expect(warnings[0].field).toBe('A');
+    });
+
+    it('overwrites the collection-wide pre-request script on merge (round-trip restore)', async () => {
+        const { importCollectionFromJson } = await import('./importExport');
+        const json = buildJson({
+            collection: makeCollection({ name: 'My API', pre_request_script: 'fb.env.set("x","1")', pre_request_script_enabled: true }),
+        });
+        const result = await importCollectionFromJson(json, existingSnapshot());
+        expect(result.collection.pre_request_script).toBe('fb.env.set("x","1")');
+        const wroteScript = mockExecute.mock.calls.some(
+            (c) => typeof c[0] === 'string' && (c[0] as string).includes('SET pre_request_script'),
+        );
+        expect(wroteScript).toBe(true);
     });
 
     it('creates a new collection when the name does not match (no behaviour change)', async () => {

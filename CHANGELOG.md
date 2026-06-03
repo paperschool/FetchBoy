@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.22.1] - 2026-06-03
+
+- fix: Re-importing a `.fetchboy` collection now restores the collection-wide pre-request script, and imported script templates resolve immediately instead of after a restart
+- fix: Importing a collection that carries environment variables no longer fails on a fresh install (environment/collection insert order)
+- fix: Deleting a collection no longer leaves orphaned request rows behind in the database
+- fix: The export redaction round-trip only blanks values that were actually flagged secret — a literal "<REDACTED>" value is preserved
+- fix: A failed merge-import can no longer corrupt your existing environment — variables are written last, after the appended content
+- refactor: Unified request-insert logic across all import paths so columns can't silently drift, and the collection-delete cascade now runs from a single decision
+
 ## [0.22.0] - 2026-06-03
 
 - feat: Deleting a collection now cleans up the environment it auto-created on import, while never touching environments you made yourself or share across collections

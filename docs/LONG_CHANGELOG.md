@@ -1,5 +1,19 @@
 # Long Changelog
 
+## [0.22.1] - 2026-06-03
+
+Epic 21 code-review fixes (cascade delete / import merge / full export).
+
+- fix: import-merge round-trip — `mergeIntoExisting` now overwrites the target collection's `pre_request_script`/`pre_request_script_enabled` with the imported one (mirrored into `collectionStore` via `setCollectionScript`) so a same-named `.fetchboy` re-import restores the collection-wide script; the wizard/persist merge applies it only when the parsed source actually carries a script, so a Postman/Bruno re-import never clobbers an existing one with an empty value
+- fix: secret redaction is gated on the `secret` flag on import — `blankRedacted` now requires `v.secret && v.value === '<REDACTED>'`, so a legitimate non-secret value that happens to equal the placeholder is no longer silently wiped to `''`
+- fix: imported script templates refresh into `useScriptTemplateStore` (`setState({ isLoaded: false })` + `load()`) after both the native (`useCollectionCrud`) and wizard (`ImportWizard`) `.fetchboy` paths, so a restored request's linked-template dot/execution resolves in-session instead of only after an app reload
+- fix: environment foreign-key insert order — both create paths (`importExport.ts` + `importers/persist.ts`) now insert the `collections` row first (with a null `default_environment_id`), then the `environments` (whose `owner_collection_id` FK now has a target), then bind the default via `UPDATE`; the previous env-first order could throw a FK violation on a fresh migration-019 DB for any import carrying variables
+- fix: merge corruption window — the env-variable union (`updateEnvironmentVariables`, a destructive overwrite of a pre-existing row) is now ordered LAST, after the additive folder/request inserts, so a mid-merge failure can no longer strand the existing environment mutated with none of the imported content added
+- fix: `lib/collections.deleteCollection` now explicitly deletes the collection's `requests` and `folders` instead of relying on FK behaviour (`requests.collection_id` is `ON DELETE SET NULL`), so deleting a collection no longer leaves orphaned `collection_id = NULL` request rows that reload on next launch
+- refactor: single source of truth for request persistence — new `src/lib/requestRow.ts` (`REQUEST_COLS` + `requestRow`) replaces the three drifted copies in `collections.ts`, `importers/persist.ts`, and `importExport.ts` (one had already lost `pre_request_chain_id`; another defaulted `pre_request_script_enabled` differently), so a newly-added column can't be silently dropped on one path
+- refactor: collection-delete cascade computed once — `deleteCollection` returns the env ids it deleted and `collectionStore.deleteCollection(id, deletedEnvIds)` consumes them rather than recomputing the owned-env set from a possibly-divergent in-memory snapshot; removing an active environment now deliberately leaves no active env (a valid state) with the misleading "fallback" comment corrected
+- chore: pre-request chains are explicitly excluded on import (`pre_request_chain_id: null`); 1275 vitest tests pass (added secret-gating and merge-overwrite regression tests) and `npx tsc -b` is clean
+
 ## [0.22.0] - 2026-06-03
 
 Epic 21 — Collection Lifecycle: Cascade Delete, Import Merge & Full Export.

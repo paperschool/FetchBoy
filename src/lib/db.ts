@@ -204,8 +204,14 @@ export async function getDb(): Promise<Database> {
         // Ensure pre_request_chain columns exist (migration 015)
         try { await _db.execute('ALTER TABLE requests ADD COLUMN pre_request_chain_id TEXT'); } catch { /* exists */ }
         try { await _db.execute('ALTER TABLE stitch_chains ADD COLUMN request_id TEXT'); } catch { /* exists */ }
-        // Ensure pre_request_template link exists (migration 016)
+        // Ensure pre_request_template link exists (JS-only column)
         try { await _db.execute('ALTER TABLE requests ADD COLUMN pre_request_template_id TEXT'); } catch { /* exists */ }
+        // Ensure post-response/test script columns exist (migration 016)
+        try { await _db.execute("ALTER TABLE requests ADD COLUMN post_response_script TEXT NOT NULL DEFAULT ''"); } catch { /* exists */ }
+        try { await _db.execute('ALTER TABLE requests ADD COLUMN post_response_script_enabled INTEGER NOT NULL DEFAULT 0'); } catch { /* exists */ }
+        // Ensure collection-wide pre-request script columns exist (migration 017)
+        try { await _db.execute("ALTER TABLE collections ADD COLUMN pre_request_script TEXT NOT NULL DEFAULT ''"); } catch { /* exists */ }
+        try { await _db.execute('ALTER TABLE collections ADD COLUMN pre_request_script_enabled INTEGER NOT NULL DEFAULT 1'); } catch { /* exists */ }
         // Ensure environment ownership column exists (migration 019)
         try { await _db.execute('ALTER TABLE environments ADD COLUMN owner_collection_id TEXT'); } catch { /* exists */ }
     }

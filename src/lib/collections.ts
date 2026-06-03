@@ -1,6 +1,7 @@
 import { getDb } from '@/lib/db';
 import type { Collection, Environment, Folder, KeyValuePair, Request } from '@/lib/db';
 import { now, parseJsonField, insertOne } from '@/lib/dbHelpers';
+import { REQUEST_COLS, requestRow } from '@/lib/requestRow';
 
 // ─── Internal raw DB types ────────────────────────────────────────────────────
 
@@ -135,7 +136,12 @@ export function selectOwnedEnvironmentsToDelete(
         .map((env) => env.id);
 }
 
-export async function deleteCollection(id: string): Promise<void> {
+/**
+ * Delete a collection and its owned, unshared environments. Returns the deleted
+ * environment ids so the store can mirror the cascade from the same decision
+ * (rather than recomputing it from a possibly-divergent in-memory snapshot).
+ */
+export async function deleteCollection(id: string): Promise<string[]> {
     const db = await getDb();
     // Compute owned, unshared environments BEFORE the delete — ON DELETE SET NULL
     // would otherwise clear owner_collection_id and hide them from the cascade.
@@ -147,10 +153,16 @@ export async function deleteCollection(id: string): Promise<void> {
     );
     const envIdsToDelete = selectOwnedEnvironmentsToDelete(id, environments, collections);
 
+    // Explicitly delete the collection's folders/requests rather than relying on FK
+    // cascade: requests.collection_id is ON DELETE SET NULL (not CASCADE), so a bare
+    // collection delete would leave orphaned request rows (reloaded on next launch).
+    await db.execute('DELETE FROM requests WHERE collection_id = ?', [id]);
+    await db.execute('DELETE FROM folders WHERE collection_id = ?', [id]);
     await db.execute('DELETE FROM collections WHERE id = ?', [id]);
     for (const envId of envIdsToDelete) {
         await db.execute('DELETE FROM environments WHERE id = ?', [envId]);
     }
+    return envIdsToDelete;
 }
 
 // ─── Folders ─────────────────────────────────────────────────────────────────
@@ -218,24 +230,8 @@ export async function updateFolderParent(
 
 // ─── Request INSERT helper ────────────────────────────────────────────────────
 
-const REQUEST_FIELDS = [
-    'id', 'collection_id', 'folder_id', 'name', 'method', 'url', 'headers', 'query_params',
-    'body_type', 'body_content', 'auth_type', 'auth_config', 'pre_request_script',
-    'pre_request_script_enabled', 'pre_request_chain_id', 'pre_request_template_id',
-    'post_response_script', 'post_response_script_enabled',
-    'sort_order', 'created_at', 'updated_at',
-] as const;
-
 async function insertRequestRow(req: Request): Promise<void> {
-    await insertOne('requests', [...REQUEST_FIELDS], [
-        req.id, req.collection_id, req.folder_id, req.name, req.method, req.url,
-        JSON.stringify(req.headers), JSON.stringify(req.query_params),
-        req.body_type, req.body_content, req.auth_type, JSON.stringify(req.auth_config),
-        req.pre_request_script, req.pre_request_script_enabled ? 1 : 0,
-        req.pre_request_chain_id, req.pre_request_template_id ?? null,
-        req.post_response_script ?? '', (req.post_response_script_enabled ?? false) ? 1 : 0,
-        req.sort_order, req.created_at, req.updated_at,
-    ]);
+    await insertOne('requests', [...REQUEST_COLS], requestRow(req));
 }
 
 // ─── Requests ────────────────────────────────────────────────────────────────

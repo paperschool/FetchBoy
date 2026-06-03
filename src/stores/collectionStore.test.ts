@@ -103,7 +103,7 @@ describe('collectionStore', () => {
             const reqInFolder = makeReq({ id: 'req-1', folder_id: 'fld-1', collection_id: 'col-1' });
             const reqDirect = makeReq({ id: 'req-2', folder_id: null, collection_id: 'col-1' });
             useCollectionStore.getState().loadAll([makeCol()], [makeFld()], [reqInFolder, reqDirect]);
-            useCollectionStore.getState().deleteCollection('col-1');
+            useCollectionStore.getState().deleteCollection('col-1', []);
             const s = useCollectionStore.getState();
             expect(s.collections).toHaveLength(0);
             expect(s.folders).toHaveLength(0);
@@ -113,7 +113,7 @@ describe('collectionStore', () => {
         it('deleteCollection clears activeRequestId when active request was in that collection', () => {
             useCollectionStore.getState().loadAll([makeCol()], [], [makeReq()]);
             useCollectionStore.getState().setActiveRequest('req-1');
-            useCollectionStore.getState().deleteCollection('col-1');
+            useCollectionStore.getState().deleteCollection('col-1', []);
             expect(useCollectionStore.getState().activeRequestId).toBeNull();
         });
     });

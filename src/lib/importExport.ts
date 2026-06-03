@@ -5,6 +5,7 @@ import { updateEnvironmentVariables } from '@/lib/environments';
 import { type ScriptTemplate, loadScriptTemplates, createScriptTemplate } from '@/lib/scriptTemplates';
 import type { ImportWarning } from '@/lib/importers/types';
 import { findCollectionByExactName, mergeEnvVariables, nextSortOrderBase } from '@/lib/importers/mergeCollection';
+import { REQUEST_COLS, requestRow } from '@/lib/requestRow';
 
 /** Existing store snapshot the importer consults to decide create-vs-merge (Story 21.2). */
 export interface ImportSnapshot {
@@ -22,29 +23,6 @@ export interface ImportCollectionResult {
     requests: Request[];
     environment: Environment | null;
     warnings: ImportWarning[];
-}
-
-// Column list shared by the create and merge request inserts. Carries the
-// post-response/test script and the linked-template id (Story 21.3) so a native
-// re-import is lossless.
-const REQUEST_INSERT_FIELDS = [
-    'id', 'collection_id', 'folder_id', 'name', 'method', 'url', 'headers', 'query_params',
-    'body_type', 'body_content', 'auth_type', 'auth_config', 'pre_request_script',
-    'pre_request_script_enabled', 'pre_request_template_id',
-    'post_response_script', 'post_response_script_enabled',
-    'sort_order', 'created_at', 'updated_at',
-] as const;
-
-function requestInsertRow(r: Request): unknown[] {
-    return [
-        r.id, r.collection_id, r.folder_id, r.name, r.method, r.url,
-        JSON.stringify(r.headers), JSON.stringify(r.query_params),
-        r.body_type, r.body_content, r.auth_type, JSON.stringify(r.auth_config),
-        r.pre_request_script ?? '', (r.pre_request_script_enabled ?? true) ? 1 : 0,
-        r.pre_request_template_id ?? null,
-        r.post_response_script ?? '', (r.post_response_script_enabled ?? false) ? 1 : 0,
-        r.sort_order, r.created_at, r.updated_at,
-    ];
 }
 
 // ─── Export Envelope Interfaces ───────────────────────────────────────────────
@@ -83,9 +61,13 @@ function redactSecrets(variables: KeyValuePair[]): KeyValuePair[] {
     );
 }
 
-/** On import, blank any value that was redacted on export so the user re-enters it. */
+/**
+ * On import, blank any value that was redacted on export so the user re-enters it.
+ * Gated on the `secret` flag (which the export preserves) so a legitimate non-secret
+ * value that happens to equal the placeholder isn't wiped.
+ */
 function blankRedacted(variables: KeyValuePair[]): KeyValuePair[] {
-    return variables.map((v) => (v.value === SECRET_PLACEHOLDER ? { ...v, value: '' } : v));
+    return variables.map((v) => (v.secret && v.value === SECRET_PLACEHOLDER ? { ...v, value: '' } : v));
 }
 
 /**
@@ -272,29 +254,38 @@ export async function importCollectionFromJson(
         id: crypto.randomUUID(),
         collection_id: newCollectionId,
         folder_id: r.folder_id ? (folderIdMap.get(r.folder_id) ?? null) : null,
+        pre_request_chain_id: null, // pre-request chains are retired — never re-import them
         pre_request_template_id: remapTemplateId(r.pre_request_template_id, templateIdMap),
         created_at: now,
         updated_at: now,
     }));
 
-    // Write to DB — environments first (foreign key target), then collection, folders, requests.
+    // Write order matters: insert the collection FIRST (default env null) so the
+    // environments' owner_collection_id FK has a target, then the environments, then
+    // bind the default. (The previous env-first order violated the FK on fresh DBs.)
+    const db = await getDb();
+    await insertOne('collections',
+        ['id', 'name', 'description', 'default_environment_id', 'pre_request_script', 'pre_request_script_enabled', 'created_at', 'updated_at'],
+        [collection.id, collection.name, collection.description, null,
+         collection.pre_request_script ?? '',
+         (collection.pre_request_script_enabled ?? !!collection.pre_request_script?.trim()) ? 1 : 0,
+         collection.created_at, collection.updated_at]);
+
     for (const env of createdEnvs) {
         await insertOne('environments', ['id', 'name', 'variables', 'is_active', 'created_at', 'owner_collection_id'],
             [env.id, env.name, JSON.stringify(env.variables), 0, env.created_at, env.owner_collection_id ?? null]);
     }
 
-    await insertOne('collections',
-        ['id', 'name', 'description', 'default_environment_id', 'pre_request_script', 'pre_request_script_enabled', 'created_at', 'updated_at'],
-        [collection.id, collection.name, collection.description, collection.default_environment_id,
-         collection.pre_request_script ?? '',
-         (collection.pre_request_script_enabled ?? !!collection.pre_request_script?.trim()) ? 1 : 0,
-         collection.created_at, collection.updated_at]);
+    if (collection.default_environment_id) {
+        await db.execute('UPDATE collections SET default_environment_id = ? WHERE id = ?',
+            [collection.default_environment_id, collection.id]);
+    }
 
     const folderFields = ['id', 'collection_id', 'parent_id', 'name', 'sort_order', 'created_at', 'updated_at'] as const;
     await insertMany('folders', [...folderFields],
         folders.map((f) => [f.id, f.collection_id, f.parent_id, f.name, f.sort_order, f.created_at, f.updated_at]));
 
-    await insertMany('requests', [...REQUEST_INSERT_FIELDS], requests.map(requestInsertRow));
+    await insertMany('requests', [...REQUEST_COLS], requests.map(requestRow));
 
     return { mode: 'create', collection, folders, requests, environment, warnings: [] };
 }
@@ -337,13 +328,35 @@ async function mergeIntoExisting(
         id: crypto.randomUUID(),
         collection_id: targetId,
         folder_id: r.folder_id ? (folderIdMap.get(r.folder_id) ?? null) : null,
+        pre_request_chain_id: null, // pre-request chains are retired — never re-import them
         pre_request_template_id: remapTemplateId(r.pre_request_template_id, templateIdMap),
         sort_order: requestBase + i,
         created_at: now,
         updated_at: now,
     }));
 
-    // Merge env variables into the target's bound environment (or create one).
+    const db = await getDb();
+
+    // 1. Append folders + requests FIRST — purely additive, existing rows untouched.
+    if (folders.length > 0) {
+        const folderFields = ['id', 'collection_id', 'parent_id', 'name', 'sort_order', 'created_at', 'updated_at'] as const;
+        await insertMany('folders', [...folderFields],
+            folders.map((f) => [f.id, f.collection_id, f.parent_id, f.name, f.sort_order, f.created_at, f.updated_at]));
+    }
+    if (requests.length > 0) {
+        await insertMany('requests', [...REQUEST_COLS], requests.map(requestRow));
+    }
+
+    // 2. Overwrite the collection-wide pre-request script with the imported one so a
+    //    re-import restores it (Story 21.3 round-trip). Runs after the additive inserts.
+    const importedScript = envelope.collection.pre_request_script ?? '';
+    const importedScriptEnabled = envelope.collection.pre_request_script_enabled ?? !!importedScript.trim();
+    await db.execute('UPDATE collections SET pre_request_script = ?, pre_request_script_enabled = ?, updated_at = ? WHERE id = ?',
+        [importedScript, importedScriptEnabled ? 1 : 0, now, targetId]);
+
+    // 3. Merge env variables LAST: this overwrites a pre-existing environment row, so
+    //    do it only after the additive content succeeded — a failure here then can't
+    //    strand the collection with mutated env vars but none of the imported content.
     const incomingVars = incomingEnvs.flatMap((e) => e.variables);
     let environment: Environment | null = null;
     const warnings: ImportWarning[] = [];
@@ -370,26 +383,20 @@ async function mergeIntoExisting(
             };
             await insertOne('environments', ['id', 'name', 'variables', 'is_active', 'created_at', 'owner_collection_id'],
                 [environment.id, environment.name, JSON.stringify(environment.variables), 0, environment.created_at, targetId]);
-            const db = await getDb();
             await db.execute('UPDATE collections SET default_environment_id = ?, updated_at = ? WHERE id = ?',
                 [environment.id, now, targetId]);
             boundEnvId = environment.id;
         }
     }
 
-    // Append folders + requests (additive; existing rows untouched).
-    if (folders.length > 0) {
-        const folderFields = ['id', 'collection_id', 'parent_id', 'name', 'sort_order', 'created_at', 'updated_at'] as const;
-        await insertMany('folders', [...folderFields],
-            folders.map((f) => [f.id, f.collection_id, f.parent_id, f.name, f.sort_order, f.created_at, f.updated_at]));
-    }
-    if (requests.length > 0) {
-        await insertMany('requests', [...REQUEST_INSERT_FIELDS], requests.map(requestInsertRow));
-    }
-
     return {
         mode: 'merge',
-        collection: { ...target, default_environment_id: boundEnvId },
+        collection: {
+            ...target,
+            pre_request_script: importedScript,
+            pre_request_script_enabled: importedScriptEnabled,
+            default_environment_id: boundEnvId,
+        },
         folders,
         requests,
         environment,
