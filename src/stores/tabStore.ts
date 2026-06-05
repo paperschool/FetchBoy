@@ -126,13 +126,26 @@ export interface TabEntry {
     openedFromIntercept?: boolean;
 }
 
+/**
+ * A tab has unsaved edits to a SAVED request — the one condition that gates a
+ * close behind an unsaved-changes prompt (Story 22.3). Shared by the store's
+ * requestCloseTab and the TabBar bulk-close guards so the two can't diverge.
+ */
+export const tabHasUnsavedSavedRequest = (tab: TabEntry): boolean =>
+    tab.requestState.savedRequestId !== null && tab.requestState.isDirty;
+
 // ─── Store Interface ──────────────────────────────────────────────────────────
 
 interface TabStore {
     tabs: TabEntry[];
     activeTabId: string;
+    /** Tab awaiting an unsaved-changes decision before it closes (Story 22.3). */
+    pendingCloseTabId: string | null;
     addTab: () => void;
     closeTab: (id: string) => void;
+    /** Close a tab, prompting first when it has unsaved edits to a saved request. */
+    requestCloseTab: (id: string) => void;
+    cancelPendingClose: () => void;
     navigateTab: (direction: 'next' | 'prev') => void;
     reorderTabs: (orderedIds: string[]) => void;
     duplicateTab: (id: string) => void;
@@ -140,6 +153,7 @@ interface TabStore {
     closeAllTabs: () => void;
     setActiveTab: (id: string) => void;
     renameTab: (id: string, label: string) => void;
+    renameSavedRequestTabs: (savedRequestId: string, name: string) => void;
     syncLabelFromRequest: (id: string, method: string, url: string) => void;
     updateTabRequestState: (id: string, patch: Partial<RequestSnapshot>) => void;
     updateTabResponseState: (id: string, patch: Partial<ResponseSnapshot>) => void;
@@ -165,9 +179,10 @@ const createInitialTab = (): TabEntry => ({
 const initialTab = createInitialTab();
 
 export const useTabStore = create<TabStore>()(
-    immer((set) => ({
+    immer((set, get) => ({
         tabs: [initialTab],
         activeTabId: initialTab.id,
+        pendingCloseTabId: null,
 
         addTab: () =>
             set((state) => {
@@ -191,9 +206,42 @@ export const useTabStore = create<TabStore>()(
                 const idx = state.tabs.findIndex((t) => t.id === id);
                 if (idx === -1) return;
                 state.tabs.splice(idx, 1);
+                if (state.pendingCloseTabId === id) state.pendingCloseTabId = null;
                 if (state.activeTabId === id) {
                     const newIdx = Math.max(0, idx - 1);
                     state.activeTabId = state.tabs[newIdx].id;
+                }
+            }),
+
+        // Story 22.3 — gate closing a tab that has unsaved edits to a SAVED request.
+        // Dirty+saved → raise a pending-close prompt; otherwise close immediately.
+        requestCloseTab: (id) => {
+            const state = get();
+            if (state.tabs.length === 1) return; // can't close the last tab
+            const tab = state.tabs.find((t) => t.id === id);
+            if (!tab) return;
+            if (tabHasUnsavedSavedRequest(tab)) {
+                set((s) => {
+                    s.pendingCloseTabId = id;
+                });
+            } else {
+                get().closeTab(id);
+            }
+        },
+
+        cancelPendingClose: () =>
+            set((state) => {
+                state.pendingCloseTabId = null;
+            }),
+
+        // Story 22.4 — keep an open tab's title in sync when its saved request is renamed.
+        renameSavedRequestTabs: (savedRequestId, name) =>
+            set((state) => {
+                for (const tab of state.tabs) {
+                    if (tab.requestState.savedRequestId === savedRequestId) {
+                        tab.label = name;
+                        tab.isCustomLabel = true;
+                    }
                 }
             }),
 

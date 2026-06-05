@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Download, Globe, Lock, Trash2, Upload } from 'lucide-react';
+import { ChevronDown, ChevronRight, Download, Globe, Lock, Trash2, Upload } from 'lucide-react';
 import { t } from '@/lib/i18n';
 import { save, open as openDialog } from '@tauri-apps/plugin-dialog';
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
@@ -10,8 +10,10 @@ import {
     updateEnvironmentVariables,
 } from '@/lib/environments';
 import { exportEnvironmentToJson, importEnvironmentFromJson } from '@/lib/importExport';
+import { groupEnvironmentsByCollection } from '@/lib/groupEnvironments';
 import { useEnvironmentStore } from '@/stores/environmentStore';
-import type { KeyValuePair } from '@/lib/db';
+import { useCollectionStore } from '@/stores/collectionStore';
+import type { Environment, KeyValuePair } from '@/lib/db';
 
 interface EnvironmentPanelProps {
     open: boolean;
@@ -27,16 +29,35 @@ export function EnvironmentPanel({ open, onClose }: EnvironmentPanelProps) {
     const pendingVariable = useEnvironmentStore((s) => s.pendingVariable);
     const activeEnvironmentId = useEnvironmentStore((s) => s.activeEnvironmentId);
     const clearPendingVariable = useEnvironmentStore((s) => s.clearPendingVariable);
+    const collections = useCollectionStore((s) => s.collections);
 
     const [selectedEnvId, setSelectedEnvId] = useState<string | null>(null);
     const [renamingId, setRenamingId] = useState<string | null>(null);
     const [renameValue, setRenameValue] = useState('');
+    const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
-    // Auto-select active environment and add pending variable when opened via quick-add.
+    // Quick-add: write the pending variable into the active environment — which
+    // follows the current request's collection (handleLoadRequest auto-activates
+    // the collection's default env), so it lands in the right place (AC6).
+    // Fallback (AC7): if there is no environment at all, create one so the
+    // variable is never silently dropped, then add it there and select it.
     useEffect(() => {
         if (!pendingVariable) return;
         const targetEnvId = activeEnvironmentId ?? environments[0]?.id ?? null;
-        if (!targetEnvId) { clearPendingVariable(); return; }
+
+        if (!targetEnvId) {
+            const key = pendingVariable;
+            void createEnvironment(t('environment.newEnvironment')).then((env) => {
+                const updated = [{ key, value: '', enabled: true }];
+                storeAddEnvironment(env);
+                setSelectedEnvId(env.id);
+                void updateEnvironmentVariables(env.id, updated).then(() => {
+                    storeUpdateVariables(env.id, updated);
+                });
+            });
+            clearPendingVariable();
+            return;
+        }
 
         setSelectedEnvId(targetEnvId);
         const env = environments.find((e) => e.id === targetEnvId);
@@ -47,7 +68,18 @@ export function EnvironmentPanel({ open, onClose }: EnvironmentPanelProps) {
             });
         }
         clearPendingVariable();
-    }, [pendingVariable, activeEnvironmentId, environments, storeUpdateVariables, clearPendingVariable]);
+    }, [pendingVariable, activeEnvironmentId, environments, storeAddEnvironment, storeUpdateVariables, clearPendingVariable]);
+
+    const envGroups = groupEnvironmentsByCollection(environments, collections);
+
+    function toggleGroup(key: string) {
+        setCollapsedGroups((prev) => {
+            const next = new Set(prev);
+            if (next.has(key)) next.delete(key);
+            else next.add(key);
+            return next;
+        });
+    }
 
     if (!open) return null;
 
@@ -146,6 +178,69 @@ export function EnvironmentPanel({ open, onClose }: EnvironmentPanelProps) {
         saveVariables(selectedEnv.id, updated);
     }
 
+    function renderEnvRow(env: Environment) {
+        return (
+            <div
+                key={env.id}
+                data-testid={`env-row-${env.id}`}
+                className={`group mb-1 flex cursor-pointer items-center gap-1 rounded px-2 py-1.5 text-xs ${
+                    selectedEnvId === env.id
+                        ? 'bg-gray-200 dark:bg-gray-700 text-app-primary'
+                        : 'text-app-muted hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-app-primary'
+                }`}
+                onClick={() => setSelectedEnvId(env.id)}
+            >
+                {renamingId === env.id ? (
+                    <input
+                        autoFocus
+                        className="bg-transparent text-app-primary w-full border-b border-app-subtle text-xs outline-none"
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onBlur={() => handleCommitRename(env.id)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleCommitRename(env.id);
+                            if (e.key === 'Escape') setRenamingId(null);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    />
+                ) : (
+                    <span
+                        className="flex-1 truncate"
+                        onDoubleClick={(e) => {
+                            e.stopPropagation();
+                            handleStartRename(env.id, env.name);
+                        }}
+                    >
+                        {env.name}
+                    </span>
+                )}
+                <button
+                    type="button"
+                    aria-label={`Export ${env.name}`}
+                    title="Export environment"
+                    className="p-1 text-app-muted hover:text-app-primary rounded cursor-pointer flex-shrink-0 opacity-0 group-hover:opacity-100"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        void handleExportEnvironment(env.id, env.name);
+                    }}
+                >
+                    <Download size={14} />
+                </button>
+                <button
+                    type="button"
+                    aria-label={`Delete ${env.name}`}
+                    className="p-1 text-app-muted hover:text-red-500 rounded cursor-pointer ml-auto flex-shrink-0 opacity-0 group-hover:opacity-100"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteEnvironment(env.id, env.name);
+                    }}
+                >
+                    <Trash2 size={14} />
+                </button>
+            </div>
+        );
+    }
+
     return (
         <div
             data-testid="env-panel-backdrop"
@@ -181,66 +276,28 @@ export function EnvironmentPanel({ open, onClose }: EnvironmentPanelProps) {
                                     No environments yet.
                                 </p>
                             ) : (
-                                environments.map((env) => (
-                                    <div
-                                        key={env.id}
-                                        data-testid={`env-row-${env.id}`}
-                                        className={`group mb-1 flex cursor-pointer items-center gap-1 rounded px-2 py-1.5 text-xs ${
-                                            selectedEnvId === env.id
-                                                ? 'bg-gray-200 dark:bg-gray-700 text-app-primary'
-                                                : 'text-app-muted hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-app-primary'
-                                        }`}
-                                        onClick={() => setSelectedEnvId(env.id)}
-                                    >
-                                        {renamingId === env.id ? (
-                                            <input
-                                                autoFocus
-                                                className="bg-transparent text-app-primary w-full border-b border-app-subtle text-xs outline-none"
-                                                value={renameValue}
-                                                onChange={(e) => setRenameValue(e.target.value)}
-                                                onBlur={() => handleCommitRename(env.id)}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter') handleCommitRename(env.id);
-                                                    if (e.key === 'Escape') setRenamingId(null);
-                                                }}
-                                                onClick={(e) => e.stopPropagation()}
-                                            />
-                                        ) : (
-                                            <span
-                                                className="flex-1 truncate"
-                                                onDoubleClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleStartRename(env.id, env.name);
-                                                }}
+                                envGroups.map((group) => {
+                                    const key = group.collectionId ?? '__shared__';
+                                    const collapsed = collapsedGroups.has(key);
+                                    return (
+                                        <div key={key} className="mb-2" data-testid={`env-group-${key}`}>
+                                            <button
+                                                type="button"
+                                                className="flex w-full items-center gap-1 rounded px-1 py-1 text-[11px] font-semibold uppercase tracking-wide text-app-muted hover:text-app-primary"
+                                                onClick={() => toggleGroup(key)}
                                             >
-                                                {env.name}
-                                            </span>
-                                        )}
-                                        <button
-                                            type="button"
-                                            aria-label={`Export ${env.name}`}
-                                            title="Export environment"
-                                            className="p-1 text-app-muted hover:text-app-primary rounded cursor-pointer flex-shrink-0 opacity-0 group-hover:opacity-100"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                void handleExportEnvironment(env.id, env.name);
-                                            }}
-                                        >
-                                            <Download size={14} />
-                                        </button>
-                                        <button
-                                            type="button"
-                                            aria-label={`Delete ${env.name}`}
-                                            className="p-1 text-app-muted hover:text-red-500 rounded cursor-pointer ml-auto flex-shrink-0 opacity-0 group-hover:opacity-100"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleDeleteEnvironment(env.id, env.name);
-                                            }}
-                                        >
-                                            <Trash2 size={14} />
-                                        </button>
-                                    </div>
-                                ))
+                                                {collapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
+                                                <span className="flex-1 truncate text-left">{group.label}</span>
+                                                <span className="text-app-muted/70">{group.environments.length}</span>
+                                            </button>
+                                            {!collapsed && (
+                                                <div className="mt-1">
+                                                    {group.environments.map(renderEnvRow)}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })
                             )}
                         </div>
                         <div className="border-t border-app-subtle p-2">

@@ -6,6 +6,8 @@ import { TimeoutInput } from "@/components/RequestBuilder/TimeoutInput";
 import { ScriptsTab } from "./components/ScriptsTab";
 import { useScriptTemplateStore } from "@/stores/scriptTemplateStore";
 import { useCollectionStore } from "@/stores/collectionStore";
+import { useTabStore } from "@/stores/tabStore";
+import { Folder } from "lucide-react";
 import { extractQueryParamsFromUrl } from "@/lib/extractQueryParamsFromUrl";
 import { areQueryParamsEqual, buildUrlFromQueryParams } from "@/lib/urlUtils";
 import type { AuthState, HttpMethod, RequestTab } from "@/stores/requestStore";
@@ -125,6 +127,18 @@ export function RequestDetailsAccordion(props: RequestDetailsAccordionProps): Re
     return !!(col?.pre_request_script_enabled && col.pre_request_script?.trim());
   });
 
+  // Story 22.4 — the active tab's saved request and its collection (per-tab truth,
+  // so a new/unsaved tab never shows the badge).
+  const activeSavedRequestId = useTabStore(
+    (s) => s.tabs.find((tab) => tab.id === s.activeTabId)?.requestState.savedRequestId ?? null,
+  );
+  const collectionName = useCollectionStore((s) => {
+    if (!activeSavedRequestId) return null;
+    const req = s.requests.find((r) => r.id === activeSavedRequestId);
+    const col = req?.collection_id ? s.collections.find((c) => c.id === req.collection_id) : null;
+    return col?.name ?? null;
+  });
+
   // One dot per associated script slot (global / pre-request / post-response).
   const scriptDots: Array<{ color: string; title: string }> = [];
   if (collectionGlobalActive) scriptDots.push({ color: 'bg-sky-400', title: 'Collection-wide script' });
@@ -218,6 +232,16 @@ export function RequestDetailsAccordion(props: RequestDetailsAccordionProps): Re
       <summary className="text-app-secondary cursor-pointer text-sm font-medium flex items-center gap-3">
         <span>Request Details</span>
         {banner}
+        {collectionName && (
+          <span
+            className="ml-auto inline-flex items-center gap-1 rounded bg-app-subtle px-1.5 py-0.5 text-xs font-normal text-app-muted"
+            title={`Saved in collection: ${collectionName}`}
+            data-testid="collection-origin-badge"
+          >
+            <Folder size={11} className="shrink-0" />
+            <span className="max-w-[12rem] truncate">{collectionName}</span>
+          </span>
+        )}
       </summary>
       {open ? (
         <div className="mt-3 flex min-h-0 flex-1 flex-col space-y-3">
@@ -230,6 +254,7 @@ export function RequestDetailsAccordion(props: RequestDetailsAccordionProps): Re
                     key={tab.id}
                     type="button"
                     onClick={() => setActiveTab(tab.id)}
+                    data-tour={tab.id === "scripts" ? "request-scripts-tab" : undefined}
                     className={`rounded-t-md px-3 py-2 text-sm cursor-pointer ${
                       isActive
                         ? "border-app-subtle bg-app-main text-app-primary border border-b-0 font-medium"

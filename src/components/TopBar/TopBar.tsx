@@ -2,14 +2,21 @@ import { useEffect, useState } from "react";
 import { Globe } from "lucide-react";
 import { t } from '@/lib/i18n';
 import { useEnvironmentStore } from "@/stores/environmentStore";
+import { useCollectionStore } from "@/stores/collectionStore";
 import { setActiveEnvironment } from "@/lib/environments";
+import { groupEnvironmentsByCollection } from "@/lib/groupEnvironments";
 import { EnvironmentPanel } from "@/components/EnvironmentPanel/EnvironmentPanel";
 
 export function FetchTabActions() {
   const environments = useEnvironmentStore((s) => s.environments);
   const activeEnvironmentId = useEnvironmentStore((s) => s.activeEnvironmentId);
   const envPanelRequested = useEnvironmentStore((s) => s.envPanelRequested);
+  const collections = useCollectionStore((s) => s.collections);
   const [panelOpen, setPanelOpen] = useState(false);
+
+  // Group environments under their owning collection (label = live collection
+  // name, so a rename updates the group automatically) with a Shared group last.
+  const envGroups = groupEnvironmentsByCollection(environments, collections);
 
   useEffect(() => {
     if (envPanelRequested) setPanelOpen(true);
@@ -30,10 +37,14 @@ export function FetchTabActions() {
           className="select-flat border-app-subtle bg-app-main text-app-primary h-7 rounded-md border pl-2 pr-6 text-xs"
         >
           <option value="">{t('common.noEnvironment')}</option>
-          {environments.map((env) => (
-            <option key={env.id} value={env.id}>
-              {env.name}
-            </option>
+          {envGroups.map((group) => (
+            <optgroup key={group.collectionId ?? '__shared__'} label={group.label}>
+              {group.environments.map((env) => (
+                <option key={env.id} value={env.id}>
+                  {env.name}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
         <button

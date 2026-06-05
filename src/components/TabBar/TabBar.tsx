@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, type RefObject, type MouseEvent, type ChangeEvent, type KeyboardEvent } from 'react';
 import { useInlineRename } from '@/hooks/useInlineRename';
 import { TabContextMenu } from './TabContextMenu';
+import { TabCloseGuard } from './TabCloseGuard';
 import { DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, horizontalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useTabStore } from '@/stores/tabStore';
+import { useTabStore, tabHasUnsavedSavedRequest } from '@/stores/tabStore';
 import { useShallow } from 'zustand/react/shallow';
 import { X, Plus } from 'lucide-react';
 
@@ -96,11 +97,24 @@ function SortableTabItem({
 
 export function TabBar() {
     const { tabs, activeTabId } = useTabStore(useShallow((s) => ({ tabs: s.tabs, activeTabId: s.activeTabId })));
-    const { addTab, closeTab, reorderTabs, duplicateTab, closeOtherTabs, closeAllTabs, setActiveTab, renameTab, syncLabelFromRequest } = useTabStore(useShallow((s) => ({
-        addTab: s.addTab, closeTab: s.closeTab, reorderTabs: s.reorderTabs,
+    const { addTab, requestCloseTab, reorderTabs, duplicateTab, closeOtherTabs, closeAllTabs, setActiveTab, renameTab, syncLabelFromRequest } = useTabStore(useShallow((s) => ({
+        addTab: s.addTab, requestCloseTab: s.requestCloseTab, reorderTabs: s.reorderTabs,
         duplicateTab: s.duplicateTab, closeOtherTabs: s.closeOtherTabs, closeAllTabs: s.closeAllTabs,
         setActiveTab: s.setActiveTab, renameTab: s.renameTab, syncLabelFromRequest: s.syncLabelFromRequest,
     })));
+
+    // Story 22.3 — bulk closes can't show the per-tab prompt; gate them once if any
+    // affected tab has unsaved edits to a saved request.
+    const hasDirtySaved = (predicate: (t: typeof tabs[number]) => boolean): boolean =>
+        tabs.some((t) => predicate(t) && tabHasUnsavedSavedRequest(t));
+    const handleCloseOtherTabs = (id: string): void => {
+        if (hasDirtySaved((t) => t.id !== id) && !window.confirm('Some other tabs have unsaved changes. Close them without saving?')) return;
+        closeOtherTabs(id);
+    };
+    const handleCloseAllTabs = (): void => {
+        if (hasDirtySaved(() => true) && !window.confirm('Some tabs have unsaved changes. Close them without saving?')) return;
+        closeAllTabs();
+    };
 
     const method = useTabStore((s) => s.tabs.find((t) => t.id === s.activeTabId)?.requestState.method ?? 'GET');
     const url = useTabStore((s) => s.tabs.find((t) => t.id === s.activeTabId)?.requestState.url ?? '');
@@ -188,7 +202,7 @@ export function TabBar() {
                                     }}
                                     onCloseClick={(e) => {
                                         e.stopPropagation();
-                                        closeTab(tab.id);
+                                        requestCloseTab(tab.id);
                                     }}
                                     onEditChange={(e) => rename.setEditValue(e.target.value)}
                                     onEditBlur={rename.handleBlur}
@@ -216,10 +230,11 @@ export function TabBar() {
                 tabCount={tabs.length}
                 onNewTab={addTab}
                 onDuplicateTab={duplicateTab}
-                onCloseTab={closeTab}
-                onCloseOtherTabs={closeOtherTabs}
-                onCloseAllTabs={closeAllTabs}
+                onCloseTab={requestCloseTab}
+                onCloseOtherTabs={handleCloseOtherTabs}
+                onCloseAllTabs={handleCloseAllTabs}
             />
+            <TabCloseGuard />
         </>
     );
 }

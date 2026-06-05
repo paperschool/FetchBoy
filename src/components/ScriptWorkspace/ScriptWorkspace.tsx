@@ -10,6 +10,7 @@ import { useCollectionStore } from '@/stores/collectionStore';
 import { useEnvironmentStore } from '@/stores/environmentStore';
 import { useScriptWorkspaceStore, type ScriptSlot } from '@/stores/scriptWorkspaceStore';
 import { updateCollectionScript } from '@/lib/collections';
+import { buildFolderNamePath } from '@/lib/breadcrumb';
 import { usePreRequestScript, type ScriptError } from '@/hooks/usePreRequestScript';
 import { usePostResponseScript } from '@/hooks/usePostResponseScript';
 import { t } from '@/lib/i18n';
@@ -81,21 +82,9 @@ export function ScriptWorkspace() {
   }, []);
 
   // Breadcrumb: Collection › Folder › … (request name shown separately as the title).
-  const breadcrumb: string[] = [];
-  if (collection) {
-    breadcrumb.push(collection.name);
-    const chain: string[] = [];
-    const seen = new Set<string>();
-    let fid = request?.folder_id ?? null;
-    while (fid && !seen.has(fid)) {
-      seen.add(fid);
-      const f = folders.find((x) => x.id === fid);
-      if (!f) break;
-      chain.unshift(f.name);
-      fid = f.parent_id;
-    }
-    breadcrumb.push(...chain);
-  }
+  const breadcrumb: string[] = collection
+    ? [collection.name, ...buildFolderNamePath(folders, request?.folder_id ?? null)]
+    : [];
 
   const handleGlobalChange = useCallback((value: string) => {
     if (!collection) return;
@@ -253,10 +242,10 @@ export function ScriptWorkspace() {
   ) : null;
 
   return (
-    <div className="flex h-full min-h-0 flex-col" data-testid="script-workspace">
+    <div className="flex h-full min-h-0 flex-col bg-app-main" data-testid="script-workspace" data-tour="script-workspace">
       <div className="flex min-h-0 flex-1">
         {/* Left sidebar: template manager (click a row to open in the editor) */}
-        <aside className="flex w-64 shrink-0 flex-col border-r border-app-subtle bg-app-main" data-testid="script-workspace-sidebar">
+        <aside className="flex w-64 shrink-0 flex-col border-r border-app-subtle bg-app-sidebar" data-testid="script-workspace-sidebar">
           <div className="border-b border-app-subtle px-3 py-2 text-xs font-medium text-app-secondary">
             {t('scripts.templates.heading')}
           </div>
@@ -288,7 +277,7 @@ export function ScriptWorkspace() {
         <main className="flex min-h-0 min-w-0 flex-1 flex-col" data-testid="script-workspace-editor">
           {editingTemplate ? (
             <>
-              <div className="flex shrink-0 items-center gap-2 border-b border-app-subtle bg-app-sidebar/40 px-3 py-2">
+              <div className="flex shrink-0 items-center gap-2 border-b border-app-subtle bg-app-subtle px-3 py-2">
                 <Pencil size={13} className="shrink-0 text-sky-400" />
                 <input
                   type="text"
@@ -337,7 +326,7 @@ export function ScriptWorkspace() {
           ) : activeTab ? (
             <>
               {/* Rich request header */}
-              <div className="flex shrink-0 flex-col gap-2 border-b border-app-subtle bg-app-sidebar/40 px-4 py-3" data-testid="script-workspace-header">
+              <div className="flex shrink-0 flex-col gap-2 border-b border-app-subtle bg-app-subtle px-4 py-3" data-testid="script-workspace-header">
                 {breadcrumb.length > 0 && (
                   <div className="flex flex-wrap items-center gap-1 text-[11px] text-app-muted">
                     {breadcrumb.map((part, i) => (

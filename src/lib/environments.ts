@@ -35,7 +35,10 @@ export async function loadAllEnvironments(): Promise<Environment[]> {
     return rows.map(deserializeEnvironment);
 }
 
-export async function createEnvironment(name: string): Promise<Environment> {
+export async function createEnvironment(
+    name: string,
+    ownerCollectionId: string | null = null,
+): Promise<Environment> {
     const db = await getDb();
     const env: Environment = {
         id: crypto.randomUUID(),
@@ -43,10 +46,11 @@ export async function createEnvironment(name: string): Promise<Environment> {
         variables: [],
         is_active: false,
         created_at: now(),
+        owner_collection_id: ownerCollectionId,
     };
     await db.execute(
-        'INSERT INTO environments (id, name, variables, is_active, created_at) VALUES (?, ?, ?, ?, ?)',
-        [env.id, env.name, JSON.stringify(env.variables), 0, env.created_at],
+        'INSERT INTO environments (id, name, variables, is_active, created_at, owner_collection_id) VALUES (?, ?, ?, ?, ?, ?)',
+        [env.id, env.name, JSON.stringify(env.variables), 0, env.created_at, env.owner_collection_id],
     );
     return env;
 }

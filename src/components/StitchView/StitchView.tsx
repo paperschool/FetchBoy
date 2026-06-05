@@ -129,11 +129,11 @@ export function StitchView(): React.ReactElement {
   }, [headerEditValue, activeChainId, activeChain?.name, renameChain]);
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col bg-app-main" data-tour="stitch-view">
       {!devWarningDismissed && (
         <div
           data-testid="stitch-dev-warning"
-          className="flex shrink-0 items-center gap-2 border-b border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-400"
+          className="flex shrink-0 items-center gap-2 border-b border-amber-300 bg-amber-100 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400"
         >
           <AlertTriangle size={14} className="shrink-0" />
           <span className="flex-1">
@@ -150,7 +150,7 @@ export function StitchView(): React.ReactElement {
             onClick={dismissDevWarning}
             aria-label="Dismiss warning"
             title="Dismiss"
-            className="shrink-0 cursor-pointer rounded p-0.5 text-amber-400 hover:bg-amber-500/20 hover:text-amber-300"
+            className="shrink-0 cursor-pointer rounded p-0.5 text-amber-700 hover:bg-amber-500/20 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-300"
           >
             <X size={14} />
           </button>

@@ -1,6 +1,17 @@
 {
   "changelog": [
     {
+      "version": "0.23.0",
+      "date": "2026-06-05",
+      "changes": [
+        "Closing a tab with unsaved edits to a saved request now prompts to Save, Don't Save, or Cancel instead of losing them silently",
+        "Saved requests show a green in-place Save button and an unsaved-changes hint, a collection breadcrumb, and tabs that retitle when you rename the request",
+        "Each new collection gets its own environment, and environments are now grouped by collection in the environment panel and the top-bar selector",
+        "The proxy starts disabled and clears any leftover OS proxy on launch, so a crash can never leave your machine silently proxied",
+        "Light mode redesigned with proper light panels, plus an expanded onboarding tour covering Request Scripts, the Script Workspace, and Stitch"
+      ]
+    },
+    {
       "version": "0.22.0",
       "date": "2026-06-03",
       "changes": [

@@ -20,6 +20,10 @@ const mockUpdateFolderOrder = vi.fn();
 const mockUpdateRequestOrder = vi.fn();
 const mockMoveRequestToFolder = vi.fn();
 const mockUpdateSavedRequest = vi.fn();
+const mockSetCollectionDefaultEnvironment = vi.fn();
+const mockCreateEnvironment = vi.fn(async (name: string, owner: string | null = null) => ({
+    id: 'env-new', name, variables: [], is_active: false, created_at: '', owner_collection_id: owner,
+}));
 
 vi.mock('@/lib/collections', () => ({
     loadAllCollections: () => mockLoadAllCollections(),
@@ -37,6 +41,13 @@ vi.mock('@/lib/collections', () => ({
     moveRequestToFolder: (...a: unknown[]) => mockMoveRequestToFolder(...a),
     updateSavedRequest: (...a: unknown[]) => mockUpdateSavedRequest(...a),
     selectOwnedEnvironmentsToDelete: () => [],
+    setCollectionDefaultEnvironment: (...a: unknown[]) => mockSetCollectionDefaultEnvironment(...a),
+}));
+
+// ─── Mock environments lib (per-collection env on create — Story 22.9) ───────
+vi.mock('@/lib/environments', () => ({
+    createEnvironment: (...a: unknown[]) => mockCreateEnvironment(...(a as [string, string | null])),
+    setActiveEnvironment: vi.fn(),
 }));
 
 // ─── Mock import/export lib ──────────────────────────────────────────────────
@@ -273,6 +284,18 @@ describe('CollectionTree', () => {
         await waitFor(() => {
             expect(mockCreateCollection).toHaveBeenCalledWith('New Collection');
             expect(useCollectionStore.getState().collections).toHaveLength(1);
+        });
+    });
+
+    it('add collection also creates an owned environment bound as its default (Story 22.9)', async () => {
+        const newCol = makeCol({ id: 'col-new', name: 'New Collection' });
+        mockCreateCollection.mockResolvedValue(newCol);
+        render(<CollectionTree />);
+        await waitFor(() => screen.getByTestId('empty-state'));
+        fireEvent.click(screen.getByLabelText('Add Collection'));
+        await waitFor(() => {
+            expect(mockCreateEnvironment).toHaveBeenCalledWith('New Collection Variables', 'col-new');
+            expect(mockSetCollectionDefaultEnvironment).toHaveBeenCalledWith('col-new', 'env-new');
         });
     });
 

@@ -83,8 +83,8 @@ export function RequestRow({
                     transition,
                     opacity: isDragging ? 0 : undefined,
                 }}
-                className={`flex items-center gap-1 py-0.5 px-1 rounded group hover:bg-gray-700 cursor-grab active:cursor-grabbing select-none ${
-                    isActive ? 'bg-gray-600' : ''
+                className={`flex items-center gap-1 py-0.5 px-1 rounded group hover:bg-app-subtle cursor-grab active:cursor-grabbing select-none ${
+                    isActive ? 'bg-app-subtle' : ''
                 }`}
                 onClick={onSelect}
                 onContextMenu={handleContextMenu}
@@ -99,7 +99,7 @@ export function RequestRow({
                 {isEditing ? (
                     <input
                         ref={editRef}
-                        className="flex-1 bg-gray-700 text-app-inverse text-sm outline-none px-1 rounded"
+                        className="flex-1 bg-app-subtle text-app-inverse text-sm outline-none px-1 rounded"
                         value={editingValue}
                         onChange={(e) => onEditChange(e.target.value)}
                         onBlur={onCommitEdit}
@@ -118,7 +118,7 @@ export function RequestRow({
                     </span>
                 )}
 
-                <div className="hidden group-hover:flex items-center gap-0.5 text-gray-300">
+                <div className="hidden group-hover:flex items-center gap-0.5 text-app-muted">
                     <button
                         onClick={(e) => {
                             e.preventDefault();
@@ -127,7 +127,7 @@ export function RequestRow({
                         }}
                         aria-label="Update request from builder"
                         title="Update with current builder config"
-                        className="p-1 rounded hover:text-white cursor-pointer"
+                        className="p-1 rounded hover:text-app-primary cursor-pointer"
                         draggable={false}
                     >
                         <Save size={14} />

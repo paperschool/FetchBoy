@@ -38,6 +38,74 @@ describe('tabStore', () => {
         expect(activeTabId).toBe(tabs[0].id);
     });
 
+    describe('requestCloseTab (Story 22.3)', () => {
+        const seedTwo = (firstRequest: Partial<ReturnType<typeof createDefaultRequestSnapshot>> = {}) => {
+            const first = makeTestTab({ requestState: { ...createDefaultRequestSnapshot(), ...firstRequest } });
+            const second = makeTestTab();
+            useTabStore.setState({ tabs: [first, second], activeTabId: first.id, pendingCloseTabId: null });
+            return { first, second };
+        };
+
+        it('closes a clean tab immediately with no prompt', () => {
+            const { first } = seedTwo();
+            useTabStore.getState().requestCloseTab(first.id);
+            const s = useTabStore.getState();
+            expect(s.pendingCloseTabId).toBeNull();
+            expect(s.tabs.find((t) => t.id === first.id)).toBeUndefined();
+        });
+
+        it('raises a pending-close prompt for a saved + dirty tab (does not close yet)', () => {
+            const { first } = seedTwo({ savedRequestId: 'r1', isDirty: true });
+            useTabStore.getState().requestCloseTab(first.id);
+            const s = useTabStore.getState();
+            expect(s.pendingCloseTabId).toBe(first.id);
+            expect(s.tabs.find((t) => t.id === first.id)).toBeDefined();
+        });
+
+        it('closes a dirty but UNSAVED (scratch) tab immediately', () => {
+            const { first } = seedTwo({ savedRequestId: null, isDirty: true });
+            useTabStore.getState().requestCloseTab(first.id);
+            expect(useTabStore.getState().pendingCloseTabId).toBeNull();
+            expect(useTabStore.getState().tabs.find((t) => t.id === first.id)).toBeUndefined();
+        });
+
+        it('cancelPendingClose clears the prompt without closing', () => {
+            const { first } = seedTwo({ savedRequestId: 'r1', isDirty: true });
+            useTabStore.getState().requestCloseTab(first.id);
+            useTabStore.getState().cancelPendingClose();
+            const s = useTabStore.getState();
+            expect(s.pendingCloseTabId).toBeNull();
+            expect(s.tabs.find((t) => t.id === first.id)).toBeDefined();
+        });
+
+        it('never prompts or closes the last remaining tab', () => {
+            const only = makeTestTab({ requestState: { ...createDefaultRequestSnapshot(), savedRequestId: 'r1', isDirty: true } });
+            useTabStore.setState({ tabs: [only], activeTabId: only.id, pendingCloseTabId: null });
+            useTabStore.getState().requestCloseTab(only.id);
+            const s = useTabStore.getState();
+            expect(s.pendingCloseTabId).toBeNull();
+            expect(s.tabs).toHaveLength(1);
+        });
+    });
+
+    describe('renameSavedRequestTabs (Story 22.4)', () => {
+        it('relabels every tab bound to the renamed saved request, leaving others alone', () => {
+            const bound1 = makeTestTab({ label: 'Old', requestState: { ...createDefaultRequestSnapshot(), savedRequestId: 'r1' } });
+            const bound2 = makeTestTab({ label: 'Old', requestState: { ...createDefaultRequestSnapshot(), savedRequestId: 'r1' } });
+            const other = makeTestTab({ label: 'Other', requestState: { ...createDefaultRequestSnapshot(), savedRequestId: 'r2' } });
+            const scratch = makeTestTab({ label: 'New Request' });
+            useTabStore.setState({ tabs: [bound1, bound2, other, scratch], activeTabId: bound1.id });
+
+            useTabStore.getState().renameSavedRequestTabs('r1', 'Renamed');
+            const tabs = useTabStore.getState().tabs;
+            expect(tabs.find((t) => t.id === bound1.id)?.label).toBe('Renamed');
+            expect(tabs.find((t) => t.id === bound1.id)?.isCustomLabel).toBe(true);
+            expect(tabs.find((t) => t.id === bound2.id)?.label).toBe('Renamed');
+            expect(tabs.find((t) => t.id === other.id)?.label).toBe('Other');
+            expect(tabs.find((t) => t.id === scratch.id)?.label).toBe('New Request');
+        });
+    });
+
     it('addTab() appends a new tab and makes it active', () => {
         const { addTab } = useTabStore.getState();
         addTab();

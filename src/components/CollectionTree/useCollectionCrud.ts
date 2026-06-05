@@ -10,6 +10,7 @@ import {
   deleteCollection as dbDeleteCollection,
   deleteFolder as dbDeleteFolder,
   deleteRequest as dbDeleteRequest,
+  setCollectionDefaultEnvironment,
   updateSavedRequest,
 } from "@/lib/collections";
 import {
@@ -20,7 +21,7 @@ import { save, open } from "@tauri-apps/plugin-dialog";
 import { writeTextFile, readTextFile } from "@tauri-apps/plugin-fs";
 import { useEnvironmentStore } from "@/stores/environmentStore";
 import { useScriptTemplateStore } from "@/stores/scriptTemplateStore";
-import { setActiveEnvironment } from "@/lib/environments";
+import { createEnvironment, setActiveEnvironment } from "@/lib/environments";
 import { useDebugStore } from "@/stores/debugStore";
 import { useToastStore } from "@/stores/toastStore";
 import { t } from "@/lib/i18n";
@@ -67,6 +68,9 @@ export function useCollectionCrud(
         if (!window.confirm("You have unsaved changes. Discard and load this request?")) return;
       }
       updateTabRequestState(activeTabId, buildSnapshotFromSaved(request));
+      // Story 22.4 — title the tab with the request name (custom label, so the
+      // URL auto-labeller doesn't overwrite it).
+      useTabStore.getState().renameTab(activeTabId, request.name);
       store.setActiveRequest(id);
 
       // Auto-switch to the collection's default environment if one is set.
@@ -94,6 +98,19 @@ export function useCollectionCrud(
   const handleAddCollection = useCallback(async () => {
     const col = await createCollection("New Collection");
     store.addCollection(col);
+    // Story 22.9 — give every top-level collection its own environment, bound as
+    // its default, so on-the-fly variable creation has a home that follows the
+    // collection. The env's group label is derived from the live collection name,
+    // so a later rename re-labels it without renaming the env row. Best-effort:
+    // a failure here must not stop the collection from being created.
+    try {
+      const env = await createEnvironment(`${col.name} Variables`, col.id);
+      await setCollectionDefaultEnvironment(col.id, env.id);
+      useEnvironmentStore.getState().addEnvironment(env);
+      store.setCollectionDefaultEnvironment(col.id, env.id);
+    } catch (error) {
+      emitDebug('warn', 'collections', `Created collection but failed to create its environment: ${String(error)}`);
+    }
     setExpanded((prev) => ({ ...prev, [col.id]: true }));
     startEdit("collection", col.id, col.name);
   }, [store, startEdit, setExpanded]);

@@ -106,6 +106,17 @@ export async function updateCollectionScript(
     );
 }
 
+export async function setCollectionDefaultEnvironment(
+    id: string,
+    environmentId: string | null,
+): Promise<void> {
+    const db = await getDb();
+    await db.execute(
+        'UPDATE collections SET default_environment_id = ?, updated_at = ? WHERE id = ?',
+        [environmentId, now(), id],
+    );
+}
+
 export async function renameCollection(id: string, name: string): Promise<void> {
     const db = await getDb();
     await db.execute('UPDATE collections SET name = ?, updated_at = ? WHERE id = ?', [

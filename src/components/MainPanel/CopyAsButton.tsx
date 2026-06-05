@@ -59,6 +59,12 @@ export function CopyAsButton({ resolvedRequest }: CopyAsButtonProps) {
           data-testid="copy-as-dropdown"
           className="absolute z-50 min-w-[10rem] rounded-md border border-app-subtle bg-app-main py-1 shadow-lg text-sm right-0 top-full mt-1"
         >
+          <li
+            role="presentation"
+            className="px-3 pt-1 pb-1.5 text-[11px] font-medium uppercase tracking-wide text-app-muted"
+          >
+            Export To:
+          </li>
           {FORMATS.map((fmt) => (
             <li key={fmt.id}>
               <button

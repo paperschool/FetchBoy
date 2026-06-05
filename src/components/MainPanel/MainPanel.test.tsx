@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MainPanel } from './MainPanel';
 import { useTabStore, createDefaultRequestSnapshot, createDefaultResponseSnapshot } from '@/stores/tabStore';
+import { useCollectionStore } from '@/stores/collectionStore';
+import type { Collection, Folder, Request } from '@/lib/db';
 
 vi.mock('@monaco-editor/react', () => ({
   default: ({ value, onChange, options, path }: { value?: string; onChange?: (value?: string) => void; options?: { readOnly?: boolean; fontSize?: number }; path?: string }) => (
@@ -569,6 +571,82 @@ describe('MainPanel request builder', () => {
       render(<MainPanel />);
 
       expect(screen.getByText(/request cancelled/i)).toBeInTheDocument();
+    });
+
+    it('hides the unsaved-changes hint when the request is clean', () => {
+      render(<MainPanel />);
+      expect(screen.queryByTestId('unsaved-changes-hint')).not.toBeInTheDocument();
+    });
+
+    it('shows the unsaved-changes hint under the URL bar when the request is dirty', () => {
+      const { activeTabId, tabs } = useTabStore.getState();
+      const tab = tabs.find((t) => t.id === activeTabId)!;
+      useTabStore.setState({
+        tabs: [{ ...tab, requestState: { ...tab.requestState, isDirty: true } }],
+        activeTabId: tab.id,
+      });
+
+      render(<MainPanel />);
+
+      expect(screen.getByTestId('unsaved-changes-hint')).toBeInTheDocument();
+    });
+
+    it('shows the collection-tree breadcrumb for a loaded saved request', () => {
+      useCollectionStore.setState({
+        collections: [{ id: 'c1', name: 'My API' }] as unknown as Collection[],
+        folders: [
+          { id: 'f1', collection_id: 'c1', parent_id: null, name: 'Auth' },
+          { id: 'f2', collection_id: 'c1', parent_id: 'f1', name: 'OAuth' },
+        ] as unknown as Folder[],
+        requests: [{ id: 'r1', collection_id: 'c1', folder_id: 'f2', name: 'Login' }] as unknown as Request[],
+      });
+      const { activeTabId, tabs } = useTabStore.getState();
+      const tab = tabs.find((t) => t.id === activeTabId)!;
+      useTabStore.setState({
+        tabs: [{ ...tab, requestState: { ...tab.requestState, savedRequestId: 'r1' } }],
+        activeTabId: tab.id,
+      });
+
+      render(<MainPanel />);
+
+      const crumb = screen.getByTestId('request-breadcrumb');
+      expect(within(crumb).getByText('My API')).toBeInTheDocument();
+      expect(within(crumb).getByText('Auth')).toBeInTheDocument();
+      expect(within(crumb).getByText('OAuth')).toBeInTheDocument();
+      expect(within(crumb).getByText('Login')).toBeInTheDocument();
+    });
+
+    it('shows no breadcrumb for an unsaved/new request', () => {
+      render(<MainPanel />);
+      expect(screen.queryByTestId('request-breadcrumb')).not.toBeInTheDocument();
+    });
+
+    it('collapses the middle of a deep breadcrumb to an ellipsis', () => {
+      useCollectionStore.setState({
+        collections: [{ id: 'c1', name: 'My API' }] as unknown as Collection[],
+        folders: [
+          { id: 'f1', collection_id: 'c1', parent_id: null, name: 'A' },
+          { id: 'f2', collection_id: 'c1', parent_id: 'f1', name: 'B' },
+          { id: 'f3', collection_id: 'c1', parent_id: 'f2', name: 'C' },
+        ] as unknown as Folder[],
+        requests: [{ id: 'r1', collection_id: 'c1', folder_id: 'f3', name: 'Login' }] as unknown as Request[],
+      });
+      const { activeTabId, tabs } = useTabStore.getState();
+      const tab = tabs.find((t) => t.id === activeTabId)!;
+      useTabStore.setState({
+        tabs: [{ ...tab, requestState: { ...tab.requestState, savedRequestId: 'r1' } }],
+        activeTabId: tab.id,
+      });
+
+      render(<MainPanel />);
+
+      const crumb = screen.getByTestId('request-breadcrumb');
+      expect(within(crumb).getByText('My API')).toBeInTheDocument(); // first kept
+      expect(within(crumb).getByText('C')).toBeInTheDocument();      // last folder kept
+      expect(within(crumb).getByText('Login')).toBeInTheDocument();  // request kept
+      expect(within(crumb).getByText('…')).toBeInTheDocument();      // middle collapsed
+      expect(within(crumb).queryByText('A')).not.toBeInTheDocument();
+      expect(within(crumb).queryByText('B')).not.toBeInTheDocument();
     });
 
     it('clicking Cancel shows "Request cancelled" and does NOT persist to history', async () => {

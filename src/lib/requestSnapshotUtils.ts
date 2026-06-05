@@ -2,6 +2,7 @@ import type { Request } from '@/lib/db';
 import type { RequestSnapshot } from '@/stores/tabStore';
 import type { AuthState } from '@/stores/requestStore';
 import { isHttpMethod, isBodyMode, isApiKeyIn } from '@/lib/validators';
+import { authStateToConfig } from '@/lib/urlUtils';
 
 function authConfigToState(
     authType: Request['auth_type'],
@@ -26,6 +27,30 @@ function authConfigToState(
         default:
             return { type: 'none' };
     }
+}
+
+/**
+ * Inverse of buildSnapshotFromSaved: the DB-shaped partial of a saved request's
+ * mutable fields, derived from a tab snapshot. Used when saving a tab's edits in
+ * place (the Save button and the close-tab guard). Mirrors the `changes` built by
+ * useCollectionCrud.handleUpdateRequest so all save paths persist the same fields.
+ */
+export function buildSavedChangesFromSnapshot(s: RequestSnapshot): Partial<Request> {
+    return {
+        method: s.method,
+        url: s.url,
+        headers: s.headers,
+        query_params: s.queryParams,
+        body_type: s.body.mode,
+        body_content: s.body.raw,
+        auth_type: s.auth.type,
+        auth_config: authStateToConfig(s.auth),
+        pre_request_script: s.preRequestScript,
+        pre_request_script_enabled: s.preRequestScriptEnabled,
+        pre_request_template_id: s.preRequestTemplateId,
+        post_response_script: s.postResponseScript,
+        post_response_script_enabled: s.postResponseScriptEnabled,
+    };
 }
 
 export function buildSnapshotFromSaved(request: Request): RequestSnapshot {

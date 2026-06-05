@@ -87,7 +87,7 @@ export function CollectionRow({
     return (
         <div key={collection.id} data-testid={`collection-${collection.id}`}>
             {/* Collection row */}
-            <div className="flex items-center gap-1 py-1 px-1 rounded group hover:bg-gray-700 cursor-grab active:cursor-grabbing select-none">
+            <div className="flex items-center gap-1 py-1 px-1 rounded group hover:bg-app-subtle cursor-grab active:cursor-grabbing select-none">
                 <button
                     onClick={onToggle}
                     className="flex-shrink-0 text-app-muted cursor-pointer"
@@ -99,7 +99,7 @@ export function CollectionRow({
                 {isEditing ? (
                     <input
                         ref={editRef}
-                        className="flex-1 bg-gray-700 text-app-inverse text-sm outline-none px-1 rounded"
+                        className="flex-1 bg-app-subtle text-app-inverse text-sm outline-none px-1 rounded"
                         value={editingValue}
                         onChange={(e) => onEditChange(e.target.value)}
                         onBlur={onCommitEdit}
@@ -118,7 +118,7 @@ export function CollectionRow({
                     </span>
                 )}
 
-                <div className="hidden group-hover:flex items-center gap-0.5 text-gray-300">
+                <div className="hidden group-hover:flex items-center gap-0.5 text-app-muted">
                     <button
                         onClick={(e) => {
                             e.preventDefault();
@@ -127,7 +127,7 @@ export function CollectionRow({
                         }}
                         aria-label="Add folder to collection"
                         title={t('collections.newFolderTitle')}
-                        className="p-1 rounded hover:text-white cursor-pointer"
+                        className="p-1 rounded hover:text-app-primary cursor-pointer"
                         draggable={false}
                     >
                         <FolderPlus size={14} />
@@ -140,7 +140,7 @@ export function CollectionRow({
                         }}
                         aria-label="Add request to collection"
                         title={t('collections.newRequestTitle')}
-                        className="p-1 rounded hover:text-white cursor-pointer"
+                        className="p-1 rounded hover:text-app-primary cursor-pointer"
                         draggable={false}
                     >
                         <FilePlus size={14} />
@@ -154,7 +154,7 @@ export function CollectionRow({
                         }}
                         aria-label={`Export ${collection.name}`}
                         title={t('collections.exportCollection')}
-                        className="p-1 rounded hover:text-white cursor-pointer"
+                        className="p-1 rounded hover:text-app-primary cursor-pointer"
                         draggable={false}
                     >
                         <Download size={12} />

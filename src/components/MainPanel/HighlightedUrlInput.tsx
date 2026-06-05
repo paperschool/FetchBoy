@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import type { KeyValuePair } from '@/lib/db';
 
 function escapeHtml(text: string): string {
@@ -8,7 +8,7 @@ function escapeHtml(text: string): string {
     .replace(/>/g, '&gt;');
 }
 
-function buildHighlightHtml(text: string, varKeys: Set<string>): string {
+export function buildHighlightHtml(text: string, varKeys: Set<string>): string {
   if (!text) return '';
   const parts: string[] = [];
   let lastIndex = 0;
@@ -43,12 +43,42 @@ export function HighlightedUrlInput({
   variables,
 }: HighlightedUrlInputProps) {
   const backdropRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const varKeys = new Set(variables.map((v) => v.key));
+
+  // Auto-grow the textarea to fit its (wrapped) content so every line is visible
+  // and the caret stays aligned with the highlight backdrop — a fixed-height box
+  // would scroll internally and the caret would drift from the rendered text.
+  useLayoutEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = 'auto';
+    ta.style.height = `${ta.scrollHeight}px`;
+  }, [value]);
 
   const syncScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
     if (backdropRef.current) {
       backdropRef.current.scrollTop = e.currentTarget.scrollTop;
+      backdropRef.current.scrollLeft = e.currentTarget.scrollLeft;
     }
+  };
+
+  // Shared text metrics — identical on both layers so glyphs (and the caret)
+  // line up exactly between the transparent textarea and the highlight backdrop.
+  // Everything is set EXPLICITLY (not `inherit`): a textarea's UA defaults can
+  // resolve `inherit` to a different computed font than a div, shifting glyph
+  // advance widths and drifting the caret away from the rendered text.
+  const textStyle: React.CSSProperties = {
+    fontFamily:
+      'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"',
+    fontSize: '0.875rem', // matches Tailwind text-sm
+    lineHeight: '1.25rem', // matches Tailwind leading-5
+    letterSpacing: 'normal',
+    tabSize: 4,
+    wordBreak: 'break-all',
+    whiteSpace: 'pre-wrap',
+    overflowWrap: 'break-word',
+    boxSizing: 'border-box',
   };
 
   return (
@@ -57,31 +87,28 @@ export function HighlightedUrlInput({
       <div
         ref={backdropRef}
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 px-3 py-2 text-sm leading-5"
-        style={{
-          wordBreak: 'break-all',
-          whiteSpace: 'pre-wrap',
-          color: 'var(--app-text-primary)',
-          fontFamily: 'inherit',
-        }}
+        className="pointer-events-none absolute inset-0 overflow-hidden px-3 py-2 text-sm leading-5"
+        style={{ ...textStyle, color: 'var(--app-text-primary)' }}
         dangerouslySetInnerHTML={{ __html: buildHighlightHtml(value, varKeys) }}
       />
       <textarea
+        ref={textareaRef}
         id={id}
         aria-label="Request URL"
         value={value}
         rows={1}
+        wrap="soft"
         onChange={(e) => onChange(e.target.value)}
         onScroll={syncScroll}
         placeholder={placeholder}
-        className="relative w-full resize-y bg-transparent px-3 py-2 text-sm leading-5"
+        className="relative block w-full resize-none bg-transparent px-3 py-2 text-sm leading-5"
         style={{
+          ...textStyle,
           minHeight: '2.25rem',
+          maxHeight: '12rem',
+          overflowY: 'auto',
           color: 'transparent',
           caretColor: 'var(--app-text-primary)',
-          fontFamily: 'inherit',
-          wordBreak: 'break-all',
-          whiteSpace: 'pre-wrap',
           outline: 'none',
         }}
       />

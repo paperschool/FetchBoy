@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act } from 'react';
 import { TourController } from './TourController';
 import { useTourStore } from '@/stores/tourStore';
+import { useAppTabStore } from '@/stores/appTabStore';
 
 // Mock react-joyride since it relies on DOM measurements not available in jsdom
 vi.mock('react-joyride', () => ({
@@ -50,6 +51,7 @@ vi.mock('react-joyride', () => ({
 
 beforeEach(() => {
   useTourStore.setState({ hasCompletedTour: false, currentStep: 0 });
+  useAppTabStore.setState({ activeTab: 'fetch' });
 });
 
 describe('TourController', () => {
@@ -130,5 +132,46 @@ describe('TourController', () => {
     useTourStore.setState({ hasCompletedTour: false, currentStep: 4 });
     render(<TourController />);
     expect(screen.getByTestId('joyride-content')).toHaveTextContent('View your API response here');
+  });
+
+  it('includes the Scripts, Script Workspace and Stitch steps', () => {
+    for (const [step, expected] of [
+      [7, 'pre-request script'],
+      [8, 'Script Workspace is a dedicated home'],
+      [9, 'Stitch lets you build request chains'],
+    ] as const) {
+      useTourStore.setState({ hasCompletedTour: false, currentStep: step });
+      const { unmount } = render(<TourController />);
+      expect(screen.getByTestId('joyride-content')).toHaveTextContent(expected);
+      unmount();
+    }
+  });
+
+  it('switches to the Script Workspace tab when advancing into its step', () => {
+    vi.useFakeTimers();
+    useTourStore.setState({ hasCompletedTour: false, currentStep: 7 });
+    render(<TourController />);
+    act(() => {
+      fireEvent.click(screen.getByTestId('joyride-next'));
+    });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    expect(useAppTabStore.getState().activeTab).toBe('scripts');
+    vi.useRealTimers();
+  });
+
+  it('switches to the Stitch tab when advancing into its step', () => {
+    vi.useFakeTimers();
+    useTourStore.setState({ hasCompletedTour: false, currentStep: 8 });
+    render(<TourController />);
+    act(() => {
+      fireEvent.click(screen.getByTestId('joyride-next'));
+    });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    expect(useAppTabStore.getState().activeTab).toBe('stitch');
+    vi.useRealTimers();
   });
 });

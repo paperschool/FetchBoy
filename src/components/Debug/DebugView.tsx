@@ -15,7 +15,7 @@ export function DebugView() {
             <div className="flex items-center justify-end px-2 py-1 border-b border-app-subtle shrink-0">
                 <button
                     onClick={openLogFolder}
-                    className="flex items-center gap-1 px-2 py-1 text-xs text-app-muted hover:text-app-inverse hover:bg-gray-700 rounded transition-colors"
+                    className="flex items-center gap-1 px-2 py-1 text-xs text-app-muted hover:text-app-inverse hover:bg-app-subtle rounded transition-colors"
                     title="Open log files directory"
                 >
                     <FolderOpen size={12} /> {t('intercept.openLogFolder')}

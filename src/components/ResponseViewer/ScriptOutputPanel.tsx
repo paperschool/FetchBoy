@@ -33,7 +33,7 @@ function StageSection({ title, accent, debug }: { title: string; accent: string;
 
   return (
     <div className="rounded border border-app-subtle">
-      <div className="flex items-center gap-2 border-b border-app-subtle bg-app-sidebar/40 px-3 py-1.5">
+      <div className="flex items-center gap-2 border-b border-app-subtle bg-app-subtle px-3 py-1.5">
         <span className={`h-2 w-2 shrink-0 rounded-full ${accent}`} />
         <span className="text-xs font-medium text-app-primary">{title}</span>
         <span className={`text-[10px] font-medium ${statusInfo.className}`}>{t(statusInfo.label as Parameters<typeof t>[0])}</span>

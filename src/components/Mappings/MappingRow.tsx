@@ -15,7 +15,7 @@ export function MappingRow({ mapping, onEdit, onDelete }: MappingRowProps) {
         <div data-testid={`mapping-${mapping.id}`} className="mb-0.5">
             <div
                 onClick={onEdit}
-                className="flex items-center gap-1 py-0.5 px-1 rounded group hover:bg-gray-700 cursor-pointer"
+                className="flex items-center gap-1 py-0.5 px-1 rounded group hover:bg-app-subtle cursor-pointer"
             >
                 <button
                     type="button"
@@ -25,7 +25,7 @@ export function MappingRow({ mapping, onEdit, onDelete }: MappingRowProps) {
                     className={`flex-shrink-0 p-1 rounded cursor-pointer transition-colors ${
                         mapping.enabled
                             ? 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10'
-                            : 'text-app-muted hover:text-app-secondary hover:bg-gray-600/40'
+                            : 'text-app-muted hover:text-app-secondary hover:bg-app-subtle/40'
                     }`}
                 >
                     {mapping.enabled ? <Pause size={11} /> : <Play size={11} />}

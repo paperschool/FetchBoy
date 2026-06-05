@@ -30,7 +30,7 @@ export default function useTabKeyboardShortcuts() {
                     );
                     return;
                 }
-                store.closeTab(store.activeTabId);
+                store.requestCloseTab(store.activeTabId);
                 return;
             }
 

@@ -62,10 +62,10 @@ export function StitchSidebar({ collapsed, onToggleCollapse }: StitchSidebarProp
   if (collapsed) {
     return (
       <div className="flex h-full flex-col items-center gap-2 bg-app-sidebar p-2" data-testid="stitch-sidebar-collapsed">
-        <button type="button" onClick={onToggleCollapse} className="rounded p-2 transition-colors hover:bg-gray-700" aria-label="Expand sidebar" title="Expand sidebar">
+        <button type="button" onClick={onToggleCollapse} className="rounded p-2 transition-colors hover:bg-app-subtle" aria-label="Expand sidebar" title="Expand sidebar">
           <ChevronRight size={20} className="text-app-muted" />
         </button>
-        <button className="cursor-pointer rounded p-2 text-green-500 transition-colors hover:bg-gray-700" onClick={() => handleCreateChain().catch(() => {})} title="New chain" data-testid="new-chain-button">
+        <button className="cursor-pointer rounded p-2 text-green-500 transition-colors hover:bg-app-subtle" onClick={() => handleCreateChain().catch(() => {})} title="New chain" data-testid="new-chain-button">
           <Plus size={20} />
         </button>
       </div>
@@ -75,7 +75,7 @@ export function StitchSidebar({ collapsed, onToggleCollapse }: StitchSidebarProp
   return (
     <div className="flex h-full flex-col bg-app-sidebar p-3" data-testid="stitch-sidebar">
       <div className="mb-3 flex items-center gap-2">
-        <button type="button" onClick={onToggleCollapse} className="rounded p-1.5 transition-colors hover:bg-gray-700" aria-label="Collapse sidebar" title="Collapse sidebar">
+        <button type="button" onClick={onToggleCollapse} className="rounded p-1.5 transition-colors hover:bg-app-subtle" aria-label="Collapse sidebar" title="Collapse sidebar">
           <ChevronLeft size={18} className="text-app-muted" />
         </button>
         <span className="rounded bg-amber-500/15 px-2 py-0.5 text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
@@ -155,13 +155,13 @@ export function StitchSidebar({ collapsed, onToggleCollapse }: StitchSidebarProp
           </ul>
           <DragOverlay dropAnimation={null}>
             {draggingFolder && (
-              <div className="flex items-center gap-1 rounded border border-blue-400 bg-gray-600 px-2 py-0.5 text-sm text-app-inverse opacity-90 shadow-lg select-none">
+              <div className="flex items-center gap-1 rounded border border-blue-400 bg-app-subtle px-2 py-0.5 text-sm text-app-inverse opacity-90 shadow-lg select-none">
                 <ChevronRight size={14} className="shrink-0 text-app-muted" />
                 <span className="truncate">{draggingFolder.name}</span>
               </div>
             )}
             {draggingChain && (
-              <div className="flex items-center gap-1 rounded border border-blue-400 bg-gray-600 px-2 py-0.5 text-sm text-app-inverse opacity-90 shadow-lg select-none">
+              <div className="flex items-center gap-1 rounded border border-blue-400 bg-app-subtle px-2 py-0.5 text-sm text-app-inverse opacity-90 shadow-lg select-none">
                 <span className="truncate">{draggingChain.name}</span>
               </div>
             )}

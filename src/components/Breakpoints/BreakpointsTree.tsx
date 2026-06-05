@@ -147,7 +147,7 @@ export function BreakpointsTree() {
                 if (e.key === 'Escape') { setCreatingFolder(false); setNewFolderName(''); }
             }}
             placeholder="Folder name…"
-            className="w-full bg-gray-700 text-app-inverse text-sm outline-none px-2 py-1 rounded mb-1"
+            className="w-full bg-app-subtle text-app-inverse text-sm outline-none px-2 py-1 rounded mb-1"
             aria-label="New folder name"
         />
     );

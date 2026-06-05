@@ -1,4 +1,5 @@
 import { useEffect, useCallback } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { Sidebar } from '@/components/Sidebar/Sidebar';
 import { MainPanel } from '@/components/MainPanel/MainPanel';
 import { TabBar } from '@/components/TabBar/TabBar';
@@ -39,8 +40,15 @@ export function FetchView() {
         useUiSettingsStore.getState().setSidebarSettingsExpanded(s.sidebar_settings_expanded ?? false);
         useUiSettingsStore.getState().setHasSeededSampleData(s.has_seeded_sample_data ?? false);
         useUiSettingsStore.getState().setLastSeenVersion(s.last_seen_version ?? null);
-        useUiSettingsStore.getState().setProxyEnabled(s.proxy_enabled ?? true);
-        useUiSettingsStore.getState().setProxyPort(s.proxy_port ?? 8080);
+        const proxyPort = s.proxy_port ?? 8080;
+        useUiSettingsStore.getState().setProxyPort(proxyPort);
+        // Reconcile the proxy indicator against the REAL OS proxy state rather than
+        // a stale persisted flag (Story 22.6). The backend clears the OS proxy on
+        // launch, so after any crash this resolves to "off" — the UI can never show
+        // the proxy "on" when the OS redirect isn't actually set.
+        invoke<boolean>('is_system_proxy_configured', { port: proxyPort })
+          .then((configured) => useUiSettingsStore.getState().setProxyEnabled(configured))
+          .catch(() => useUiSettingsStore.getState().setProxyEnabled(false));
       })
       .catch(() => {}); // defaults already set in store initial state
   }, []);

@@ -52,7 +52,7 @@ export function StitchEditorPanel({ node }: StitchEditorPanelProps): React.React
   }, [selectNode]);
 
   return (
-    <div className="flex h-full flex-col overflow-hidden" data-testid="node-editor-panel">
+    <div className="flex h-full flex-col overflow-hidden bg-app-sidebar" data-testid="node-editor-panel">
       {/* Unified header */}
       <div className="flex shrink-0 items-center gap-2 border-b border-app-subtle bg-app-sidebar px-3 py-1.5">
         <span className="text-app-secondary">{TYPE_ICONS[node.type]}</span>

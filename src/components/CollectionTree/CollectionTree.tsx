@@ -182,13 +182,13 @@ export function CollectionTree() {
             {/* Drag overlay — floating ghost following the cursor */}
             <DragOverlay dropAnimation={null}>
                 {draggingFolder && (
-                    <div className="flex items-center gap-1 py-0.5 px-2 rounded bg-gray-600 border border-blue-400 shadow-lg text-sm text-app-inverse select-none opacity-90">
+                    <div className="flex items-center gap-1 py-0.5 px-2 rounded bg-app-subtle border border-blue-400 shadow-lg text-sm text-app-inverse select-none opacity-90">
                         <ChevronRight size={14} className="text-app-muted flex-shrink-0" />
                         <span className="truncate">{draggingFolder.name}</span>
                     </div>
                 )}
                 {draggingRequest && (
-                    <div className="flex items-center gap-1 py-0.5 px-2 rounded bg-gray-600 border border-blue-400 shadow-lg text-sm text-app-inverse select-none opacity-90">
+                    <div className="flex items-center gap-1 py-0.5 px-2 rounded bg-app-subtle border border-blue-400 shadow-lg text-sm text-app-inverse select-none opacity-90">
                         <span className="text-[10px] font-mono text-blue-300 w-10 flex-shrink-0 truncate">
                             {draggingRequest.method}
                         </span>

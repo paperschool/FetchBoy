@@ -26,17 +26,17 @@ export const NODE_ICONS: Record<NodeType, React.ReactNode> = {
 };
 
 export const NODE_COLORS: Record<NodeType, string> = {
-  'request': 'bg-app-main/95 border-blue-500/40',
-  'js-snippet': 'bg-app-main/95 border-amber-500/40',
-  'json-object': 'bg-app-main/95 border-green-500/40',
-  'sleep': 'bg-app-main/95 border-purple-500/40',
-  'loop': 'bg-app-main/95 border-cyan-500/40',
-  'merge': 'bg-app-main/95 border-indigo-500/40',
-  'condition': 'bg-app-main/95 border-orange-500/40',
-  'mapping': 'bg-app-main/95 border-yellow-500/40',
-  'mapping-entry': 'bg-app-main/95 border-yellow-500/40',
-  'mapping-exit': 'bg-app-main/95 border-yellow-500/40',
-  'fetch-terminal': 'bg-app-main/95 border-teal-500/40',
+  'request': 'bg-app-main border-blue-500/40',
+  'js-snippet': 'bg-app-main border-amber-500/40',
+  'json-object': 'bg-app-main border-green-500/40',
+  'sleep': 'bg-app-main border-purple-500/40',
+  'loop': 'bg-app-main border-cyan-500/40',
+  'merge': 'bg-app-main border-indigo-500/40',
+  'condition': 'bg-app-main border-orange-500/40',
+  'mapping': 'bg-app-main border-yellow-500/40',
+  'mapping-entry': 'bg-app-main border-yellow-500/40',
+  'mapping-exit': 'bg-app-main border-yellow-500/40',
+  'fetch-terminal': 'bg-app-main border-teal-500/40',
 };
 
 export const NODE_HEADER_COLORS: Record<NodeType, string> = {

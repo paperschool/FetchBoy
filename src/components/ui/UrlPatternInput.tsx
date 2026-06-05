@@ -33,7 +33,7 @@ export function UrlPatternInput({
           value={urlPattern}
           onChange={(e) => onUrlPatternChange(e.target.value)}
           placeholder={PLACEHOLDERS[matchType]}
-          className="w-full bg-app-main text-app-inverse border border-app-subtle rounded px-2 py-1.5 text-sm font-mono"
+          className="w-full bg-app-main text-app-primary border border-app-subtle rounded px-2 py-1.5 text-sm font-mono"
           data-testid={`${testIdPrefix}url-input`}
         />
         {computedError && urlPattern.trim() && (
@@ -63,7 +63,7 @@ export function UrlPatternInput({
               className={`px-3 py-1 text-xs rounded ${
                 matchType === type
                   ? 'bg-app-accent text-white'
-                  : 'bg-app-subtle text-app-muted hover:text-app-inverse'
+                  : 'bg-app-subtle text-app-muted hover:text-app-primary'
               }`}
               data-testid={`${testIdPrefix}match-type-${type}`}
             >

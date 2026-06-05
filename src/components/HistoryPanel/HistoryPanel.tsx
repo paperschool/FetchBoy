@@ -114,7 +114,7 @@ export function HistoryPanel() {
                             onClick={() => handleRowClick(entry)}
                             onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setCtxMenu({ x: e.clientX, y: e.clientY, entryId: entry.id }); }}
                             onMouseDown={(e) => { if (e.button === 1) { e.preventDefault(); handleOpenInNewTab(entry); } }}
-                            className="flex items-center gap-2 px-1.5 py-1 rounded cursor-pointer hover:bg-gray-700"
+                            className="flex items-center gap-2 px-1.5 py-1 rounded cursor-pointer hover:bg-app-subtle"
                         >
                             <span
                                 className={`font-mono text-xs font-bold uppercase w-14 shrink-0 ${methodColour(entry.method)}`}

@@ -55,10 +55,10 @@ export function SettingsAccordion({ isExpanded, onToggle }: SettingsAccordionPro
     }
 
     return (
-        <div className="shrink-0 border-t border-gray-700" data-testid="settings-accordion">
+        <div className="shrink-0 border-t border-app-subtle" data-testid="settings-accordion">
             <button
                 type="button"
-                className="w-full flex items-center gap-2 p-2 text-app-muted hover:text-app-inverse hover:bg-gray-700 rounded transition-colors"
+                className="w-full flex items-center gap-2 p-2 text-app-muted hover:text-app-inverse hover:bg-app-subtle rounded transition-colors"
                 onClick={onToggle}
                 aria-expanded={isExpanded}
                 aria-controls="settings-accordion-content"
@@ -108,7 +108,7 @@ export function SettingsAccordion({ isExpanded, onToggle }: SettingsAccordionPro
                             step={100}
                             value={requestTimeoutMs}
                             onChange={handleTimeoutChange}
-                            className="w-full bg-transparent border border-gray-700 rounded px-2 py-1 text-app-muted text-xs"
+                            className="w-full bg-transparent border border-app-subtle rounded px-2 py-1 text-app-muted text-xs"
                             data-testid="sidebar-timeout-input"
                         />
                     </div>
@@ -134,7 +134,7 @@ export function SettingsAccordion({ isExpanded, onToggle }: SettingsAccordionPro
                                 type="button"
                                 aria-label="Decrease font size"
                                 onClick={handleFontSizeDecrease}
-                                className="text-app-muted border border-gray-700 rounded w-6 h-6 flex items-center justify-center hover:bg-black/10 text-xs"
+                                className="text-app-muted border border-app-subtle rounded w-6 h-6 flex items-center justify-center hover:bg-black/10 text-xs"
                                 data-testid="sidebar-font-size-decrease"
                             >
                                 −
@@ -149,7 +149,7 @@ export function SettingsAccordion({ isExpanded, onToggle }: SettingsAccordionPro
                                 type="button"
                                 aria-label="Increase font size"
                                 onClick={handleFontSizeIncrease}
-                                className="text-app-muted border border-gray-700 rounded w-6 h-6 flex items-center justify-center hover:bg-black/10 text-xs"
+                                className="text-app-muted border border-app-subtle rounded w-6 h-6 flex items-center justify-center hover:bg-black/10 text-xs"
                                 data-testid="sidebar-font-size-increase"
                             >
                                 +
@@ -163,7 +163,7 @@ export function SettingsAccordion({ isExpanded, onToggle }: SettingsAccordionPro
                         <button
                             type="button"
                             onClick={resetTour}
-                            className="w-full text-left px-2 py-1 text-xs border border-gray-700 rounded text-app-muted hover:bg-gray-700 cursor-pointer transition-colors"
+                            className="w-full text-left px-2 py-1 text-xs border border-app-subtle rounded text-app-muted hover:bg-app-subtle cursor-pointer transition-colors"
                             data-testid="sidebar-restart-tutorial-button"
                         >
                             {t('settings.restartTutorial')}

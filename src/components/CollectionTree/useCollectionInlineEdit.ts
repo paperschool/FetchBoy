@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { useCollectionStore } from "@/stores/collectionStore";
+import { useTabStore } from "@/stores/tabStore";
 import {
   renameCollection as dbRenameCollection,
   renameFolder as dbRenameFolder,
@@ -38,7 +39,10 @@ export function useCollectionInlineEdit(): UseCollectionInlineEditReturn {
     } else if (type === "folder") {
       void dbRenameFolder(id, name).then(() => store.renameFolder(id, name));
     } else {
-      void dbRenameRequest(id, name).then(() => store.renameRequest(id, name));
+      void dbRenameRequest(id, name).then(() => {
+        store.renameRequest(id, name);
+        useTabStore.getState().renameSavedRequestTabs(id, name);
+      });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [store]);
@@ -75,6 +79,7 @@ export function useCollectionInlineEdit(): UseCollectionInlineEditReturn {
       } else {
         await dbRenameRequest(id, name);
         store.renameRequest(id, name);
+        useTabStore.getState().renameSavedRequestTabs(id, name);
       }
     }
   }, [rename, cancelEdit, store]);

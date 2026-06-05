@@ -79,7 +79,7 @@ export function StitchFolderRow({
         style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0 : undefined }}
       >
         <div
-          className="group flex cursor-pointer select-none items-center gap-1 rounded px-1 py-0.5 hover:bg-gray-700"
+          className="group flex cursor-pointer select-none items-center gap-1 rounded px-1 py-0.5 hover:bg-app-subtle"
           {...attributes}
           {...listeners}
         >
@@ -90,7 +90,7 @@ export function StitchFolderRow({
           {isEditing ? (
             <input
               ref={editRef}
-              className="min-w-0 flex-1 rounded bg-gray-700 px-1 text-sm text-app-inverse outline-none"
+              className="min-w-0 flex-1 rounded bg-app-subtle px-1 text-sm text-app-inverse outline-none"
               value={editingValue}
               onChange={(e) => onEditChange(e.target.value)}
               onBlur={onCommitEdit}
@@ -109,11 +109,11 @@ export function StitchFolderRow({
             </span>
           )}
 
-          <div className="hidden items-center gap-0.5 text-gray-300 group-hover:flex">
+          <div className="hidden items-center gap-0.5 text-app-muted group-hover:flex">
             <button
               onClick={(e) => { e.stopPropagation(); onAddChain(folder.id); }}
               title={t('stitch.addChainToFolder')}
-              className="cursor-pointer rounded p-0.5 hover:text-white"
+              className="cursor-pointer rounded p-0.5 hover:text-app-primary"
               draggable={false}
             >
               <Plus size={12} />
@@ -121,7 +121,7 @@ export function StitchFolderRow({
             <button
               onClick={(e) => { e.stopPropagation(); onAddSubfolder(folder.id); }}
               title={t('stitch.addSubfolder')}
-              className="cursor-pointer rounded p-0.5 hover:text-white"
+              className="cursor-pointer rounded p-0.5 hover:text-app-primary"
               draggable={false}
             >
               <FolderPlus size={12} />

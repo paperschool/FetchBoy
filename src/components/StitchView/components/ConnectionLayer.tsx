@@ -126,6 +126,15 @@ export function ConnectionLayer({ onConnectionContextMenu }: ConnectionLayerProp
         ? (conn.targetSlot && conn.targetSlot !== 'input' ? conn.targetSlot : conn.sourceKey)
         : null;
 
+      // A line out of a JS snippet node with no explicit label defaults to the
+      // snippet node's name. Derived from the live node (in deps), so it updates
+      // automatically when the node's label changes.
+      const jsSnippetLabel =
+        sourceNode.type === 'js-snippet' && sourceNode.label?.trim()
+          ? sourceNode.label
+          : null;
+      const alias = resolvedAlias || jsSnippetLabel;
+
       return {
         id: conn.id,
         fromX: from.x,
@@ -136,7 +145,7 @@ export function ConnectionLayer({ onConnectionContextMenu }: ConnectionLayerProp
         executionStatus: execStatus,
         isBroken,
         sourceKey: conn.sourceKey,
-        alias: resolvedAlias,
+        alias,
       };
     }).filter(Boolean) as Array<{
       id: string; fromX: number; fromY: number; toX: number; toY: number;
@@ -177,7 +186,7 @@ export function ConnectionLayer({ onConnectionContextMenu }: ConnectionLayerProp
                   height={14}
                   rx={3}
                   ry={3}
-                  fill="var(--app-main, #111)"
+                  fill="var(--app-surface-main)"
                   stroke="var(--app-border-subtle)"
                   strokeWidth={0.5}
                   opacity={0.9}

@@ -16,7 +16,7 @@ export function BreakpointRow({ breakpoint, onEdit, onDelete }: BreakpointRowPro
         <div data-testid={`breakpoint-${breakpoint.id}`} className="mb-0.5">
         <div
             onClick={onEdit}
-            className="flex items-center gap-1 py-0.5 px-1 rounded group hover:bg-gray-700 cursor-pointer"
+            className="flex items-center gap-1 py-0.5 px-1 rounded group hover:bg-app-subtle cursor-pointer"
         >
             <button
                 type="button"
@@ -26,7 +26,7 @@ export function BreakpointRow({ breakpoint, onEdit, onDelete }: BreakpointRowPro
                 className={`flex-shrink-0 p-1 rounded cursor-pointer transition-colors ${
                     breakpoint.enabled
                         ? 'text-blue-400 hover:text-blue-300 hover:bg-blue-500/10'
-                        : 'text-app-muted hover:text-app-secondary hover:bg-gray-600/40'
+                        : 'text-app-muted hover:text-app-secondary hover:bg-app-subtle/40'
                 }`}
             >
                 {breakpoint.enabled ? <Pause size={11} /> : <Play size={11} />}

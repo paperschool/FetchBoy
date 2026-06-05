@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.23.0] - 2026-06-05
+
+- feat: Closing a tab with unsaved edits to a saved request now prompts (Save / Don't Save / Cancel) instead of discarding silently; a green in-place Save button and an "Unsaved changes" hint show when a saved request is dirty
+- feat: Renaming a saved request now retitles every open tab for it, loaded requests show a collection breadcrumb, and the Request Details header shows which collection a request belongs to
+- feat: Each new collection gets its own environment, and environments are grouped by collection in both the environment panel and the top-bar selector (with a "Shared" group for the rest)
+- feat: The proxy now starts disabled and clears any leftover OS proxy on launch, so a crash or force-quit can never leave your machine silently proxied or the indicator stuck "on"
+- feat: Light mode redesigned with proper light panels, plus an expanded onboarding tour covering Request Scripts, the Script Workspace, and Stitch
+- fix: URL field auto-grows with the caret aligned, Stitch frames the first chain correctly when you open the tab, and JS-snippet connections are labelled with the snippet name
+
 ## [0.22.1] - 2026-06-03
 
 - fix: Re-importing a `.fetchboy` collection now restores the collection-wide pre-request script, and imported script templates resolve immediately instead of after a restart

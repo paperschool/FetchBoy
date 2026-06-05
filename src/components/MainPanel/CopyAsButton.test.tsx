@@ -42,6 +42,17 @@ describe('CopyAsButton', () => {
     expect(screen.getByRole('menuitem', { name: 'Node.js (axios)' })).toBeInTheDocument();
   });
 
+  it('shows a non-interactive "Export To:" heading above the formats', () => {
+    render(<CopyAsButton resolvedRequest={resolvedRequest} />);
+    fireEvent.click(screen.getByTestId('copy-as-button'));
+
+    const heading = screen.getByText('Export To:');
+    expect(heading).toBeInTheDocument();
+    // Heading must not be a menu item (not focusable / not an action).
+    expect(heading).not.toHaveAttribute('role', 'menuitem');
+    expect(screen.queryByRole('menuitem', { name: 'Export To:' })).not.toBeInTheDocument();
+  });
+
   it('clicking cURL calls navigator.clipboard.writeText with a non-empty string', async () => {
     render(<CopyAsButton resolvedRequest={resolvedRequest} />);
     fireEvent.click(screen.getByTestId('copy-as-button'));

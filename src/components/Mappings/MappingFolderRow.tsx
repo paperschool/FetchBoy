@@ -39,7 +39,7 @@ export function MappingFolderRow({
 
     return (
         <div data-testid={`mapping-folder-${folder.id}`}>
-            <div className="flex items-center gap-1 py-0.5 px-1 rounded group hover:bg-gray-700 cursor-pointer select-none">
+            <div className="flex items-center gap-1 py-0.5 px-1 rounded group hover:bg-app-subtle cursor-pointer select-none">
                 <button
                     onClick={onToggle}
                     className="flex-shrink-0 text-app-muted cursor-pointer"
@@ -58,7 +58,7 @@ export function MappingFolderRow({
                             if (e.key === 'Enter') handleCommit();
                             if (e.key === 'Escape') { setEditValue(folder.name); setIsEditing(false); }
                         }}
-                        className="flex-1 bg-gray-700 text-app-inverse text-sm outline-none px-1 rounded"
+                        className="flex-1 bg-app-subtle text-app-inverse text-sm outline-none px-1 rounded"
                         aria-label="Rename folder"
                     />
                 ) : (
@@ -69,12 +69,12 @@ export function MappingFolderRow({
                         {folder.name}
                     </span>
                 )}
-                <div className="hidden group-hover:flex items-center gap-0.5 text-gray-300">
+                <div className="hidden group-hover:flex items-center gap-0.5 text-app-muted">
                     <button
                         onClick={(e) => { e.stopPropagation(); onAddMapping(); }}
                         aria-label="Add mapping to folder"
                         title="New Mapping"
-                        className="p-1 rounded hover:text-white cursor-pointer"
+                        className="p-1 rounded hover:text-app-primary cursor-pointer"
                     >
                         <Plus size={14} />
                     </button>

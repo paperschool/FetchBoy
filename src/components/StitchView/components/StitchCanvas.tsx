@@ -3,6 +3,7 @@ import { ZoomIn, ZoomOut, Maximize, Play, Square, ScrollText, FileOutput, Send, 
 import { CANVAS_NODE_FOCUS_ZOOM } from '@/lib/constants';
 import { useStitchStore } from '@/stores/stitchStore';
 import { useUiSettingsStore } from '@/stores/uiSettingsStore';
+import { useAppTabStore } from '@/stores/appTabStore';
 import { saveSetting } from '@/lib/settings';
 import { useCanvasTransform } from './StitchCanvas.hooks';
 import { StitchNode } from './StitchNode';
@@ -116,27 +117,41 @@ function StitchCanvasInner(): React.ReactElement {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedNodeId]);
 
-  // Auto-rebalance containers and frame nodes when switching chains
+  // Auto-rebalance containers and frame nodes for a chain — but only once the
+  // Stitch tab is actually VISIBLE. While the tab is hidden (AppTabs keeps it
+  // mounted with `display:none`) the canvas measures 0×0, so framing then would
+  // push the chain offscreen. We therefore wait until the tab is shown — this is
+  // what fixes "the first chain isn't framed when you click the Stitch tab".
+  const isStitchVisible = useAppTabStore((s) => s.activeTab === 'stitch');
   const prevChainIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (activeChainId && activeChainId !== prevChainIdRef.current && nodes.length > 0) {
-      for (const n of nodes) {
-        if (n.type === 'loop') rebalanceLoop(n.id);
-      }
-      // Use setTimeout to ensure the canvas is fully mounted and laid out
-      // (first load: canvas transitions from empty state → mounted)
-      const delay = prevChainIdRef.current === null ? 100 : 0;
-      setTimeout(() => {
-        requestAnimationFrame(() => {
-          if (!useUiSettingsStore.getState().stitchCanvasAutoFocus) return;
-          const fresh = useStitchStore.getState().nodes;
-          frameAll(fresh);
-        });
-      }, delay);
+    // No chain selected — reset so re-selecting the same chain re-frames.
+    if (!activeChainId) {
+      prevChainIdRef.current = null;
+      return;
     }
+    // Tab hidden → canvas has no dimensions. Don't frame and don't mark the chain
+    // as seen; this effect re-runs (and frames) when the tab becomes visible.
+    if (!isStitchVisible) return;
+    // Already framed this chain while visible.
+    if (activeChainId === prevChainIdRef.current) return;
+    // Nodes can load asynchronously after the chain id is set; wait for them.
+    if (nodes.length === 0) return;
+
+    for (const n of nodes) {
+      if (n.type === 'loop') rebalanceLoop(n.id);
+    }
+    // Longer delay on the very first frame so the canvas has mounted/laid out.
+    const delay = prevChainIdRef.current === null ? 100 : 0;
     prevChainIdRef.current = activeChainId;
+    setTimeout(() => {
+      requestAnimationFrame(() => {
+        if (!useUiSettingsStore.getState().stitchCanvasAutoFocus) return;
+        frameAll(useStitchStore.getState().nodes);
+      });
+    }, delay);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeChainId]);
+  }, [activeChainId, nodes.length, isStitchVisible]);
 
   const handlePlay = useCallback((): void => {
     // Deselect node so the debug log panel is visible
@@ -639,7 +654,7 @@ function StitchCanvasInner(): React.ReactElement {
         ref={canvasRef}
         tabIndex={0}
         onKeyDown={handleKeyDown}
-        className={`relative flex-1 cursor-grab overflow-hidden outline-none active:cursor-grabbing ${isMapperChain ? 'bg-yellow-500/[0.03]' : 'bg-app-main'}`}
+        className={`relative flex-1 cursor-grab overflow-hidden outline-none active:cursor-grabbing ${isMapperChain ? 'bg-yellow-50 dark:bg-yellow-500/[0.03]' : 'bg-app-main'}`}
         style={{
           backgroundImage: isMapperChain
             ? 'radial-gradient(circle, rgba(234, 179, 8, 0.15) 1px, transparent 1px)'

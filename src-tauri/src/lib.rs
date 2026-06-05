@@ -257,10 +257,20 @@ pub fn run() {
                 chain_emit_fn: Arc::clone(&chain_emit_fn),
             });
 
-            // Default config: enabled on port 8080.
+            // ─── Startup proxy reconciliation (Story 22.6) ─────────────────────
+            // A non-graceful exit (SIGKILL/force-quit/crash/power loss) can leave
+            // the OS proxy still pointing at us — we cannot run cleanup on those
+            // paths. The robust safety net is to clear the OS proxy on EVERY launch
+            // and start with the proxy disabled, so a previous crash can never leave
+            // the machine silently proxied or the UI showing the proxy "on". The
+            // user must explicitly re-enable the OS redirect this session.
+            platform::disable_os_proxy_all_services();
+            emit_debug_clone("info", "proxy", "Startup reconciliation: cleared OS proxy, proxy starts disabled");
+
+            // Default config: disabled on port 8080 (OS redirect off until the user enables it).
             app.manage(ProxyConfigState {
                 port: std::sync::Mutex::new(8080),
-                enabled: std::sync::Mutex::new(true),
+                enabled: std::sync::Mutex::new(false),
             });
 
             // Shared breakpoints ref — populated at runtime via sync_breakpoints.

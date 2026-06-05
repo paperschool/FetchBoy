@@ -40,7 +40,7 @@ function SlotLauncher({ icon, label, badge, badgeClass, buttonClass, name, hasSc
           </label>
         </div>
       </div>
-      <div className="flex items-center justify-between gap-3 rounded border border-app-subtle bg-app-sidebar/50 px-3 py-2">
+      <div className="flex items-center justify-between gap-3 rounded border border-app-subtle bg-app-subtle px-3 py-2">
         <div className="min-w-0 flex-1">
           {name && <div className="truncate text-xs font-medium text-app-secondary">{name}</div>}
           <div className="text-[11px] text-app-muted">{hasScript ? statusHas : statusEmpty}</div>

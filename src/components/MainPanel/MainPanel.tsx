@@ -1,4 +1,4 @@
-import { Loader2, Plus, Save, Send, X } from "lucide-react";
+import { ChevronRight, Loader2, Plus, Save, Send, X } from "lucide-react";
 import { CopyAsButton } from "./CopyAsButton";
 import { HighlightedUrlInput } from "./HighlightedUrlInput";
 import { RequestDetailsAccordion, HTTP_METHODS } from "./RequestDetailsAccordion";
@@ -10,6 +10,8 @@ import { SaveRequestDialog } from "@/components/SaveRequestDialog/SaveRequestDia
 import { ProgressBar } from "@/components/ProgressBar/ProgressBar";
 import { createDefaultScriptDebugState } from "@/stores/tabStore";
 import { createFullSavedRequest, updateSavedRequest } from "@/lib/collections";
+import { saveTabRequest } from "@/lib/persistTab";
+import { buildFolderNamePath } from "@/lib/breadcrumb";
 import { authStateToConfig, areQueryParamsEqual } from "@/lib/urlUtils";
 import { extractQueryParamsFromUrl } from "@/lib/extractQueryParamsFromUrl";
 import type { HttpMethod } from "@/stores/requestStore";
@@ -24,7 +26,7 @@ import { useEnvironment } from "@/hooks/useEnvironment";
 import { useEnvironmentStore } from "@/stores/environmentStore";
 import { useSendRequest } from "@/hooks/useSendRequest";
 import { useProgressBar } from "@/hooks/useProgressBar";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useSendRequestKeyboardShortcut from "@/hooks/useSendRequestKeyboardShortcut";
 import { t } from "@/lib/i18n";
 
@@ -81,6 +83,43 @@ export function MainPanel(): React.ReactElement {
   const setRequestTimeout = (ms: number): void => updateReq({ timeout: ms });
   const setRequestBodyLanguage = (lang: "json" | "html" | "xml"): void => updateRes({ requestBodyLanguage: lang });
   const markDirty = (dirty = true): void => updateReq({ isDirty: dirty });
+
+  // Story 22.3 — saved request with unsaved edits → green Save that saves in place;
+  // otherwise the Save button opens the save dialog (save / save-as).
+  const isSavedDirty = req.savedRequestId !== null && req.isDirty;
+  const handleSaveClick = (): void => {
+    if (isSavedDirty) {
+      void saveTabRequest(req).then((ok) => { if (ok) markDirty(false); });
+    } else {
+      setSaveDialogOpen(true);
+    }
+  };
+
+  // Collection-tree breadcrumb for the active tab's saved request:
+  // Collection › Folder › … › Request name. Null for an unsaved/new request.
+  const breadcrumb = useMemo((): string[] | null => {
+    const id = req.savedRequestId;
+    if (!id) return null;
+    const request = collectionStore.requests.find((r) => r.id === id);
+    const collection = request?.collection_id
+      ? collectionStore.collections.find((c) => c.id === request.collection_id)
+      : null;
+    if (!request || !collection) return null;
+    return [collection.name, ...buildFolderNamePath(collectionStore.folders, request.folder_id), request.name];
+  }, [req.savedRequestId, collectionStore.requests, collectionStore.collections, collectionStore.folders]);
+
+  // Collapse the middle of a long path to "…" (keep collection + last folder +
+  // request); each remaining segment still truncates individually.
+  const breadcrumbDisplay = useMemo(() => {
+    if (!breadcrumb) return null;
+    const MAX = 4;
+    if (breadcrumb.length <= MAX) return { items: breadcrumb, ellipsisAt: -1, hiddenTitle: '' };
+    return {
+      items: [breadcrumb[0], '…', breadcrumb[breadcrumb.length - 2], breadcrumb[breadcrumb.length - 1]],
+      ellipsisAt: 1,
+      hiddenTitle: breadcrumb.slice(1, breadcrumb.length - 2).join(' › '),
+    };
+  }, [breadcrumb]);
 
   const unresolvedVars = unresolvedIn(url);
 
@@ -170,7 +209,28 @@ export function MainPanel(): React.ReactElement {
       />
       <main data-testid="main-panel" className="bg-app-main text-app-primary flex flex-col overflow-hidden p-4 h-full">
         <div className="flex min-h-0 flex-1 flex-col gap-4">
-          <p className="text-app-muted text-sm">{t('fetch.requestBuilder')}</p>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-app-muted text-sm shrink-0">{t('fetch.requestBuilder')}</p>
+            {breadcrumbDisplay && (
+              <nav className="flex min-w-0 items-center gap-0.5 text-[11px] text-app-muted" aria-label="Request location" data-testid="request-breadcrumb">
+                {breadcrumbDisplay.items.map((seg, i) => {
+                  const isEllipsis = i === breadcrumbDisplay.ellipsisAt;
+                  const isLast = i === breadcrumbDisplay.items.length - 1;
+                  return (
+                    <span key={i} className="flex min-w-0 items-center gap-0.5">
+                      {i > 0 && <ChevronRight size={10} className="shrink-0 opacity-60" />}
+                      <span
+                        className={`truncate ${isEllipsis ? 'shrink-0' : 'max-w-[8rem]'} ${isLast ? 'text-app-secondary font-medium' : ''}`}
+                        title={isEllipsis ? breadcrumbDisplay.hiddenTitle : seg}
+                      >
+                        {seg}
+                      </span>
+                    </span>
+                  );
+                })}
+              </nav>
+            )}
+          </div>
 
           <div className="grid grid-cols-[8rem_1fr_auto] items-start gap-3" data-tour="request-builder">
             <div>
@@ -181,7 +241,15 @@ export function MainPanel(): React.ReactElement {
               </select>
             </div>
             <div>
-              <label htmlFor="request-url" className="text-app-secondary mb-1 block text-xs font-medium">Request URL</label>
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <label htmlFor="request-url" className="text-app-secondary text-xs font-medium">Request URL</label>
+                {req.isDirty && (
+                  <span className="flex items-center gap-1 text-xs text-app-muted" data-testid="unsaved-changes-hint" style={{ animation: 'app-fade-in 0.2s ease-out' }}>
+                    <Save size={11} className="shrink-0" />
+                    Unsaved changes — save them with the Save button.
+                  </span>
+                )}
+              </div>
               <HighlightedUrlInput id="request-url" value={url} onChange={setUrl} placeholder="https://api.example.com" variables={activeVariables} />
               {unresolvedVars.length > 0 && (
                 <p className="mt-1 flex flex-wrap items-center gap-1 text-xs text-orange-400">
@@ -209,7 +277,7 @@ export function MainPanel(): React.ReactElement {
                   </button>
                 )}
                 <span className="w-px self-stretch bg-app-subtle opacity-50" aria-hidden="true" />
-                <button type="button" onClick={() => setSaveDialogOpen(true)} className="border-app-subtle text-app-secondary h-9 rounded-md border px-3 flex items-center cursor-pointer" title="Save">
+                <button type="button" onClick={handleSaveClick} className={`h-9 rounded-md border px-3 flex items-center cursor-pointer ${isSavedDirty ? "border-green-600 text-green-600 hover:bg-green-600/10" : "border-app-subtle text-app-secondary"}`} title={isSavedDirty ? "Save changes" : "Save"}>
                   <Save size={15} />
                 </button>
                 <CopyAsButton resolvedRequest={resolvedRequest} />

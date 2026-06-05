@@ -34,7 +34,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 <button
                     type="button"
                     onClick={onToggle}
-                    className="p-2 hover:bg-gray-700 rounded transition-colors"
+                    className="p-2 hover:bg-app-subtle rounded transition-colors"
                     aria-label="Expand sidebar"
                     title="Expand sidebar (Cmd/Ctrl+B)"
                 >
@@ -46,7 +46,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                         setActivePanel('collections');
                         onToggle();
                     }}
-                    className="p-2 hover:bg-gray-700 rounded transition-colors"
+                    className="p-2 hover:bg-app-subtle rounded transition-colors"
                     aria-label="Collections"
                     title="Collections"
                 >
@@ -58,7 +58,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                         setActivePanel('history');
                         onToggle();
                     }}
-                    className="p-2 hover:bg-gray-700 rounded transition-colors"
+                    className="p-2 hover:bg-app-subtle rounded transition-colors"
                     aria-label="History"
                     title="History"
                 >
@@ -71,7 +71,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                         void saveSetting('sidebar_settings_expanded', true);
                         onToggle();
                     }}
-                    className="p-2 hover:bg-gray-700 rounded transition-colors mt-auto"
+                    className="p-2 hover:bg-app-subtle rounded transition-colors mt-auto"
                     aria-label="Settings"
                     title="Settings"
                     data-testid="collapsed-settings-button"
@@ -91,20 +91,20 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 <button
                     type="button"
                     onClick={onToggle}
-                    className="p-1.5 hover:bg-gray-700 rounded transition-colors"
+                    className="p-1.5 hover:bg-app-subtle rounded transition-colors"
                     aria-label="Collapse sidebar"
                     title="Collapse sidebar (Cmd/Ctrl+B)"
                 >
                     <ChevronLeft size={18} className="text-app-muted" />
                 </button>
             </div>
-            <div className="flex shrink-0 mb-3 rounded overflow-hidden border border-gray-700">
+            <div className="flex shrink-0 mb-3 rounded overflow-hidden border border-app-subtle">
                 <button
                     type="button"
                     onClick={() => setActivePanel('collections')}
                     className={`flex-1 py-1.5 text-xs cursor-pointer ${
                         activePanel === 'collections'
-                            ? 'bg-gray-700 text-app-inverse font-medium'
+                            ? 'bg-app-subtle text-app-inverse font-medium'
                             : 'text-app-muted hover:text-app-inverse'
                     }`}
                     aria-label="Collections panel"
@@ -116,7 +116,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     onClick={() => setActivePanel('history')}
                     className={`flex-1 py-1.5 text-xs cursor-pointer ${
                         activePanel === 'history'
-                            ? 'bg-gray-700 text-app-inverse font-medium'
+                            ? 'bg-app-subtle text-app-inverse font-medium'
                             : 'text-app-muted hover:text-app-inverse'
                     }`}
                     aria-label="History panel"
