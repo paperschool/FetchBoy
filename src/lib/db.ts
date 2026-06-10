@@ -160,6 +160,16 @@ export interface Mapping {
     updated_at: string;
 }
 
+export interface IgnoreRule {
+    id: string;
+    name: string;
+    url_pattern: string;
+    match_type: 'exact' | 'partial' | 'wildcard' | 'regex';
+    enabled: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
 export interface AppSettings {
     theme: 'light' | 'dark' | 'system';
     request_timeout_ms: number;

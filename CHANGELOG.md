@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.23.1] - 2026-06-10
+
+- feat: New "Ignore" tab in the Intercept view to bypass noisy URLs — matching requests pass straight through and never appear in the Requests table
+- feat: Ignore rules use the same exact/partial/wildcard/regex matching as overrides, with a simple enable/disable toggle per rule
+- feat: While enabled, a matching rule's traffic is exempt from breakpoints and overrides, and rules sync to the running proxy instantly — no restart
+- fix: Fixed a backend test fixture that blocked the Rust test suite from compiling
+
 ## [0.23.0] - 2026-06-05
 
 - feat: Closing a tab with unsaved edits to a saved request now prompts (Save / Don't Save / Cancel) instead of discarding silently; a green in-place Save button and an "Unsaved changes" hint show when a saved request is dirty

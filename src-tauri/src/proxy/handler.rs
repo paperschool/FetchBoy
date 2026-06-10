@@ -25,6 +25,7 @@ pub struct InterceptHandler {
     chain_emit_fn: ChainEmitFn,
     breakpoints: BreakpointsRef,
     mappings: MappingsRef,
+    ignore_rules: IgnoreRulesRef,
     pause_registry: PauseRegistryRef,
     pause_timeout: PauseTimeoutRef,
     chain_registry: ChainRegistryRef,
@@ -45,6 +46,7 @@ impl InterceptHandler {
         chain_emit_fn: ChainEmitFn,
         breakpoints: BreakpointsRef,
         mappings: MappingsRef,
+        ignore_rules: IgnoreRulesRef,
         pause_registry: PauseRegistryRef,
         pause_timeout: PauseTimeoutRef,
         chain_registry: ChainRegistryRef,
@@ -58,6 +60,7 @@ impl InterceptHandler {
             chain_emit_fn,
             breakpoints,
             mappings,
+            ignore_rules,
             pause_registry,
             pause_timeout,
             chain_registry,
@@ -104,11 +107,24 @@ impl HttpHandler for InterceptHandler {
             .cloned()
             .unwrap_or_default();
 
+        // ── Ignore-rule bypass ─────────────────────────────────────────────
+        // If an enabled ignore rule matches, forward the request completely
+        // untouched: no header mutation, no capture, no emit, no breakpoint,
+        // no mapping. Evaluate before any mutation so the request is verbatim.
+        let full_url_for_ignore = format!("https://{}{}", host, path);
+        let bypass = {
+            let guard = self.ignore_rules.lock().expect("ignore rules lock");
+            should_bypass(&guard, &full_url_for_ignore)
+        };
+
         // Override Accept-Encoding to "identity" so the server sends uncompressed
         // responses (readable without a decompression step). We set the header
         // rather than removing it because some CDN/WAF systems (e.g. Akamai) flag
         // requests that are missing Accept-Encoding entirely as bot traffic.
-        req.headers_mut().insert("accept-encoding", HeaderValue::from_static("identity"));
+        // Skipped for bypassed requests so they pass through verbatim.
+        if !bypass {
+            req.headers_mut().insert("accept-encoding", HeaderValue::from_static("identity"));
+        }
 
         // Shared slot: the async block writes the captured request body; handle_response reads it.
         let body_slot: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
@@ -116,16 +132,20 @@ impl HttpHandler for InterceptHandler {
 
         // Store synchronously before returning the future — safe because this clone
         // of the handler is dedicated to this single request/response pair.
-        self.pending = Some(PendingRequest {
-            id: id.clone(),
-            timestamp,
-            method: method.clone(),
-            host: host.clone(),
-            path: path.clone(),
-            request_headers: request_headers.clone(),
-            request_body: body_slot,
-            started: std::time::Instant::now(),
-        });
+        // Skipped on bypass: leaving `pending` as None signals handle_response to
+        // forward the response untouched and emit nothing.
+        if !bypass {
+            self.pending = Some(PendingRequest {
+                id: id.clone(),
+                timestamp,
+                method: method.clone(),
+                host: host.clone(),
+                path: path.clone(),
+                request_headers: request_headers.clone(),
+                request_body: body_slot,
+                started: std::time::Instant::now(),
+            });
+        }
 
         let request_emit_fn = Arc::clone(&self.request_emit_fn);
         let response_emit_fn_for_block = Arc::clone(&self.response_emit_fn);
@@ -134,6 +154,11 @@ impl HttpHandler for InterceptHandler {
         let mappings_for_remap = Arc::clone(&self.mappings);
 
         async move {
+            // Bypassed request: forward verbatim with no capture/emit/remap/block.
+            if bypass {
+                return RequestOrResponse::Request(req);
+            }
+
             // Buffer the request body so we can both capture it and forward it upstream.
             let (mut parts, body) = req.into_parts();
             let bytes: Bytes = body.collect().await.unwrap_or_default().to_bytes();
@@ -334,6 +359,12 @@ impl HttpHandler for InterceptHandler {
         let chain_timeout_ref = Arc::clone(&self.chain_timeout);
 
         async move {
+            // No pending request means handle_request bypassed it (matched an
+            // ignore rule). Forward the response untouched and emit nothing.
+            if req_info.is_none() {
+                return res;
+            }
+
             let (mut parts, body) = res.into_parts();
             let response_headers = collect_headers(&parts.headers);
 
@@ -799,11 +830,12 @@ mod tests {
         let chain_emit_fn: ChainEmitFn = Arc::new(|_| {});
         let breakpoints: BreakpointsRef = Arc::new(Mutex::new(Vec::new()));
         let mappings: MappingsRef = Arc::new(Mutex::new(Vec::new()));
+        let ignore_rules: IgnoreRulesRef = Arc::new(Mutex::new(Vec::new()));
         let pause_registry: PauseRegistryRef = Arc::new(Mutex::new(HashMap::new()));
         let pause_timeout: PauseTimeoutRef = Arc::new(Mutex::new(30));
         let chain_registry: ChainRegistryRef = Arc::new(Mutex::new(HashMap::new()));
         let chain_timeout: ChainTimeoutRef = Arc::new(Mutex::new(30));
-        let handler = InterceptHandler::new(paused_emit_fn, request_emit_fn, response_emit_fn, mapping_emit_fn, chain_emit_fn, breakpoints, mappings, pause_registry, pause_timeout, chain_registry, chain_timeout);
+        let handler = InterceptHandler::new(paused_emit_fn, request_emit_fn, response_emit_fn, mapping_emit_fn, chain_emit_fn, breakpoints, mappings, ignore_rules, pause_registry, pause_timeout, chain_registry, chain_timeout);
         assert!(handler.pending.is_none());
     }
 }

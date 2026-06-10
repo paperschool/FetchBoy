@@ -119,5 +119,11 @@ pub fn migrations() -> Vec<Migration> {
             sql: include_str!("../migrations/019_environment_ownership.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 20,
+            description: "create_ignore_rules_table",
+            sql: include_str!("../migrations/020_ignore_rules.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }

@@ -57,6 +57,21 @@ export function breakpointFormToDb(form: {
   };
 }
 
+/** Shared form→DB field mapping for ignore rules. */
+export function ignoreRuleFormToDb(form: {
+  name: string;
+  urlPattern: string;
+  matchType: string;
+  enabled: boolean;
+}): Record<string, unknown> {
+  return {
+    name: form.name,
+    url_pattern: form.urlPattern,
+    match_type: form.matchType,
+    enabled: form.enabled,
+  };
+}
+
 /** Shared form→DB field mapping for mappings. */
 export function mappingFormToDb(form: {
   name: string;

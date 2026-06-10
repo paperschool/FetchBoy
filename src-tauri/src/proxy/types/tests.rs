@@ -256,6 +256,7 @@ fn chain_execution_request_event_serialises_camelcase() {
         status: 200,
         headers,
         body: "{\"test\":true}".to_string(),
+        url: "https://api.example.com/users".to_string(),
     };
 
     let json = serde_json::to_value(&event).unwrap();

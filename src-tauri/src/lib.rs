@@ -39,6 +39,9 @@ pub struct BreakpointsState(pub proxy::BreakpointsRef);
 /// Shared mapping rules — kept in sync via the sync_mappings command.
 pub struct MappingsState(pub proxy::MappingsRef);
 
+/// Shared ignore rules — kept in sync via the sync_ignore_rules command.
+pub struct IgnoreRulesState(pub proxy::IgnoreRulesRef);
+
 /// Pause registry — maps request_id to a oneshot sender so Tauri commands can resume paused proxy handlers.
 pub struct PauseRegistryState(pub proxy::PauseRegistryRef);
 
@@ -283,6 +286,11 @@ pub fn run() {
                 Arc::new(std::sync::Mutex::new(Vec::new()));
             app.manage(MappingsState(Arc::clone(&mappings_ref)));
 
+            // Shared ignore rules ref — populated at runtime via sync_ignore_rules.
+            let ignore_rules_ref: proxy::IgnoreRulesRef =
+                Arc::new(std::sync::Mutex::new(Vec::new()));
+            app.manage(IgnoreRulesState(Arc::clone(&ignore_rules_ref)));
+
             // Pause registry and timeout state.
             let pause_registry_ref: proxy::PauseRegistryRef =
                 Arc::new(std::sync::Mutex::new(std::collections::HashMap::new()));
@@ -313,6 +321,7 @@ pub fn run() {
                         chain_emit_fn,
                         breakpoints_ref,
                         mappings_ref,
+                        ignore_rules_ref,
                         pause_registry_ref,
                         pause_timeout_ref,
                         chain_registry_ref,
@@ -350,6 +359,7 @@ pub fn run() {
             commands::match_breakpoint_url,
             commands::sync_breakpoints,
             commands::sync_mappings,
+            commands::sync_ignore_rules,
             commands::resume_request,
             commands::get_pause_timeout,
             commands::set_pause_timeout,

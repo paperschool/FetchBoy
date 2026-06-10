@@ -1,5 +1,15 @@
 # Long Changelog
 
+## [0.23.1] - 2026-06-10
+
+Epic 22 (cont.) — Story 22.10: Intercept Ignore Rules (proxy bypass list).
+
+- feat: ignore rules (Story 22.10) — a new "Ignore" sub-tab in the Intercept view (`InterceptView` top-tab tuple `requests | mapping-log | ignore`) manages URL-match rules that the proxy bypasses. Each rule is name + URL pattern + match type (exact/partial/wildcard/regex) + enabled, reusing the shared `UrlPatternInput`/`MATCH_TYPES`/`validateUrlPattern` from mappings; the editor (`IgnoreRuleEditor`) mounts in the same bottom region as `MappingEditor`/`BreakpointEditor`, and the list (`IgnoreRulesTable`) loads + syncs on mount mirroring `MappingsTree`
+- feat: interception-level bypass (Rust) — `handle_request` evaluates enabled ignore rules against `https://{host}{path}` via the shared `match_url` *before* any header mutation or capture; on a match it skips the `accept-encoding` override, leaves `pending = None`, and early-returns `RequestOrResponse::Request(req)` untouched, while `handle_response` returns the response verbatim when `pending` is `None` — so a matched request is never captured, emitted, paused by a breakpoint, or rewritten by a mapping. The decision is factored into a unit-tested pure `should_bypass(&[IgnoreRule], url)` helper
+- feat: persistence + runtime sync — new `ignore_rules` SQLite table (migration 020), an `IgnoreRule` type + `IgnoreRulesRef` shared state managed in `lib.rs`, a `sync_ignore_rules` Tauri command mirroring `sync_mappings`, and an `ignoreRulesStore` zustand store + `src/lib/ignoreRules.ts` CRUD/sync; rules are threaded through both `proxy.start()` call sites (startup + restart-on-enable in `set_proxy_config`) and re-synced on every CRUD so an enabled rule stays active across a proxy toggle without a restart
+- fix: pre-existing Rust test breakage — `proxy/types/tests.rs` constructed `ChainExecutionRequestEvent` without its later-added `url` field, failing the whole Rust test target's compile; added the missing field to the fixture
+- chore: `npx tsc -b` clean, `cargo check`/`cargo test` clean — 47 Rust + 1319 TS tests pass, including new ignore-rule store/table/handler tests
+
 ## [0.23.0] - 2026-06-05
 
 Epic 22 — Tab Lifecycle, Per-Collection Environments, Proxy Reconciliation & Light-Mode Theme.

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    BreakpointsState, ChainRegistryState, ChainTimeoutState, MappingsState,
+    BreakpointsState, ChainRegistryState, ChainTimeoutState, IgnoreRulesState, MappingsState,
     PauseRegistryState, PauseTimeoutState, ProxyConfigState, ProxyRestartInfo, ProxyState,
 };
 use crate::{cert, proxy};
@@ -22,6 +22,7 @@ pub async fn set_proxy_config(
     restart_info: tauri::State<'_, ProxyRestartInfo>,
     breakpoints: tauri::State<'_, BreakpointsState>,
     mappings_state: tauri::State<'_, MappingsState>,
+    ignore_rules_state: tauri::State<'_, IgnoreRulesState>,
     pause_registry: tauri::State<'_, PauseRegistryState>,
     pause_timeout: tauri::State<'_, PauseTimeoutState>,
     chain_registry: tauri::State<'_, ChainRegistryState>,
@@ -90,6 +91,7 @@ pub async fn set_proxy_config(
             Arc::clone(&restart_info.chain_emit_fn),
             Arc::clone(&breakpoints.0),
             Arc::clone(&mappings_state.0),
+            Arc::clone(&ignore_rules_state.0),
             Arc::clone(&pause_registry.0),
             Arc::clone(&pause_timeout.0),
             Arc::clone(&chain_registry.0),

@@ -39,6 +39,7 @@ impl ProxyServer {
         chain_emit_fn: ChainEmitFn,
         breakpoints: BreakpointsRef,
         mappings: MappingsRef,
+        ignore_rules: IgnoreRulesRef,
         pause_registry: PauseRegistryRef,
         pause_timeout: PauseTimeoutRef,
         chain_registry: ChainRegistryRef,
@@ -48,7 +49,7 @@ impl ProxyServer {
         self.shutdown_tx = Some(shutdown_tx);
 
         let port = self.port;
-        let handler = InterceptHandler::new(paused_emit_fn, request_emit_fn, response_emit_fn, mapping_emit_fn, chain_emit_fn, breakpoints, mappings, pause_registry, pause_timeout, chain_registry, chain_timeout);
+        let handler = InterceptHandler::new(paused_emit_fn, request_emit_fn, response_emit_fn, mapping_emit_fn, chain_emit_fn, breakpoints, mappings, ignore_rules, pause_registry, pause_timeout, chain_registry, chain_timeout);
         let crypto_provider = rustls::crypto::ring::default_provider();
 
         tauri::async_runtime::spawn(async move {
