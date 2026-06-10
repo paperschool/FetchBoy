@@ -47,6 +47,7 @@ export const intercept = {
   'intercept.ignoreName': 'Name',
   'intercept.ignoreCount': '{count} ignore rule{plural}',
   'intercept.ignoreDescription': 'Requests matching an enabled rule bypass the proxy entirely — not captured, not paused by breakpoints, not modified by overrides.',
+  'intercept.ignoreSaveFailed': 'Save failed',
   'intercept.noRequestsMatch': 'No requests match filters',
   'intercept.allMethods': 'All methods',
   'intercept.allStatuses': 'All statuses',

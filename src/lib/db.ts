@@ -224,6 +224,12 @@ export async function getDb(): Promise<Database> {
         try { await _db.execute('ALTER TABLE collections ADD COLUMN pre_request_script_enabled INTEGER NOT NULL DEFAULT 1'); } catch { /* exists */ }
         // Ensure environment ownership column exists (migration 019)
         try { await _db.execute('ALTER TABLE environments ADD COLUMN owner_collection_id TEXT'); } catch { /* exists */ }
+        // Ensure ignore_rules table exists (migration 020)
+        await _db.execute(`CREATE TABLE IF NOT EXISTS ignore_rules (
+            id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL DEFAULT 'New Ignore Rule',
+            url_pattern TEXT NOT NULL DEFAULT '', match_type TEXT NOT NULL DEFAULT 'partial',
+            enabled INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+        )`);
     }
     return _db;
 }

@@ -45,6 +45,8 @@ interface IgnoreRulesState {
     startEditing: (rule?: IgnoreRule) => void;
     cancelEditing: () => void;
     saveRule: (form: IgnoreRuleEditForm) => Promise<void>;
+    /** Save without closing the editor. Returns the rule id (useful for newly created rules). */
+    silentSave: (form: IgnoreRuleEditForm) => Promise<string>;
 }
 
 export const useIgnoreRulesStore = create<IgnoreRulesState>()(
@@ -126,6 +128,31 @@ export const useIgnoreRulesStore = create<IgnoreRulesState>()(
                 },
             });
             await syncIgnoreRulesToProxy(get().rules);
+        },
+
+        silentSave: async (form: IgnoreRuleEditForm) => {
+            let savedId = form.id;
+            await saveEntity({
+                form,
+                dbCreate: (f) => dbCreateIgnoreRule(f.name, f.urlPattern, f.matchType),
+                dbUpdate: dbUpdateIgnoreRule,
+                formToDbChanges: ignoreRuleFormToDb,
+                applyToState: (entity, isNew) => {
+                    savedId = entity.id;
+                    set((state) => {
+                        if (isNew) {
+                            state.rules.push(entity as unknown as IgnoreRule);
+                        } else {
+                            const r = state.rules.find((x) => x.id === form.id);
+                            if (r) Object.assign(r, ignoreRuleFormToDb(form));
+                        }
+                        // Do NOT update editForm.id here — the component tracks it via a
+                        // ref so the React key stays stable and the editor isn't remounted.
+                    });
+                },
+            });
+            await syncIgnoreRulesToProxy(get().rules);
+            return savedId!;
         },
     })),
 );

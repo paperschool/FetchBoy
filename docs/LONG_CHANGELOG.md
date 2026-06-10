@@ -1,5 +1,15 @@
 # Long Changelog
 
+## [0.23.2] - 2026-06-10
+
+Epic 22 (cont.) — launch without binding the proxy + ignore-rule silent autosave.
+
+- refactor: proxy not started at boot (`lib.rs`) — the setup hook no longer constructs a `ProxyServer` or binds port 8080 on launch; it only runs `CertificateAuthority::load_or_create` so the CA exists for the install-cert UI, then manages `ProxyState(None)`. The MITM listener is now created exclusively on demand by `set_proxy_config` when the user enables it (which already loads the CA and binds the user-configured port), so a fresh launch never opens a listener the user didn't ask for. This extends 22.6's "start disabled" by also not binding the port; the startup OS-proxy reconciliation (`disable_os_proxy_all_services`) and `ProxyConfigState.enabled = false` default are unchanged
+- feat: ignore-rule silent autosave (`IgnoreRuleEditor`) — replaced the explicit Save/Cancel footer with a debounced (800 ms) auto-save driven by a generation counter + value refs (so the effect depends only on the counter, not store values), surfacing an `idle | saving | saved | error` status badge; adds `silentSave` to `ignoreRulesStore` (mirrors `saveRule` via the shared `saveEntity` helper but leaves the editor open and returns the new rule id) plus an `intercept.ignoreSaveFailed` string. The editor keys off `editForm.id` and tracks the assigned id in a ref so creating a rule doesn't remount the open editor
+- fix: autosave hardening (review pass) — flush a pending save on close so closing within the debounce window can't silently drop an edit; a single-save invariant via `savingRef` (a request arriving while a save is in flight re-arms instead of firing, preventing a slow create from duplicating the rule); `buildForm` restores the `name.trim() || default` fallback and trims the URL pattern; the enabled toggle on an existing rule goes through `toggleEnabled` only (no second debounced write that could diverge); the status badge flips to `saving` only when a real save starts (no false "Saving…" on invalid input); and the store is read via selectors instead of a whole-store subscription
+- chore: ensure the `ignore_rules` table exists in the JS `getDb` migration path (migration 020, `CREATE TABLE IF NOT EXISTS`) so it's present regardless of which migration path ran first
+- chore: `npx tsc -b` clean; `ignoreRulesStore` suite (7 tests) passes, including a new `silentSave` test
+
 ## [0.23.1] - 2026-06-10
 
 Epic 22 (cont.) — Story 22.10: Intercept Ignore Rules (proxy bypass list).

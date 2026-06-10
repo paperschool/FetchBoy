@@ -305,37 +305,20 @@ pub fn run() {
             app.manage(ChainRegistryState(Arc::clone(&chain_registry_ref)));
             app.manage(ChainTimeoutState(Arc::clone(&chain_timeout_ref)));
 
-            // Initialise the CA and start the proxy.
+            // Ensure the CA certificate exists on disk so the user can install it
+            // from the UI, but do NOT start the proxy at boot. The MITM proxy starts
+            // only when the user explicitly enables it (set_proxy_config), which loads
+            // the CA and binds the user-configured port itself. Starting it here would
+            // bind a port the user never asked for on every launch.
             match cert::CertificateAuthority::load_or_create(app_data_dir) {
-                Ok(ca) => {
-                    emit_debug_clone("info", "ca", "CA certificate loaded");
-                    let ca_authority = ca.into_authority();
-                    let mut proxy = proxy::ProxyServer::new(8080);
-                    emit_debug_clone("info", "proxy", "Starting MITM proxy on port 8080");
-                    proxy.start(
-                        ca_authority,
-                        paused_emit_fn,
-                        request_emit_fn,
-                        response_emit_fn,
-                        mapping_emit_fn,
-                        chain_emit_fn,
-                        breakpoints_ref,
-                        mappings_ref,
-                        ignore_rules_ref,
-                        pause_registry_ref,
-                        pause_timeout_ref,
-                        chain_registry_ref,
-                        chain_timeout_ref,
-                    );
-                    app.manage(ProxyState(std::sync::Mutex::new(Some(proxy))));
-                }
+                Ok(_) => emit_debug_clone("info", "ca", "CA certificate loaded (proxy not started — enable to start)"),
                 Err(e) => {
-                    log::error!("MITM proxy CA initialisation failed — proxy disabled: {e}");
-                    emit_debug_clone("error", "ca", &format!("CA init failed — proxy disabled: {e}"));
-                    app.manage(ProxyState(std::sync::Mutex::new(None)));
-                    *app.state::<ProxyConfigState>().enabled.lock().unwrap() = false;
+                    log::error!("MITM proxy CA initialisation failed: {e}");
+                    emit_debug_clone("error", "ca", &format!("CA init failed: {e}"));
                 }
             }
+            // No proxy running at boot; the enable toggle creates it on demand.
+            app.manage(ProxyState(std::sync::Mutex::new(None)));
 
             Ok(())
         })

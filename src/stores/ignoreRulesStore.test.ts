@@ -94,4 +94,17 @@ describe('ignoreRulesStore', () => {
         expect(s.editForm.id).toBeNull();
         expect(s.selectedRuleId).toBeNull();
     });
+
+    it('silentSave creates a rule, returns its id, and leaves the editor open', async () => {
+        useIgnoreRulesStore.getState().startEditing();
+        const id = await useIgnoreRulesStore.getState().silentSave({
+            id: null, name: 'Bypass', urlPattern: 'noisy.example.com', matchType: 'partial', enabled: true,
+        });
+        const s = useIgnoreRulesStore.getState();
+        expect(id).toBe('id-1');
+        expect(s.rules).toHaveLength(1);
+        expect(s.rules[0].url_pattern).toBe('noisy.example.com');
+        expect(s.isEditing).toBe(true); // autosave does not close the editor
+        expect(syncIgnoreRulesToProxy).toHaveBeenCalled();
+    });
 });

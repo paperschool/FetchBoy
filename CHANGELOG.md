@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.23.2] - 2026-06-10
+
+- feat: The MITM proxy no longer binds a port at launch — it starts only when you enable it, so FetchBoy never opens a listener you didn't ask for
+- feat: Ignore rules now save automatically as you edit, with a live save-status indicator — no more Save/Cancel buttons
+- fix: Closing the ignore-rule editor mid-edit no longer drops your change, and a blank name falls back to a default instead of saving empty
+- fix: Fast edits to a brand-new ignore rule can no longer create a duplicate, and toggling a rule's enabled state no longer double-writes
+
 ## [0.23.1] - 2026-06-10
 
 - feat: New "Ignore" tab in the Intercept view to bypass noisy URLs — matching requests pass straight through and never appear in the Requests table
