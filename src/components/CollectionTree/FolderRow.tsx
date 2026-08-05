@@ -28,6 +28,7 @@ export interface FolderRowProps {
     onAddRequest: (folderId: string) => void;
     onAddSubFolder: (parentId: string) => void;
     onDeleteFolder: (folderId: string) => void;
+    onEditRequest: (id: string, name: string) => void;
     onSelectRequest: (id: string) => void;
     onDeleteRequest: (id: string) => void;
     onUpdateRequest: (id: string) => void;
@@ -50,6 +51,7 @@ export function FolderRow({
     onAddRequest,
     onAddSubFolder,
     onDeleteFolder,
+    onEditRequest,
     onSelectRequest,
     onDeleteRequest,
     onUpdateRequest,
@@ -173,7 +175,7 @@ export function FolderRow({
                                 editingValue={editingValue}
                                 editRef={editRef}
                                 onEditChange={onEditChange}
-                                onStartEdit={() => onEditFolder(reqNode.item.id, reqNode.item.name)}
+                                onStartEdit={() => onEditRequest(reqNode.item.id, reqNode.item.name)}
                                 onCommitEdit={onCommitEdit}
                                 onCancelEdit={onCancelEdit}
                                 onSelect={() => onSelectRequest(reqNode.item.id)}
@@ -204,6 +206,7 @@ export function FolderRow({
                                 onAddRequest={onAddRequest}
                                 onAddSubFolder={onAddSubFolder}
                                 onDeleteFolder={onDeleteFolder}
+                                onEditRequest={onEditRequest}
                                 onSelectRequest={onSelectRequest}
                                 onDeleteRequest={onDeleteRequest}
                                 onUpdateRequest={onUpdateRequest}

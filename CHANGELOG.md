@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.23.3] - 2026-08-05
+
+- fix: Renaming a saved request in the Fetch tab now actually sticks — double-click rename silently did nothing and the old name snapped back
+- fix: Request renames apply to requests sitting directly in a collection and to requests nested at any folder depth
+- fix: Renaming a request now also updates the label of any open tab for that request
+- test: Added regression coverage for request rename (collection-level, folder-level, tab label) plus a folder-rename guard
+
 ## [0.23.2] - 2026-06-10
 
 - feat: The MITM proxy no longer binds a port at launch — it starts only when you enable it, so FetchBoy never opens a listener you didn't ask for

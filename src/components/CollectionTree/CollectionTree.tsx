@@ -170,6 +170,7 @@ export function CollectionTree() {
                             onAddSubFolder={(parentId: string) => void handleAddFolder(col.id, parentId)}
                             onDeleteFolder={(folderId: string) => void handleDeleteFolder(folderId)}
                             // Request actions
+                            onEditRequest={(id: string, name: string) => startEdit('request', id, name)}
                             onSelectRequest={(id: string) => handleLoadRequest(id)}
                             onDeleteRequest={(id: string) => void handleDeleteRequest(id)}
                             onUpdateRequest={(id: string) => void handleUpdateRequest(id)}

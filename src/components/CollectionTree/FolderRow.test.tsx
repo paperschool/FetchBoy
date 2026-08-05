@@ -42,6 +42,7 @@ function renderFolder(node: TreeFolder, expandedFolders: Record<string, boolean>
                 onAddRequest={noop}
                 onAddSubFolder={noop}
                 onDeleteFolder={noop}
+                onEditRequest={noop}
                 onSelectRequest={noop}
                 onDeleteRequest={noop}
                 onUpdateRequest={noop}

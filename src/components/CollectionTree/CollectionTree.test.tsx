@@ -443,4 +443,100 @@ describe('CollectionTree', () => {
             expect(tabs[1].requestState.url).toBe(req.url);
         });
     });
+
+    describe('inline rename of requests', () => {
+        beforeEach(() => {
+            mockRenameRequest.mockResolvedValue(undefined);
+            mockRenameFolder.mockResolvedValue(undefined);
+        });
+
+        it('double-click rename on a collection-level request calls renameRequest and updates the store', async () => {
+            const col = makeCol();
+            const req = makeReq({ folder_id: null });
+            mockLoadAllCollections.mockResolvedValue({ collections: [col], folders: [], requests: [req] });
+            render(<CollectionTree />);
+            await waitFor(() => screen.getByTestId('collection-col-1'));
+            fireEvent.click(screen.getByLabelText('Expand collection'));
+            await waitFor(() => screen.getByTestId('request-req-1'));
+
+            fireEvent.doubleClick(screen.getByText('Get Users'));
+            const input = await screen.findByLabelText('Rename request');
+            fireEvent.change(input, { target: { value: 'Renamed Users' } });
+            fireEvent.keyDown(input, { key: 'Enter' });
+
+            await waitFor(() => {
+                expect(mockRenameRequest).toHaveBeenCalledWith('req-1', 'Renamed Users');
+            });
+            expect(mockRenameFolder).not.toHaveBeenCalled();
+            expect(useCollectionStore.getState().requests[0].name).toBe('Renamed Users');
+        });
+
+        it('double-click rename on a folder-level request calls renameRequest and updates the store', async () => {
+            const col = makeCol();
+            const fld = makeFld();
+            const req = makeReq({ folder_id: 'fld-1' });
+            mockLoadAllCollections.mockResolvedValue({ collections: [col], folders: [fld], requests: [req] });
+            render(<CollectionTree />);
+            await waitFor(() => screen.getByTestId('collection-col-1'));
+            fireEvent.click(screen.getByLabelText('Expand collection'));
+            await waitFor(() => screen.getByTestId('folder-fld-1'));
+            fireEvent.click(screen.getByLabelText('Expand folder'));
+            await waitFor(() => screen.getByTestId('request-req-1'));
+
+            fireEvent.doubleClick(screen.getByText('Get Users'));
+            const input = await screen.findByLabelText('Rename request');
+            fireEvent.change(input, { target: { value: 'Nested Renamed' } });
+            fireEvent.keyDown(input, { key: 'Enter' });
+
+            await waitFor(() => {
+                expect(mockRenameRequest).toHaveBeenCalledWith('req-1', 'Nested Renamed');
+            });
+            expect(mockRenameFolder).not.toHaveBeenCalled();
+            expect(useCollectionStore.getState().requests[0].name).toBe('Nested Renamed');
+        });
+
+        it('renaming a request also renames its open saved-request tabs', async () => {
+            const col = makeCol();
+            const req = makeReq({ folder_id: null });
+            mockLoadAllCollections.mockResolvedValue({ collections: [col], folders: [], requests: [req] });
+            render(<CollectionTree />);
+            await waitFor(() => screen.getByTestId('collection-col-1'));
+            fireEvent.click(screen.getByLabelText('Expand collection'));
+            await waitFor(() => screen.getByTestId('request-req-1'));
+
+            fireEvent.mouseDown(screen.getByTestId('request-req-1'), { button: 1 });
+            const openedTabId = useTabStore.getState().activeTabId;
+
+            fireEvent.doubleClick(screen.getByText('Get Users'));
+            const input = await screen.findByLabelText('Rename request');
+            fireEvent.change(input, { target: { value: 'Tab Renamed' } });
+            fireEvent.keyDown(input, { key: 'Enter' });
+
+            await waitFor(() => {
+                const tab = useTabStore.getState().tabs.find((t) => t.id === openedTabId);
+                expect(tab?.label).toBe('Tab Renamed');
+            });
+        });
+
+        it('double-click rename on a folder still calls renameFolder (no regression)', async () => {
+            const col = makeCol();
+            const fld = makeFld();
+            mockLoadAllCollections.mockResolvedValue({ collections: [col], folders: [fld], requests: [] });
+            render(<CollectionTree />);
+            await waitFor(() => screen.getByTestId('collection-col-1'));
+            fireEvent.click(screen.getByLabelText('Expand collection'));
+            await waitFor(() => screen.getByTestId('folder-fld-1'));
+
+            fireEvent.doubleClick(screen.getByText('Auth'));
+            const input = await screen.findByLabelText('Rename folder');
+            fireEvent.change(input, { target: { value: 'Renamed Auth' } });
+            fireEvent.keyDown(input, { key: 'Enter' });
+
+            await waitFor(() => {
+                expect(mockRenameFolder).toHaveBeenCalledWith('fld-1', 'Renamed Auth');
+            });
+            expect(mockRenameRequest).not.toHaveBeenCalled();
+            expect(useCollectionStore.getState().folders[0].name).toBe('Renamed Auth');
+        });
+    });
 });

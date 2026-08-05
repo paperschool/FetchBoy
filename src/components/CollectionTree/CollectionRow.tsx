@@ -38,6 +38,7 @@ export interface CollectionRowProps {
     onAddSubFolder: (parentId: string) => void;
     onDeleteFolder: (folderId: string) => void;
     // Request callbacks
+    onEditRequest: (id: string, name: string) => void;
     onSelectRequest: (id: string) => void;
     onDeleteRequest: (id: string) => void;
     onUpdateRequest: (id: string) => void;
@@ -70,6 +71,7 @@ export function CollectionRow({
     onAddRequestToFolder,
     onAddSubFolder,
     onDeleteFolder,
+    onEditRequest,
     onSelectRequest,
     onDeleteRequest,
     onUpdateRequest,
@@ -202,7 +204,7 @@ export function CollectionRow({
                                     editingValue={editingValue}
                                     editRef={editRef}
                                     onEditChange={onEditChange}
-                                    onStartEdit={() => onEditFolder(reqNode.item.id, reqNode.item.name)}
+                                    onStartEdit={() => onEditRequest(reqNode.item.id, reqNode.item.name)}
                                     onCommitEdit={onCommitEdit}
                                     onCancelEdit={onCancelEdit}
                                     onSelect={() => onSelectRequest(reqNode.item.id)}
@@ -234,6 +236,7 @@ export function CollectionRow({
                                 onAddRequest={onAddRequestToFolder}
                                 onAddSubFolder={onAddSubFolder}
                                 onDeleteFolder={onDeleteFolder}
+                                onEditRequest={onEditRequest}
                                 onSelectRequest={onSelectRequest}
                                 onDeleteRequest={onDeleteRequest}
                                 onUpdateRequest={onUpdateRequest}

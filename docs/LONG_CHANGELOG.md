@@ -1,5 +1,15 @@
 # Long Changelog
 
+## [0.23.3] - 2026-08-05
+
+Bug fix — saved-request inline rename in the collection tree.
+
+- fix: request rename dispatched the wrong edit type (`CollectionRow.tsx`, `FolderRow.tsx`) — both rendered `RequestRow` with `onStartEdit={() => onEditFolder(reqNode.item.id, reqNode.item.name)}`, and `onEditFolder` resolves to `startEdit('folder', …)` in `CollectionTree.tsx`. `commitEdit` (`useCollectionInlineEdit.ts`) therefore took the folder branch and ran `dbRenameFolder(requestId, name)` → `UPDATE folders WHERE id = <requestId>` matched 0 rows, followed by `store.renameFolder(requestId, …)` which found no folder — a silent double no-op, so the input closed and the old name snapped back
+- fix: added a dedicated request-rename callback chain — `onEditRequest` is introduced on `CollectionRowProps` and `FolderRowProps`, wired at the top as `onEditRequest={(id, name) => startEdit('request', id, name)}`, consumed by `RequestRow.onStartEdit` at both the collection-root and in-folder render sites, and passed through `FolderRow`'s recursion so requests nested at any depth rename correctly. The `request` branch of `commitEdit` also calls `useTabStore.getState().renameSavedRequestTabs`, so open tabs now relabel on rename
+- chore: only the double-click path was affected — newly created requests auto-enter edit mode via `useCollectionCrud.ts`, which already passed `startEdit("request", …)`, which is why the defect went unnoticed
+- test: four regression tests in `CollectionTree.test.tsx` (`inline rename of requests`) — collection-level rename, folder-nested rename (both asserting `renameRequest` is called and `renameFolder` is not), tab-label propagation via `renameSavedRequestTabs`, and a folder-rename guard; the three request tests fail against the old wiring. `FolderRow.test.tsx` updated for the new required prop
+- chore: `npx tsc -b` clean; full suite green — 118 files, 1324 tests
+
 ## [0.23.2] - 2026-06-10
 
 Epic 22 (cont.) — launch without binding the proxy + ignore-rule silent autosave.
