@@ -25,6 +25,12 @@ vi.mock('@/lib/stitchFolders', () => ({
   updateChainOrder: vi.fn(),
 }));
 
+// Pass-through — the migration itself is covered by stitchMappingMigration.test.ts
+vi.mock('@/lib/stitchMappingMigration', () => ({
+  ensureMappingChainUpToDate: vi.fn((_chainId, nodes, connections) => Promise.resolve({ nodes, connections })),
+  syncMappingChainFlags: vi.fn(() => Promise.resolve()),
+}));
+
 const makeChain = (overrides: Partial<StitchChain> = {}): StitchChain => ({
   id: 'chain-1',
   name: 'Test Chain',

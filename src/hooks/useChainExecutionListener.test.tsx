@@ -17,6 +17,12 @@ vi.mock('@/lib/stitch', () => ({
   loadChainWithNodes: vi.fn(),
 }));
 
+// Mock the chain migration helper as a pass-through — covered separately in
+// stitchMappingMigration.test.ts
+vi.mock('@/lib/stitchMappingMigration', () => ({
+  ensureMappingChainUpToDate: vi.fn((_chainId, nodes, connections) => Promise.resolve({ nodes, connections })),
+}));
+
 // Mock stitch engine (executeMappingNode)
 vi.mock('@/lib/stitchEngine', () => ({
   executeMappingNode: vi.fn(),
@@ -75,6 +81,7 @@ describe('useChainExecutionListener', () => {
     vi.mocked(executeMappingNode).mockResolvedValue({
       status: 201,
       headers: { 'x-custom': 'test' },
+      setCookies: ['session=abc123'],
       body: '{"ok":true}',
       bodyContentType: 'application/json',
     });
@@ -91,6 +98,10 @@ describe('useChainExecutionListener', () => {
           status: 200,
           headers: { 'content-type': 'application/json' },
           body: '{"original":true}',
+          url: 'https://example.com/api',
+          requestMethod: 'POST',
+          requestHeaders: { cookie: 'session=old' },
+          requestBody: '{"input":true}',
         },
       });
       // Allow microtasks to settle
@@ -100,18 +111,28 @@ describe('useChainExecutionListener', () => {
     expect(loadChainWithNodes).toHaveBeenCalledWith('chain-1');
     expect(executeMappingNode).toHaveBeenCalledWith(
       mappingNode,
-      { status: 200, headers: { 'content-type': 'application/json' }, body: { original: true } },
+      {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+        body: { original: true },
+        url: 'https://example.com/api',
+        requestMethod: 'POST',
+        requestHeaders: { cookie: 'session=old' },
+        requestBody: { input: true },
+      },
       [mappingNode],
       [],
       expect.any(Object),
       expect.any(Object),
       expect.any(Object),
+      true,
     );
     expect(invoke).toHaveBeenCalledWith('resume_chain', {
       requestId: 'req-1',
       success: true,
       status: 201,
       headers: { 'x-custom': 'test' },
+      setCookies: ['session=abc123'],
       body: '{"ok":true}',
       bodyContentType: 'application/json',
     });
@@ -137,6 +158,10 @@ describe('useChainExecutionListener', () => {
           status: 200,
           headers: {},
           body: '',
+          url: '',
+          requestMethod: 'GET',
+          requestHeaders: {},
+          requestBody: '',
         },
       });
       await new Promise((r) => setTimeout(r, 50));
@@ -147,6 +172,7 @@ describe('useChainExecutionListener', () => {
       success: false,
       status: null,
       headers: null,
+      setCookies: null,
       body: null,
       bodyContentType: null,
     });
@@ -178,6 +204,10 @@ describe('useChainExecutionListener', () => {
           status: 200,
           headers: {},
           body: '',
+          url: '',
+          requestMethod: 'GET',
+          requestHeaders: {},
+          requestBody: '',
         },
       });
       await new Promise((r) => setTimeout(r, 50));
@@ -188,6 +218,7 @@ describe('useChainExecutionListener', () => {
       success: false,
       status: null,
       headers: null,
+      setCookies: null,
       body: null,
       bodyContentType: null,
     });

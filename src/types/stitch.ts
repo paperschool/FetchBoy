@@ -1,6 +1,6 @@
 // ─── Stitch Node Types ──────────────────────────────────────────────────────
 
-export type StitchNodeType = 'request' | 'json-object' | 'js-snippet' | 'sleep' | 'loop' | 'merge' | 'condition' | 'mapping' | 'mapping-entry' | 'mapping-exit' | 'fetch-terminal';
+export type StitchNodeType = 'request' | 'json-object' | 'js-snippet' | 'sleep' | 'log' | 'loop' | 'merge' | 'condition' | 'mapping' | 'mapping-entry' | 'mapping-response' | 'mapping-exit' | 'fetch-terminal';
 
 export type StitchExecutionState = 'idle' | 'running' | 'paused' | 'completed' | 'error';
 
@@ -111,6 +111,16 @@ export interface MappingEntryNodeConfig {
 
 export const DEFAULT_MAPPING_ENTRY_CONFIG: MappingEntryNodeConfig = {
   isEntryNode: true,
+};
+
+/** The "wire" node — marks where the real upstream request/response round trip
+ * happens. Its output is the real response; it takes no wired input. */
+export interface MappingResponseNodeConfig {
+  isResponseNode: true;
+}
+
+export const DEFAULT_MAPPING_RESPONSE_CONFIG: MappingResponseNodeConfig = {
+  isResponseNode: true,
 };
 
 export interface MappingExitNodeConfig {

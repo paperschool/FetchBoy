@@ -6,6 +6,7 @@ import { executeJsonObjectNode } from './jsonObjectExecutor';
 import { executeJsSnippetNode } from './jsSnippetExecutor';
 import { executeRequestNode } from './requestExecutor';
 import { executeSleepNode } from './sleepExecutor';
+import { executeLogNode } from './logExecutor';
 
 export async function executeLoopNode(
   loopNode: StitchNode,
@@ -103,6 +104,12 @@ export async function executeLoopNode(
           case 'sleep':
             output = await executeSleepNode(childNode, childInput, callbacks, cancelledRef);
             break;
+          case 'log': {
+            const logResult = executeLogNode(childNode, childInput);
+            output = logResult.output;
+            childConsoleLogs = logResult.consoleLogs;
+            break;
+          }
           default:
             throw new Error(`Unsupported node type in loop: ${childNode.type}`);
         }

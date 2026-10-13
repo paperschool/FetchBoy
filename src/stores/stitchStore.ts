@@ -3,11 +3,20 @@ import { immer } from 'zustand/middleware/immer';
 import type { StitchChain, StitchFolder, StitchNode, StitchConnection, StitchExecutionState, ExecutionLogEntry } from '@/types/stitch';
 import * as stitchDb from '@/lib/stitch';
 import * as stitchFolderDb from '@/lib/stitchFolders';
+import { ensureMappingChainUpToDate, syncMappingChainFlags } from '@/lib/stitchMappingMigration';
 import { executeChain } from '@/lib/stitchEngine';
 import { useEnvironmentStore } from '@/stores/environmentStore';
 
 // Mutable ref lives outside immer — never frozen
 const cancelledRef = { current: false };
+
+/** Recomputes and persists needs_request_chain/needs_response_chain for the mapping bound
+ * to the currently active chain (a no-op if the active chain isn't mapping-bound). */
+function syncActiveMappingChainFlags(): Promise<void> {
+  const state = useStitchStore.getState();
+  const chain = state.chains.find((c) => c.id === state.activeChainId);
+  return syncMappingChainFlags(chain?.mappingId, state.nodes, state.connections);
+}
 
 // ─── State ──────────────────────────────────────────────────────────────────
 
@@ -22,6 +31,10 @@ interface StitchState {
   executionState: StitchExecutionState;
   executionCurrentNodeId: string | null;
   executionNodeOutputs: Record<string, unknown>;
+  /** Populated only by the request-side (pre-forwarding) execution phase — kept
+   * separate from executionNodeOutputs so Response's request-firing shape
+   * (method/url/headers/body) isn't clobbered by its later reply shape. */
+  executionRequestNodeOutputs: Record<string, unknown>;
   executionError: { nodeId: string; message: string } | null;
   executionLogs: ExecutionLogEntry[];
   executionStartTime: number;
@@ -87,6 +100,7 @@ export const useStitchStore = create<StitchState>()(
     executionState: 'idle' as StitchExecutionState,
     executionCurrentNodeId: null,
     executionNodeOutputs: {},
+    executionRequestNodeOutputs: {},
     executionError: null,
     executionLogs: [],
     executionStartTime: 0,
@@ -107,11 +121,15 @@ export const useStitchStore = create<StitchState>()(
     },
 
     loadChain: async (chainId: string) => {
-      const { chain, nodes, connections } = await stitchDb.loadChainWithNodes(chainId);
+      const loaded = await stitchDb.loadChainWithNodes(chainId);
+      // Legacy mapping chains predate keyed entry→exit connections and/or the
+      // Response node — upgrade in place on every load so any navigation path
+      // (sidebar, View Chain button, etc.) sees the current shape.
+      const { nodes, connections } = await ensureMappingChainUpToDate(chainId, loaded.nodes, loaded.connections);
       set((state) => {
-        const idx = state.chains.findIndex((c) => c.id === chain.id);
-        if (idx >= 0) state.chains[idx] = chain;
-        state.activeChainId = chain.id;
+        const idx = state.chains.findIndex((c) => c.id === loaded.chain.id);
+        if (idx >= 0) state.chains[idx] = loaded.chain;
+        state.activeChainId = loaded.chain.id;
         state.nodes = nodes;
         state.connections = connections;
         state.selectedNodeId = null;
@@ -143,18 +161,18 @@ export const useStitchStore = create<StitchState>()(
       // If chain is bound to a mapper, unhook it and re-sync proxy
       if (chain?.mappingId) {
         const { updateMapping, syncMappingsToProxy } = await import('@/lib/mappings');
-        await updateMapping(chain.mappingId, { use_chain: false, chain_id: null }).catch(() => {});
+        await updateMapping(chain.mappingId, { use_chain: false, chain_id: null }).catch(() => { });
         const { useMappingsStore } = await import('@/stores/mappingsStore');
         useMappingsStore.setState((state) => {
           const m = state.mappings.find((x) => x.id === chain.mappingId);
           if (m) { m.use_chain = false; m.chain_id = null; }
         });
-        await syncMappingsToProxy(useMappingsStore.getState().mappings).catch(() => {});
+        await syncMappingsToProxy(useMappingsStore.getState().mappings).catch(() => { });
       }
       // If chain is bound to a request (pre-request chain), unset pre_request_chain_id
       if (chain?.requestId) {
         const { updateSavedRequest } = await import('@/lib/collections');
-        await updateSavedRequest(chain.requestId, { pre_request_chain_id: null } as never).catch(() => {});
+        await updateSavedRequest(chain.requestId, { pre_request_chain_id: null } as never).catch(() => { });
       }
       await stitchDb.deleteChain(id);
       set((state) => {
@@ -183,6 +201,7 @@ export const useStitchStore = create<StitchState>()(
         state.selectedConnectionId = null;
         state.executionState = 'idle';
         state.executionNodeOutputs = {};
+        state.executionRequestNodeOutputs = {};
         state.executionLogs = [];
         state.previewNodeId = null;
         state.bottomPanel = 'none';
@@ -367,6 +386,7 @@ export const useStitchStore = create<StitchState>()(
         state.connections.push(created);
       });
       await stitchDb.insertConnection(created);
+      await syncActiveMappingChainFlags();
       return created;
     },
 
@@ -375,6 +395,7 @@ export const useStitchStore = create<StitchState>()(
       set((state) => {
         state.connections = state.connections.filter((c) => c.id !== id);
       });
+      await syncActiveMappingChainFlags();
     },
 
     updateConnection: async (id, changes) => {
@@ -383,6 +404,7 @@ export const useStitchStore = create<StitchState>()(
         if (conn && changes.targetSlot !== undefined) conn.targetSlot = changes.targetSlot;
       });
       await stitchDb.updateConnection(id, changes);
+      await syncActiveMappingChainFlags();
     },
 
     selectConnection: (id) =>
@@ -423,6 +445,7 @@ export const useStitchStore = create<StitchState>()(
         state.executionState = 'running';
         state.executionCurrentNodeId = null;
         state.executionNodeOutputs = {};
+        state.executionRequestNodeOutputs = {};
         state.executionError = null;
         state.executionLogs = [];
         state.executionStartTime = startTime;
@@ -510,11 +533,15 @@ export const useStitchStore = create<StitchState>()(
             state.executionCurrentNodeId = null;
             state.sleepCountdown = null;
           });
-          // Fade out green highlights after 4 seconds so subsequent runs are visible
+          // Fade the connection highlight animation down to a resting dim state
+          // after 4s (handled entirely by the CSS `forwards`-filled animation —
+          // see .stitch-connection-fading). Deliberately does NOT clear
+          // executionNodeOutputs: the Debug Log/Preview panels read from it to
+          // show the last run's result, and it should persist until the next
+          // run replaces it, not vanish a few seconds after the run finishes.
           setTimeout(() => {
             set((state) => {
               if (state.executionState === 'completed') {
-                state.executionNodeOutputs = {};
                 state.executionState = 'idle';
               }
             });
@@ -591,6 +618,7 @@ export const useStitchStore = create<StitchState>()(
           state.bottomPanel = 'preview';
         });
       } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
         set((state) => {
           state.executionLogs.push({
             nodeId,
@@ -598,8 +626,13 @@ export const useStitchStore = create<StitchState>()(
             nodeType: node.type,
             status: 'error',
             timestamp: Date.now() - (executionStartTime || Date.now()),
-            error: err instanceof Error ? err.message : String(err),
+            error: message,
           });
+          // Surface the failure — previously this only appended a silent log
+          // entry, so a replay error (e.g. a JS Snippet throwing) never showed
+          // unless the user happened to already be on the Debug Log tab.
+          state.executionError = { nodeId, message };
+          state.bottomPanel = 'debug';
         });
       }
     },

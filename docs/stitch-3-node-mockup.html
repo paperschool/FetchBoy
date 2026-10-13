@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Stitch Mapping Chain — 3-Node Model Mockup</title>
+<style>
+  :root {
+    --app-text-primary: #f3f4f6;
+    --app-text-secondary: #d1d5db;
+    --app-text-muted: #9ca3af;
+    --app-surface-main: #111827;
+    --app-surface-sidebar: #030712;
+    --app-surface-topbar: #0f172a;
+    --app-surface-hover: #1f2937;
+    --app-border-subtle: #374151;
+
+    --yellow: #eab308;
+    --orange: #f97316;
+    --amber: #f59e0b;
+    --green: #22c55e;
+    --red: #ef4444;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--app-surface-main);
+    color: var(--app-text-primary);
+    padding: 24px;
+  }
+
+  h1 { font-size: 15px; font-weight: 600; margin: 0 0 4px; }
+  p.lede { color: var(--app-text-muted); font-size: 12.5px; margin: 0 0 20px; }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--app-border-subtle);
+    margin-bottom: 20px;
+  }
+  .tab {
+    background: none;
+    border: none;
+    color: var(--app-text-muted);
+    font-size: 12.5px;
+    font-weight: 500;
+    padding: 8px 14px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    font-family: inherit;
+  }
+  .tab:hover { color: var(--app-text-secondary); }
+  .tab.active { color: var(--app-text-primary); border-bottom-color: #3b82f6; }
+
+  .scene { display: none; }
+  .scene.active { display: block; }
+
+  .segment-status {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid;
+  }
+  .badge.clean { color: #86efac; border-color: rgba(34,197,94,0.4); background: rgba(34,197,94,0.08); }
+  .badge.live { color: #fca5a5; border-color: rgba(239,68,68,0.4); background: rgba(239,68,68,0.08); }
+  .badge .dot { width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
+
+  .canvas {
+    position: relative;
+    height: 300px;
+    background: var(--app-surface-topbar);
+    border: 1px solid var(--app-border-subtle);
+    border-radius: 10px;
+    background-image: radial-gradient(circle, var(--app-border-subtle) 1px, transparent 1px);
+    background-size: 20px 20px;
+    overflow: visible;
+  }
+
+  svg.wires { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+  .wire { fill: none; stroke-width: 1.5; }
+  .wire.dim { stroke: #52525b; }
+  .wire.live { stroke: var(--red); stroke-width: 2; }
+  .wire.entry-live { stroke: var(--amber); stroke-width: 2; }
+
+  .node {
+    position: absolute;
+    width: 176px;
+    background: var(--app-surface-main);
+    border: 1.5px solid var(--app-border-subtle);
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    font-size: 11px;
+  }
+  .node .head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    border-radius: 7px 7px 0 0;
+    font-weight: 600;
+    color: var(--app-text-primary);
+  }
+  .node .head .icon { font-size: 11px; }
+  .node .body { padding: 6px 8px 8px; color: var(--app-text-muted); font-size: 10px; }
+  .node .body code {
+    display: block;
+    background: rgba(0,0,0,0.25);
+    border-radius: 4px;
+    padding: 4px 6px;
+    color: var(--app-text-secondary);
+    font-family: ui-monospace, monospace;
+    font-size: 9.5px;
+    margin-top: 3px;
+    white-space: pre;
+  }
+  .node.entry { border-color: rgba(234,179,8,0.5); }
+  .node.entry .head { background: rgba(234,179,8,0.15); }
+  .node.response { border-color: rgba(249,115,22,0.5); }
+  .node.response .head { background: rgba(249,115,22,0.15); }
+  .node.exit { border-color: rgba(234,179,8,0.5); }
+  .node.exit .head { background: rgba(234,179,8,0.15); }
+  .node.snippet { border-color: rgba(245,158,11,0.6); }
+  .node.snippet .head { background: rgba(245,158,11,0.18); }
+  .node.dim { opacity: 0.55; }
+
+  .ports {
+    display: flex;
+    gap: 3px;
+    padding: 0 8px 6px;
+    flex-wrap: wrap;
+  }
+  .port-pill {
+    font-size: 8.5px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.06);
+    color: var(--app-text-muted);
+  }
+  .port-pill.override { background: rgba(239,68,68,0.18); color: #fca5a5; }
+
+  .caption { color: var(--app-text-muted); font-size: 11.5px; margin-top: 14px; line-height: 1.5; }
+  .caption b { color: var(--app-text-secondary); }
+</style>
+</head>
+<body>
+
+<h1>Stitch Mapping Chain — Entry / Response / Exit model</h1>
+<p class="lede">Mockup only — static HTML, not the real app. Colors/fonts approximate the actual dark theme.</p>
+
+<div class="tabs">
+  <button class="tab active" data-scene="fresh">1. New chain</button>
+  <button class="tab" data-scene="entry-only">2. Entry-only modification</button>
+  <button class="tab" data-scene="response-only">3. Response-only modification</button>
+  <button class="tab" data-scene="both">4. Both modified</button>
+</div>
+
+<!-- ───────────────────── Scene 1: Fresh chain ───────────────────── -->
+<div class="scene active" id="fresh">
+  <div class="segment-status">
+    <span class="badge clean"><span class="dot"></span>Entry — pass-through, no pause</span>
+    <span class="badge clean"><span class="dot"></span>Response — pass-through, no pause</span>
+  </div>
+  <div class="canvas">
+    <svg class="wires">
+      <path class="wire dim" d="M 216,90 C 260,90 260,90 300,90" />
+      <path class="wire dim" d="M 466,90 C 510,90 510,90 550,90" />
+    </svg>
+
+    <div class="node entry dim" style="left:40px; top:60px;">
+      <div class="head"><span class="icon">↓</span> Entry</div>
+      <div class="ports">
+        <span class="port-pill">method</span><span class="port-pill">headers</span>
+        <span class="port-pill">body</span><span class="port-pill">url</span>
+      </div>
+      <div class="body">The real inbound request<br/>from the client, untouched.</div>
+    </div>
+
+    <div class="node response dim" style="left:290px; top:60px;">
+      <div class="head"><span class="icon">⇄</span> Response</div>
+      <div class="ports">
+        <span class="port-pill">headers</span><span class="port-pill">body</span>
+        <span class="port-pill">cookies</span><span class="port-pill">url</span>
+      </div>
+      <div class="body">The real upstream reply,<br/>untouched.</div>
+    </div>
+
+    <div class="node exit dim" style="left:540px; top:60px;">
+      <div class="head"><span class="icon">↑</span> Exit</div>
+      <div class="ports">
+        <span class="port-pill">status</span><span class="port-pill">headers</span>
+        <span class="port-pill">body</span><span class="port-pill">cookies</span>
+      </div>
+      <div class="body">What's returned to<br/>the browser.</div>
+    </div>
+  </div>
+  <p class="caption">Nothing wired into either node's override ports → both flags false. The request goes out unmodified and the response comes back unmodified — no pause on either side, even with the mapping enabled.</p>
+</div>
+
+<!-- ───────────────────── Scene 2: Entry-only modification ───────────────────── -->
+<div class="scene" id="entry-only">
+  <div class="segment-status">
+    <span class="badge live"><span class="dot"></span>Entry — LIVE, will pause</span>
+    <span class="badge clean"><span class="dot"></span>Response — pass-through, no pause</span>
+  </div>
+  <div class="canvas">
+    <svg class="wires">
+      <path class="wire entry-live" d="M 216,40 C 250,40 250,90 300,90" />
+      <path class="wire entry-live" d="M 40,140 C 80,140 260,140 300,40" />
+      <path class="wire dim" d="M 466,90 C 510,90 510,90 550,90" />
+    </svg>
+
+    <div class="node snippet" style="left:40px; top:10px;">
+      <div class="head"><span class="icon">{ }</span> JS Snippet</div>
+      <div class="body">rewrite the url<br/><code>return { url: input.url.replace(...) }</code></div>
+    </div>
+
+    <div class="node entry" style="left:40px; top:120px;">
+      <div class="head"><span class="icon">↓</span> Entry</div>
+      <div class="ports">
+        <span class="port-pill override">method</span><span class="port-pill">headers</span>
+        <span class="port-pill">body</span><span class="port-pill override">url ←</span>
+      </div>
+      <div class="body">Real request, with <b style="color:#fca5a5">url</b><br/>overridden by the snippet.</div>
+    </div>
+
+    <div class="node response dim" style="left:290px; top:60px;">
+      <div class="head"><span class="icon">⇄</span> Response</div>
+      <div class="ports">
+        <span class="port-pill">headers</span><span class="port-pill">body</span>
+        <span class="port-pill">cookies</span><span class="port-pill">url</span>
+      </div>
+      <div class="body">The real upstream reply,<br/>untouched.</div>
+    </div>
+
+    <div class="node exit dim" style="left:540px; top:60px;">
+      <div class="head"><span class="icon">↑</span> Exit</div>
+      <div class="ports">
+        <span class="port-pill">status</span><span class="port-pill">headers</span>
+        <span class="port-pill">body</span><span class="port-pill">cookies</span>
+      </div>
+      <div class="body">What's returned to<br/>the browser.</div>
+    </div>
+  </div>
+  <p class="caption">A JS Snippet feeds Entry's <b>url</b> override port. Entry's own output — not a separate node — becomes the request actually sent upstream. Only the request-side pause fires; Response → Exit is still the default passthrough.</p>
+</div>
+
+<!-- ───────────────────── Scene 3: Response-only modification ───────────────────── -->
+<div class="scene" id="response-only">
+  <div class="segment-status">
+    <span class="badge clean"><span class="dot"></span>Entry — pass-through, no pause</span>
+    <span class="badge live"><span class="dot"></span>Response — LIVE, will pause</span>
+  </div>
+  <div class="canvas">
+    <svg class="wires">
+      <path class="wire dim" d="M 216,90 C 260,90 260,90 300,90" />
+      <path class="wire live" d="M 466,90 C 500,90 500,90 540,140" />
+    </svg>
+
+    <div class="node entry dim" style="left:40px; top:60px;">
+      <div class="head"><span class="icon">↓</span> Entry</div>
+      <div class="ports">
+        <span class="port-pill">method</span><span class="port-pill">headers</span>
+        <span class="port-pill">body</span><span class="port-pill">url</span>
+      </div>
+      <div class="body">The real inbound request,<br/>untouched.</div>
+    </div>
+
+    <div class="node response" style="left:290px; top:60px;">
+      <div class="head"><span class="icon">⇄</span> Response</div>
+      <div class="ports">
+        <span class="port-pill">headers</span><span class="port-pill override">body →</span>
+        <span class="port-pill">cookies</span><span class="port-pill">url</span>
+      </div>
+      <div class="body">Real upstream reply — <b style="color:#fca5a5">body</b><br/>routed through a snippet.</div>
+    </div>
+
+    <div class="node snippet" style="left:520px; top:10px;">
+      <div class="head"><span class="icon">{ }</span> JS Snippet</div>
+      <div class="body">transform the body<br/><code>return { body: {...} }</code></div>
+    </div>
+
+    <div class="node exit" style="left:540px; top:120px;">
+      <div class="head"><span class="icon">↑</span> Exit</div>
+      <div class="ports">
+        <span class="port-pill">status</span><span class="port-pill">headers</span>
+        <span class="port-pill override">body ←</span><span class="port-pill">cookies</span>
+      </div>
+      <div class="body">What's returned to<br/>the browser.</div>
+    </div>
+  </div>
+  <p class="caption">Today's existing capability. Response's <b>body</b> output routes through a snippet before reaching Exit. Only the response-side pause fires; the request goes out unmodified with zero added latency.</p>
+</div>
+
+<!-- ───────────────────── Scene 4: Both modified ───────────────────── -->
+<div class="scene" id="both">
+  <div class="segment-status">
+    <span class="badge live"><span class="dot"></span>Entry — LIVE, will pause</span>
+    <span class="badge live"><span class="dot"></span>Response — LIVE, will pause</span>
+  </div>
+  <div class="canvas">
+    <svg class="wires">
+      <path class="wire entry-live" d="M 216,40 C 250,40 250,90 300,90" />
+      <path class="wire entry-live" d="M 40,140 C 80,140 260,140 300,40" />
+      <path class="wire live" d="M 466,90 C 500,90 500,90 540,140" />
+    </svg>
+
+    <div class="node snippet" style="left:40px; top:10px;">
+      <div class="head"><span class="icon">{ }</span> JS Snippet</div>
+      <div class="body">rewrite the url<br/><code>return { url: ... }</code></div>
+    </div>
+
+    <div class="node entry" style="left:40px; top:120px;">
+      <div class="head"><span class="icon">↓</span> Entry</div>
+      <div class="ports">
+        <span class="port-pill override">method</span><span class="port-pill">headers</span>
+        <span class="port-pill">body</span><span class="port-pill override">url ←</span>
+      </div>
+      <div class="body">Real request, with <b style="color:#fca5a5">url</b><br/>overridden by the snippet.</div>
+    </div>
+
+    <div class="node response" style="left:290px; top:60px;">
+      <div class="head"><span class="icon">⇄</span> Response</div>
+      <div class="ports">
+        <span class="port-pill">headers</span><span class="port-pill override">body →</span>
+        <span class="port-pill">cookies</span><span class="port-pill">url</span>
+      </div>
+      <div class="body">Real upstream reply — <b style="color:#fca5a5">body</b><br/>routed through a snippet.</div>
+    </div>
+
+    <div class="node snippet" style="left:520px; top:10px;">
+      <div class="head"><span class="icon">{ }</span> JS Snippet</div>
+      <div class="body">transform the body<br/><code>return { body: {...} }</code></div>
+    </div>
+
+    <div class="node exit" style="left:540px; top:120px;">
+      <div class="head"><span class="icon">↑</span> Exit</div>
+      <div class="ports">
+        <span class="port-pill">status</span><span class="port-pill">headers</span>
+        <span class="port-pill override">body ←</span><span class="port-pill">cookies</span>
+      </div>
+      <div class="body">What's returned to<br/>the browser.</div>
+    </div>
+  </div>
+  <p class="caption">Both flags true — one pause on the way out (Entry), one pause on the way back (Response → Exit). Same total pause count as today's always-on behavior, just now opt-in per side instead of forced.</p>
+</div>
+
+<script>
+  document.querySelectorAll('.tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
+      document.querySelectorAll('.scene').forEach((s) => s.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById(tab.dataset.scene).classList.add('active');
+    });
+  });
+</script>
+
+</body>
+</html>

@@ -52,6 +52,13 @@ describe('AddNodeMenu', () => {
     expect(onAddNode).toHaveBeenCalledWith('sleep');
   });
 
+  it('calls onAddNode with "log" when Log is clicked', () => {
+    render(<AddNodeMenu onAddNode={onAddNode} />);
+    fireEvent.click(screen.getByTestId('add-node-button'));
+    fireEvent.click(screen.getByTestId('add-node-log'));
+    expect(onAddNode).toHaveBeenCalledWith('log');
+  });
+
   it('closes menu after selection', () => {
     render(<AddNodeMenu onAddNode={onAddNode} />);
     fireEvent.click(screen.getByTestId('add-node-button'));

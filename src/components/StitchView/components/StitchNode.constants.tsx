@@ -1,4 +1,4 @@
-import { Send, Code, Braces, Timer, Repeat, GitMerge, GitBranch, Globe, ArrowDownToLine, ArrowUpFromLine, CircleStop } from 'lucide-react';
+import { Send, Code, Braces, Timer, ScrollText, Repeat, GitMerge, GitBranch, Globe, ArrowDownToLine, ArrowUpFromLine, ArrowLeftRight, CircleStop } from 'lucide-react';
 import type { StitchNodeType as NodeType } from '@/types/stitch';
 
 export const METHOD_COLORS: Record<string, string> = {
@@ -16,11 +16,13 @@ export const NODE_ICONS: Record<NodeType, React.ReactNode> = {
   'js-snippet': <Code size={12} />,
   'json-object': <Braces size={12} />,
   'sleep': <Timer size={12} />,
+  'log': <ScrollText size={12} />,
   'loop': <Repeat size={12} />,
   'merge': <GitMerge size={12} />,
   'condition': <GitBranch size={12} />,
   'mapping': <Globe size={12} />,
   'mapping-entry': <ArrowDownToLine size={12} />,
+  'mapping-response': <ArrowLeftRight size={12} />,
   'mapping-exit': <ArrowUpFromLine size={12} />,
   'fetch-terminal': <CircleStop size={12} />,
 };
@@ -30,11 +32,13 @@ export const NODE_COLORS: Record<NodeType, string> = {
   'js-snippet': 'bg-app-main border-amber-500/40',
   'json-object': 'bg-app-main border-green-500/40',
   'sleep': 'bg-app-main border-purple-500/40',
+  'log': 'bg-app-main border-slate-500/40',
   'loop': 'bg-app-main border-cyan-500/40',
   'merge': 'bg-app-main border-indigo-500/40',
   'condition': 'bg-app-main border-orange-500/40',
   'mapping': 'bg-app-main border-yellow-500/40',
   'mapping-entry': 'bg-app-main border-yellow-500/40',
+  'mapping-response': 'bg-app-main border-orange-500/40',
   'mapping-exit': 'bg-app-main border-yellow-500/40',
   'fetch-terminal': 'bg-app-main border-teal-500/40',
 };
@@ -44,11 +48,13 @@ export const NODE_HEADER_COLORS: Record<NodeType, string> = {
   'js-snippet': 'bg-amber-500/15',
   'json-object': 'bg-green-500/15',
   'sleep': 'bg-purple-500/15',
+  'log': 'bg-slate-500/15',
   'loop': 'bg-cyan-500/15',
   'merge': 'bg-indigo-500/15',
   'condition': 'bg-orange-500/15',
   'mapping': 'bg-yellow-500/15',
   'mapping-entry': 'bg-yellow-500/15',
+  'mapping-response': 'bg-orange-500/15',
   'mapping-exit': 'bg-yellow-500/15',
   'fetch-terminal': 'bg-teal-500/15',
 };

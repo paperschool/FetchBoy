@@ -9,6 +9,7 @@ import { getRequestOutputPorts } from '../utils/requestOutputResolver';
 import { resolveInputShape } from '../utils/inputShapeResolver';
 import { getNodeInputKeys, getPortLeftPercent } from '../utils/nodeOutputKeys';
 import { useConnectionDrag } from './StitchConnectionDragContext';
+import { useSuccessGlowRestart } from '../hooks/useSuccessGlowRestart';
 import { METHOD_COLORS, NODE_ICONS, NODE_COLORS, NODE_HEADER_COLORS, NODE_WIDTH } from './StitchNode.constants';
 
 interface StitchNodeProps {
@@ -44,7 +45,7 @@ export const StitchNode = React.memo(function StitchNode({
   const [replaying, setReplaying] = useState(false);
   const replayNodeWithInput = useStitchStore((s) => s.replayNodeWithInput);
   const executionLogs = useStitchStore((s) => s.executionLogs);
-  const canReplay = hasOutput && node.type !== 'sleep' && node.type !== 'mapping-entry' && node.type !== 'mapping-exit';
+  const canReplay = hasOutput && node.type !== 'sleep' && node.type !== 'mapping-entry' && node.type !== 'mapping-response' && node.type !== 'mapping-exit';
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [replayModalOpen, setReplayModalOpen] = useState(false);
   const isLoopEntry = node.type === 'js-snippet' && (node.config as { isLoopEntry?: boolean }).isLoopEntry === true;
@@ -54,6 +55,7 @@ export const StitchNode = React.memo(function StitchNode({
   const [editValue, setEditValue] = useState('');
   const [dragging, setDragging] = useState(false);
   const dragRef = useRef({ startX: 0, startY: 0, nodeX: 0, nodeY: 0 });
+  useSuccessGlowRestart(nodeRef, executionStatus);
 
   const handlePointerDown = useCallback((e: PointerEvent<HTMLDivElement>): void => {
     if (e.button !== 0) return;
@@ -126,11 +128,18 @@ export const StitchNode = React.memo(function StitchNode({
       const inputKeys = resolveInputShape(node.id, connections, allNodes);
       return inputKeys.length > 0 ? { keys: inputKeys, error: null } : null;
     }
+    if (node.type === 'log') {
+      const inputKeys = resolveInputShape(node.id, connections, allNodes);
+      return inputKeys.length > 0 ? { keys: inputKeys, error: null } : null;
+    }
     if (node.type === 'condition') {
       return { keys: ['true', 'false'], error: null };
     }
     if (node.type === 'mapping-entry') {
-      return { keys: ['status', 'headers', 'body', 'cookies', 'url'], error: null };
+      return { keys: ['method', 'headers', 'cookies', 'body', 'url'], error: null };
+    }
+    if (node.type === 'mapping-response') {
+      return { keys: ['status', 'headers', 'cookies', 'body', 'url'], error: null };
     }
     return null;
   }, [node.type, node.config, node.id, connections, allNodes]);
@@ -138,9 +147,9 @@ export const StitchNode = React.memo(function StitchNode({
   const outputKeys = portResult?.keys ?? [];
   const hasError = portResult !== null && portResult.error !== null;
   // JSON Object, JS Snippet, and Sleep use a single output port (full payload); Request keeps per-key ports
-  const useSinglePort = node.type === 'json-object' || node.type === 'js-snippet' || node.type === 'sleep';
+  const useSinglePort = node.type === 'json-object' || node.type === 'js-snippet' || node.type === 'sleep' || node.type === 'log';
   const hasDynamicPorts = !useSinglePort && outputKeys.length > 0;
-  const portColor = node.type === 'js-snippet' ? 'amber' : node.type === 'request' ? 'blue' : node.type === 'sleep' ? 'purple' : node.type === 'condition' ? 'amber' : node.type === 'mapping-entry' ? 'blue' : 'green';
+  const portColor = node.type === 'js-snippet' ? 'amber' : node.type === 'request' ? 'blue' : node.type === 'sleep' ? 'purple' : node.type === 'condition' ? 'amber' : node.type === 'mapping-entry' ? 'blue' : node.type === 'mapping-response' ? 'orange' : 'green';
 
   const requestConfig = node.type === 'request' ? node.config as { method?: string; url?: string } : null;
 
@@ -215,7 +224,7 @@ export const StitchNode = React.memo(function StitchNode({
       onContextMenu={handleContextMenu}
       onKeyDown={handleKeyDown}
     >
-      {/* Input port(s) — named for exit node, hidden for entry node, single slot for others */}
+      {/* Input port(s) — named for exit/response nodes, hidden for entry, single slot for others */}
       {node.type === 'mapping-entry' ? null : inputKeys.length > 0 ? (
         <>
           {/* Named input port labels */}
@@ -349,7 +358,7 @@ export const StitchNode = React.memo(function StitchNode({
         ) : outputKeys.length > 0 ? (
           <div className="flex flex-wrap gap-1">
             {outputKeys.map((key) => (
-              <span key={key} className={`rounded px-1 py-0.5 text-[9px] ${portColor === 'amber' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400' : portColor === 'blue' ? 'bg-blue-500/15 text-blue-700 dark:text-blue-400' : portColor === 'purple' ? 'bg-purple-500/15 text-purple-700 dark:text-purple-400' : 'bg-green-500/15 text-green-700 dark:text-green-400'}`} data-testid={`port-${key}`}>
+              <span key={key} className={`rounded px-1 py-0.5 text-[9px] ${portColor === 'amber' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400' : portColor === 'blue' ? 'bg-blue-500/15 text-blue-700 dark:text-blue-400' : portColor === 'purple' ? 'bg-purple-500/15 text-purple-700 dark:text-purple-400' : portColor === 'orange' ? 'bg-orange-500/15 text-orange-700 dark:text-orange-400' : 'bg-green-500/15 text-green-700 dark:text-green-400'}`} data-testid={`port-${key}`}>
                 {key}
               </span>
             ))}
@@ -385,7 +394,7 @@ export const StitchNode = React.memo(function StitchNode({
             return (
               <div
                 key={key}
-                className={`absolute -bottom-1.5 h-3 w-3 cursor-crosshair rounded-full border-2 bg-app-main ${portColor === 'amber' ? 'border-amber-500/50' : portColor === 'blue' ? 'border-blue-500/50' : portColor === 'purple' ? 'border-purple-500/50' : 'border-green-500/50'} hover:scale-150 hover:border-blue-500 transition-transform`}
+                className={`absolute -bottom-1.5 h-3 w-3 cursor-crosshair rounded-full border-2 bg-app-main ${portColor === 'amber' ? 'border-amber-500/50' : portColor === 'blue' ? 'border-blue-500/50' : portColor === 'purple' ? 'border-purple-500/50' : portColor === 'orange' ? 'border-orange-500/50' : 'border-green-500/50'} hover:scale-150 hover:border-blue-500 transition-transform`}
                 style={{ left: `${leftPercent}%`, transform: 'translateX(-50%)' }}
                 title={key}
                 data-testid={`output-port-${key}`}

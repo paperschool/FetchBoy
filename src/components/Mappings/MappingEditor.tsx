@@ -4,7 +4,9 @@ import { useMappingsStore } from '@/stores/mappingsStore';
 import type { MatchType, MappingEditForm } from '@/stores/mappingsStore';
 import { useStitchStore } from '@/stores/stitchStore';
 import { useAppTabStore } from '@/stores/appTabStore';
-import { DEFAULT_MAPPING_CONFIG, DEFAULT_MAPPING_ENTRY_CONFIG, DEFAULT_MAPPING_EXIT_CONFIG } from '@/types/stitch';
+import { useInterceptStore } from '@/stores/interceptStore';
+import { useBreakpointMatching } from '@/hooks/useBreakpointMatching';
+import { DEFAULT_MAPPING_CONFIG, DEFAULT_MAPPING_ENTRY_CONFIG, DEFAULT_MAPPING_RESPONSE_CONFIG, DEFAULT_MAPPING_EXIT_CONFIG } from '@/types/stitch';
 import type { MappingHeader, MappingCookie } from '@/lib/db';
 import { ViewerShell } from '@/components/ui/ViewerShell';
 import { UrlPatternInput } from '@/components/ui/UrlPatternInput';
@@ -32,11 +34,33 @@ const TABS = [
     { id: 'log', label: 'Log' },
 ];
 
-function MappingLogTab({ mappingId }: { mappingId: string | null }) {
+function TabCountBadge({ count, testId, title }: { count: number; testId: string; title: string }) {
+    if (count <= 0) return null;
+    return (
+        <span
+            className="flex min-w-[1.1rem] items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-medium leading-none text-white"
+            data-testid={testId}
+            title={title}
+        >
+            {count > 99 ? '99+' : count}
+        </span>
+    );
+}
+
+function MappingLogTab({ mappingId, enabled, hasOverrides }: { mappingId: string | null; enabled: boolean; hasOverrides: boolean }) {
     const entries = useMappingLogStore((s) => s.entries);
     const filtered = mappingId ? entries.filter((e) => e.mappingId === mappingId) : [];
     if (filtered.length === 0) {
-        return <p className="text-app-muted text-sm">No activity logged for this mapping yet.</p>;
+        // A URL can match the pattern without ever producing a log entry — a
+        // log row only appears once an override actually applies, so explain
+        // the two common reasons nothing shows up yet.
+        let hint = 'No activity logged for this mapping yet.';
+        if (!enabled) {
+            hint = 'This mapping is disabled, so it never runs against live traffic — enable it to start logging matches.';
+        } else if (!hasOverrides) {
+            hint = 'This mapping has no overrides configured (headers, cookies, response body, or a chain) — matching URLs pass through untouched and nothing gets logged until you add one.';
+        }
+        return <p className="text-app-muted text-sm">{hint}</p>;
     }
     return (
         <div className="space-y-1 text-xs">
@@ -93,6 +117,34 @@ export function MappingEditor({ onClose }: Props) {
     const savedTimerRef = useRef<ReturnType<typeof setTimeout>>();
     const savingRef = useRef(false);
 
+    // Live "unseen" badge on the Log tab — counts entries for this mapping
+    // added since the tab was last viewed (mirrors the Overrides/Debug tab badges).
+    const mappingLogEntries = useMappingLogStore((s) => s.entries);
+    const mappingLogCount = editForm.id ? mappingLogEntries.filter((e) => e.mappingId === editForm.id).length : 0;
+    const [seenLogCount, setSeenLogCount] = useState(0);
+    useEffect(() => {
+        if (activeTab === 'log') setSeenLogCount(mappingLogCount);
+    }, [activeTab, mappingLogCount]);
+    const unseenLogCount = Math.max(0, mappingLogCount - seenLogCount);
+
+    const tabs = TABS.map((tab) =>
+        tab.id === 'log'
+            ? {
+                ...tab,
+                label: (
+                    <span className="flex items-center gap-1.5">
+                        Log
+                        <TabCountBadge
+                            count={unseenLogCount}
+                            testId="mapping-editor-log-tab-badge"
+                            title={`${unseenLogCount} new log ${unseenLogCount !== 1 ? 'entries' : 'entry'}`}
+                        />
+                    </span>
+                ),
+            }
+            : tab,
+    );
+
     useEffect(() => {
         return () => {
             if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -103,6 +155,13 @@ export function MappingEditor({ onClose }: Props) {
     useEffect(() => {
         setUrlError(validateUrlPattern(urlPattern, matchType));
     }, [urlPattern, matchType]);
+
+    const interceptRequests = useInterceptStore((s) => s.requests);
+    const { computeMatchCount, matchCount } = useBreakpointMatching();
+    useEffect(() => {
+        const urls = interceptRequests.map((req) => `https://${req.host}${req.path}`);
+        computeMatchCount(urls, urlPattern, matchType);
+    }, [urlPattern, matchType, interceptRequests, computeMatchCount]);
 
     // Called by the debounce timer — not a hook dep, just a stable ref.
     const formRef = useRef({ name, urlPattern, matchType, enabled, headersAdd, headersRemove, cookies, responseBodyEnabled, responseBody, responseBodyContentType, responseBodyFilePath, urlRemapEnabled, urlRemapTarget, useChain, chainId });
@@ -158,7 +217,7 @@ export function MappingEditor({ onClose }: Props) {
     }, [saveGen]);
 
     return (
-        <ViewerShell tabs={TABS} activeTab={activeTab} onTabChange={(id) => setActiveTab(id as EditorTab)}
+        <ViewerShell tabs={tabs} activeTab={activeTab} onTabChange={(id) => setActiveTab(id as EditorTab)}
             header={<h3 className="text-app-inverse font-medium text-sm">{isNew ? t('mappings.new') : t('mappings.edit')}</h3>}
             testId="mapping-editor"
             data-tour="mapping-editor"
@@ -181,6 +240,7 @@ export function MappingEditor({ onClose }: Props) {
                                 onUrlPatternChange={edit.urlPattern}
                                 matchType={matchType}
                                 onMatchTypeChange={edit.matchType}
+                                matchCount={matchCount}
                                 urlError={urlError}
                                 testIdPrefix="mapping-"
                             />
@@ -200,26 +260,9 @@ export function MappingEditor({ onClose }: Props) {
                                     <button type="button"
                                         onClick={async () => {
                                             const stitchStore = useStitchStore.getState();
+                                            // loadChain migrates legacy chains in place (keyed connections,
+                                            // missing Response node) before loading them into the canvas.
                                             await stitchStore.loadChain(chainId);
-                                            // Upgrade old single-connection entry→exit to 4 keyed connections
-                                            const freshState = useStitchStore.getState();
-                                            const entryNode = freshState.nodes.find((n: { type: string }) => n.type === 'mapping-entry');
-                                            const exitNode = freshState.nodes.find((n: { type: string }) => n.type === 'mapping-exit');
-                                            if (entryNode && exitNode) {
-                                                const entryToExit = freshState.connections.filter(
-                                                    (c: { sourceNodeId: string; targetNodeId: string }) => c.sourceNodeId === entryNode.id && c.targetNodeId === exitNode.id,
-                                                );
-                                                const hasOldSingle = entryToExit.length === 1 && entryToExit[0].sourceKey === null;
-                                                if (hasOldSingle) {
-                                                    await stitchStore.removeConnection(entryToExit[0].id);
-                                                    for (const key of ['status', 'headers', 'body', 'cookies']) {
-                                                        await stitchStore.addConnection({
-                                                            chainId, sourceNodeId: entryNode.id, sourceKey: key,
-                                                            targetNodeId: exitNode.id, targetSlot: key,
-                                                        });
-                                                    }
-                                                }
-                                            }
                                             useAppTabStore.getState().setActiveTab('stitch');
                                         }}
                                         className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30"
@@ -255,7 +298,7 @@ export function MappingEditor({ onClose }: Props) {
                                         // Create a new bound chain with entry/exit nodes
                                         const chain = await stitchStore.createChain(`Mapping: ${name}`, editForm.id);
                                         await stitchStore.loadChain(chain.id);
-                                        // Mapping node is engine-only (hidden) — entry/exit are its children
+                                        // Mapping node is engine-only (hidden) — entry/response/exit are its children
                                         const mappingContainer = await stitchStore.addNode({
                                             chainId: chain.id, type: 'mapping', positionX: -9999, positionY: -9999,
                                             config: { ...DEFAULT_MAPPING_CONFIG, urlPattern, matchType }, label: name, parentNodeId: null,
@@ -264,13 +307,25 @@ export function MappingEditor({ onClose }: Props) {
                                             chainId: chain.id, type: 'mapping-entry', positionX: 200, positionY: 80,
                                             config: { ...DEFAULT_MAPPING_ENTRY_CONFIG }, label: 'Entry', parentNodeId: mappingContainer.id,
                                         });
+                                        const response = await stitchStore.addNode({
+                                            chainId: chain.id, type: 'mapping-response', positionX: 200, positionY: 215,
+                                            config: { ...DEFAULT_MAPPING_RESPONSE_CONFIG }, label: 'Response', parentNodeId: mappingContainer.id,
+                                        });
                                         const exit = await stitchStore.addNode({
                                             chainId: chain.id, type: 'mapping-exit', positionX: 200, positionY: 350,
                                             config: { ...DEFAULT_MAPPING_EXIT_CONFIG }, label: 'Exit', parentNodeId: mappingContainer.id,
                                         });
+                                        // Entry → Response: Response is what actually fires the
+                                        // (possibly modified) request, so it default-wires the full
+                                        // request shape from Entry.
+                                        for (const key of ['method', 'headers', 'body', 'url']) {
+                                            await stitchStore.addConnection({
+                                                chainId: chain.id, sourceNodeId: entry.id, sourceKey: key, targetNodeId: response.id, targetSlot: key,
+                                            });
+                                        }
                                         for (const key of ['status', 'headers', 'body', 'cookies']) {
                                             await stitchStore.addConnection({
-                                                chainId: chain.id, sourceNodeId: entry.id, sourceKey: key, targetNodeId: exit.id, targetSlot: key,
+                                                chainId: chain.id, sourceNodeId: response.id, sourceKey: key, targetNodeId: exit.id, targetSlot: key,
                                             });
                                         }
                                         edit.chainId(chain.id);
@@ -319,7 +374,19 @@ export function MappingEditor({ onClose }: Props) {
                             onChangeFilePath={edit.responseBodyFilePath}
                         />
                     )}
-                    {activeTab === 'log' && <MappingLogTab mappingId={editForm.id} />}
+                    {activeTab === 'log' && (
+                        <MappingLogTab
+                            mappingId={editForm.id}
+                            enabled={enabled}
+                            hasOverrides={
+                                headersAdd.some((h) => h.enabled && !!h.key.trim()) ||
+                                headersRemove.some((h) => h.enabled && !!h.key.trim()) ||
+                                cookies.length > 0 ||
+                                responseBodyEnabled ||
+                                useChain
+                            }
+                        />
+                    )}
                 </div>
                 <div className="flex items-center justify-between pt-3 border-t border-app-subtle">
                     <div className="flex items-center gap-1.5 text-xs h-6" data-testid="mapping-save-status">

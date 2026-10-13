@@ -14,6 +14,7 @@ const LABEL_MAP: Record<string, string> = {
   'js-snippet': 'Snippet',
   'json-object': 'JSON',
   sleep: 'Sleep',
+  log: 'Log',
   loop: 'Loop',
   request: 'Request',
   merge: 'Merge',

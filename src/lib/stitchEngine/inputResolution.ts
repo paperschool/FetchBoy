@@ -27,9 +27,19 @@ export function resolveNodeInputs(
       }
       inputs[targetKey ?? key] = value;
     } else {
-      // Null key (single-port connection) — pass the raw value through
+      // Null key (single-port connection, e.g. JS Snippet/JSON Object) — the
+      // whole node's output is "the value". Wiring it straight into a NAMED
+      // target slot (Response/Exit's url, body, etc.) previously assigned
+      // that whole object to the field, silently double-wrapping it (e.g.
+      // `body` becoming `{ body: {...} }` instead of `{...}`) whenever the
+      // source followed the documented "destructure X, return { X }"
+      // pattern. Unwrap it when the returned object has a same-named key.
       if (targetKey) {
-        inputs[targetKey] = sourceOutput;
+        if (typeof sourceOutput === 'object' && sourceOutput !== null && !Array.isArray(sourceOutput) && targetKey in sourceOutput) {
+          inputs[targetKey] = (sourceOutput as Record<string, unknown>)[targetKey];
+        } else {
+          inputs[targetKey] = sourceOutput;
+        }
       } else if (typeof sourceOutput === 'object' && sourceOutput !== null && !Array.isArray(sourceOutput)) {
         // Object: spread its keys into input
         Object.assign(inputs, sourceOutput);

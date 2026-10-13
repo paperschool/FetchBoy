@@ -5,6 +5,7 @@ import {
   executeRequestNode,
   executeConditionNode,
   executeLoopNode,
+  executeLogNode,
 } from './nodeExecutors';
 
 export interface SingleNodeResult {
@@ -60,17 +61,23 @@ export async function executeSingleNode(
       }
       const cancelledRef = { current: false };
       const noopCallbacks: ExecutionCallbacks = {
-        onNodeStart: () => {},
-        onNodeComplete: () => {},
-        onError: () => {},
-        onSleepStart: () => {},
-        onChainComplete: () => {},
+        onNodeStart: () => { },
+        onNodeComplete: () => { },
+        onError: () => { },
+        onSleepStart: () => { },
+        onChainComplete: () => { },
       };
       output = await executeLoopNode(node, inputRecord, allNodes, allConnections, envVariables, noopCallbacks, cancelledRef);
       break;
     }
     case 'sleep':
       throw new Error('Sleep nodes cannot be replayed');
+    case 'log': {
+      const logResult = executeLogNode(node, inputRecord);
+      output = logResult.output;
+      consoleLogs = logResult.consoleLogs;
+      break;
+    }
     case 'fetch-terminal':
       output = { complete: true, ...inputRecord };
       break;

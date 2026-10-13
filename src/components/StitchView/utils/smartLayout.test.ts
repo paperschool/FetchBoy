@@ -118,6 +118,19 @@ describe('computeSmartLayout', () => {
     expect(positions.get('exit')!.y).toBeGreaterThan(positions.get('entry')!.y);
   });
 
+  it('mapping-response is not pinned like entry/exit \u2014 it layers like any ordinary node', () => {
+    const entry = makeNode('entry', { type: 'mapping-entry' });
+    const response = makeNode('response', { type: 'mapping-response' });
+    const exit = makeNode('exit', { type: 'mapping-exit' });
+    const nodes = [entry, response, exit];
+    const conns = [makeConn('response', 'exit')];
+    const positions = computeSmartLayout(nodes, conns);
+    // Response has no wired predecessor, so it's ordered purely by the
+    // topological sort like any other node — same treatment a js-snippet
+    // node between entry and exit would get, not a fixed pinned slot.
+    expect(positions.get('response')!.y).toBeLessThan(positions.get('exit')!.y);
+  });
+
   it('linear chain with skip edges applies horizontal stagger', () => {
     const nodes = [
       makeNode('Entry'), makeNode('A'), makeNode('Req'),

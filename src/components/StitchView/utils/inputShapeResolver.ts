@@ -54,5 +54,9 @@ function getOutputKeysForNode(node: StitchNode, connections: StitchConnection[])
     // Sleep passes through its inputs
     return resolveInputShape(node.id, connections);
   }
+  if (node.type === 'log') {
+    // Log passes through its inputs unchanged
+    return resolveInputShape(node.id, connections);
+  }
   return [];
 }

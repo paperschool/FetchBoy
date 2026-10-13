@@ -15,7 +15,9 @@ import {
   executeMergeNode,
   executeConditionNode,
   executeMappingEntryNode,
+  executeMappingResponseNode,
   executeMappingExitNode,
+  executeMappingNode,
   computeSkippedNodes,
   groupByDepth,
   executeChain,
@@ -459,6 +461,23 @@ describe('executeChain', () => {
     expect(callbacks.onError).toHaveBeenCalledWith('', expect.stringContaining('Cycle'));
   });
 
+  it('passes data through a log node unchanged and captures a console log entry', async () => {
+    const nodes = [
+      makeNode({ id: 'a', positionY: 0, config: { json: '{"x": 10}' } }),
+      makeNode({ id: 'b', positionY: 100, type: 'log', label: 'Checkpoint' }),
+    ];
+    const conns = [makeConn({ sourceNodeId: 'a', targetNodeId: 'b', sourceKey: 'x' })];
+    const callbacks = makeCallbacks();
+    const cancelledRef = { current: false };
+
+    const ctx = await executeChain(nodes, conns, {}, callbacks, cancelledRef);
+
+    expect(ctx.status).toBe('completed');
+    expect(ctx.nodeOutputs['b']).toEqual({ x: 10 });
+    const logEntry = ctx.logs.find((l) => l.nodeId === 'b' && l.status === 'completed');
+    expect(logEntry?.consoleLogs?.[0].args).toContain('[Checkpoint]');
+  });
+
   it('executes a loop node over an array', async () => {
     // JSON node outputs an array, loop node iterates and runs a JS snippet child
     const nodes = [
@@ -765,10 +784,10 @@ describe('computeSkippedNodes', () => {
 // ─── Mapping Node Tests ────────────────────────────────────────────────────
 
 describe('executeMappingEntryNode', () => {
-  it('passes through status, headers, body from input', () => {
+  it('passes through method, headers, body from the real request', () => {
     const node = makeNode({ id: 'e', type: 'mapping-entry', config: { isEntryNode: true } });
-    const result = executeMappingEntryNode(node, { status: 404, headers: { 'x-foo': 'bar' }, body: { err: true } });
-    expect(result.status).toBe(404);
+    const result = executeMappingEntryNode(node, { method: 'POST', headers: { 'x-foo': 'bar' }, body: { err: true } });
+    expect(result.method).toBe('POST');
     expect(result.headers).toEqual({ 'x-foo': 'bar' });
     expect(result.body).toEqual({ err: true });
   });
@@ -776,9 +795,41 @@ describe('executeMappingEntryNode', () => {
   it('provides defaults when input is empty', () => {
     const node = makeNode({ id: 'e', type: 'mapping-entry', config: { isEntryNode: true } });
     const result = executeMappingEntryNode(node, {});
+    expect(result.method).toBe('GET');
+    expect(result.headers).toEqual({});
+    expect(result.body).toEqual({});
+    expect(result.cookies).toEqual({});
+  });
+
+  it('parses the real Cookie request header into an object', () => {
+    const node = makeNode({ id: 'e', type: 'mapping-entry', config: { isEntryNode: true } });
+    const result = executeMappingEntryNode(node, { headers: { cookie: 'session=abc; theme=dark' } });
+    expect(result.cookies).toEqual({ session: 'abc', theme: 'dark' });
+  });
+});
+
+describe('executeMappingResponseNode', () => {
+  it('passes through the real upstream status, headers, and body', () => {
+    const node = makeNode({ id: 'r', type: 'mapping-response', config: { isResponseNode: true } });
+    const result = executeMappingResponseNode(node, { status: 404, headers: { 'x-foo': 'bar' }, body: { err: true } });
+    expect(result.status).toBe(404);
+    expect(result.headers).toEqual({ 'x-foo': 'bar' });
+    expect(result.body).toEqual({ err: true });
+  });
+
+  it('provides defaults when input is empty', () => {
+    const node = makeNode({ id: 'r', type: 'mapping-response', config: { isResponseNode: true } });
+    const result = executeMappingResponseNode(node, {});
     expect(result.status).toBe(200);
     expect(result.headers).toEqual({});
     expect(result.body).toEqual({});
+    expect(result.cookies).toEqual({});
+  });
+
+  it('reflects wired cookies when provided (e.g. from Entry)', () => {
+    const node = makeNode({ id: 'r', type: 'mapping-response', config: { isResponseNode: true } });
+    const result = executeMappingResponseNode(node, { cookies: { session: 'abc' } });
+    expect(result.cookies).toEqual({ session: 'abc' });
   });
 });
 
@@ -798,6 +849,25 @@ describe('executeMappingExitNode', () => {
     expect(result.headers).toEqual({ 'X-Id': '42' });
     expect(result.body).toBe('{"created": "test"}');
     expect(result.bodyContentType).toBe('application/json');
+  });
+
+  it('emits one Set-Cookie string per cookie instead of a comma-joined header', () => {
+    const node = makeNode({
+      id: 'x', type: 'mapping-exit',
+      config: { isExitNode: true, status: 200, headers: [], cookies: [], body: '', bodyContentType: 'application/json' },
+    });
+    const result = executeMappingExitNode(node, { cookies: { session: 'abc123', theme: 'dark' } });
+    expect(result.setCookies).toEqual(['session=abc123', 'theme=dark']);
+    expect(result.headers).not.toHaveProperty('Set-Cookie');
+  });
+
+  it('falls back to configured cookies when nothing is wired in', () => {
+    const node = makeNode({
+      id: 'x', type: 'mapping-exit',
+      config: { isExitNode: true, status: 200, headers: [], cookies: [{ key: 'id', value: '{{id}}' }], body: '', bodyContentType: 'application/json' },
+    });
+    const result = executeMappingExitNode(node, { id: '7' });
+    expect(result.setCookies).toEqual(['id=7']);
   });
 });
 
@@ -827,13 +897,13 @@ describe('mapping container execution', () => {
     expect(ctx.status).toBe('completed');
     const output = ctx.nodeOutputs['map'] as Record<string, unknown>;
     expect(output.status).toBe(200);
-    expect(output.body).toBe('Hello undefined'); // body.name not set in empty input
+    expect(output.body).toBe('Hello undefined'); // entry has no requestBody in this test's input
     expect(output.bodyContentType).toBe('text/plain');
   });
 
-  it('mapping entry receives input data from parent', async () => {
+  it('mapping entry receives the real request data from the proxy', async () => {
     const nodes = [
-      makeNode({ id: 'data', positionY: 0, config: { json: '{"status": 200, "headers": {}, "body": {"name": "World"}}' } }),
+      makeNode({ id: 'data', positionY: 0, config: { json: '{"requestBody": {"name": "World"}}' } }),
       makeNode({ id: 'map', positionY: 100, type: 'mapping', config: { urlPattern: '/test', matchType: 'exact' } }),
       makeNode({ id: 'entry', positionY: 150, type: 'mapping-entry', parentNodeId: 'map', config: { isEntryNode: true } }),
       makeNode({
@@ -859,4 +929,248 @@ describe('mapping container execution', () => {
     const output = ctx.nodeOutputs['map'] as Record<string, unknown>;
     expect(output.body).toBe('Hi World');
   });
+
+  it('response node injects the real upstream response, separate from entry', async () => {
+    const nodes = [
+      makeNode({ id: 'data', positionY: 0, config: { json: '{"status": 201, "body": {"id": "9"}}' } }),
+      makeNode({ id: 'map', positionY: 100, type: 'mapping', config: { urlPattern: '/test', matchType: 'exact' } }),
+      makeNode({ id: 'entry', positionY: 150, type: 'mapping-entry', parentNodeId: 'map', config: { isEntryNode: true } }),
+      makeNode({ id: 'response', positionY: 150, positionX: 200, type: 'mapping-response', parentNodeId: 'map', config: { isResponseNode: true } }),
+      makeNode({
+        id: 'exit', positionY: 150, positionX: 400, type: 'mapping-exit', parentNodeId: 'map',
+        config: { isExitNode: true, status: 200, headers: [], body: '', bodyContentType: 'application/json' },
+      }),
+    ];
+    const conns = [
+      makeConn({ sourceNodeId: 'data', targetNodeId: 'map' }),
+      makeConn({ sourceNodeId: 'response', targetNodeId: 'exit', sourceKey: 'status', targetSlot: 'status' }),
+      makeConn({ sourceNodeId: 'response', targetNodeId: 'exit', sourceKey: 'body', targetSlot: 'body' }),
+    ];
+    const callbacks = makeCallbacks();
+    const cancelledRef = { current: false };
+
+    const ctx = await executeChain(nodes, conns, {}, callbacks, cancelledRef);
+
+    expect(ctx.status).toBe('completed');
+    const output = ctx.nodeOutputs['map'] as Record<string, unknown>;
+    expect(output.status).toBe(201);
+    expect(output.body).toBe('{"id":"9"}');
+  });
+
+  it('the default Entry→Response request-firing wiring (method/headers/body/url) does not leak into the real reply', async () => {
+    // Entry has no requestBody here (e.g. a bodyless GET) — if the default
+    // Entry→Response wiring (added so the request-side pause can fire the
+    // real request) were allowed to affect this response-shaping run too,
+    // Entry's empty body would silently overwrite the real reply's body.
+    const nodes = [
+      makeNode({ id: 'data', positionY: 0, config: { json: '{"status": 200, "body": {"real": "reply"}}' } }),
+      makeNode({ id: 'map', positionY: 100, type: 'mapping', config: { urlPattern: '/test', matchType: 'exact' } }),
+      makeNode({ id: 'entry', positionY: 150, type: 'mapping-entry', parentNodeId: 'map', config: { isEntryNode: true } }),
+      makeNode({ id: 'response', positionY: 150, positionX: 200, type: 'mapping-response', parentNodeId: 'map', config: { isResponseNode: true } }),
+      makeNode({
+        id: 'exit', positionY: 150, positionX: 400, type: 'mapping-exit', parentNodeId: 'map',
+        config: { isExitNode: true, status: 200, headers: [], body: '', bodyContentType: 'application/json' },
+      }),
+    ];
+    const conns = [
+      makeConn({ sourceNodeId: 'data', targetNodeId: 'map' }),
+      makeConn({ sourceNodeId: 'entry', targetNodeId: 'response', sourceKey: 'method', targetSlot: 'method' }),
+      makeConn({ sourceNodeId: 'entry', targetNodeId: 'response', sourceKey: 'headers', targetSlot: 'headers' }),
+      makeConn({ sourceNodeId: 'entry', targetNodeId: 'response', sourceKey: 'body', targetSlot: 'body' }),
+      makeConn({ sourceNodeId: 'entry', targetNodeId: 'response', sourceKey: 'url', targetSlot: 'url' }),
+      makeConn({ sourceNodeId: 'response', targetNodeId: 'exit', sourceKey: 'status', targetSlot: 'status' }),
+      makeConn({ sourceNodeId: 'response', targetNodeId: 'exit', sourceKey: 'body', targetSlot: 'body' }),
+    ];
+    const callbacks = makeCallbacks();
+    const cancelledRef = { current: false };
+
+    const ctx = await executeChain(nodes, conns, {}, callbacks, cancelledRef);
+
+    expect(ctx.status).toBe('completed');
+    const output = ctx.nodeOutputs['map'] as Record<string, unknown>;
+    expect(output.status).toBe(200);
+    expect(output.body).toBe('{"real":"reply"}');
+  });
+
+  it('wiring Entry into Response overrides just that field, leaving the rest as the real response', async () => {
+    const nodes = [
+      makeNode({ id: 'data', positionY: 0, config: { json: '{"status": 201, "headers": {"content-type": "application/json"}, "body": {"id": "9"}, "requestHeaders": {"cookie": "session=abc"}}' } }),
+      makeNode({ id: 'map', positionY: 100, type: 'mapping', config: { urlPattern: '/test', matchType: 'exact' } }),
+      makeNode({ id: 'entry', positionY: 150, type: 'mapping-entry', parentNodeId: 'map', config: { isEntryNode: true } }),
+      makeNode({ id: 'response', positionY: 150, positionX: 200, type: 'mapping-response', parentNodeId: 'map', config: { isResponseNode: true } }),
+      makeNode({
+        id: 'exit', positionY: 150, positionX: 400, type: 'mapping-exit', parentNodeId: 'map',
+        config: { isExitNode: true, status: 200, headers: [], body: '', bodyContentType: 'application/json' },
+      }),
+    ];
+    const conns = [
+      makeConn({ sourceNodeId: 'data', targetNodeId: 'map' }),
+      // Only cookies is overridden by Entry's parsed request cookies \u2014 status/body/headers should still reflect the real response.
+      makeConn({ sourceNodeId: 'entry', targetNodeId: 'response', sourceKey: 'cookies', targetSlot: 'cookies' }),
+      makeConn({ sourceNodeId: 'response', targetNodeId: 'exit', sourceKey: 'status', targetSlot: 'status' }),
+      makeConn({ sourceNodeId: 'response', targetNodeId: 'exit', sourceKey: 'cookies', targetSlot: 'cookies' }),
+    ];
+    const callbacks = makeCallbacks();
+    const cancelledRef = { current: false };
+
+    const ctx = await executeChain(nodes, conns, {}, callbacks, cancelledRef);
+
+    expect(ctx.status).toBe('completed');
+    const output = ctx.nodeOutputs['map'] as Record<string, unknown>;
+    expect(output.status).toBe(201);
+    expect(output.setCookies).toEqual(['session=abc']);
+  });
+
+  it('runs a node added after Response even when it is top-level (not parented to the mapping container) — matches how the toolbar actually creates nodes, and how the proxy\'s live chain execution invokes executeMappingNode directly', async () => {
+    const mapNode = makeNode({ id: 'map', positionY: 100, type: 'mapping', config: { urlPattern: '/test', matchType: 'exact' } });
+    // Entry/Response/Exit — and a JS Snippet added afterwards via the
+    // toolbar — are all created top-level (parentNodeId: null) in
+    // production, not nested under the mapping container.
+    const nodes = [
+      mapNode,
+      makeNode({ id: 'response', positionY: 150, type: 'mapping-response', config: { isResponseNode: true } }),
+      makeNode({
+        id: 'transform', positionY: 150, positionX: 200, type: 'js-snippet',
+        // The documented "destructure X, return { X }" pattern for reshaping a named field.
+        config: { code: 'return { body: { id: input.body.id, transformed: true } }' },
+      }),
+      makeNode({
+        id: 'exit', positionY: 150, positionX: 400, type: 'mapping-exit',
+        config: { isExitNode: true, status: 200, headers: [], body: '', bodyContentType: 'application/json' },
+      }),
+    ];
+    const conns = [
+      makeConn({ sourceNodeId: 'response', targetNodeId: 'exit', sourceKey: 'status', targetSlot: 'status' }),
+      makeConn({ sourceNodeId: 'response', targetNodeId: 'transform', sourceKey: 'body', targetSlot: 'input' }),
+      // Snippet's single output port (sourceKey: null) wired straight into Exit's named 'body' slot.
+      makeConn({ sourceNodeId: 'transform', targetNodeId: 'exit', targetSlot: 'body' }),
+    ];
+    const callbacks = makeCallbacks();
+    const cancelledRef = { current: false };
+
+    const output = await executeMappingNode(mapNode, { status: 200, body: { id: '9' } }, nodes, conns, {}, callbacks, cancelledRef);
+
+    expect(callbacks.onNodeComplete).toHaveBeenCalledWith('transform', { body: { id: '9', transformed: true } }, expect.any(Number), undefined, undefined);
+    // Previously this double-wrapped to '{"body":{"id":"9","transformed":true}}'
+    // because a single-port source wired into a named slot assigned its whole
+    // output object to the field instead of unwrapping the matching key.
+    expect(output.body).toBe('{"id":"9","transformed":true}');
+  });
+
+  it('skips a node that exclusively feeds Response\'s request-firing ports — the request-side pause already ran it for real', async () => {
+    // Entry -> transform -> sleep -> Response.url, same shape as a Sleep node
+    // used to rewrite the outbound URL. executeMappingRequestSegment already
+    // ran this exact segment once, for real, before the request went out —
+    // executeMappingNode (the response-shaping run) must not run it again,
+    // or a Sleep node's delay would fire a second time.
+    const mapNode = makeNode({ id: 'map', positionY: 100, type: 'mapping', config: { urlPattern: '/test', matchType: 'exact' } });
+    const nodes = [
+      mapNode,
+      makeNode({ id: 'entry', positionY: 150, type: 'mapping-entry', config: { isEntryNode: true } }),
+      makeNode({ id: 'response', positionY: 150, positionX: 200, type: 'mapping-response', config: { isResponseNode: true } }),
+      makeNode({ id: 'transform', positionY: 250, type: 'js-snippet', config: { code: 'return { rewritten: input.url + "/x" }' } }),
+      makeNode({ id: 'sleep', positionY: 300, type: 'sleep', config: { mode: 'fixed', durationMs: 0, minMs: 0, maxMs: 0 } }),
+      makeNode({
+        id: 'exit', positionY: 150, positionX: 400, type: 'mapping-exit',
+        config: { isExitNode: true, status: 200, headers: [], body: '', bodyContentType: 'application/json' },
+      }),
+    ];
+    const conns = [
+      makeConn({ sourceNodeId: 'entry', targetNodeId: 'transform', sourceKey: 'url', targetSlot: 'input' }),
+      makeConn({ sourceNodeId: 'transform', targetNodeId: 'sleep', targetSlot: 'input' }),
+      makeConn({ sourceNodeId: 'sleep', targetNodeId: 'response', targetSlot: 'url' }),
+      makeConn({ sourceNodeId: 'response', targetNodeId: 'exit', sourceKey: 'status', targetSlot: 'status' }),
+    ];
+    const callbacks = makeCallbacks();
+    const cancelledRef = { current: false };
+
+    const output = await executeMappingNode(
+      mapNode,
+      { status: 200, url: 'https://real.example.com/api', requestMethod: 'GET', requestHeaders: {}, requestBody: {} },
+      nodes, conns, {}, callbacks, cancelledRef,
+      true, // simulates the live proxy flow, where a request-firing pre-pass already ran
+    );
+
+    const startedNodeIds = (callbacks.onNodeStart as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]);
+    expect(startedNodeIds).toEqual(['entry', 'response', 'exit']);
+    expect(startedNodeIds).not.toContain('transform');
+    expect(startedNodeIds).not.toContain('sleep');
+    expect(output.status).toBe(200);
+  });
+
+  it('still runs request-only nodes during a one-shot manual test run (no preceding request-phase pre-pass)', async () => {
+    // Same topology as above, but simulating the canvas's manual Play button
+    // (executeMappingNode called with requestPhaseAlreadyRan left at its
+    // default false) — there's no separate pre-pass in that flow, so this
+    // must remain the one and only place transform/sleep actually run.
+    const mapNode = makeNode({ id: 'map', positionY: 100, type: 'mapping', config: { urlPattern: '/test', matchType: 'exact' } });
+    const nodes = [
+      mapNode,
+      makeNode({ id: 'entry', positionY: 150, type: 'mapping-entry', config: { isEntryNode: true } }),
+      makeNode({ id: 'response', positionY: 150, positionX: 200, type: 'mapping-response', config: { isResponseNode: true } }),
+      makeNode({ id: 'transform', positionY: 250, type: 'js-snippet', config: { code: 'return { rewritten: input.url + "/x" }' } }),
+      makeNode({ id: 'sleep', positionY: 300, type: 'sleep', config: { mode: 'fixed', durationMs: 0, minMs: 0, maxMs: 0 } }),
+      makeNode({
+        id: 'exit', positionY: 150, positionX: 400, type: 'mapping-exit',
+        config: { isExitNode: true, status: 200, headers: [], body: '', bodyContentType: 'application/json' },
+      }),
+    ];
+    const conns = [
+      makeConn({ sourceNodeId: 'entry', targetNodeId: 'transform', sourceKey: 'url', targetSlot: 'input' }),
+      makeConn({ sourceNodeId: 'transform', targetNodeId: 'sleep', targetSlot: 'input' }),
+      makeConn({ sourceNodeId: 'sleep', targetNodeId: 'response', targetSlot: 'url' }),
+      makeConn({ sourceNodeId: 'response', targetNodeId: 'exit', sourceKey: 'status', targetSlot: 'status' }),
+    ];
+    const callbacks = makeCallbacks();
+    const cancelledRef = { current: false };
+
+    await executeMappingNode(
+      mapNode,
+      { status: 200, url: 'https://real.example.com/api', requestMethod: 'GET', requestHeaders: {}, requestBody: {} },
+      nodes, conns, {}, callbacks, cancelledRef,
+    );
+
+    const startedNodeIds = (callbacks.onNodeStart as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]);
+    expect(startedNodeIds).toEqual(['entry', 'transform', 'sleep', 'response', 'exit']);
+  });
+
+  it('does not run top-level nodes downstream of Entry/Response a second time alongside the mapping container', async () => {
+    // Same shape as the "runs a node added after Response" test above, but
+    // driven through executeChain (as the canvas's manual Play button does)
+    // rather than calling executeMappingNode directly — this is what
+    // exposed the bug: executeChain's own top-level topological sort saw
+    // "transform"/"sleep" as independent roots (their real dependency,
+    // Entry, isn't top-level) and ran them a second time, racing ahead of
+    // the mapping's own internal traversal with no real input to wait on.
+    const mapNode = makeNode({ id: 'map', positionY: 100, type: 'mapping', config: { urlPattern: '/test', matchType: 'exact' } });
+    const nodes = [
+      mapNode,
+      makeNode({ id: 'entry', positionY: 150, type: 'mapping-entry', config: { isEntryNode: true } }),
+      makeNode({ id: 'response', positionY: 150, positionX: 200, type: 'mapping-response', config: { isResponseNode: true } }),
+      makeNode({
+        id: 'transform', positionY: 250, type: 'js-snippet',
+        config: { code: 'return { rewritten: input.url + "/x" }' },
+      }),
+      makeNode({ id: 'sleep', positionY: 300, type: 'sleep', config: { mode: 'fixed', durationMs: 0, minMs: 0, maxMs: 0 } }),
+      makeNode({
+        id: 'exit', positionY: 150, positionX: 400, type: 'mapping-exit',
+        config: { isExitNode: true, status: 200, headers: [], body: '', bodyContentType: 'application/json' },
+      }),
+    ];
+    const conns = [
+      makeConn({ sourceNodeId: 'entry', targetNodeId: 'transform', sourceKey: 'url', targetSlot: 'input' }),
+      makeConn({ sourceNodeId: 'transform', targetNodeId: 'sleep', targetSlot: 'input' }),
+      makeConn({ sourceNodeId: 'sleep', targetNodeId: 'response', targetSlot: 'url' }),
+      makeConn({ sourceNodeId: 'response', targetNodeId: 'exit', sourceKey: 'status', targetSlot: 'status' }),
+    ];
+    const callbacks = makeCallbacks();
+    const cancelledRef = { current: false };
+
+    const ctx = await executeChain(nodes, conns, {}, callbacks, cancelledRef);
+
+    expect(ctx.status).toBe('completed');
+    const startedNodeIds = (callbacks.onNodeStart as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]);
+    expect(startedNodeIds).toEqual(['map', 'entry', 'transform', 'sleep', 'response', 'exit']);
+  });
 });
+

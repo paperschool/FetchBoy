@@ -14,6 +14,7 @@ export const stitch = {
   'stitch.jsSnippet': 'JS Snippet',
   'stitch.jsonObject': 'JSON Object',
   'stitch.sleep': 'Sleep',
+  'stitch.log': 'Log',
   'stitch.loop': 'Loop',
   'stitch.merge': 'Merge',
   'stitch.condition': 'Condition',
