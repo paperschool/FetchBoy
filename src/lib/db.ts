@@ -156,6 +156,10 @@ export interface Mapping {
     url_remap_target: string;
     use_chain: boolean;
     chain_id: string | null;
+    /** True only if something is wired into Entry's override ports — gates the proxy's request-side pause. */
+    needs_request_chain: boolean;
+    /** True if Response's ports are wired, or Exit isn't fed by a plain Response passthrough — gates the proxy's response-side pause. */
+    needs_response_chain: boolean;
     created_at: string;
     updated_at: string;
 }
@@ -230,6 +234,9 @@ export async function getDb(): Promise<Database> {
             url_pattern TEXT NOT NULL DEFAULT '', match_type TEXT NOT NULL DEFAULT 'partial',
             enabled INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
         )`);
+        // Ensure mapping chain pause-gating flags exist (migration 021)
+        try { await _db.execute('ALTER TABLE mappings ADD COLUMN needs_request_chain INTEGER NOT NULL DEFAULT 0'); } catch { /* exists */ }
+        try { await _db.execute('ALTER TABLE mappings ADD COLUMN needs_response_chain INTEGER NOT NULL DEFAULT 1'); } catch { /* exists */ }
     }
     return _db;
 }

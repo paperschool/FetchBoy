@@ -25,6 +25,7 @@ pub struct ProxyRestartInfo {
     pub response_emit_fn: proxy::ResponseEmitFn,
     pub mapping_emit_fn: proxy::MappingEmitFn,
     pub chain_emit_fn: proxy::ChainEmitFn,
+    pub chain_request_emit_fn: proxy::ChainRequestEmitFn,
 }
 
 /// Current proxy configuration (port + enabled flag).
@@ -53,6 +54,10 @@ pub struct ChainRegistryState(pub proxy::ChainRegistryRef);
 
 /// Configurable chain execution timeout in seconds (default 30).
 pub struct ChainTimeoutState(pub proxy::ChainTimeoutRef);
+
+/// Request-side chain execution registry — maps request_id to a oneshot sender so
+/// resume_chain_request can unblock waiting proxy handlers (see ChainRegistryState).
+pub struct ChainRequestRegistryState(pub proxy::ChainRequestRegistryRef);
 
 /// Debug logger for persisting events to log files.
 pub struct DebugLoggerState(pub debug_logger::SharedDebugLogger);
@@ -248,6 +253,14 @@ pub fn run() {
                 emit_debug_chain("info", "chain", &format!("Chain execute: chain={} mapping={}", event.chain_id, event.mapping_id));
             });
 
+            let emit_debug_chain_request = emit_debug.clone();
+            let chain_request_emit_base: Arc<dyn Fn(&proxy::ChainRequestExecutionEvent) + Send + Sync> =
+                make_emit(app.handle(), "mapping:chain-execute-request");
+            let chain_request_emit_fn: proxy::ChainRequestEmitFn = Arc::new(move |event| {
+                chain_request_emit_base(event);
+                emit_debug_chain_request("info", "chain", &format!("Chain execute (request): chain={} mapping={}", event.chain_id, event.mapping_id));
+            });
+
             let emit_debug_clone = emit_debug.clone();
 
             // Register restart info so the set_proxy_config command can recreate the proxy.
@@ -258,6 +271,7 @@ pub fn run() {
                 response_emit_fn: Arc::clone(&response_emit_fn),
                 mapping_emit_fn: Arc::clone(&mapping_emit_fn),
                 chain_emit_fn: Arc::clone(&chain_emit_fn),
+                chain_request_emit_fn: Arc::clone(&chain_request_emit_fn),
             });
 
             // ─── Startup proxy reconciliation (Story 22.6) ─────────────────────
@@ -267,8 +281,13 @@ pub fn run() {
             // and start with the proxy disabled, so a previous crash can never leave
             // the machine silently proxied or the UI showing the proxy "on". The
             // user must explicitly re-enable the OS redirect this session.
-            platform::disable_os_proxy_all_services();
-            emit_debug_clone("info", "proxy", "Startup reconciliation: cleared OS proxy, proxy starts disabled");
+            match platform::disable_os_proxy_all_services() {
+                Ok(()) => emit_debug_clone("info", "proxy", "Startup reconciliation: cleared OS proxy, proxy starts disabled"),
+                Err(e) => {
+                    log::error!("Startup OS proxy reconciliation failed: {e}");
+                    emit_debug_clone("error", "proxy", &format!("Startup reconciliation failed: {e}"));
+                }
+            }
 
             // Default config: disabled on port 8080 (OS redirect off until the user enables it).
             app.manage(ProxyConfigState {
@@ -304,6 +323,13 @@ pub fn run() {
             let chain_timeout_ref: proxy::ChainTimeoutRef = Arc::new(std::sync::Mutex::new(30));
             app.manage(ChainRegistryState(Arc::clone(&chain_registry_ref)));
             app.manage(ChainTimeoutState(Arc::clone(&chain_timeout_ref)));
+
+            // Request-side chain execution registry — shares chain_timeout_ref (no
+            // need for independent tuning yet; see Phase 2 of the conditional
+            // chain-pausing PRD).
+            let chain_request_registry_ref: proxy::ChainRequestRegistryRef =
+                Arc::new(std::sync::Mutex::new(std::collections::HashMap::new()));
+            app.manage(ChainRequestRegistryState(Arc::clone(&chain_request_registry_ref)));
 
             // Ensure the CA certificate exists on disk so the user can install it
             // from the UI, but do NOT start the proxy at boot. The MITM proxy starts
@@ -350,7 +376,8 @@ pub fn run() {
             commands::open_proxy_settings,
             commands::open_cert_manager,
             commands::exit_app,
-            commands::resume_chain
+            commands::resume_chain,
+            commands::resume_chain_request
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
@@ -363,7 +390,9 @@ pub fn run() {
                     }
                 }
                 // Ensure OS-level proxy settings are cleared regardless.
-                platform::disable_os_proxy_all_services();
+                if let Err(e) = platform::disable_os_proxy_all_services() {
+                    log::error!("Failed to clear OS proxy on exit: {e}");
+                }
             }
         });
 }

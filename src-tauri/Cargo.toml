@@ -29,6 +29,8 @@ log = "0.4"
 open = "5"
 regex = "1"
 time = "0.3"
+flate2 = "1"
+brotli = "6"
 
 [profile.release]
 panic = "abort"

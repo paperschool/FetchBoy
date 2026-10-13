@@ -42,6 +42,17 @@ pub struct MappingRule {
     #[serde(default)]
     pub use_chain: bool,
     pub chain_id: Option<String>,
+    /// True only if something is wired into Entry's override ports — gates the request-side pause (Phase 2).
+    #[serde(default)]
+    pub needs_request_chain: bool,
+    /// True if Response's ports are wired or Exit isn't a plain Response passthrough — gates the response-side pause.
+    /// Defaults to `true` so mappings synced before this field existed keep today's always-pause behavior until re-analyzed.
+    #[serde(default = "default_true")]
+    pub needs_response_chain: bool,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 pub type MappingsRef = Arc<Mutex<Vec<MappingRule>>>;

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    BreakpointsState, ChainRegistryState, ChainTimeoutState, IgnoreRulesState, MappingsState,
+    BreakpointsState, ChainRegistryState, ChainRequestRegistryState, ChainTimeoutState, IgnoreRulesState, MappingsState,
     PauseRegistryState, PauseTimeoutState, ProxyConfigState, ProxyRestartInfo, ProxyState,
 };
 use crate::{cert, proxy};
@@ -27,6 +27,7 @@ pub async fn set_proxy_config(
     pause_timeout: tauri::State<'_, PauseTimeoutState>,
     chain_registry: tauri::State<'_, ChainRegistryState>,
     chain_timeout: tauri::State<'_, ChainTimeoutState>,
+    chain_request_registry: tauri::State<'_, ChainRequestRegistryState>,
 ) -> Result<(), String> {
     // Update stored config.
     *config.port.lock().unwrap() = port;
@@ -89,6 +90,7 @@ pub async fn set_proxy_config(
             Arc::clone(&restart_info.response_emit_fn),
             Arc::clone(&restart_info.mapping_emit_fn),
             Arc::clone(&restart_info.chain_emit_fn),
+            Arc::clone(&restart_info.chain_request_emit_fn),
             Arc::clone(&breakpoints.0),
             Arc::clone(&mappings_state.0),
             Arc::clone(&ignore_rules_state.0),
@@ -96,6 +98,7 @@ pub async fn set_proxy_config(
             Arc::clone(&pause_timeout.0),
             Arc::clone(&chain_registry.0),
             Arc::clone(&chain_timeout.0),
+            Arc::clone(&chain_request_registry.0),
         );
         *proxy_state.0.lock().unwrap() = Some(new_proxy);
     }

@@ -125,5 +125,11 @@ pub fn migrations() -> Vec<Migration> {
             sql: include_str!("../migrations/020_ignore_rules.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 21,
+            description: "mapping_chain_flags",
+            sql: include_str!("../migrations/021_mapping_chain_flags.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }

@@ -5,14 +5,61 @@ use hudsucker::{
     hyper_util::client::legacy::Error as UpstreamError,
     Body, HttpContext, HttpHandler, RequestOrResponse,
 };
-use hudsucker::hyper::header::{HeaderValue, CONTENT_LENGTH, CONTENT_TYPE, TRANSFER_ENCODING};
+use hudsucker::hyper::header::{HeaderValue, CONTENT_ENCODING, CONTENT_LENGTH, CONTENT_TYPE, TRANSFER_ENCODING};
 use std::collections::HashMap;
+use std::io::Read;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::sync::oneshot;
 
 use super::types::*;
 use super::url_matching::match_url;
+
+/// Decode a response body if the upstream server compressed it despite our
+/// "Accept-Encoding: identity" hint (some CDNs/gateways ignore it). Falls back
+/// to the original bytes on any decode failure so a misidentified encoding
+/// can't turn a working response into an empty/broken one.
+fn decode_content_encoding(bytes: Bytes, content_encoding: Option<&str>) -> Bytes {
+    let Some(encoding) = content_encoding else { return bytes };
+    match encoding.trim().to_ascii_lowercase().as_str() {
+        "gzip" | "x-gzip" => {
+            let mut out = Vec::new();
+            match flate2::read::GzDecoder::new(&bytes[..]).read_to_end(&mut out) {
+                Ok(_) => Bytes::from(out),
+                Err(e) => {
+                    log::warn!("Failed to gunzip response body: {e}");
+                    bytes
+                }
+            }
+        }
+        "deflate" => {
+            let mut out = Vec::new();
+            if flate2::read::DeflateDecoder::new(&bytes[..]).read_to_end(&mut out).is_ok() {
+                return Bytes::from(out);
+            }
+            // Some servers send raw zlib under the "deflate" token — retry before giving up.
+            let mut zlib_out = Vec::new();
+            match flate2::read::ZlibDecoder::new(&bytes[..]).read_to_end(&mut zlib_out) {
+                Ok(_) => Bytes::from(zlib_out),
+                Err(e) => {
+                    log::warn!("Failed to inflate response body: {e}");
+                    bytes
+                }
+            }
+        }
+        "br" => {
+            let mut out = Vec::new();
+            match brotli::Decompressor::new(&bytes[..], 4096).read_to_end(&mut out) {
+                Ok(_) => Bytes::from(out),
+                Err(e) => {
+                    log::warn!("Failed to brotli-decompress response body: {e}");
+                    bytes
+                }
+            }
+        }
+        _ => bytes,
+    }
+}
 
 // ─── HTTP handler ─────────────────────────────────────────────────────────────
 
@@ -23,6 +70,7 @@ pub struct InterceptHandler {
     response_emit_fn: ResponseEmitFn,
     mapping_emit_fn: MappingEmitFn,
     chain_emit_fn: ChainEmitFn,
+    chain_request_emit_fn: ChainRequestEmitFn,
     breakpoints: BreakpointsRef,
     mappings: MappingsRef,
     ignore_rules: IgnoreRulesRef,
@@ -30,6 +78,7 @@ pub struct InterceptHandler {
     pause_timeout: PauseTimeoutRef,
     chain_registry: ChainRegistryRef,
     chain_timeout: ChainTimeoutRef,
+    chain_request_registry: ChainRequestRegistryRef,
     /// Pending request captured in handle_request, consumed in handle_response.
     /// Hudsucker clones the handler once per request (see internal.rs `self.clone().proxy(req)`),
     /// so each clone handles exactly one request/response pair sequentially — no shared
@@ -44,6 +93,7 @@ impl InterceptHandler {
         response_emit_fn: ResponseEmitFn,
         mapping_emit_fn: MappingEmitFn,
         chain_emit_fn: ChainEmitFn,
+        chain_request_emit_fn: ChainRequestEmitFn,
         breakpoints: BreakpointsRef,
         mappings: MappingsRef,
         ignore_rules: IgnoreRulesRef,
@@ -51,6 +101,7 @@ impl InterceptHandler {
         pause_timeout: PauseTimeoutRef,
         chain_registry: ChainRegistryRef,
         chain_timeout: ChainTimeoutRef,
+        chain_request_registry: ChainRequestRegistryRef,
     ) -> Self {
         Self {
             paused_emit_fn,
@@ -58,6 +109,7 @@ impl InterceptHandler {
             response_emit_fn,
             mapping_emit_fn,
             chain_emit_fn,
+            chain_request_emit_fn,
             breakpoints,
             mappings,
             ignore_rules,
@@ -65,6 +117,7 @@ impl InterceptHandler {
             pause_timeout,
             chain_registry,
             chain_timeout,
+            chain_request_registry,
             pending: None,
         }
     }
@@ -150,8 +203,11 @@ impl HttpHandler for InterceptHandler {
         let request_emit_fn = Arc::clone(&self.request_emit_fn);
         let response_emit_fn_for_block = Arc::clone(&self.response_emit_fn);
         let mapping_emit_fn_for_remap = Arc::clone(&self.mapping_emit_fn);
+        let chain_request_emit_fn = Arc::clone(&self.chain_request_emit_fn);
         let breakpoints = Arc::clone(&self.breakpoints);
         let mappings_for_remap = Arc::clone(&self.mappings);
+        let chain_request_registry = Arc::clone(&self.chain_request_registry);
+        let chain_request_timeout_ref = Arc::clone(&self.chain_timeout);
 
         async move {
             // Bypassed request: forward verbatim with no capture/emit/remap/block.
@@ -161,7 +217,7 @@ impl HttpHandler for InterceptHandler {
 
             // Buffer the request body so we can both capture it and forward it upstream.
             let (mut parts, body) = req.into_parts();
-            let bytes: Bytes = body.collect().await.unwrap_or_default().to_bytes();
+            let mut bytes: Bytes = body.collect().await.unwrap_or_default().to_bytes();
 
             let captured_body: Option<String> = if !bytes.is_empty()
                 && bytes.len() <= MAX_BODY_CAPTURE_BYTES
@@ -184,9 +240,123 @@ impl HttpHandler for InterceptHandler {
                 request_body: captured_body.clone(),
             });
 
+            let full_url = format!("https://{}{}", host, path);
+
+            // ── Request-side chain pause ────────────────────────────────────
+            // Mirrors the response-side chain pause in handle_response, but
+            // fires before the request is forwarded upstream — Response's
+            // (possibly overridden) result is applied directly to
+            // `parts`/`bytes` rather than to a response. needs_request_chain
+            // gates the *pause* only: an untouched chain still gets the match
+            // emitted (fire-and-forget, for the debug log/canvas) but doesn't
+            // block forwarding on a result that would just no-op anyway.
+            {
+                let request_chain_rule = {
+                    let guard = mappings_for_remap.lock().expect("mappings request-chain lock");
+                    guard
+                        .iter()
+                        .filter(|m| m.enabled && m.use_chain)
+                        .find(|m| match_url(&full_url, &m.url_pattern, m.match_type.as_str()).matches)
+                        .cloned()
+                };
+
+                if let Some(ref rule) = request_chain_rule {
+                    if let Some(ref chain_id) = rule.chain_id {
+                        if !rule.needs_request_chain {
+                            // Fire-and-forget: still shows the match in the debug
+                            // log/canvas, but doesn't block forwarding on a result
+                            // that would just no-op anyway.
+                            chain_request_emit_fn(&ChainRequestExecutionEvent {
+                                request_id: id.clone(),
+                                chain_id: chain_id.clone(),
+                                mapping_id: rule.id.clone(),
+                                method: method.clone(),
+                                host: host.clone(),
+                                path: path.clone(),
+                                headers: request_headers.clone(),
+                                body: captured_body.clone().unwrap_or_default(),
+                            });
+                            // No pause means no override — but the mapping log should
+                            // still show that this mapping matched the request.
+                            mapping_emit_fn_for_remap(&MappingAppliedEvent {
+                                mapping_id: rule.id.clone(),
+                                mapping_name: rule.id.clone(),
+                                request_id: id.clone(),
+                                timestamp: now_millis(),
+                                overrides_applied: vec!["chain_matched".to_string()],
+                                original_url: None,
+                                remapped_url: None,
+                            });
+                        } else {
+                        let timeout_secs = *chain_request_timeout_ref.lock().expect("chain request timeout lock");
+                        let (tx, rx) = oneshot::channel::<Option<ChainRequestResult>>();
+                        chain_request_registry.lock().expect("chain request registry lock").insert(id.clone(), tx);
+
+                        chain_request_emit_fn(&ChainRequestExecutionEvent {
+                            request_id: id.clone(),
+                            chain_id: chain_id.clone(),
+                            mapping_id: rule.id.clone(),
+                            method: method.clone(),
+                            host: host.clone(),
+                            path: path.clone(),
+                            headers: request_headers.clone(),
+                            body: captured_body.clone().unwrap_or_default(),
+                        });
+
+                        let chain_result = if timeout_secs == 0 {
+                            match rx.await {
+                                Ok(result) => result,
+                                Err(_) => None,
+                            }
+                        } else {
+                            match tokio::time::timeout(Duration::from_secs(timeout_secs), rx).await {
+                                Ok(Ok(result)) => result,
+                                _ => {
+                                    log::warn!(
+                                        "Request-chain execution timeout for mapping '{}' ({}s)",
+                                        rule.id, timeout_secs,
+                                    );
+                                    None
+                                }
+                            }
+                        };
+
+                        chain_request_registry.lock().expect("chain request registry lock").remove(&id);
+
+                        if let Some(result) = chain_result {
+                            if let Ok(new_method) = hudsucker::hyper::Method::from_bytes(result.method.as_bytes()) {
+                                parts.method = new_method;
+                            }
+                            if let Ok(uri) = result.url.parse::<hudsucker::hyper::Uri>() {
+                                parts.uri = uri;
+                            }
+                            for (key, value) in &result.headers {
+                                if let (Ok(name), Ok(val)) = (
+                                    hudsucker::hyper::header::HeaderName::from_bytes(key.as_bytes()),
+                                    HeaderValue::from_str(value),
+                                ) {
+                                    parts.headers.insert(name, val);
+                                }
+                            }
+                            bytes = Bytes::from(result.body.into_bytes());
+                            if let Ok(val) = HeaderValue::from_str(&bytes.len().to_string()) {
+                                parts.headers.insert(CONTENT_LENGTH, val);
+                            }
+
+                            log::info!("Request chain applied for mapping '{}'", rule.id);
+                        } else {
+                            log::info!(
+                                "Request-chain execution failed/timed out for mapping '{}' — forwarding original request",
+                                rule.id,
+                            );
+                        }
+                        }
+                    }
+                }
+            }
+
             // ── URL Remapping ──────────────────────────────────────────────
             // Check mapping rules for URL remap BEFORE forwarding upstream.
-            let full_url = format!("https://{}{}", host, path);
             {
                 let remap_rule = {
                     let guard = mappings_for_remap.lock().expect("mappings remap lock");
@@ -345,6 +515,16 @@ impl HttpHandler for InterceptHandler {
             .and_then(|v| v.to_str().ok())
             .map(str::to_string);
 
+        // Some upstream servers/CDNs ignore our "Accept-Encoding: identity"
+        // hint and compress anyway — capture the real encoding so we can
+        // decode it below rather than forwarding compressed bytes under
+        // headers that (further down) claim the body is unencoded.
+        let orig_content_encoding: Option<String> = res
+            .headers()
+            .get(CONTENT_ENCODING)
+            .and_then(|v| v.to_str().ok())
+            .map(str::to_string);
+
         // Take the pending request that was stored by handle_request on this same clone.
         let req_info = self.pending.take();
         let paused_emit_fn = Arc::clone(&self.paused_emit_fn);
@@ -369,6 +549,7 @@ impl HttpHandler for InterceptHandler {
             let response_headers = collect_headers(&parts.headers);
 
             let orig_bytes: Bytes = body.collect().await.unwrap_or_default().to_bytes();
+            let orig_bytes: Bytes = decode_content_encoding(orig_bytes, orig_content_encoding.as_deref());
 
             // Capture the response body for potential pausing.
             let orig_response_body: Option<String> =
@@ -590,19 +771,56 @@ impl HttpHandler for InterceptHandler {
                     // ── Chain-based mapping ────────────────────────────────────
                     // When use_chain is true, delegate response generation to a
                     // Stitch chain on the frontend instead of using static rules.
+                    // needs_response_chain gates the *pause* only: a chain whose
+                    // Response segment is a plain passthrough to Exit still gets
+                    // the match emitted (fire-and-forget, so the debug log/canvas
+                    // shows it matched) but doesn't block the response waiting on
+                    // a result that would just no-op anyway.
                     let chain_applied = if mapping.use_chain {
                         if let Some(ref chain_id) = mapping.chain_id {
-                            let chain_timeout_secs = *chain_timeout_ref.lock().expect("chain timeout lock");
-                            let (tx, rx) = oneshot::channel::<Option<ChainExecutionResult>>();
-
-                            chain_registry.lock().expect("chain registry lock").insert(request_id.clone(), tx);
-
-                            // Build the request data to send to the frontend.
                             let chain_body = orig_response_body.clone().unwrap_or_default();
                             let chain_url = req_info
                                 .as_ref()
                                 .map(|r| format!("https://{}{}", r.host, r.path))
                                 .unwrap_or_default();
+                            let request_method = req_info.as_ref().map(|r| r.method.clone()).unwrap_or_default();
+                            let request_headers = req_info.as_ref().map(|r| r.request_headers.clone()).unwrap_or_default();
+                            let request_body = req_info
+                                .as_ref()
+                                .and_then(|r| r.request_body.lock().expect("request body lock").clone())
+                                .unwrap_or_default();
+
+                            if !mapping.needs_response_chain {
+                                chain_emit_fn(&ChainExecutionRequestEvent {
+                                    request_id: request_id.clone(),
+                                    chain_id: chain_id.clone(),
+                                    mapping_id: mapping.id.clone(),
+                                    status: status_code,
+                                    headers: response_headers.clone(),
+                                    body: chain_body,
+                                    url: chain_url,
+                                    request_method,
+                                    request_headers,
+                                    request_body,
+                                });
+                                // No pause means no override — but the mapping log should
+                                // still show that this mapping matched the request.
+                                mapping_emit_fn(&MappingAppliedEvent {
+                                    mapping_id: mapping.id.clone(),
+                                    mapping_name: mapping.id.clone(),
+                                    request_id: request_id.clone(),
+                                    timestamp: now_millis(),
+                                    overrides_applied: vec!["chain_matched".to_string()],
+                                    original_url: None,
+                                    remapped_url: None,
+                                });
+                                false
+                            } else {
+                            let chain_timeout_secs = *chain_timeout_ref.lock().expect("chain timeout lock");
+                            let (tx, rx) = oneshot::channel::<Option<ChainExecutionResult>>();
+
+                            chain_registry.lock().expect("chain registry lock").insert(request_id.clone(), tx);
+
                             chain_emit_fn(&ChainExecutionRequestEvent {
                                 request_id: request_id.clone(),
                                 chain_id: chain_id.clone(),
@@ -611,6 +829,9 @@ impl HttpHandler for InterceptHandler {
                                 headers: response_headers.clone(),
                                 body: chain_body,
                                 url: chain_url,
+                                request_method,
+                                request_headers,
+                                request_body,
                             });
 
                             // Wait for the frontend to execute the chain and send the result back.
@@ -655,6 +876,13 @@ impl HttpHandler for InterceptHandler {
                                         parts.headers.insert(name, val);
                                     }
                                 }
+                                // Each cookie is its own Set-Cookie header — append (not insert) so
+                                // multiple cookies survive as distinct header lines.
+                                for cookie in &result.set_cookies {
+                                    if let Ok(val) = HeaderValue::from_str(cookie) {
+                                        parts.headers.append(hudsucker::hyper::header::SET_COOKIE, val);
+                                    }
+                                }
 
                                 overrides.push("chain".to_string());
                                 true
@@ -665,6 +893,7 @@ impl HttpHandler for InterceptHandler {
                                     mapping.id,
                                 );
                                 false
+                            }
                             }
                         } else {
                             false
@@ -774,8 +1003,13 @@ impl HttpHandler for InterceptHandler {
             // Rebuild response with potentially modified status code.
             // Remove Transfer-Encoding and set Content-Length since we always send a
             // fully-buffered body; leaving Transfer-Encoding: chunked in place would
-            // make the client misparse the response and cancel the request.
+            // make the client misparse the response and cancel the request. Remove
+            // Content-Encoding too — final_bytes is always the literal, unencoded
+            // bytes we send (we already request Accept-Encoding: identity upstream),
+            // so a stale gzip/br/deflate header here would make the client try to
+            // decode an already-plain body and fail with ERR_CONTENT_DECODING_FAILED.
             parts.headers.remove(TRANSFER_ENCODING);
+            parts.headers.remove(CONTENT_ENCODING);
             if let Ok(val) = HeaderValue::from_str(&final_bytes.len().to_string()) {
                 parts.headers.insert(CONTENT_LENGTH, val);
             }
@@ -828,6 +1062,7 @@ mod tests {
         let response_emit_fn: ResponseEmitFn = Arc::new(|_| {});
         let mapping_emit_fn: MappingEmitFn = Arc::new(|_| {});
         let chain_emit_fn: ChainEmitFn = Arc::new(|_| {});
+        let chain_request_emit_fn: ChainRequestEmitFn = Arc::new(|_| {});
         let breakpoints: BreakpointsRef = Arc::new(Mutex::new(Vec::new()));
         let mappings: MappingsRef = Arc::new(Mutex::new(Vec::new()));
         let ignore_rules: IgnoreRulesRef = Arc::new(Mutex::new(Vec::new()));
@@ -835,7 +1070,48 @@ mod tests {
         let pause_timeout: PauseTimeoutRef = Arc::new(Mutex::new(30));
         let chain_registry: ChainRegistryRef = Arc::new(Mutex::new(HashMap::new()));
         let chain_timeout: ChainTimeoutRef = Arc::new(Mutex::new(30));
-        let handler = InterceptHandler::new(paused_emit_fn, request_emit_fn, response_emit_fn, mapping_emit_fn, chain_emit_fn, breakpoints, mappings, ignore_rules, pause_registry, pause_timeout, chain_registry, chain_timeout);
+        let chain_request_registry: ChainRequestRegistryRef = Arc::new(Mutex::new(HashMap::new()));
+        let handler = InterceptHandler::new(paused_emit_fn, request_emit_fn, response_emit_fn, mapping_emit_fn, chain_emit_fn, chain_request_emit_fn, breakpoints, mappings, ignore_rules, pause_registry, pause_timeout, chain_registry, chain_timeout, chain_request_registry);
         assert!(handler.pending.is_none());
+    }
+
+    #[test]
+    fn decode_content_encoding_passes_through_when_no_encoding_header() {
+        let bytes = Bytes::from_static(b"plain text");
+        assert_eq!(decode_content_encoding(bytes.clone(), None), bytes);
+    }
+
+    #[test]
+    fn decode_content_encoding_passes_through_unknown_encoding() {
+        let bytes = Bytes::from_static(b"plain text");
+        assert_eq!(decode_content_encoding(bytes.clone(), Some("zstd")), bytes);
+    }
+
+    #[test]
+    fn decode_content_encoding_gunzips_gzip_body() {
+        use std::io::Write;
+        let mut encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
+        encoder.write_all(b"hello from gzip").unwrap();
+        let compressed = Bytes::from(encoder.finish().unwrap());
+
+        let decoded = decode_content_encoding(compressed, Some("gzip"));
+        assert_eq!(decoded, Bytes::from_static(b"hello from gzip"));
+    }
+
+    #[test]
+    fn decode_content_encoding_inflates_deflate_body() {
+        use std::io::Write;
+        let mut encoder = flate2::write::DeflateEncoder::new(Vec::new(), flate2::Compression::default());
+        encoder.write_all(b"hello from deflate").unwrap();
+        let compressed = Bytes::from(encoder.finish().unwrap());
+
+        let decoded = decode_content_encoding(compressed, Some("deflate"));
+        assert_eq!(decoded, Bytes::from_static(b"hello from deflate"));
+    }
+
+    #[test]
+    fn decode_content_encoding_falls_back_to_original_on_bad_gzip() {
+        let bytes = Bytes::from_static(b"not actually gzip");
+        assert_eq!(decode_content_encoding(bytes.clone(), Some("gzip")), bytes);
     }
 }

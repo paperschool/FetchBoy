@@ -257,6 +257,9 @@ fn chain_execution_request_event_serialises_camelcase() {
         headers,
         body: "{\"test\":true}".to_string(),
         url: "https://api.example.com/users".to_string(),
+        request_method: "GET".to_string(),
+        request_headers: HashMap::new(),
+        request_body: String::new(),
     };
 
     let json = serde_json::to_value(&event).unwrap();
@@ -266,6 +269,7 @@ fn chain_execution_request_event_serialises_camelcase() {
     assert_eq!(json["status"], 200);
     assert_eq!(json["headers"]["content-type"], "application/json");
     assert_eq!(json["body"], "{\"test\":true}");
+    assert_eq!(json["requestMethod"], "GET");
 }
 
 #[test]
@@ -330,6 +334,7 @@ fn chain_registry_stores_and_retrieves_sender() {
     let result = ChainExecutionResult {
         status: 201,
         headers: HashMap::new(),
+        set_cookies: vec!["session=abc".to_string()],
         body: "test".to_string(),
         body_content_type: "text/plain".to_string(),
     };
@@ -341,6 +346,7 @@ fn chain_registry_stores_and_retrieves_sender() {
     assert_eq!(r.status, 201);
     assert_eq!(r.body, "test");
     assert_eq!(r.body_content_type, "text/plain");
+    assert_eq!(r.set_cookies, vec!["session=abc".to_string()]);
 }
 
 #[test]

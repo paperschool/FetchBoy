@@ -1,0 +1,2 @@
+ALTER TABLE mappings ADD COLUMN needs_request_chain INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE mappings ADD COLUMN needs_response_chain INTEGER NOT NULL DEFAULT 1;

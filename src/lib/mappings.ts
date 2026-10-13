@@ -20,6 +20,8 @@ interface RawMapping {
     url_remap_target: string;
     use_chain: number;
     chain_id: string | null;
+    needs_request_chain: number;
+    needs_response_chain: number;
     created_at: string;
     updated_at: string;
 }
@@ -43,6 +45,8 @@ function deserializeMapping(raw: RawMapping): Mapping {
         url_remap_target: raw.url_remap_target ?? '',
         use_chain: raw.use_chain === 1,
         chain_id: raw.chain_id ?? null,
+        needs_request_chain: raw.needs_request_chain === 1,
+        needs_response_chain: raw.needs_response_chain !== 0,
     };
 }
 
@@ -97,8 +101,9 @@ export async function createMapping(
         'response_body_enabled', 'response_body', 'response_body_content_type', 'response_body_file_path',
         'url_remap_enabled', 'url_remap_target',
         'use_chain', 'chain_id',
+        'needs_request_chain', 'needs_response_chain',
         'created_at', 'updated_at',
-    ], [id, folderId, name, urlPattern, matchType, 1, '[]', '[]', '[]', 0, '', 'application/json', '', 0, '', 0, null, ts, ts]);
+    ], [id, folderId, name, urlPattern, matchType, 1, '[]', '[]', '[]', 0, '', 'application/json', '', 0, '', 0, null, 0, 1, ts, ts]);
     return {
         id, folder_id: folderId, name, url_pattern: urlPattern,
         match_type: matchType, enabled: true,
@@ -107,6 +112,7 @@ export async function createMapping(
         response_body_content_type: 'application/json', response_body_file_path: '',
         url_remap_enabled: false, url_remap_target: '',
         use_chain: false, chain_id: null,
+        needs_request_chain: false, needs_response_chain: true,
         created_at: ts, updated_at: ts,
     };
 }
@@ -116,17 +122,20 @@ export async function updateMapping(
     changes: Partial<Pick<Mapping,
         'name' | 'url_pattern' | 'match_type' | 'enabled' |
         'response_body_enabled' | 'response_body' | 'response_body_content_type' | 'response_body_file_path' |
-        'url_remap_enabled' | 'url_remap_target' | 'use_chain' | 'chain_id'> & {
-        headers_add?: MappingHeader[];
-        headers_remove?: MappingHeader[];
-        cookies?: MappingCookie[];
-    }>,
+        'url_remap_enabled' | 'url_remap_target' | 'use_chain' | 'chain_id' |
+        'needs_request_chain' | 'needs_response_chain'> & {
+            headers_add?: MappingHeader[];
+            headers_remove?: MappingHeader[];
+            cookies?: MappingCookie[];
+        }>,
 ): Promise<void> {
     const update = buildUpdate('mappings', id, changes, {
         enabled: boolToInt,
         response_body_enabled: boolToInt,
         url_remap_enabled: boolToInt,
         use_chain: boolToInt,
+        needs_request_chain: boolToInt,
+        needs_response_chain: boolToInt,
         headers_add: toJson,
         headers_remove: toJson,
         cookies: toJson,
@@ -152,5 +161,6 @@ export async function syncMappingsToProxy(mappings: Mapping[]): Promise<void> {
         response_body_file_path: m.response_body_file_path,
         url_remap_enabled: m.url_remap_enabled, url_remap_target: m.url_remap_target,
         use_chain: m.use_chain, chain_id: m.chain_id,
+        needs_request_chain: m.needs_request_chain, needs_response_chain: m.needs_response_chain,
     }));
 }
