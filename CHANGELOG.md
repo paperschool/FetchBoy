@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.24.0] - 2026-10-13
+
+- feat: Stitch mapping chains now only pause the proxy when something is actually wired to override the request or response — a no-op chain fires without blocking the request, while staying visible in the debug log
+- feat: Response (not Entry) now owns outbound request overrides in a mapping chain, and a new Log node lets you pass data through unchanged while logging it
+- feat: the Stitch node editor, debug log, and output views are now one unified panel, with merged start/complete log rows and unseen-count badges on the Debug, Overrides, and mapping Log tabs
+- fix: a chain node wired only through Entry/Response (e.g. a Sleep node) no longer runs — and delays — twice
+- fix: FetchBoy now surfaces OS proxy disable failures instead of silently swallowing them, and detects HTTPS-only proxy configuration correctly
+
 ## [0.23.3] - 2026-08-05
 
 - fix: Renaming a saved request in the Fetch tab now actually sticks — double-click rename silently did nothing and the old name snapped back

@@ -1,5 +1,18 @@
 # Long Changelog
 
+## [0.24.0] - 2026-10-13
+
+Conditional Stitch chain pausing, an Entry/Response rework, and a unified debug panel.
+
+- feat: conditional request/response chain pausing (`handler.rs`) — mappings gain `needs_request_chain`/`needs_response_chain` flags (migration 021, mirrored in `src/lib/db.ts`/`mappings.ts`), computed by a new chain analyzer (`mappingChainAnalysis.ts`) that detects whether Entry→Response/Response→Exit wiring is a customized override or plain default passthrough. `handle_request`/`handle_response` now only block-and-wait on `resume_chain_request`/`resume_chain` when the corresponding flag is set; otherwise they fire-and-forget — the chain still runs (and is still visible in the debug log via a new `chain_matched` entry type) without holding up the real request. Also decodes gzip/deflate/brotli response bodies (`decode_content_encoding`) before any further processing, since some upstream servers ignore the proxy's "Accept-Encoding: identity" hint
+- feat: Response (not Entry) now owns outbound request overrides — `mappingExecutor.ts`'s `executeMappingResponseNode`/`executeMappingRequestSegment` rewritten so wiring into Response's method/headers/body/url ports determines what's actually fired, while Response still independently shapes the reply; `stitchMappingMigration.ts`'s `ensureMappingChainUpToDate` self-heals legacy chains' default wiring on first load. Adds a `Log` node type (`logExecutor.ts`) that passes its input through unchanged while logging it to the console and the debug log
+- fix: chain nodes executing twice — `chainExecutor.ts`'s `findMappingInternalNodeIds` stops the canvas Play button's top-level topological sort from treating a mapping's own top-level-sibling nodes (e.g. a Sleep node only reachable through Entry/Response) as independent roots and running them a second time in parallel with the mapping's own traversal; `mappingExecutor.ts`'s `findRequestOnlyChildIds` + a `requestPhaseAlreadyRan` flag stop the response-shaping phase from re-running (and re-delaying) nodes that exclusively fed the request-firing phase, which already ran them for real before the request went out
+- feat: unified Stitch details panel — `StitchDebugLog.tsx`/`StitchChainOutput.tsx` deleted in favour of a single `StitchDetailsPanel.tsx` (Node/Debug Log/Output tabs) with minimize/flash UX in `StitchView.tsx`; `StitchDebugLogEntry.tsx` rewritten to merge each node's started+completed rows into one clickable entry (`mergeExecutionLogEntries.ts`) with a jump-to-node button; new shared `NodeOutputView.tsx` (Request/Response/Raw tabs, via `nodeOutputToInterceptRequest.ts`) replaces the duplicated output renderers and is reused by Entry/Response/Log nodes
+- feat: unseen-count badges on the Debug tab, Overrides tab, and per-mapping Log tab (`debugStore.ts`/`mappingLogStore.ts` gain `unseenCount`/`markSeen()`), so a chain firing while you're not looking at its log is still noticeable
+- fix: `disable_os_proxy_all_services` (`platform.rs`) now returns `Result<(), String>` listing every service/command that failed instead of silently swallowing errors, and `is_system_proxy_configured` also checks `-getsecurewebproxy` (previously only `-getwebproxy`, missing an HTTPS-only proxy config)
+- feat: added a JS content-type option to the mapping response body editor
+- chore: `npx tsc -b` clean; `cargo check`/`cargo test` clean — 52 Rust + 1397 vitest tests pass
+
 ## [0.23.3] - 2026-08-05
 
 Bug fix — saved-request inline rename in the collection tree.
