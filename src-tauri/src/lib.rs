@@ -153,6 +153,11 @@ fn build_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Routing a whole machine's traffic through the proxy can hold far more
+    // concurrent connections than macOS's default 256-fd soft limit allows —
+    // raise it before anything else starts (see platform::raise_fd_limit's doc).
+    platform::raise_fd_limit();
+
     tauri::Builder::default()
         .menu(build_menu)
         .on_menu_event(|app, event| {
