@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.24.1] - 2026-10-13
+
+- fix: the proxy no longer exhausts your machine's file-descriptor limit during normal use — a busy connection count previously hit macOS's default ceiling, causing proxy misbehavior and a "Too many open files" error when disabling the system proxy
+
 ## [0.24.0] - 2026-10-13
 
 - feat: Stitch mapping chains now only pause the proxy when something is actually wired to override the request or response — a no-op chain fires without blocking the request, while staying visible in the debug log

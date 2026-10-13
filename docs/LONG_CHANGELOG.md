@@ -1,5 +1,14 @@
 # Long Changelog
 
+## [0.24.1] - 2026-10-13
+
+Bug fix — proxy connection file-descriptor exhaustion.
+
+- fix: routing a whole machine's traffic through the proxy can hold far more concurrent connections (local CONNECT tunnels plus their upstream legs) than macOS's default per-process soft limit of 256 open files — on a busy machine this was exhausted within an hour or two of normal use, causing proxy misbehavior and a spurious `Failed to list network services: Too many open files (os error 24)` when disabling the OS proxy (the `networksetup` subprocess call itself couldn't open a pipe). New `platform::raise_fd_limit()` reads the process's current `RLIMIT_NOFILE` via `libc::getrlimit` and raises the soft limit to the hard limit (falling back to 10,240 if the hard limit is reported as `RLIM_INFINITY`) via `libc::setrlimit`, called as the first statement in `run()` before the Tauri builder or proxy even starts. Unix-only (`#[cfg(unix)]`, gated via a `[target.'cfg(unix)'.dependencies]` `libc` dependency) — Windows already has a much higher default per-process handle limit, so it's a no-op there
+- chore: confirmed via live investigation — inspected the installed app's SQLite DB (shared with dev under the `com.fetchboy.app` identifier) and found every mapping, breakpoint, and ignore rule disabled, ruling out a broken/cyclic Stitch mapping chain as the cause; `lsof` on the running process showed 282 open files against the 256 soft limit, ~190 of them long-lived established connections (the proxy's own listening port plus real outbound traffic), confirming the fd ceiling — not chain logic — was the root cause
+- test: added `platform::tests::raise_fd_limit_never_lowers_the_soft_limit`
+- chore: `cargo check`/`cargo test` clean — 53 Rust tests pass; `yarn tauri build` produces an installable `.app`/`.dmg` with the fix
+
 ## [0.24.0] - 2026-10-13
 
 Conditional Stitch chain pausing, an Entry/Response rework, and a unified debug panel.
