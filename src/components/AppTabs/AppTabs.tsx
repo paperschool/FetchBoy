@@ -1,10 +1,11 @@
-import { type ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 import type React from "react";
 import { Send, Radar, Link2, Code2, Bug, Settings } from "lucide-react";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { ToastContainer } from "@/components/ui/ToastContainer";
 import { useAppTabStore, type AppTab } from "@/stores/appTabStore";
 import { useUiSettingsStore } from "@/stores/uiSettingsStore";
+import { useDebugStore } from "@/stores/debugStore";
 import { InterceptView } from "@/components/InterceptView/InterceptView";
 import { DebugView } from "@/components/Debug/DebugView";
 import { SettingsView } from "@/components/SettingsView/SettingsView";
@@ -13,6 +14,7 @@ import { FetchTabActions } from "@/components/TopBar/TopBar";
 import { InterceptTabActions } from "@/components/InterceptView/InterceptTopBar";
 import { StitchView } from "@/components/StitchView/StitchView";
 import { useChainExecutionListener } from "@/hooks/useChainExecutionListener";
+import { useChainRequestExecutionListener } from "@/hooks/useChainRequestExecutionListener";
 import { t } from "@/lib/i18n";
 
 const TAB_CONFIG: Record<AppTab, { label: () => string; icon: React.ReactNode }> = {
@@ -32,9 +34,18 @@ export function AppTabs({ children }: AppTabsProps) {
   const activeTab = useAppTabStore((s) => s.activeTab);
   const setActiveTab = useAppTabStore((s) => s.setActiveTab);
   const proxyEnabled = useUiSettingsStore((s) => s.proxyEnabled);
+  const debugUnseenCount = useDebugStore((s) => s.unseenCount);
+  const markDebugSeen = useDebugStore((s) => s.markSeen);
 
-  // Always-on listener for proxy-triggered chain execution (must be globally mounted)
+  // Always-on listeners for proxy-triggered chain execution (must be globally mounted)
   useChainExecutionListener();
+  useChainRequestExecutionListener();
+
+  // Keep the Debug tab's badge at 0 while it's the active tab, including for
+  // events that arrive after it's already open.
+  useEffect(() => {
+    if (activeTab === "debug") markDebugSeen();
+  }, [activeTab, debugUnseenCount, markDebugSeen]);
 
   return (
     <div className="flex h-screen flex-col">
@@ -68,6 +79,15 @@ export function AppTabs({ children }: AppTabsProps) {
                   title={proxyEnabled ? "Intercepting" : "Not intercepting"}
                 />
               )}
+              {tab === "debug" && debugUnseenCount > 0 && (
+                <span
+                  className="flex min-w-[1.1rem] items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-medium leading-none text-white"
+                  data-testid="debug-tab-badge"
+                  title={`${debugUnseenCount} new debug event${debugUnseenCount !== 1 ? "s" : ""}`}
+                >
+                  {debugUnseenCount > 99 ? "99+" : debugUnseenCount}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -75,7 +95,7 @@ export function AppTabs({ children }: AppTabsProps) {
         {/* Tab-specific actions on the right */}
         <div className="flex items-center pr-1">
           {activeTab === "fetch" && <FetchTabActions />}
-          {activeTab === "intercept" && <InterceptTabActions />}
+          {(activeTab === "intercept" || activeTab === "stitch") && <InterceptTabActions />}
         </div>
       </div>
 

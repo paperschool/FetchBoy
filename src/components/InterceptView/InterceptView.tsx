@@ -14,6 +14,7 @@ import { useUiSettingsStore } from "@/stores/uiSettingsStore";
 import { useInterceptStore } from "@/stores/interceptStore";
 import { useBreakpointsStore } from "@/stores/breakpointsStore";
 import { useMappingsStore } from "@/stores/mappingsStore";
+import { useMappingLogStore } from "@/stores/mappingLogStore";
 import { useIgnoreRulesStore } from "@/stores/ignoreRulesStore";
 import { useInterceptEvents } from "@/hooks/useInterceptEvents";
 import { useMappingLogEvents } from "@/hooks/useMappingLogEvents";
@@ -27,6 +28,14 @@ export function InterceptView() {
   useMappingLogEvents();
 
   const [topTab, setTopTab] = useState<'requests' | 'mapping-log' | 'ignore'>('requests');
+  const mappingLogUnseenCount = useMappingLogStore((s) => s.unseenCount);
+  const markMappingLogSeen = useMappingLogStore((s) => s.markSeen);
+
+  // Keep the Overrides tab's badge at 0 while it's the active tab, including
+  // for entries that arrive after it's already open.
+  useEffect(() => {
+    if (topTab === 'mapping-log') markMappingLogSeen();
+  }, [topTab, mappingLogUnseenCount, markMappingLogSeen]);
 
   const selectedRequest = useInterceptStore((state) =>
     state.requests.find((r) => r.id === state.selectedRequestId) ?? null
@@ -72,12 +81,21 @@ export function InterceptView() {
         {(['requests', 'mapping-log', 'ignore'] as const).map((tab) => (
           <button key={tab} type="button" onClick={() => setTopTab(tab)}
             data-tour={tab === 'mapping-log' ? 'overrides-tab' : tab === 'ignore' ? 'ignore-tab' : undefined}
-            className={`px-4 py-1.5 text-xs transition-colors ${
+            className={`flex items-center gap-1.5 px-4 py-1.5 text-xs transition-colors ${
               topTab === tab
                 ? 'text-app-inverse font-medium border-b-2 border-app-accent'
                 : 'text-app-muted hover:text-app-inverse'
             }`}>
             {tab === 'requests' ? t('intercept.requests') : tab === 'mapping-log' ? t('intercept.overrides') : t('intercept.ignore')}
+            {tab === 'mapping-log' && mappingLogUnseenCount > 0 && (
+              <span
+                className="flex min-w-[1.1rem] items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-medium leading-none text-white"
+                data-testid="mapping-log-tab-badge"
+                title={`${mappingLogUnseenCount} new override${mappingLogUnseenCount !== 1 ? 's' : ''}`}
+              >
+                {mappingLogUnseenCount > 99 ? '99+' : mappingLogUnseenCount}
+              </span>
+            )}
           </button>
         ))}
       </div>
