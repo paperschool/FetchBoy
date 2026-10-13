@@ -1,33 +1,57 @@
 /// Disable the system-level proxy on all active network services.
 /// Safe to call from any context (exit handler, command, etc.).
-pub fn disable_os_proxy_all_services() {
+///
+/// Returns an error listing every service/command that failed instead of
+/// silently swallowing failures — a partial failure here previously left the
+/// OS proxy pointing at a dead listener with no way to diagnose why.
+pub fn disable_os_proxy_all_services() -> Result<(), String> {
     #[cfg(target_os = "macos")]
     {
-        if let Ok(out) = std::process::Command::new("networksetup")
+        let out = std::process::Command::new("networksetup")
             .args(["-listallnetworkservices"])
             .current_dir("/tmp")
             .output()
+            .map_err(|e| format!("Failed to list network services: {e}"))?;
+
+        let text = String::from_utf8_lossy(&out.stdout);
+        let mut failures: Vec<String> = Vec::new();
+
+        for service in text
+            .lines()
+            .skip(1)
+            .filter(|s| !s.starts_with('*') && !s.trim().is_empty())
         {
-            let text = String::from_utf8_lossy(&out.stdout);
-            for service in text
-                .lines()
-                .skip(1)
-                .filter(|s| !s.starts_with('*') && !s.trim().is_empty())
-            {
-                let _ = std::process::Command::new("networksetup")
-                    .args(["-setwebproxystate", service, "off"])
+            for (flag, label) in [
+                ("-setwebproxystate", "web proxy"),
+                ("-setsecurewebproxystate", "secure web proxy"),
+            ] {
+                match std::process::Command::new("networksetup")
+                    .args([flag, service, "off"])
                     .current_dir("/tmp")
-                    .output();
-                let _ = std::process::Command::new("networksetup")
-                    .args(["-setsecurewebproxystate", service, "off"])
-                    .current_dir("/tmp")
-                    .output();
+                    .output()
+                {
+                    Ok(result) if !result.status.success() => failures.push(format!(
+                        "{service} ({label}): {}",
+                        String::from_utf8_lossy(&result.stderr).trim()
+                    )),
+                    Err(e) => failures.push(format!("{service} ({label}): {e}")),
+                    Ok(_) => {}
+                }
             }
+        }
+
+        if failures.is_empty() {
+            Ok(())
+        } else {
+            Err(format!(
+                "Failed to disable OS proxy for: {}",
+                failures.join("; ")
+            ))
         }
     }
     #[cfg(target_os = "windows")]
     {
-        let _ = std::process::Command::new("reg")
+        let out = std::process::Command::new("reg")
             .args([
                 "add",
                 "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings",
@@ -36,7 +60,20 @@ pub fn disable_os_proxy_all_services() {
                 "/d", "0",
                 "/f",
             ])
-            .output();
+            .output()
+            .map_err(|e| format!("Failed to disable proxy: {e}"))?;
+        if out.status.success() {
+            Ok(())
+        } else {
+            Err(format!(
+                "reg add ProxyEnable failed: {}",
+                String::from_utf8_lossy(&out.stderr)
+            ))
+        }
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    {
+        Ok(())
     }
 }
 

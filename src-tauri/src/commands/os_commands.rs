@@ -92,8 +92,7 @@ pub fn configure_system_proxy(port: u16) -> Result<(), String> {
 
 #[tauri::command]
 pub fn unconfigure_system_proxy() -> Result<(), String> {
-    crate::platform::disable_os_proxy_all_services();
-    Ok(())
+    crate::platform::disable_os_proxy_all_services()
 }
 
 #[tauri::command]
@@ -103,13 +102,15 @@ pub fn is_system_proxy_configured(port: u16) -> bool {
         let services = crate::platform::list_network_services();
         let port_str = format!("Port: {port}");
         for service in services {
-            let out = std::process::Command::new("networksetup")
-                .args(["-getwebproxy", &service])
-                .output();
-            if let Ok(out) = out {
-                let text = String::from_utf8_lossy(&out.stdout);
-                if text.contains("Enabled: Yes") && text.contains(&port_str) {
-                    return true;
+            for flag in ["-getwebproxy", "-getsecurewebproxy"] {
+                if let Ok(out) = std::process::Command::new("networksetup")
+                    .args([flag, &service])
+                    .output()
+                {
+                    let text = String::from_utf8_lossy(&out.stdout);
+                    if text.contains("Enabled: Yes") && text.contains(&port_str) {
+                        return true;
+                    }
                 }
             }
         }

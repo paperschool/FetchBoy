@@ -14,6 +14,8 @@ pub fn exit_app(
             proxy.stop();
         }
     }
-    platform::disable_os_proxy_all_services();
+    if let Err(e) = platform::disable_os_proxy_all_services() {
+        log::error!("Failed to clear OS proxy on app exit: {e}");
+    }
     app.exit(0);
 }
