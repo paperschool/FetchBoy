@@ -9,6 +9,7 @@ type BodyMode = 'inline' | 'file';
 
 const CONTENT_TYPES = [
     { value: 'application/json', label: 'JSON', lang: 'json' as const },
+    { value: 'application/x-javascript', label: 'JS', lang: 'javascript' as const },
     { value: 'text/xml', label: 'XML', lang: 'xml' as const },
     { value: 'text/html', label: 'HTML', lang: 'html' as const },
     { value: 'text/plain', label: 'Plain Text', lang: 'plaintext' as const },
@@ -21,6 +22,7 @@ const CONTENT_TYPES = [
 
 const EXT_MAP: Record<string, string> = {
     '.json': 'application/json',
+    '.js': 'application/x-javascript',
     '.xml': 'text/xml',
     '.html': 'text/html',
     '.htm': 'text/html',
