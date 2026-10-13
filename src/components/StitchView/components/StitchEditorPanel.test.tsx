@@ -80,4 +80,28 @@ describe('StitchEditorPanel', () => {
     fireEvent.click(screen.getByTestId('editor-close'));
     expect(selectNode).toHaveBeenCalledWith(null);
   });
+
+  it('renders last-run output (not a config editor) for mapping-response, since it has nothing to configure', () => {
+    useStitchStore.setState({ executionNodeOutputs: {}, executionRequestNodeOutputs: {} });
+    renderPanel(makeNode('mapping-response', {}, 'Response'));
+    expect(screen.getByText(/No results yet/)).toBeInTheDocument();
+  });
+
+  it('shows the response viewer once mapping-response has recorded output', () => {
+    useStitchStore.setState({
+      executionNodeOutputs: { n1: { status: 200, body: { ok: true } } },
+      executionRequestNodeOutputs: {},
+    });
+    renderPanel(makeNode('mapping-response', {}, 'Response'));
+    expect(screen.getByTestId('intercept-detail-viewer')).toBeInTheDocument();
+  });
+
+  it('renders last-run output for mapping-entry too', () => {
+    useStitchStore.setState({
+      executionNodeOutputs: { n1: { method: 'GET', url: 'https://example.com' } },
+      executionRequestNodeOutputs: {},
+    });
+    renderPanel(makeNode('mapping-entry', {}, 'Entry'));
+    expect(screen.getByTestId('node-output-view')).toBeInTheDocument();
+  });
 });

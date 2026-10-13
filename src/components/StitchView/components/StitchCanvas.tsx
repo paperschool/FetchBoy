@@ -16,17 +16,24 @@ import { validateConnection } from '../utils/connectionValidator';
 import { computeLoopChildPositions } from '../utils/loopLayout';
 import { getDefaultConfig, generateNodeLabel } from '../utils/nodeFactory';
 import type { StitchNodeType } from '@/types/stitch';
-import { DEFAULT_MAPPING_ENTRY_CONFIG, DEFAULT_MAPPING_EXIT_CONFIG } from '@/types/stitch';
+import { DEFAULT_MAPPING_ENTRY_CONFIG, DEFAULT_MAPPING_RESPONSE_CONFIG, DEFAULT_MAPPING_EXIT_CONFIG } from '@/types/stitch';
 
-export function StitchCanvas(): React.ReactElement {
+interface StitchCanvasProps {
+  /** Whether the node details panel is currently collapsed to its header bar. */
+  editorMinimized?: boolean;
+  /** Called instead of deselecting when clicking empty canvas space while the editor panel is expanded. */
+  onEditorMinimizeRequest?: () => void;
+}
+
+export function StitchCanvas({ editorMinimized, onEditorMinimizeRequest }: StitchCanvasProps): React.ReactElement {
   return (
     <StitchConnectionDragProvider>
-      <StitchCanvasInner />
+      <StitchCanvasInner editorMinimized={editorMinimized} onEditorMinimizeRequest={onEditorMinimizeRequest} />
     </StitchConnectionDragProvider>
   );
 }
 
-function StitchCanvasInner(): React.ReactElement {
+function StitchCanvasInner({ editorMinimized, onEditorMinimizeRequest }: StitchCanvasProps): React.ReactElement {
   const nodes = useStitchStore((s) => s.nodes);
   const connections = useStitchStore((s) => s.connections);
   const selectedNodeId = useStitchStore((s) => s.selectedNodeId);
@@ -47,6 +54,7 @@ function StitchCanvasInner(): React.ReactElement {
   const cancelExecution = useStitchStore((s) => s.cancelExecution);
   const executionCurrentNodeId = useStitchStore((s) => s.executionCurrentNodeId);
   const executionNodeOutputs = useStitchStore((s) => s.executionNodeOutputs);
+  const executionRequestNodeOutputs = useStitchStore((s) => s.executionRequestNodeOutputs);
   const executionError = useStitchStore((s) => s.executionError);
   const executionLogs = useStitchStore((s) => s.executionLogs);
   const { drag, consumeDroppedDrag } = useConnectionDrag();
@@ -185,9 +193,15 @@ function StitchCanvasInner(): React.ReactElement {
     if ((e.target as HTMLElement).closest('[data-stitch-node]')) return;
     // Don't deselect when clicking on SVG connection lines
     if ((e.target as HTMLElement).closest('svg')) return;
-    selectNode(null);
+    // First click away just minimizes the open editor panel (keeping the node
+    // selected so its details aren't lost); a second click away fully deselects.
+    if (selectedNodeId && !editorMinimized && onEditorMinimizeRequest) {
+      onEditorMinimizeRequest();
+    } else {
+      selectNode(null);
+    }
     selectConnection(null);
-  }, [selectNode, selectConnection]);
+  }, [selectedNodeId, editorMinimized, onEditorMinimizeRequest, selectNode, selectConnection]);
 
   const handleConnectionDrop = useCallback(
     async (targetNodeId: string, targetSlot?: string): Promise<void> => {
@@ -195,9 +209,9 @@ function StitchCanvasInner(): React.ReactElement {
       const sourceKey = drag.sourceKey === '__output__' ? null : drag.sourceKey;
       const slot = targetSlot ?? 'input';
 
-      // Exit node: disconnect existing incoming connection to this port before rewiring
+      // Exit/Response node: disconnect existing incoming connection to this port before rewiring
       const targetNode = nodes.find((n) => n.id === targetNodeId);
-      if (targetNode?.type === 'mapping-exit' && slot && slot !== 'input') {
+      if ((targetNode?.type === 'mapping-exit' || targetNode?.type === 'mapping-response') && slot && slot !== 'input') {
         const existing = connections.find(
           (c) => c.targetNodeId === targetNodeId && c.targetSlot === slot,
         );
@@ -282,7 +296,7 @@ function StitchCanvasInner(): React.ReactElement {
       // "no parent" — silently stripping mapping membership and triggering
       // rebalanceLoop on the mapping container, which stamps every child
       // into off-screen container-relative coords.
-      if (movedNode.type === 'mapping-entry' || movedNode.type === 'mapping-exit') return;
+      if (movedNode.type === 'mapping-entry' || movedNode.type === 'mapping-response' || movedNode.type === 'mapping-exit') return;
       if (movedNode.parentNodeId) {
         const currentParent = nodes.find((n) => n.id === movedNode.parentNodeId);
         if (currentParent?.type === 'mapping') return;
@@ -333,8 +347,8 @@ function StitchCanvasInner(): React.ReactElement {
         const cfg = nodeToDelete.config as { isLoopEntry?: boolean };
         if (cfg.isLoopEntry) return; // Can't delete loop entry snippet
       }
-      // Can't delete mapping entry/exit or fetch-terminal nodes
-      if (nodeToDelete?.type === 'mapping-entry' || nodeToDelete?.type === 'mapping-exit') return;
+      // Can't delete mapping entry/response/exit or fetch-terminal nodes
+      if (nodeToDelete?.type === 'mapping-entry' || nodeToDelete?.type === 'mapping-response' || nodeToDelete?.type === 'mapping-exit') return;
       if (nodeToDelete?.type === 'fetch-terminal') return;
       // Can't delete mapping container nodes (hidden, engine-only)
       if (nodeToDelete?.type === 'mapping') return;
@@ -353,7 +367,7 @@ function StitchCanvasInner(): React.ReactElement {
   const createMappingChildren = useCallback(
     (_mappingNodeId: string): void => {
       if (!activeChainId) return;
-      // Entry/exit are top-level nodes (mapping container is engine-only)
+      // Entry/response/exit are top-level nodes (mapping container is engine-only)
       const entryPromise = addNode({
         chainId: activeChainId,
         type: 'mapping-entry',
@@ -361,6 +375,15 @@ function StitchCanvasInner(): React.ReactElement {
         positionY: 80,
         config: { ...DEFAULT_MAPPING_ENTRY_CONFIG },
         label: 'Entry',
+        parentNodeId: null,
+      });
+      const responsePromise = addNode({
+        chainId: activeChainId,
+        type: 'mapping-response',
+        positionX: 200,
+        positionY: 215,
+        config: { ...DEFAULT_MAPPING_RESPONSE_CONFIG },
+        label: 'Response',
         parentNodeId: null,
       });
       const exitPromise = addNode({
@@ -372,11 +395,24 @@ function StitchCanvasInner(): React.ReactElement {
         label: 'Exit',
         parentNodeId: null,
       });
-      Promise.all([entryPromise, exitPromise]).then(async ([entry, exit]) => {
-        for (const key of ['status', 'headers', 'body', 'cookies']) {
+      Promise.all([entryPromise, responsePromise, exitPromise]).then(async ([entry, response, exit]) => {
+        // Entry → Response: only 'url' is safe to default-wire — it's the same
+        // value on both sides. headers/body/cookies mean different things for
+        // the request (Entry) vs the response (Response), so wiring them by
+        // default would silently replace the real response with request data.
+        for (const key of ['url']) {
           await addConnection({
             chainId: activeChainId,
             sourceNodeId: entry.id,
+            sourceKey: key,
+            targetNodeId: response.id,
+            targetSlot: key,
+          }).catch(() => {});
+        }
+        for (const key of ['status', 'headers', 'body', 'cookies']) {
+          await addConnection({
+            chainId: activeChainId,
+            sourceNodeId: response.id,
             sourceKey: key,
             targetNodeId: exit.id,
             targetSlot: key,
@@ -684,7 +720,7 @@ function StitchCanvasInner(): React.ReactElement {
               ? 'error' as const
               : executionCurrentNodeId === node.id
                 ? 'running' as const
-                : node.id in executionNodeOutputs
+                : node.id in executionNodeOutputs || node.id in executionRequestNodeOutputs
                   ? 'success' as const
                   : null;
             const children = nodes.filter((n) => n.parentNodeId === node.id);
@@ -712,7 +748,7 @@ function StitchCanvasInner(): React.ReactElement {
               ? 'error' as const
               : executionCurrentNodeId === node.id
                 ? 'running' as const
-                : node.id in executionNodeOutputs
+                : node.id in executionNodeOutputs || node.id in executionRequestNodeOutputs
                   ? 'success' as const
                   : null;
             return (
@@ -759,6 +795,7 @@ function StitchCanvasInner(): React.ReactElement {
               { type: 'js-snippet' as const, label: 'JS Snippet', icon: <Code size={14} /> },
               { type: 'json-object' as const, label: 'JSON Object', icon: <Braces size={14} /> },
               { type: 'sleep' as const, label: 'Sleep', icon: <Timer size={14} /> },
+              { type: 'log' as const, label: 'Log', icon: <ScrollText size={14} /> },
               { type: 'loop' as const, label: 'Loop', icon: <Repeat size={14} /> },
               { type: 'merge' as const, label: 'Merge', icon: <GitMerge size={14} /> },
               { type: 'condition' as const, label: 'Condition', icon: <GitBranch size={14} /> },

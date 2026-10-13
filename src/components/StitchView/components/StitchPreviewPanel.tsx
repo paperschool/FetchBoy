@@ -1,13 +1,17 @@
 import { useCallback } from 'react';
-import { Eye, X } from 'lucide-react';
+import { Eye, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { useStitchStore } from '@/stores/stitchStore';
-import { MonacoEditorField } from '@/components/Editor/MonacoEditorField';
-import { formatNodeOutput } from '../utils/formatNodeOutput';
+import { NodeOutputView } from './NodeOutputView';
 
-export function StitchPreviewPanel(): React.ReactElement | null {
+interface StitchPreviewPanelProps {
+  minimized: boolean;
+  onToggleMinimize: () => void;
+}
+
+export function StitchPreviewPanel({ minimized, onToggleMinimize }: StitchPreviewPanelProps): React.ReactElement | null {
   const previewNodeId = useStitchStore((s) => s.previewNodeId);
   const nodes = useStitchStore((s) => s.nodes);
-  const executionNodeOutputs = useStitchStore((s) => s.executionNodeOutputs);
+  const executionLogs = useStitchStore((s) => s.executionLogs);
   const clearPreview = useStitchStore((s) => s.clearPreview);
 
   const node = nodes.find((n) => n.id === previewNodeId);
@@ -16,44 +20,16 @@ export function StitchPreviewPanel(): React.ReactElement | null {
     clearPreview();
   }, [clearPreview]);
 
-  if (!previewNodeId || !node) return null;
-
-  const executionLogs = useStitchStore((s) => s.executionLogs);
-  const output = executionNodeOutputs[previewNodeId];
-  const hasOutput = previewNodeId in executionNodeOutputs;
   const lastLog = [...executionLogs].reverse().find(
     (e) => e.nodeId === previewNodeId && (e.status === 'completed' || e.status === 'replayed'),
   );
   const isReplayed = lastLog?.status === 'replayed';
 
-  if (!hasOutput) {
-    return (
-      <div className="flex h-full flex-col overflow-hidden" data-testid="preview-panel">
-        <div className="flex shrink-0 items-center gap-2 border-b border-app-subtle bg-app-sidebar px-3 py-1.5">
-          <Eye size={12} className="text-app-secondary" />
-          <span className="min-w-0 flex-1 truncate text-xs font-medium text-app-primary">
-            Preview: {node.label ?? node.type} — Last Run Output
-          </span>
-          <button
-            className="rounded p-0.5 text-app-muted transition-colors hover:bg-app-hover hover:text-app-secondary"
-            onClick={handleClose}
-            title="Close preview"
-            data-testid="preview-close"
-          >
-            <X size={14} />
-          </button>
-        </div>
-        <div className="flex flex-1 items-center justify-center">
-          <p className="text-sm text-app-muted">No results yet — run the chain to see output</p>
-        </div>
-      </div>
-    );
-  }
-
-  const formatted = formatNodeOutput(output);
+  if (!previewNodeId || !node) return null;
 
   return (
     <div className="flex h-full flex-col overflow-hidden" data-testid="preview-panel">
+      {/* Header — always visible, even minimized, so the panel stays discoverable */}
       <div className="flex shrink-0 items-center gap-2 border-b border-app-subtle bg-app-sidebar px-3 py-1.5">
         <Eye size={12} className="text-app-secondary" />
         <span className="min-w-0 flex-1 truncate text-xs font-medium text-app-primary">
@@ -64,6 +40,14 @@ export function StitchPreviewPanel(): React.ReactElement | null {
         )}
         <button
           className="rounded p-0.5 text-app-muted transition-colors hover:bg-app-hover hover:text-app-secondary"
+          onClick={onToggleMinimize}
+          title={minimized ? 'Show panel' : 'Hide panel'}
+          data-testid="panel-minimize-toggle"
+        >
+          {minimized ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        </button>
+        <button
+          className="rounded p-0.5 text-app-muted transition-colors hover:bg-app-hover hover:text-app-secondary"
           onClick={handleClose}
           title="Close preview"
           data-testid="preview-close"
@@ -71,17 +55,9 @@ export function StitchPreviewPanel(): React.ReactElement | null {
           <X size={14} />
         </button>
       </div>
-      <div className="min-h-0 flex-1">
-        <MonacoEditorField
-          value={formatted}
-          language="json"
-          readOnly={true}
-          fontSize={12}
-          path={`stitch-preview-${previewNodeId}`}
-          testId="preview-monaco"
-          height="100%"
-        />
-      </div>
+
+      {!minimized && <NodeOutputView node={node} />}
     </div>
   );
 }
+

@@ -4,9 +4,7 @@ import { open } from '@tauri-apps/plugin-shell';
 import { TabLayout } from '@/components/Layout/TabLayout';
 import { useStitchStore } from '@/stores/stitchStore';
 import { StitchCanvas } from './components/StitchCanvas';
-import { StitchEditorPanel } from './components/StitchEditorPanel';
-import { StitchDebugLog } from './components/StitchDebugLog';
-import { StitchChainOutput } from './components/StitchChainOutput';
+import { StitchDetailsPanel } from './components/StitchDetailsPanel';
 import { StitchPreviewPanel } from './components/StitchPreviewPanel';
 import { StitchSidebar } from './components/StitchSidebar';
 import { StitchEmptyState } from './components/StitchEmptyState';
@@ -38,16 +36,13 @@ export function StitchView(): React.ReactElement {
   const { saving } = useStitchAutoSave();
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId) ?? null;
-  const showEditor = selectedNode !== null && selectedNode.type !== undefined;
-  const showDebugLog = !showEditor && bottomPanel === 'debug';
-  const showOutput = !showEditor && bottomPanel === 'output';
-  const showPreview = !showEditor && bottomPanel === 'preview';
+  // Node detail, Debug Log, and Output are all tabs within one unified panel
+  // now — selecting a node, or either toolbar button, opens it and just
+  // defaults to a different tab.
+  const showDetails = selectedNode !== null || bottomPanel === 'debug' || bottomPanel === 'output';
+  const showPreview = !showDetails && bottomPanel === 'preview';
 
   const activeChain = chains.find((c) => c.id === activeChainId);
-
-  const handleClosePanel = useCallback((): void => {
-    useStitchStore.setState({ bottomPanel: 'none' });
-  }, []);
 
   const handleCloseAndClear = useCallback((): void => {
     useStitchStore.setState({
@@ -61,8 +56,24 @@ export function StitchView(): React.ReactElement {
   }, []);
 
   const [editorHeight, setEditorHeight] = useState(260);
+  // Independent of node selection so it stays minimized while clicking around the canvas.
+  const [panelMinimized, setPanelMinimized] = useState(false);
   const dragRef = useRef<{ startY: number; startH: number } | null>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
+
+  // Briefly highlight the panel whenever a different node is selected — a cue
+  // that it's still there when the panel is minimized (or just easy to miss).
+  const [panelFlash, setPanelFlash] = useState(false);
+  const lastSelectedNodeIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (selectedNodeId && selectedNodeId !== lastSelectedNodeIdRef.current) {
+      setPanelFlash(true);
+      const t = setTimeout(() => setPanelFlash(false), 500);
+      lastSelectedNodeIdRef.current = selectedNodeId;
+      return () => clearTimeout(t);
+    }
+    lastSelectedNodeIdRef.current = selectedNodeId;
+  }, [selectedNodeId]);
 
   useEffect(() => () => { cleanupRef.current?.(); }, []);
 
@@ -199,23 +210,34 @@ export function StitchView(): React.ReactElement {
               )}
             </div>
 
-            <div className={(showEditor || showDebugLog || showOutput || showPreview) ? 'min-h-0 flex-1' : 'h-full'}>
-              <StitchCanvas />
+            <div className={(showDetails || showPreview) ? 'min-h-0 flex-1' : 'h-full'}>
+              <StitchCanvas
+                editorMinimized={panelMinimized}
+                onEditorMinimizeRequest={() => setPanelMinimized(true)}
+              />
             </div>
-            {(showEditor || showDebugLog || showOutput || showPreview) && (
+            {(showDetails || showPreview) && (
               <>
+                {!panelMinimized && (
+                  <div
+                    className="shrink-0 cursor-row-resize border-t border-app-subtle bg-app-sidebar hover:bg-blue-500/20 active:bg-blue-500/30"
+                    style={{ height: 5 }}
+                    onPointerDown={handleResizePointerDown}
+                    title="Drag to resize"
+                    data-testid="panel-resize-handle"
+                  />
+                )}
                 <div
-                  className="shrink-0 cursor-row-resize border-t border-app-subtle bg-app-sidebar hover:bg-blue-500/20 active:bg-blue-500/30"
-                  style={{ height: 5 }}
-                  onPointerDown={handleResizePointerDown}
-                  title="Drag to resize"
-                  data-testid="panel-resize-handle"
-                />
-                <div className="shrink-0 overflow-hidden transition-[height] duration-150" style={{ height: editorHeight }}>
-                  {showEditor && selectedNode && <StitchEditorPanel node={selectedNode} />}
-                  {showDebugLog && <StitchDebugLog onClose={handleCloseAndClear} />}
-                  {showOutput && <StitchChainOutput onClose={handleClosePanel} />}
-                  {showPreview && <StitchPreviewPanel />}
+                  className={`${panelMinimized ? 'shrink-0 overflow-hidden' : 'shrink-0 overflow-hidden transition-[height] duration-150'} border-2 transition-colors duration-300 ${panelFlash ? 'border-blue-400' : 'border-app-subtle'}`}
+                  style={{ height: panelMinimized ? 33 : editorHeight }}
+                  data-testid="panel-flash-container"
+                >
+                  {showDetails && (
+                    <StitchDetailsPanel onClose={handleCloseAndClear} minimized={panelMinimized} onToggleMinimize={() => setPanelMinimized((m) => !m)} />
+                  )}
+                  {showPreview && (
+                    <StitchPreviewPanel minimized={panelMinimized} onToggleMinimize={() => setPanelMinimized((m) => !m)} />
+                  )}
                 </div>
               </>
             )}

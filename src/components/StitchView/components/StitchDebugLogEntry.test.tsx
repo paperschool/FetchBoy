@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StitchDebugLogEntry } from './StitchDebugLogEntry';
@@ -32,7 +32,7 @@ describe('StitchDebugLogEntry', () => {
     expect(screen.getByTestId('log-error-message')).toHaveTextContent('Something went wrong');
   });
 
-  it('toggles input and output editors', async () => {
+  it('toggles input and output editors together with a single click on the row', async () => {
     const entry: ExecutionLogEntry = {
       ...baseEntry,
       input: { foo: 'bar' },
@@ -44,18 +44,27 @@ describe('StitchDebugLogEntry', () => {
     expect(screen.queryByTestId('debug-input-editor-n1')).not.toBeInTheDocument();
     expect(screen.queryByTestId('debug-output-editor-n1')).not.toBeInTheDocument();
 
-    // Expand input
-    await userEvent.click(screen.getByText('Input'));
+    // Clicking anywhere on the row header expands both at once
+    await userEvent.click(screen.getByTestId('debug-log-entry-header-n1'));
     expect(screen.getByTestId('debug-input-editor-n1')).toBeInTheDocument();
-
-    // Expand output
-    await userEvent.click(screen.getByText('Output'));
     expect(screen.getByTestId('debug-output-editor-n1')).toBeInTheDocument();
+
+    // Clicking again collapses both
+    await userEvent.click(screen.getByTestId('debug-log-entry-header-n1'));
+    expect(screen.queryByTestId('debug-input-editor-n1')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('debug-output-editor-n1')).not.toBeInTheDocument();
   });
 
-  it('does not show input/output buttons when data is empty', () => {
+  it('does not show input/output labels when data is empty', () => {
     render(<StitchDebugLogEntry entry={baseEntry} isError={false} />);
     expect(screen.queryByText('Input')).not.toBeInTheDocument();
     expect(screen.queryByText('Output')).not.toBeInTheDocument();
+  });
+
+  it('renders an open-node button that calls onOpenNode with the node id', async () => {
+    const onOpenNode = vi.fn();
+    render(<StitchDebugLogEntry entry={baseEntry} isError={false} onOpenNode={onOpenNode} />);
+    await userEvent.click(screen.getByTestId('debug-log-open-node-n1'));
+    expect(onOpenNode).toHaveBeenCalledWith('n1');
   });
 });

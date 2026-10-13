@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useRef } from 'react';
+import { useAnimationRestart } from '../hooks/useSuccessGlowRestart';
 
 type ConnectionStatus = 'active' | 'preview' | 'broken' | 'selected';
 type ExecutionStatus = 'default' | 'active' | 'fading';
@@ -36,6 +37,8 @@ export const ConnectionLine = React.memo(function ConnectionLine({
   const execClass = executionStatus === 'active' ? 'stitch-connection-active'
     : executionStatus === 'fading' ? 'stitch-connection-fading' : undefined;
   const execStroke = executionStatus === 'active' ? 'rgb(74, 222, 128)' : undefined;
+  const pathRef = useRef<SVGPathElement>(null);
+  useAnimationRestart(pathRef, executionStatus === 'fading', 'stitch-connection-fading');
 
   return (
     <g data-testid="connection-line">
@@ -51,6 +54,7 @@ export const ConnectionLine = React.memo(function ConnectionLine({
         />
       )}
       <path
+        ref={pathRef}
         d={d}
         fill="none"
         stroke={execStroke ?? style.stroke}

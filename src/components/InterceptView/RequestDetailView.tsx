@@ -31,9 +31,12 @@ interface RequestDetailViewProps {
   editMode?: boolean
   pendingMods?: BreakpointModifications
   onModsChange?: (mods: Partial<BreakpointModifications>) => void
+  /** Hides the Open in Fetch / Add Mapping / Add Breakpoint actions — for
+   * read-only reuse outside the Intercept view (e.g. Stitch node preview). */
+  hideActions?: boolean
 }
 
-export function RequestDetailView({ selectedRequest, editMode = false, pendingMods = {}, onModsChange }: RequestDetailViewProps) {
+export function RequestDetailView({ selectedRequest, editMode = false, pendingMods = {}, onModsChange, hideActions = false }: RequestDetailViewProps) {
   const [activeTab, setActiveTab] = useState<DetailTab>('body')
   const editorFontSize = useUiSettingsStore((s) => s.editorFontSize)
   const [newHeaderKey, setNewHeaderKey] = useState('')
@@ -89,10 +92,14 @@ export function RequestDetailView({ selectedRequest, editMode = false, pendingMo
       <div className="flex items-center gap-2">
         <span className="text-xs text-app-muted font-mono truncate flex-1" title={fullUrl}>{fullUrl}</span>
         <CopyButton text={fullUrl} />
-        <button type="button" onClick={() => openInFetch(selectedRequest)} className="shrink-0 rounded px-2 py-0.5 text-xs font-medium bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors cursor-pointer" title="Open in Fetch tab">{t('intercept.openInFetch')}</button>
-        <button type="button" onClick={() => setMapDialogOpen(true)} className="shrink-0 rounded px-2 py-0.5 text-xs font-medium bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 transition-colors cursor-pointer" title="Add mapping for this URL">{t('intercept.addMapping')}</button>
-        {!isPaused && (
-          <button type="button" onClick={() => setBreakDialogOpen(true)} className="shrink-0 rounded px-2 py-0.5 text-xs font-medium bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors cursor-pointer" title="Add breakpoint for this URL">{t('intercept.addBreakpoint')}</button>
+        {!hideActions && (
+          <>
+            <button type="button" onClick={() => openInFetch(selectedRequest)} className="shrink-0 rounded px-2 py-0.5 text-xs font-medium bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors cursor-pointer" title="Open in Fetch tab">{t('intercept.openInFetch')}</button>
+            <button type="button" onClick={() => setMapDialogOpen(true)} className="shrink-0 rounded px-2 py-0.5 text-xs font-medium bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 transition-colors cursor-pointer" title="Add mapping for this URL">{t('intercept.addMapping')}</button>
+            {!isPaused && (
+              <button type="button" onClick={() => setBreakDialogOpen(true)} className="shrink-0 rounded px-2 py-0.5 text-xs font-medium bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors cursor-pointer" title="Add breakpoint for this URL">{t('intercept.addBreakpoint')}</button>
+            )}
+          </>
         )}
       </div>
       <div className="flex flex-wrap items-center gap-3 text-xs">
@@ -156,12 +163,16 @@ export function RequestDetailView({ selectedRequest, editMode = false, pendingMo
         <p className="text-app-muted text-sm">No options available yet.</p>
       )}
     </ViewerShell>
-    <SaveBreakpointDialog open={breakDialogOpen} onClose={() => setBreakDialogOpen(false)} onSave={handleBreakSave}
-      defaultName={(() => { const s = selectedRequest.path.split('/').filter(Boolean); return s[s.length - 1] ?? selectedRequest.host; })()}
-      defaultUrlPattern={fullUrl} />
-    <SaveMappingDialog open={mapDialogOpen} onClose={() => setMapDialogOpen(false)} onSave={handleMapSave}
-      defaultName={(() => { const s = selectedRequest.path.split('/').filter(Boolean); return s[s.length - 1] ?? selectedRequest.host; })()}
-      defaultUrlPattern={fullUrl} />
+    {!hideActions && (
+      <>
+        <SaveBreakpointDialog open={breakDialogOpen} onClose={() => setBreakDialogOpen(false)} onSave={handleBreakSave}
+          defaultName={(() => { const s = selectedRequest.path.split('/').filter(Boolean); return s[s.length - 1] ?? selectedRequest.host; })()}
+          defaultUrlPattern={fullUrl} />
+        <SaveMappingDialog open={mapDialogOpen} onClose={() => setMapDialogOpen(false)} onSave={handleMapSave}
+          defaultName={(() => { const s = selectedRequest.path.split('/').filter(Boolean); return s[s.length - 1] ?? selectedRequest.host; })()}
+          defaultUrlPattern={fullUrl} />
+      </>
+    )}
     </>
   )
 }

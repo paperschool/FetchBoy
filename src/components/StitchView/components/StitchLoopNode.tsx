@@ -2,6 +2,7 @@ import React, { useCallback, useRef, useState, useMemo, type PointerEvent, type 
 import { Repeat, Eye } from 'lucide-react';
 import type { StitchNode as StitchNodeType, StitchConnection, ExecutionNodeStatus, LoopNodeConfig } from '@/types/stitch';
 import { useConnectionDrag } from './StitchConnectionDragContext';
+import { useSuccessGlowRestart } from '../hooks/useSuccessGlowRestart';
 
 const LOOP_PADDING = 20;
 const LOOP_HEADER_HEIGHT = 32;
@@ -45,6 +46,7 @@ export const StitchLoopNode = React.memo(function StitchLoopNode({
   const [editValue, setEditValue] = useState('');
   const [dragging, setDragging] = useState(false);
   const dragRef = useRef({ startX: 0, startY: 0, nodeX: 0, nodeY: 0 });
+  useSuccessGlowRestart(nodeRef, executionStatus);
 
   const config = node.config as unknown as LoopNodeConfig;
   const delayMs = config.delayMs ?? 100;

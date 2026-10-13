@@ -2,6 +2,7 @@ import React, { useCallback, useRef, useState, useMemo, type PointerEvent, type 
 import { Globe, Eye } from 'lucide-react';
 import type { StitchNode as StitchNodeType, StitchConnection, ExecutionNodeStatus, MappingNodeConfig } from '@/types/stitch';
 import { useStitchStore } from '@/stores/stitchStore';
+import { useSuccessGlowRestart } from '../hooks/useSuccessGlowRestart';
 
 const MAPPING_PADDING = 40;
 const MAPPING_HEADER_HEIGHT = 32;
@@ -41,6 +42,7 @@ export const StitchMappingNode = React.memo(function StitchMappingNode({
   const [editValue, setEditValue] = useState('');
   const [dragging, setDragging] = useState(false);
   const dragRef = useRef({ startX: 0, startY: 0, nodeX: 0, nodeY: 0 });
+  useSuccessGlowRestart(nodeRef, executionStatus);
 
   const config = node.config as unknown as MappingNodeConfig;
   const hasOutput = useStitchStore((s) => node.id in s.executionNodeOutputs);

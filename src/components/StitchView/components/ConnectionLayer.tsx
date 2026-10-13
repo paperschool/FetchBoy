@@ -66,6 +66,20 @@ export function ConnectionLayer({ onConnectionContextMenu }: ConnectionLayerProp
     };
   }, [nodes, connections]);
 
+  // Some nodes (e.g. mapping-response, which renders more rows than a plain
+  // node) settle into their final size a beat after the rAF pair above fires,
+  // so lines computed from the stale height stay wrong until something else
+  // (like dragging a node) happens to trigger another recalculation. Watch
+  // every node element directly and recalibrate on any real size change.
+  useEffect(() => {
+    const observer = new ResizeObserver(() => setCalibrated((c) => c + 1));
+    for (const n of nodes) {
+      const el = document.querySelector(`[data-node-id="${n.id}"]`);
+      if (el) observer.observe(el);
+    }
+    return () => observer.disconnect();
+  }, [nodes]);
+
   const nodeMap = useMemo(() => {
     const map = new Map<string, StitchNode>();
     for (const n of nodes) map.set(n.id, n);

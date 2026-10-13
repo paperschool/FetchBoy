@@ -41,6 +41,7 @@ describe('StitchPreviewPanel', () => {
       executionState: 'idle',
       previewNodeId: null,
       executionNodeOutputs: {},
+      executionRequestNodeOutputs: {},
     });
   });
 
@@ -55,7 +56,7 @@ describe('StitchPreviewPanel', () => {
     expect(screen.getByText(/No results yet/)).toBeInTheDocument();
   });
 
-  it('shows formatted JSON output in Monaco when node has output', () => {
+  it('shows formatted JSON output in Monaco on the Details tab', () => {
     const output = { status: 200, body: { id: 1 } };
     useStitchStore.setState({
       previewNodeId: 'n1',
@@ -64,8 +65,22 @@ describe('StitchPreviewPanel', () => {
     });
     render(<StitchPreviewPanel />);
     expect(screen.getByTestId('preview-panel')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Raw Response'));
     const monaco = screen.getByTestId('mock-monaco') as HTMLTextAreaElement;
     expect(JSON.parse(monaco.value)).toEqual(output);
+  });
+
+  it('defaults to the Response tab, reusing the intercept detail viewer without action buttons', () => {
+    useStitchStore.setState({
+      previewNodeId: 'n1',
+      bottomPanel: 'preview',
+      executionNodeOutputs: { n1: { status: 200, headers: { 'content-type': 'application/json' }, body: { id: 1 } } },
+    });
+    render(<StitchPreviewPanel />);
+    expect(screen.getByTestId('intercept-detail-viewer')).toBeInTheDocument();
+    expect(screen.queryByText('Open in Fetch')).not.toBeInTheDocument();
+    expect(screen.queryByText('Add Mapping')).not.toBeInTheDocument();
+    expect(screen.queryByText('Add Breakpoint')).not.toBeInTheDocument();
   });
 
   it('displays node label in header', () => {
@@ -89,5 +104,32 @@ describe('StitchPreviewPanel', () => {
     render(<StitchPreviewPanel />);
     fireEvent.click(screen.getByTestId('preview-close'));
     expect(clearPreview).toHaveBeenCalled();
+  });
+
+  it('shows a Request tab for a mapping-response node with request-phase output, defaulting to it', () => {
+    useStitchStore.setState({
+      nodes: [makeNode('n1', 'mapping-response', 'Response')],
+      previewNodeId: 'n1',
+      bottomPanel: 'preview',
+      executionNodeOutputs: {},
+      executionRequestNodeOutputs: {
+        n1: { method: 'POST', url: 'https://rewritten.example.com/test', headers: { 'x-custom': '1' }, body: { id: 9 } },
+      },
+    });
+    render(<StitchPreviewPanel />);
+    expect(screen.getByText('Request')).toBeInTheDocument();
+    expect(screen.getByTestId('intercept-detail-viewer')).toBeInTheDocument();
+  });
+
+  it('does not show a Request tab for non-response nodes even with request-phase data', () => {
+    useStitchStore.setState({
+      nodes: [makeNode('n1', 'js-snippet', 'Transform')],
+      previewNodeId: 'n1',
+      bottomPanel: 'preview',
+      executionNodeOutputs: { n1: { result: 'ok' } },
+      executionRequestNodeOutputs: { n1: { result: 'ok' } },
+    });
+    render(<StitchPreviewPanel />);
+    expect(screen.queryByText('Request')).not.toBeInTheDocument();
   });
 });
