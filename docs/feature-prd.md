@@ -1,8 +1,33 @@
 # Feature PRD: Conditional Request/Response Chain Pausing (Entry-side overrides)
 
-Status: **Approved design, ready for implementation — Phase 1 & 2 only.**
+Status: **Implemented** (Phase 1 & 2 shipped — see "Post-implementation notes" below for how the final design differs from the draft in this doc).
 Author context: designed collaboratively in chat; this doc is written so a fresh
 chat session can implement it without re-deriving the investigation below.
+
+---
+
+> **Post-implementation notes (read this first):** The design below has Entry
+> gaining override ports as the mechanism for rewriting the outbound request.
+> During implementation this was corrected: **Response**, not Entry, is the
+> override sink — Entry stays a pure source (the real inbound request, never
+> itself overridden), and Response's wired inputs (defaulting to Entry's real
+> values) determine what's actually fired upstream. Wherever this doc says
+> `MAPPING_ENTRY_INPUT_KEYS` / `executeMappingEntrySegment` / "Entry's override
+> ports", read `MAPPING_RESPONSE_INPUT_KEYS` / `executeMappingRequestSegment` /
+> "Response's override ports" instead — the Rust-side mechanism in §5.3 (event
+> names, `resume_chain_request`, the shared timeout) shipped exactly as
+> designed. All three §7 open questions resolved as drafted: method is
+> overridable, the shared `chain_timeout` was reused (no separate timeout
+> added), and migration `021` was free. Beyond Phase 1 & 2, the shipped release
+> also added some follow-on work discovered during live testing, none of it
+> scoped here: fire-and-forget visibility events even when a chain doesn't
+> pause (so a no-op chain still shows up in the debug log), gzip/deflate/brotli
+> response decompression, a `Log` passthrough node, two double-execution bug
+> fixes (chain nodes re-running via the canvas Play button, and request-only
+> nodes re-running during the response-shaping phase), and a UI overhaul
+> (unified Node/Debug Log/Output panel + unseen-count badges on the Debug,
+> Overrides, and mapping Log tabs — distinct from the canvas segment badges
+> mentioned as out-of-scope in §6, which were not built).
 
 ---
 

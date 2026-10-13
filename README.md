@@ -41,15 +41,29 @@ Runs entirely offline. No account required. All data stored locally.
 
 ## Contents
 
-- [Features](#features)
-- [Architecture and Stack](#architecture-and-stack)
-- [Pre-requisites](#pre-requisites)
-- [Getting Started](#getting-started)
-- [Installation](#installation)
-- [About the MITM Proxy](#about-the-mitm-proxy)
-- [Known Issues](#known-issues)
-- [Project Structure](#project-structure)
-- [Author](#author)
+- [Fetch Boy](#fetch-boy)
+  - [Contents](#contents)
+  - [Features](#features)
+    - [Request Building \& Execution](#request-building--execution)
+    - [HTTP Interception \& Debugging](#http-interception--debugging)
+    - [Request Mappings](#request-mappings)
+    - [Stitch — Visual Request Chains](#stitch--visual-request-chains)
+    - [User Experience \& Productivity](#user-experience--productivity)
+    - [History \& Persistence](#history--persistence)
+  - [Architecture and Stack](#architecture-and-stack)
+  - [Pre-requisites](#pre-requisites)
+  - [Getting Started](#getting-started)
+  - [Installation](#installation)
+    - [windows](#windows)
+    - [macOS](#macos)
+    - [Linux](#linux)
+  - [About the MITM Proxy](#about-the-mitm-proxy)
+    - [What it does](#what-it-does)
+    - [Things to keep in mind](#things-to-keep-in-mind)
+    - [When to use it](#when-to-use-it)
+  - [Known Issues](#known-issues)
+  - [Project Structure](#project-structure)
+  - [Author](#author)
 
 ---
 
@@ -85,7 +99,7 @@ Runs entirely offline. No account required. All data stored locally.
 ### Stitch — Visual Request Chains
 
 - Compose multi-step flows on an infinite canvas by wiring nodes together
-- Node types include Request, JS Snippet, JSON Object, Sleep, Loop/forEach, Condition, Parallel + Merge, and Mapping Chain containers
+- Node types include Request, JS Snippet, JSON Object, Sleep, Log, Loop/forEach, Condition, Parallel + Merge, and Mapping Chain containers
 - Pipe response data between nodes — outputs flow as raw types with input key shape inference and type badges
 - Write inline JavaScript with a Monaco editor; console.log/warn/error is captured into the debug log
 - Iterate over arrays with loop containers that auto-layout their children and indent in the debug log
@@ -94,7 +108,7 @@ Runs entirely offline. No account required. All data stored locally.
 - Node result preview with an Eye toggle; click to scroll to the corresponding debug log entry
 - Import existing saved requests into the canvas via a searchable palette
 - Organize chains into folders in a collapsible sidebar with auto-save
-- Run chains as a pre-request step, or bind one to a mapping rule so proxied traffic triggers it automatically
+- Run chains as a pre-request step, or bind one to a mapping rule so proxied traffic triggers it automatically — a mapping-bound chain only pauses the live request/response while something is actually wired to override it, so a no-op chain stays visible in the debug log without blocking traffic
 
 ### User Experience & Productivity
 
